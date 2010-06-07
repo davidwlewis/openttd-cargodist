@@ -1,0 +1,93 @@
+
+# HG changeset patch
+# User Hirundo
+# Date 1262201189 -3600
+# Node ID ba6cda83f9a0aa5d9ae1d3620f2acc809db58c0b
+# Parent  5621f4b171ff010accb122cd315554d67f58672c
+[IS] Prepare release of IS2.1.1
+
+--- a/config.lib	Wed Dec 30 20:25:53 2009 +0100
++++ b/config.lib	Wed Dec 30 20:26:29 2009 +0100
+@@ -11,7 +11,7 @@
+ }
+ 
+ set_default() {
+-	released_version=""
++	released_version="IS2.1.1"
+ 
+ 	ignore_extra_parameters="0"
+ 	# We set all kinds of defaults for params. Later on the user can override
+--- a/findversion.sh	Wed Dec 30 20:25:53 2009 +0100
++++ b/findversion.sh	Wed Dec 30 20:26:29 2009 +0100
+@@ -121,4 +121,4 @@
+ 	REV="${REV}-$BRANCH"
+ fi
+ 
+-echo "$REV	$REV_NR	$MODIFIED	$CLEAN_REV"
++echo "IS2.1.1	$REV_NR	$MODIFIED	IS2.1.1"
+--- a/projects/determineversion.vbs	Wed Dec 30 20:25:53 2009 +0100
++++ b/projects/determineversion.vbs	Wed Dec 30 20:26:29 2009 +0100
+@@ -39,6 +39,7 @@
+ 		modified = Mid(version, InStrRev(version, Chr(9)) + 1)
+ 		version  = Mid(version, 1, InStr(version, Chr(9)) - 1)
+ 	Else
++		version = "IS2.1.1"
+ 		revision = 0
+ 		modified = 1
+ 	End If
+--- a/src/os/windows/ottdres.rc.in	Wed Dec 30 20:25:53 2009 +0100
++++ b/src/os/windows/ottdres.rc.in	Wed Dec 30 20:26:29 2009 +0100
+@@ -79,8 +79,8 @@
+ //
+ 
+ VS_VERSION_INFO VERSIONINFO
+- FILEVERSION 1,0,0,!!REVISION!!
+- PRODUCTVERSION 1,0,0,!!REVISION!!
++ FILEVERSION 1,0,0,18667
++ PRODUCTVERSION 1,0,0,18667
+  FILEFLAGSMASK 0x3fL
+ #ifdef _DEBUG
+  FILEFLAGS 0x1L
+@@ -98,14 +98,14 @@
+             VALUE "Comments", "This program is licensed under the GNU General Public License version 2.\0"
+             VALUE "CompanyName", "OpenTTD Development Team\0"
+             VALUE "FileDescription", "OpenTTD\0"
+-            VALUE "FileVersion", "Development !!VERSION!!\0"
++            VALUE "FileVersion", "Development IS2.1.1\0"
+             VALUE "InternalName", "openttd\0"
+             VALUE "LegalCopyright", "Copyright \xA9 OpenTTD Developers 2002-2009. All Rights Reserved.\0"
+             VALUE "LegalTrademarks", "\0"
+             VALUE "OriginalFilename", "openttd.exe\0"
+             VALUE "PrivateBuild", "\0"
+             VALUE "ProductName", "OpenTTD\0"
+-            VALUE "ProductVersion", "Development !!VERSION!!\0"
++            VALUE "ProductVersion", "Development IS2.1.1\0"
+             VALUE "SpecialBuild", "-\0"
+         END
+     END
+--- a/src/rev.cpp.in	Wed Dec 30 20:25:53 2009 +0100
++++ b/src/rev.cpp.in	Wed Dec 30 20:26:29 2009 +0100
+@@ -27,7 +27,7 @@
+  * norev000 is for non-releases that are made on systems without
+  * subversion or sources that are not a checkout of subversion.
+  */
+-const char _openttd_revision[] = "!!VERSION!!";
++const char _openttd_revision[] = "IS2.1.1";
+ 
+ /**
+  * The text version of OpenTTD's build date.
+@@ -60,11 +60,11 @@
+  * final release will always have a lower version number than the released
+  * version, thus making comparisions on specific revisions easy.
+  */
+-const uint32 _openttd_newgrf_version = 1 << 28 | 0 << 24 | 0 << 20 | 0 << 19 | (!!REVISION!! & ((1 << 19) - 1));
++const uint32 _openttd_newgrf_version = 1 << 28 | 0 << 24 | 0 << 20 | 0 << 19 | (18667 & ((1 << 19) - 1));
+ 
+ #ifdef __MORPHOS__
+ /**
+  * Variable used by MorphOS to show the version.
+  */
+-extern const char morphos_versions_tag[] = "$VER: OpenTTD !!VERSION!! (!!DATE!!) OpenTTD Team [MorphOS, PowerPC]";
++extern const char morphos_versions_tag[] = "$VER: OpenTTD IS2.1.1 (!!DATE!!) OpenTTD Team [MorphOS, PowerPC]";
+ #endif
+

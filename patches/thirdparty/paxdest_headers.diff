@@ -1,0 +1,309 @@
+Index: src/vehicle.h
+===================================================================
+--- src/vehicle.h	(Revision 11629)
++++ src/vehicle.h	(Arbeitskopie)
+@@ -282,6 +282,8 @@
+ 
+ 	byte vehstatus;          // Status
+ 	StationID last_station_visited;
++	uint32 last_station_visited_time;        // cache current_order_time
++	OrderID last_station_order_id;           // the OrderID at the last station
+ 
+ 	CargoID cargo_type;      // type of cargo this vehicle is carrying
+ 	uint16 cargo_cap;        // total capacity
+@@ -369,7 +371,7 @@
+ 	/** We want to 'destruct' the right class. */
+ 	virtual ~Vehicle();
+ 
+-	void BeginLoading();
++	void BeginLoading(StationID prev_station);
+ 	void LeaveStation();
+ 
+ 	/**
+@@ -715,6 +717,14 @@
+ #define FOR_ALL_VEHICLES_FROM(v, start) for (v = GetVehicle(start); v != NULL; v = (v->index + 1U < GetVehiclePoolSize()) ? GetVehicle(v->index + 1) : NULL) if (v->IsValid())
+ #define FOR_ALL_VEHICLES(v) FOR_ALL_VEHICLES_FROM(v, 0)
+ 
++static inline bool VehicleHas(const Vehicle * const v, const Order * const o)
++{
++	for (const Order *i = v->orders; i != NULL; i = i->next) {
++		if (i == o) return true;
++	}
++	return false;
++}
++
+ /**
+  * Check if an index is a vehicle-index (so between 0 and max-vehicles)
+  * @param index of the vehicle to query
+Index: src/station.h
+===================================================================
+--- src/station.h	(Revision 11629)
++++ src/station.h	(Arbeitskopie)
+@@ -13,6 +13,8 @@
+ #include "road.h"
+ #include "newgrf_station.h"
+ #include "cargopacket.h"
++#include "date.h"
++#include "order.h"
+ #include <list>
+ #include <set>
+ 
+@@ -90,6 +92,110 @@
+ 	uint8  localidx;   ///< Station ID within GRF of station
+ };
+ 
++enum PassengerRoutingType {
++	PRT_NORMAL = 0,
++	PRT_TEMPINFO,
++	PRT_WALKING
++};
++
++#define PASSENGER_TRAIN_STATISTICS_LENGTH 6
++struct PassengerTrainStatistics {
++	StationID src_id;  ///< source for vehicle
++	StationID dest_id; ///< destination for vehicle
++	OrderID	  order_id;
++	PassengerRoutingType type;
++
++	uint32	sum_arrival;		///< cache
++	uint32	sum_driving_time;	///< cache
++	uint32	sum_fare;		///< cache
++	uint32	sum_vacancy;		///< cache
++	uint16	sum_days;		///< cache
++
++	uint16	arrival     [PASSENGER_TRAIN_STATISTICS_LENGTH];	///< the number of the trains arrival in a month
++	uint16	driving_time[PASSENGER_TRAIN_STATISTICS_LENGTH];	///< the total of the time between the station and the previous station
++	uint16	fare        [PASSENGER_TRAIN_STATISTICS_LENGTH];	///< the total of the fare of the trains
++	uint16	vacancy     [PASSENGER_TRAIN_STATISTICS_LENGTH];	///< the total of the number of underoccupied seats
++	uint8	days        [PASSENGER_TRAIN_STATISTICS_LENGTH];	///< the number of days of the month
++
++	PassengerTrainStatistics(StationID src = INVALID_STATION, StationID dst = INVALID_STATION, OrderID o = INVALID_ORDER, PassengerRoutingType type = PRT_NORMAL);
++	void Clear();
++	void Add(uint16 driving_time, Money fare, uint16 vacancy, uint8 days = 0, uint8 month_offset = 0);
++};
++
++class PassengerTrainStatisticsList {
++public:
++	typedef std::list<PassengerTrainStatistics> List;
++
++	const List *Stats() const;
++	bool Empty() const;
++	uint Count() const;
++	void AddInfo(StationID src_id, StationID dest_id, const Vehicle* v, Money fare);
++	void AddTempInfo(StationID src_id, StationID dest_id, const Vehicle * const v, OrderID order_id);
++	void AddWalkInfo(StationID src_id, StationID dest_id);
++	void Add(PassengerTrainStatistics& p);
++	void RemoveInfo(const Order * const order);
++	void StatsLoop();
++	bool IsExists(const Vehicle* v) const;
++private:
++	void AddInfo(StationID src_id, StationID dest_id, const Vehicle * const v, OrderID order_id, uint16 driving_time, Money fare);
++	void Add(StationID src_id, StationID dest_id, OrderID order_id, uint16 driving_time, Money fare, uint16 vacancy, uint8 month_offset = 0, PassengerRoutingType type = PRT_NORMAL);
++private:
++	List stats;	 ///< The cargo packets in this list
++};
++
++struct PassengerRoutingInformation {
++	const StationID	src_id;		///< source of passenger
++	const OrderID	order_id;	///< order of train
++	const StationID	subdest_id;     ///< next transfer (or walk) stn.
++	const uint	driving_time;
++
++	PassengerRoutingInformation(StationID src_id, OrderID odr_id, StationID sub_id = INVALID_STATION, uint driving_time = 0)
++		: src_id(src_id), order_id(odr_id), subdest_id(sub_id), driving_time(driving_time) {}
++};
++
++struct RoutingInformationList {
++	typedef std::list<PassengerRoutingInformation> List;
++
++	RoutingInformationList(StationID dest_id) : dest_id(dest_id) {}
++
++	void AddWalkInfo (StationID src_id, StationID subdest_id);
++	void AddKeepInfo (StationID src_id, OrderID order_id);
++	void AddBoardInfo(StationID src_id, OrderID order_id, StationID subdest_id, uint driving_time);
++
++	StationID GetNextStationInWalk(StationID src_id) const;
++	bool IsExistsInKeep (StationID src_id, OrderID order_id) const;
++	bool IsExistsInBoard(StationID src_id, OrderID order_id) const;
++
++	const StationID dest_id;	///< destination for passenger
++	List walk_info;
++	List keep_info;
++	List board_info;
++};
++
++class RoutingInformationGroup {
++public:
++	typedef std::list<RoutingInformationList> List;
++	typedef List::iterator Iterator;
++
++	void Clear();
++	uint Count() const;
++  	const List *Info() const;
++	void Erase(StationID dest_id);
++
++	void AddWalkInfo (StationID src_id, StationID dest_id, StationID subdest_id);
++	void AddKeepInfo (StationID src_id, StationID dest_id, OrderID order_id);
++	void AddBoardInfo(StationID src_id, StationID dest_id, OrderID order_id, StationID subdest_id, uint driving_time);
++
++	StationID GetNextStationInWalk(StationID src_id, StationID dest_id) const;
++	bool IsExistsInKeep (StationID src_id, StationID dest_id, OrderID order_id) const;
++	bool IsExistsInBoard(StationID src_id, StationID dest_id, OrderID order_id) const;
++private:
++	List::iterator       Find(StationID dest_id);
++	List::const_iterator Find(StationID dest_id) const;
++
++	List info;
++};
++
+ /** StationRect - used to track station spread out rectangle - cheaper than scanning whole map */
+ struct StationRect : public Rect {
+ 	enum StationRectMode
+@@ -168,6 +274,13 @@
+ 
+ 	StationRect rect; ///< Station spread out rectangle (not saved) maintained by StationRect_xxx() functions
+ 
++	uint passenger_acceptance;  // cache
++	PassengerTrainStatisticsList passenger_stat;  // cache
++	RoutingInformationGroup  routing_info;        // cache
++
++	std::list<const PassengerTrainStatistics*> prev_stations;           // cache
++	uint16 passenger_waiting_modulo; // to reduce the number of passengers traveling
++
+ 	static const int cDebugCtorLevel = 5;
+ 
+ 	Station(TileIndex tile = 0);
+Index: src/cargopacket.h
+===================================================================
+--- src/cargopacket.h	(Revision 11629)
++++ src/cargopacket.h	(Arbeitskopie)
+@@ -21,6 +21,7 @@
+ 	StationID source;       ///< The station where the cargo came from first
+ 	TileIndex source_xy;    ///< The origin of the cargo (first station in feeder chain)
+ 	TileIndex loaded_at_xy; ///< Location where this cargo has been loaded into the vehicle
++	StationID destination;  ///< The station of the passenger's final destination
+ 
+ 	uint16 count;           ///< The amount of cargo in this packet
+ 	byte days_in_transit;   ///< Amount of days this packet has been in transit
+@@ -31,13 +32,20 @@
+ 	 * Creates a new cargo packet
+ 	 * @param source the source of the packet
+ 	 * @param count  the number of cargo entities to put in this packet
++	 * @param destination	the destination for this packet
+ 	 * @pre count != 0 || source == INVALID_STATION
+ 	 */
+-	CargoPacket(StationID source = INVALID_STATION, uint16 count = 0);
++	CargoPacket(StationID source = INVALID_STATION, uint16 count = 0, StationID dest = INVALID_STATION);
+ 
+ 	/** Destroy the packet */
+ 	virtual ~CargoPacket();
+ 
++	/**
++	 * Checks whether the cargo packet has the same destination
++	 * @param cp the cargo packet to compare to
++	 * @return true if destination is the same
++	 */
++	bool SameDestination(CargoPacket *cp);
+ 
+ 	/**
+ 	 * Is this a valid cargo packet ?
+@@ -159,6 +167,8 @@
+ 	 */
+ 	void Append(CargoPacket *cp);
+ 
++	void MovePacketTo(CargoPacket *cp, CargoList &dest);
++
+ 	/**
+ 	 * Truncates the cargo in this list to the given amount. It leaves the
+ 	 * first count cargo entities and removes the rest.
+@@ -188,4 +198,25 @@
+ 	void InvalidateCache();
+ };
+ 
++struct CargoDisplayPacket
++{
++	StationID destination;
++	uint16 count;
++	CargoDisplayPacket(StationID s, uint16 c) : destination(s), count(c) {}
++};
++
++class CargoDisplayList
++{
++public:
++	typedef std::list<CargoDisplayPacket> List;
++
++	const List& Packets() const;
++	void Append(const CargoPacket &cp);
++	void Append(const CargoList &srcList);
++	uint Size() const;
++	void Sort();
++private:
++	List packets;
++};
++
+ #endif /* CARGOPACKET_H */
+Index: src/variables.h
+===================================================================
+--- src/variables.h	(Revision 11629)
++++ src/variables.h	(Arbeitskopie)
+@@ -249,6 +249,21 @@
+ 	bool give_money;         ///< allow giving other players money
+ 
+ 	bool enable_signal_gui;  ///< Show the signal GUI when the signal button is pressed
++
++	bool use_destinations;   ///< destination for cargo packets
++	uint8 additional_route_rate;
++	uint8 aircraft_cost_modifier;
++	uint8 transferring_cost_modifier;
++	uint8 reduce_passenger;         // reduce amount of passengers Sensible value half the number of transfers
++	bool generate_unreachable_passenger;
++	uint8 reduce_unreachable_passenger;
++	bool use_temporary_info;
++	bool update_route_on_jit;
++	bool faster_gradual_loading;
++	bool pay_partly_fare;
++	uint8 passenger_walking;
++	uint8 update_route_size;
++	uint8 passenger_train_statistics_length;
+ };
+ 
+ VARDEF Patches _patches;
+@@ -354,4 +369,7 @@
+ /* Forking stuff */
+ VARDEF bool _dedicated_forks;
+ 
++/* pax dest */
++extern bool _need_to_update_routinginfo;
++
+ #endif /* VARIABLES_H */
+Index: src/economy.h
+===================================================================
+--- src/economy.h	(Revision 11629)
++++ src/economy.h	(Arbeitskopie)
+@@ -69,7 +69,7 @@
+ Money GetTransportedGoodsIncome(uint num_pieces, uint dist, byte transit_days, CargoID cargo_type);
+ uint MoveGoodsToStation(TileIndex tile, int w, int h, CargoID type, uint amount);
+ 
+-void VehiclePayment(Vehicle *front_v);
++void VehiclePayment(Vehicle *front_v, StationID prev_station);
+ void LoadUnloadStation(Station *st);
+ 
+ #endif /* ECONOMY_H */
+Index: src/window.h
+===================================================================
+--- src/window.h	(Revision 11629)
++++ src/window.h	(Arbeitskopie)
+@@ -406,6 +406,13 @@
+ };
+ assert_compile(WINDOW_CUSTOM_SIZE >= sizeof(order_d));
+ 
++struct station_d {
++	byte   tab;
++	StationID selected_sid;
++	OrderID   selected_oid;
++};
++assert_compile(WINDOW_CUSTOM_SIZE >= sizeof(station_d));
++
+ struct vehicledetails_d {
+ 	byte tab;
+ };

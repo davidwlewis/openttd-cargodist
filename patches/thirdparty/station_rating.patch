@@ -1,0 +1,33 @@
+Index: src/station_cmd.cpp
+===================================================================
+--- src/station_cmd.cpp (revision 16671)
++++ src/station_cmd.cpp (working copy)
+@@ -2672,7 +2672,27 @@
+                                (rating += 35, true);
+                        }
+
+-                       uint waiting = ge->cargo.Count();
++                       // waiting = ( amount of routed cargo / number of next hops ) + amount of unrouted cargo
++                       const CargoList::List* packets = ge->cargo.Packets();
++                       std::list<StationID> next_hops;
++                       uint routed_cargo = 0;
++                       uint unrouted_cargo = 0;
++                       for (CargoList::List::const_iterator it = packets->begin(); it != packets->end(); it++) {
++                               if ( (*it)->next != INVALID_STATION ) {
++                                       next_hops.push_back((*it)->next);
++                                       routed_cargo += (*it)->count;
++                               } else {
++                                       unrouted_cargo += (*it)->count;
++                               }
++                       }
++                       next_hops.sort();
++                       next_hops.unique();
++
++                       uint waiting = unrouted_cargo;
++                       if (next_hops.size() > 0) {
++                               waiting += routed_cargo / next_hops.size();
++                       }
++
+                        (rating -= 90, waiting > 1500) ||
+                        (rating += 55, waiting > 1000) ||
+                        (rating += 35, waiting > 600) ||

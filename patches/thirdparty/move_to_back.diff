@@ -1,0 +1,17 @@
+Index: src/cargopacket.cpp
+===================================================================
+--- src/cargopacket.cpp	(revision 17837)
++++ src/cargopacket.cpp	(working copy)
+@@ -117,6 +117,12 @@
+ 	for (List::reverse_iterator it(this->packets.rbegin()); it != this->packets.rend(); it++) {
+ 		CargoPacket *icp = *it;
+ 		if (Tinst::AreMergable(icp, cp) && icp->count + cp->count <= CargoPacket::MAX_COUNT) {
++			if (it != this->packets.rbegin()) {
++				/* Reverse iterators are 'kinda' off-by-one to iterators, so
++				 * when converting between the two account for that. */
++				this->packets.erase((++it).base());
++				this->packets.push_back(icp);
++			}
+ 			icp->count        += cp->count;
+ 			icp->feeder_share += cp->feeder_share;
+ 

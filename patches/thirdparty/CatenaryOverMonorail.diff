@@ -1,0 +1,21 @@
+Index: src/elrail_func.h
+===================================================================
+--- src/elrail_func.h	(revision 17901)
++++ src/elrail_func.h	(working copy)
+@@ -16,6 +16,7 @@
+ #include "transparency.h"
+ #include "tile_cmd.h"
+ #include "settings_type.h"
++#include "newgrf.h"
+ 
+ /**
+  * Test if a rail type has catenary
+@@ -23,7 +24,7 @@
+  */
+ static inline bool HasCatenary(RailType rt)
+ {
+-	return HasBit(GetRailTypeInfo(rt)->flags, RTF_CATENARY);
++	return HasBit(GetRailTypeInfo(rt)->flags, RTF_CATENARY) || (HasGrfMiscBit(GMB_CATENARY_ON_3RD_TRACK) && rt == RAILTYPE_MONO);
+ }
+ 
+ /**

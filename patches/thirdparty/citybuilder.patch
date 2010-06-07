@@ -1,0 +1,2159 @@
+Index: projects/openttd_vs80.vcproj
+===================================================================
+--- projects/openttd_vs80.vcproj	(revision 16780)
++++ projects/openttd_vs80.vcproj	(working copy)
+@@ -488,6 +488,10 @@
+ 				>
+ 			</File>
+ 			<File
++				RelativePath="..\src\network\citybuilder.cpp"
++				>
++			</File>
++			<File
+ 				RelativePath=".\..\src\command.cpp"
+ 				>
+ 			</File>
+@@ -848,6 +852,10 @@
+ 				>
+ 			</File>
+ 			<File
++				RelativePath="..\src\network\citybuilder.h"
++				>
++			</File>
++			<File
+ 				RelativePath=".\..\src\cmd_helper.h"
+ 				>
+ 			</File>
+@@ -3424,11 +3432,11 @@
+ 			Name="Music"
+ 			>
+ 			<File
+-				RelativePath=".\..\src\music\null_m.cpp"
++				RelativePath=".\..\src\music\dmusic.cpp"
+ 				>
+ 			</File>
+ 			<File
+-				RelativePath=".\..\src\music\dmusic.cpp"
++				RelativePath=".\..\src\music\null_m.cpp"
+ 				>
+ 			</File>
+ 			<File
+Index: projects/openttd_vs90.vcproj
+===================================================================
+--- projects/openttd_vs90.vcproj	(revision 16780)
++++ projects/openttd_vs90.vcproj	(working copy)
+@@ -1,7 +1,7 @@
+ <?xml version="1.0" encoding="Windows-1252"?>
+ <VisualStudioProject
+ 	ProjectType="Visual C++"
+-	Version="9.00"
++	Version="9,00"
+ 	Name="openttd"
+ 	ProjectGUID="{668328A0-B40E-4CDB-BD72-D0064424414A}"
+ 	RootNamespace="openttd"
+@@ -485,6 +485,10 @@
+ 				>
+ 			</File>
+ 			<File
++				RelativePath="..\src\network\citybuilder.cpp"
++				>
++			</File>
++			<File
+ 				RelativePath=".\..\src\command.cpp"
+ 				>
+ 			</File>
+@@ -845,6 +849,10 @@
+ 				>
+ 			</File>
+ 			<File
++				RelativePath="..\src\network\citybuilder.h"
++				>
++			</File>
++			<File
+ 				RelativePath=".\..\src\cmd_helper.h"
+ 				>
+ 			</File>
+@@ -3421,11 +3429,11 @@
+ 			Name="Music"
+ 			>
+ 			<File
+-				RelativePath=".\..\src\music\null_m.cpp"
++				RelativePath=".\..\src\music\dmusic.cpp"
+ 				>
+ 			</File>
+ 			<File
+-				RelativePath=".\..\src\music\dmusic.cpp"
++				RelativePath=".\..\src\music\null_m.cpp"
+ 				>
+ 			</File>
+ 			<File
+Index: src/ai/api/ai_cargo.hpp
+===================================================================
+--- src/ai/api/ai_cargo.hpp	(revision 16772)
++++ src/ai/api/ai_cargo.hpp	(working copy)
+@@ -40,6 +40,7 @@
+ 		TE_GOODS      = 3, //!< This cargo supplies goods to a town
+ 		TE_WATER      = 4, //!< This cargo supplies water to a town
+ 		TE_FOOD       = 5, //!< This cargo supplies food to a town
++		TE_DIAMONDS   = 6, //!< This cargo supplies diamonds to a town //GOAL
+ 	};
+ 
+ 	/**
+Index: src/command.cpp
+===================================================================
+--- src/command.cpp	(revision 16772)
++++ src/command.cpp	(working copy)
+@@ -23,6 +23,8 @@
+ 
+ #include "table/strings.h"
+ 
++#include "network/citybuilder.h"
++
+ StringID _error_message;
+ 
+ /**
+@@ -579,7 +581,13 @@
+ 	 */
+ 	if (_networking && !(cmd & CMD_NETWORK_COMMAND)) {
+ 		CompanyID bck = _local_company;
+-		if (_network_dedicated || (_network_server && bck == COMPANY_SPECTATOR)) _local_company = COMPANY_FIRST;
++		if (_network_dedicated || (_network_server && bck == COMPANY_SPECTATOR)) 
++		{
++			if(CB_citybuilder()) //goal
++				_local_company = OWNER_NONE; //UGLY UGLY HACK -.-  that works
++			else
++				_local_company = COMPANY_FIRST;
++		}
+ 		NetworkSend_Command(tile, p1, p2, cmd & ~CMD_FLAGS_MASK, callback, text);
+ 		if (_network_dedicated || (_network_server && bck == COMPANY_SPECTATOR)) _local_company = bck;
+ 		_docommand_recursive = 0;
+Index: src/company_base.h
+===================================================================
+--- src/company_base.h	(revision 16772)
++++ src/company_base.h	(working copy)
+@@ -34,6 +34,9 @@
+ 	Company(uint16 name_1 = 0, bool is_ai = false);
+ 	~Company();
+ 
++	bool saved;
++	uint16 rank;
++
+ 	uint32 name_2;
+ 	uint16 name_1;
+ 	char *name;
+Index: src/console_cmds.cpp
+===================================================================
+--- src/console_cmds.cpp	(revision 16772)
++++ src/console_cmds.cpp	(working copy)
+@@ -33,6 +33,9 @@
+ #include "ai/ai.hpp"
+ #include "ai/ai_config.hpp"
+ 
++#include "town.h" //goal
++#include "network/citybuilder.h" //goal
++
+ #ifdef ENABLE_NETWORK
+ 	#include "table/strings.h"
+ #endif /* ENABLE_NETWORK */
+@@ -742,6 +745,15 @@
+ 	}
+ 
+ 	/* It is safe to remove this company */
++
++	//goal
++	Town *t;
++	FOR_ALL_TOWNS(t) 
++	{
++		if(t->owner==c->index+1)
++			CB_resettown(t);
++	}
++
+ 	DoCommandP(0, 2, index, CMD_COMPANY_CTRL);
+ 	IConsolePrint(CC_DEFAULT, "Company deleted.");
+ 
+Index: src/economy.cpp
+===================================================================
+--- src/economy.cpp	(revision 16772)
++++ src/economy.cpp	(working copy)
+@@ -36,6 +36,8 @@
+ #include "table/strings.h"
+ #include "table/sprites.h"
+ 
++//#include "network/citybuilder.h" //goal
++
+ /**
+  * Multiply two integer values and shift the results to right.
+  *
+@@ -528,6 +530,23 @@
+ 			SetDParamStr(2, cni->company_name);
+ 			AddNewsItem(STR_02B6, NS_COMPANY_BANKRUPT, 0, 0, cni);
+ 
++			//goal
++			Town *t;
++			FOR_ALL_TOWNS(t)
++			{
++				if(t->owner==c->index+1)
++				{
++					//remove sign
++					CompanyByte oldc = _current_company; 
++					_current_company = OWNER_NONE;
++					DoCommandP(NULL, t->signID, 0, CMD_RENAME_SIGN, 0, "");
++					_current_company = oldc;
++
++					//remove id
++					t->owner=NULL;
++				}
++			}
++
+ 			/* Remove the company */
+ 			ChangeNetworkOwner(c->index, COMPANY_SPECTATOR);
+ 			ChangeOwnershipOfCompanyItems(c->index, INVALID_OWNER);
+@@ -1376,6 +1395,8 @@
+ 	const CargoSpec *cs = GetCargo(cargo_type);
+ 	if (cs->town_effect == TE_FOOD) s_to->town->new_act_food += num_pieces;
+ 	if (cs->town_effect == TE_WATER) s_to->town->new_act_water += num_pieces;
++	if (cs->town_effect == TE_GOODS) s_to->town->new_act_goods += num_pieces; //GOAL
++	if (cs->bitnum == CT_VALUABLES) s_to->town->new_act_diamonds += num_pieces; //GOAL
+ 
+ 	/* Give the goods to the industry. */
+ 	DeliverGoodsToIndustry(s_to, cargo_type, num_pieces, industry_set);
+Index: src/industry_cmd.cpp
+===================================================================
+--- src/industry_cmd.cpp	(revision 16772)
++++ src/industry_cmd.cpp	(working copy)
+@@ -39,6 +39,8 @@
+ #include "table/industry_land.h"
+ #include "table/build_industry.h"
+ 
++//#include "network/citybuilder.h"
++
+ void ShowIndustryViewWindow(int industry);
+ void BuildOilRig(TileIndex tile);
+ 
+@@ -1805,6 +1807,8 @@
+ 			ind_spc = GetIndustrySpec(it);
+ 			if (ind_spc->enabled) {
+ 				chance = ind_spc->appear_creation[_settings_game.game_creation.landscape];
++				if(it==IT_WATER_TOWER) //GOAL we want some more water tower cities
++					chance*=10;
+ 				if (chance > 0) PlaceInitialIndustry(it, chance);
+ 			}
+ 		}
+Index: src/network/citybuilder.cpp
+===================================================================
+--- src/network/citybuilder.cpp	(revision 0)
++++ src/network/citybuilder.cpp	(revision 0)
+@@ -0,0 +1,1385 @@
++/*	Citybuilder goal version 0.1 beta by Akoz 2009-07-14
++
++	Thanks to Rasco from speedy on showing me his company value code to base this on,
++	to Xi and Ex' for the great citybuilding concept that inspired this, and ofc
++	everyone in #openttd
++
++	todo: 
++	add goal population as int in cmd input
++	remove english language dependancy in CB_precommand (industry name check)
++	optimize code (loads of unnecessary for_all_companies and for_all_towns lookups)
++	move out as much goal code as possible from other files into this one. (in general just tidy up)
++	removing nobuildzone for reseted companies (in-round).
++
++	make voting system to decide next map, and whether or not to continue after goal is reached.(?)
++	anti 1-way train and anti-quardouble payment cheat.
++	scoretable
++	
++*/
++
++#include <stdio.h>
++#include <stdlib.h>
++#include <time.h>
++
++#include "../stdafx.h"
++#include "../debug.h"
++#include "../strings_func.h"
++#include "network_internal.h"
++//#include "../vehicle_base.h"
++//#include "../date_func.h"
++#include "network_server.h"
++#include "network_udp.h"
++#include "../console_func.h"
++#include "../command_func.h"
++//#include "../saveload/saveload.h"
++#include "../station_base.h"
++#include "../genworld.h"
++//#include "../fileio_func.h"
++//#include "../string_func.h"
++#include "../company_func.h"
++//#include "../company_gui.h"
++#include "../settings_type.h"
++//#include "../window_func.h"
++#include "../town.h"
++#include "../cmd_helper.h"
++#include "../industry.h"
++
++#include "../landscape.h"
++
++#include "table/strings.h"
++
++#include <math.h>
++
++
++#include "../core/random_func.hpp"
++#include "../landscape_type.h"
++#include "../aircraft.h"
++
++#include "../signs_base.h"
++#include "../signs_func.h"
++
++#include <string>
++#include <vector>
++
++#include "citybuilder.h"
++
++bool debugging=false;
++
++const bool CITYBUILDER=true;
++CB_goalmode goalmode = CB_monthly;
++bool b25MileStoneReached=false;
++bool b50MileStoneReached=false;
++bool b75MileStoneReached=false;
++int previousLeader = -1;
++uint WINPOP=250; // default population to reach to win the game.
++uint goalID = 0 ;
++int mapsizex=6; 
++int mapsizey=6;
++const uint32 NOBUILDBUFFER = 10; //extra area around city that is nobuildzone for other players
++
++std::vector<TileIndex> nobuildzone;
++std::vector<uint16> nobuildzoneowner;
++
++bool CB_citybuilder() //called from other classes
++{
++	return CITYBUILDER;
++}
++CB_goalmode CB_getGoalMode()
++{
++	return goalmode;
++}
++void CB_setPopGoal(int i)
++{
++	goalID=i;
++}
++
++void CB_setCityMode(CB_goalmode m)
++{
++	goalmode = m;
++}
++
++void CB_placeSign(TileIndex tile, const char *text)
++{
++	CompanyByte oldc = _current_company; 
++	_current_company = OWNER_NONE;
++	DoCommandP(tile, 0, 0, CMD_PLACE_SIGN, 0, text);
++	_current_company = oldc;
++}
++
++void CB_renameSign(int signID, const char *text)
++{
++	CompanyByte oldc = _current_company; 
++	_current_company = OWNER_NONE;
++	DoCommandP(NULL, signID, 0, CMD_RENAME_SIGN, 0, text);
++	_current_company = oldc;
++}
++void CB_removeSign(int signID)
++{
++	CB_renameSign(signID, "");
++}
++void CB_resettown(Town *t)
++{
++	CB_removeSign(t->signID);	//remove owner name as sign under city
++	t->owner=NULL;
++	//TODO: destroy town back to ~150 pop.
++}
++
++int CB_getFoodReq(Town *t)
++{
++	if(goalmode==CB_storage)
++		return t->population/25;
++	else
++		return t->population/55;
++}
++
++int CB_getWaterReq(Town *t)
++{
++	if(goalmode==CB_storage)
++		return t->population/19;
++	else
++		return t->population/45;
++}
++int CB_getGoodsReq(Town *t)
++{
++	if(t->population>=1500)
++	{
++		if(goalmode==CB_storage)
++			return t->population/30;
++		else
++			return t->population/65;
++	}
++	return 0;
++}
++int CB_getDiamondReq(Town *t)
++{
++	if(t->population>=5000)
++	{
++		if(goalmode==CB_storage)
++			return t->population/200;
++		else
++			return t->population/500;
++	}
++	return 0;
++}
++
++bool CB_claimCity(CommandPacket *cp, NetworkClientInfo *cs) // used to claim a city when a hq is built. forwarding packet and networkclientinfo for convenience.
++{
++	Town *town = CalcClosestTownFromTile(cp->tile);
++	static char townname [64];
++	SetDParam(0, town->index);
++	GetString(townname, STR_TOWN, lastof(townname));
++
++	if(town->owner!=NULL && town->owner!=cs->client_playas+1) //already claimed
++	{
++		char msg[4096];
++		sprintf(msg, "%s is already claimed!", &townname[0]);
++		CB_clientMessage(cs->client_id,  msg);
++		return false;
++	} else
++	{
++		//unclaim previous town if any
++		int oldtown = -1;
++		Town *t;
++		FOR_ALL_TOWNS(t)
++		{
++			if(t->owner==cs->client_playas+1)
++			{
++				oldtown=t->index;
++				CB_resettown(t);
++				break;
++			}
++		}
++
++		//claim new town.
++		town->owner=cs->client_playas+1;
++		char msg[4096];
++		sprintf(msg, "You successfully claimed %s as your home town! For hints on how to make your city grow type !hint", &townname[0]);	
++
++		//find the name of the company to list as owner
++		const Company *c;
++		FOR_ALL_COMPANIES(c) { //<- should be able to be done easier than having to loop through all?
++			if(c->index==cs->client_playas)
++			{
++				//announce the claiming to client and to all
++				char msg2[4096];
++				sprintf(msg2, "%s has claimed %s as the home town!",  c->name==NULL ? "Unnamed" : c->name, &townname[0]);
++				if(town->index!=oldtown) //no need to announce changing location of HQ if its in the same town.
++				{
++					CB_clientMessage(cs->client_id, msg);
++					NetworkServerSendChat(NETWORK_ACTION_CHAT, DESTTYPE_BROADCAST, 0, msg2, CLIENT_ID_SERVER);
++				}
++				//set owner name as sign under city (its refreshed anyway)
++				sprintf(msg2, "Claimed by: %s",  c->name==NULL ? "Unnamed" : c->name);
++				if(strlen(msg2)>30)
++					sprintf(msg2, c->name==NULL ? "Unnamed" : c->name);
++				
++				CB_placeSign(town->xy, msg2);
++				//Sign *s;
++				//int i=0;
++				//FOR_ALL_SIGNS(s)
++				//{
++				//	i++;
++				//}
++				//town->signID=i+move;//s->index+1;
++				
++				
++				return true;
++			}
++		}
++		return true; //but we failed finding the company name .. this is reached when a player makes a new company on the server without renaming it.. the name is listed as "null" for some reason. suggestions?
++	}
++}
++bool CB_precommand(CommandPacket *cp, NetworkClientInfo *cs) //this is done before a command is processed by the server. Used to interrupt.
++{
++	if(cp->cmd==81) //packet 81 = make new company. I didnt figure out how to connect the CMD_ id's to the actualy package cp->cmd numbers, so the CMD_s are just for show atm.
++	{
++		CB_handleTextCommand(cs->client_id, (char*)"welcome", false);
++		return true;
++	}
++	if(cp->cmd==671875131 || cp->cmd==671940667) // rename or delete sign 
++	{
++		Town *t;
++		FOR_ALL_TOWNS(t)
++		{	//if town has an owner + towns sign equals renamed sign id
++			if(t->owner!=NULL && t->signID==cp->p1)// && t->owner!=cs->client_playas+1)
++			{
++				//CB_clientMessage(cs->client_id,  (char*)"You can not rename this city sign as the city does not belong to you.");
++				CB_clientMessage(cs->client_id,  (char*)"City signs may not be edited.");
++				return false;
++			}
++		}
++	}
++	if(cp->cmd==CMD_BUILD_AIRPORT || cp->cmd==2684420122) //first comparison does not check out. its only for show
++	{
++		char msg[4096];
++		sprintf(msg, "Airports are not allowed here.");
++		CB_clientMessage(cs->client_id,  msg);
++		return false;
++	}
++	if(cp->cmd==CMD_BUILD_INDUSTRY || cp->cmd==1211367466) //first comparison does not check out. its only for show
++	{
++		//this allows claiming industries by keeping a list of "reserved" tiles around them.
++		//todo: move to postcommand function and verify it still works.
++		//todo: make it work for all languages. (server has to run english for this to work atm)
++
++		const IndustrySpec *indspec = GetIndustrySpec(GB(cp->p1, 0, 16));
++		static char industryname [64];
++		SetDParam(0, indspec->name);
++		GetString(industryname, indspec->name, lastof(industryname));
++		if(!strcmp(industryname,"Factory") || !strcmp(industryname, "Oil Refinery") || !strcmp(industryname, "Printing Works") || !strcmp(industryname,"Steel Mill") || !strcmp(industryname,"Food Processing Plant") || !strcmp(industryname,"Paper Mill") || !strcmp(industryname,"Sawmill"))
++		{
++			int sx = TileX(cp->tile);
++			int sy = TileY(cp->tile);
++			//todo: this grid is at least 5 tiles around each side of any factory type. The grid should be customized to each type.
++			for (int x = sx-8; x <= sx+8; ++x) {
++				for (int y = sy-8; y <= sy+8; ++y) {
++					nobuildzone.push_back(TileXY(x, y));
++					nobuildzoneowner.push_back(cs->client_playas);
++				}
++			}
++			char msg[4096];
++			sprintf(msg, "You have successfully constructed your own %s!", industryname);
++			CB_clientMessage(cs->client_id,  msg);
++
++			const Company *c;
++			FOR_ALL_COMPANIES(c) {
++				if(c->index==cs->client_playas)
++				{
++					//announce the claiming to all clients
++					char msg2[4096];
++					sprintf(msg2, "%s has constructed a private %s and claimed it as their own!",  c->name==NULL ? "Unnamed" : c->name, industryname);
++					NetworkServerSendChat(NETWORK_ACTION_CHAT, DESTTYPE_BROADCAST, 0, msg2, CLIENT_ID_SERVER);
++
++					//place sign
++					TileIndex t2 = TileXY(TileX(cp->tile)+1, TileY(cp->tile)+1);
++					CB_placeSign(cp->tile, "Owned by:");
++					CB_placeSign(t2, c->name==NULL ? "Unnamed" : c->name);
++				}
++			}
++					
++		}
++		return true;
++	}
++
++	//Hinder construction in claimed towns and claimed tiles due to industries
++	if(CB_citybuilder())
++	{
++		Town *town = ClosestTownFromTile(cp->tile, -1);
++
++		/**/
++		//specifically checks each tile in the clear area and road building commands. I have yet to decifer the parametres of railroad building
++		//to find out the area parametres there, but start & stop (not inbetween!) coordinates for that is checked further down this function
++		if(cp->cmd==CMD_CLEAR_AREA || cp->cmd==9896014 || cp->cmd==CMD_BUILD_ROAD || cp->cmd==403046421)
++		{
++			int ex = TileX(cp->tile);
++			int ey = TileY(cp->tile);
++			int sx = TileX(cp->p1);
++			int sy = TileY(cp->p1);
++			/* make sure sx,sy are smaller than ex,ey */
++			if (ex < sx) Swap(ex, sx);
++			if (ey < sy) Swap(ey, sy);
++			for (int x = sx; x <= ex; ++x) {
++				for (int y = sy; y <= ey; ++y) {
++					TileIndex t = TileXY(x,y);
++					if(town->owner!=NULL && town->owner!=cs->client_playas+1 && uint32(DistanceManhattan(town->xy, t))<=pow(uint32(town->squared_town_zone_radius[0]), 0.5)+NOBUILDBUFFER)
++					{
++						Town *town = CalcClosestTownFromTile(cp->tile);
++						static char townname [64];
++						SetDParam(0, town->index);
++						GetString(townname, STR_TOWN, lastof(townname));
++						char msg[4096];
++						sprintf(msg, "%s is claimed by another player. You can not build here!", &townname[0]);
++						CB_clientMessage(cs->client_id,  msg);
++						return false;
++					}
++				}
++			}
++			/**/
++		}
++		//if command = railroad station or bus station or lorry station or water station
++		if(cp->cmd==269484038 || cp->cmd==403570707 || cp->cmd==403636243 || cp->cmd==2550333467)
++		{
++			if(cp->cmd==269484038) //railroad station (custom size)
++			{
++				/* unpack parametres*/
++				Axis axis = Extract<Axis, 4>(cp->p1);
++				uint numtracks = GB(cp->p1,  0, 8);
++				uint plat_len  = GB(cp->p1, 8, 4);
++				uint plat_len2  = GB(cp->p1, 12, 4);
++				uint plat_len3  = GB(cp->p1, 16, 4);
++
++
++				int w_org, h_org;
++				if (axis == AXIS_X) {
++					w_org = plat_len;
++					h_org = numtracks;
++				} else {
++					h_org = plat_len;
++					w_org = numtracks;
++				}
++
++				uint sx = TileX(cp->tile);
++				uint sy = TileY(cp->tile);
++				for (uint x = sx; x <= sx+plat_len3-1; ++x) {
++					for (uint y = sy; y <= sy+plat_len-1; ++y) {
++						TileIndex t = TileXY(x,y); //check no build zones from industries
++						for(uint i=0; i<nobuildzone.size(); i++)
++						{
++							if(TileX(nobuildzone[i])-TileX(t)==0 && TileY(nobuildzone[i])-TileY(t)==0) //industry zone
++								if(nobuildzoneowner[i]!=cs->client_playas)
++								{
++									char msg[4096];
++									sprintf(msg, "A nearby industry is funded and owner by another player. You can not build stations here!");
++									CB_clientMessage(cs->client_id,  msg);
++									return false;
++								}
++							if(town->owner!=NULL && town->owner!=cs->client_playas+1 && uint32(DistanceManhattan(town->xy, t))<=pow(uint32(town->squared_town_zone_radius[0]), 0.5)+NOBUILDBUFFER) //city zone
++							{
++								static char townname [64];
++								SetDParam(0, town->index);
++								GetString(townname, STR_TOWN, lastof(townname));
++								char msg[4096];
++								sprintf(msg, "%s is claimed by another player. You can not build here!", &townname[0]);
++								CB_clientMessage(cs->client_id,  msg);
++								return false;
++							}
++						}
++					}
++				}
++			} else // = single tile station
++			{ 
++				//check no build zones from industries
++				for(uint i=0; i<nobuildzone.size(); i++)
++				{
++					if(TileX(nobuildzone[i])-TileX(cp->tile)==0 && TileY(nobuildzone[i])-TileY(cp->tile)==0)
++					if(nobuildzoneowner[i]!=cs->client_playas)
++					{
++						char msg[4096];
++						sprintf(msg, "A nearby industry is funded and owner by another player. You can not build stations here!");
++						CB_clientMessage(cs->client_id,  msg);
++						return false;
++					}
++				}
++			}
++		}
++
++
++		if(town->owner!=NULL && town->owner!=cs->client_playas+1)
++		{
++			// this function basically checks the tile coordinate of all commands, and blindly checks the p1 as if it is a tile (it usually isnt) before allowing
++			// the command to go through. Currently this disables all actions in a city like stopping a bus driving through the city
++			// and probably also all city commands like "build statue" etc (anything that has coordinates attached). 
++			// It is still possible to stop buses blocking cities if you do it from the vehicle list which applies to all vehicles.
++			// I am not sure if I should remove this completely, but there is plenty of room for improvement here.
++			if((uint32(DistanceManhattan(town->xy, cp->tile))<=pow(uint32(town->squared_town_zone_radius[0]), 0.5)+NOBUILDBUFFER) || (uint32(DistanceManhattan(town->xy, cp->p1))<=pow(uint32(town->squared_town_zone_radius[0]), 0.5)+NOBUILDBUFFER))
++			{
++				Town *town = CalcClosestTownFromTile(cp->tile);
++				static char townname [64];
++				SetDParam(0, town->index);
++				GetString(townname, STR_TOWN, lastof(townname));
++				char msg[4096];
++				sprintf(msg, "%s is claimed by another player. You can not build here!", &townname[0]);
++				CB_clientMessage(cs->client_id,  msg);
++				return false;
++			}
++		}
++	}
++
++	//claim town
++	if(CB_citybuilder() && (cp->cmd==CMD_BUILD_COMPANY_HQ || cp->cmd==1886257195))
++	{
++		return CB_claimCity(cp, cs);
++	}
++	return true;
++}
++
++void CB_postcommand(CommandPacket *cp, NetworkClientInfo *cs)
++{
++	//todo
++}
++void CB_makeNewGame(void)
++{
++	srand(time(NULL));
++
++	nobuildzone.clear(); //empty "private industry tile" list
++	nobuildzoneowner.clear(); //Im currently keeping two lists, but this can surely be done more elegantly.
++	b25MileStoneReached=false;
++	b50MileStoneReached=false;
++	b75MileStoneReached=false;
++	previousLeader=-1;
++
++	strcpy(_settings_client.network.rcon_password, "rconPW");
++	if(CB_citybuilder())
++	{
++		_settings_game.game_creation.starting_year = 1970 + ( InteractiveRandom() % 5 );
++		_settings_game.game_creation.landscape = LT_TROPIC;
++		_settings_newgame.game_creation.landscape  = LT_TROPIC;
++
++		_settings_game.difficulty.terrain_type = 0;
++		printf("terrain_type: %d\r\n",_settings_game.difficulty.terrain_type);
++		_settings_game.difficulty.quantity_sea_lakes = 1;
++		printf("sea/lakes: %d\r\n",	 _settings_game.difficulty.quantity_sea_lakes);
++
++		_settings_game.difficulty.number_towns=1; // <- doesnt appear to be working. It gets overloaded by last games setting.
++		_settings_game.difficulty.number_industries=3; // <- doesnt appear to be working. It gets overloaded by last games setting.
++		_settings_game.difficulty.max_loan = 100000; // <- doesnt appear to be working. It gets overloaded by last games setting.
++
++		strcpy(_settings_client.network.client_name, "Server");
++		//strcpy(_settings_client.network.server_password, "abc");
++	}
++	else 
++	{
++		_settings_game.game_creation.starting_year = 1960 + ( InteractiveRandom() % 60 );
++		int temp = InteractiveRandom() % 3;
++		switch ( temp )
++		{
++			case 0: 
++				_settings_game.game_creation.landscape = LT_ARCTIC;
++				_settings_newgame.game_creation.landscape = LT_ARCTIC;
++				break;
++			case 1: 
++				_settings_game.game_creation.landscape = LT_TEMPERATE;
++				_settings_newgame.game_creation.landscape 
++				 = LT_TEMPERATE;
++				break;
++			case 2: 
++				_settings_game.game_creation.landscape = LT_TROPIC;
++				_settings_newgame.game_creation.landscape = LT_TROPIC;
++				break;
++		}
++		_settings_game.difficulty.terrain_type = 4;// what is max? we want max!
++		printf("terrain_type: %d\r\n",_settings_game.difficulty.terrain_type);
++		_settings_game.difficulty.quantity_sea_lakes = InteractiveRandom() % 4;
++		printf("sea/lakes: %d\r\n",	 _settings_game.difficulty.quantity_sea_lakes);
++
++		_settings_game.difficulty.number_towns=2;// <- doesnt appear to be working. It gets overloaded by last games setting.
++		_settings_game.difficulty.number_industries=3;// <- doesnt appear to be working. It gets overloaded by last games setting.
++		_settings_game.difficulty.max_loan = 100000;// <- doesnt appear to be working. It gets overloaded by last games setting.
++
++		strcpy(_settings_client.network.client_name, "Server");
++		//strcpy(_settings_client.network.rcon_password, "akoz0r");
++		
++		//strcpy(_settings_client.network.server_password, "abc");
++	}
++	_settings_client.network.pause_on_join=true;
++	_settings_client.network.autoclean_companies = true;
++	//I edited the network file to not delete top 5 ranked companies, and to allow the !saveme command to protect companies up to 20 years.
++	_settings_client.network.autoclean_novehicles = 1;
++	_settings_client.network.autoclean_unprotected = 6; 
++	_settings_client.network.autoclean_protected = 6; 
++	//this usually keeps the server from clogging up, while it keeps at least 5 running to keep the server active.
++
++ 	_settings_client.network.server_port=3979+goalID;
++	if(goalID==0)
++	{
++		_settings_game.game_creation.map_x = 9;
++		_settings_game.game_creation.map_y = 9;
++		WINPOP=5000;
++		//strcpy(_settings_client.network.server_name, "!  [Goal] Akoz' Town builder");
++	} else if(goalID==1)
++	{
++		_settings_game.game_creation.map_x = 9;
++		_settings_game.game_creation.map_y = 10;
++		_settings_game.game_creation.starting_year = 2001 + InteractiveRandom() % 10;
++		WINPOP=15000;
++		//strcpy(_settings_client.network.server_name, "!  [Goal] Akoz' City builder");
++	} else if (goalID==2)
++	{
++		_settings_game.game_creation.map_x = 10;
++		_settings_game.game_creation.map_y = 10;
++		_settings_game.game_creation.starting_year = 2015 + InteractiveRandom() % 5;
++		WINPOP=50000;
++		//strcpy(_settings_client.network.server_name, "!  [Goal] Akoz' Metropolian builder (coop)");
++	}
++	if(debugging)
++	{
++		WINPOP=1000;
++		_settings_game.game_creation.map_x = 7;
++		_settings_game.game_creation.map_y = 7;
++		//strcpy(_settings_client.network.server_name, "!  [Goal] Akoz' debugging server...");
++	}
++
++	// Always renew generation seed
++	_settings_game.game_creation.generation_seed=InteractiveRandom();
++}
++
++Money CB_CalculateCompanyValue(const Company* c)
++{ //function by rasco
++	CompanyID owner = c->index;
++	Money value = 0;
++	uint num = 0;
++	Vehicle *v;
++	FOR_ALL_VEHICLES(v) {
++		if (v->owner != owner) continue;
++
++		if (v->type == VEH_TRAIN ||
++				v->type == VEH_ROAD ||
++				( v->type == VEH_AIRCRAFT 
++				&& IsNormalAircraft(v) ) ||
++				v->type == VEH_SHIP) {
++			value += v->value;
++		}
++	}
++
++	/* Add real money value */
++	value -= c->current_loan;
++	value += c->money;
++
++	return max(value, (Money)1);
++}
++
++bool CB_sortCompaniesByCVal(Company *first, Company *second)
++{
++	if ( CB_CalculateCompanyValue(first) > 
++	 CB_CalculateCompanyValue(second) )
++		return true;
++	return false;
++}
++bool CB_sortTownsByCVal(Town *first, Town *second)
++{
++	if ( first->population > second->population)
++		return true;
++	return false;
++}
++
++void CB_checkScores() // todo: tidy up a bit.
++{
++	std::list<Company*> companies;
++	std::list<Company*>::iterator cit;
++	Company *c;
++
++	std::list<Town*> towns;
++	std::list<Town*>::iterator it;
++	Town *t;
++	FOR_ALL_TOWNS(t) {
++	if(t->owner!=NULL)
++		towns.push_back(t);
++	}
++	if ( towns.empty() && CB_citybuilder() ) {
++		return;
++	}
++	
++
++	static int gameEnd = -1;
++	static char winnerName[512];
++
++	int n = 0;
++
++	if ( gameEnd >= 0 )
++	{
++		if ( gameEnd == 0 )
++		{
++			gameEnd = -1;
++			DEBUG(net, 0, "Auto-restarting map. Someone won.");
++			StartNewGameWithoutGUI(GENERATE_NEW_SEED);
++		}
++		else
++		{
++			if ( gameEnd % 100 == 0 )
++			{
++				char msg[4096];
++				sprintf(msg, 
++				 "%s won. Restarting... (in %d ticks)", 
++				 winnerName, gameEnd/100);
++				NetworkServerSendChat(NETWORK_ACTION_CHAT, 
++				 DESTTYPE_BROADCAST, 0, msg, CLIENT_ID_SERVER);
++			}
++			gameEnd--;
++		}
++		return;
++	}
++
++	FOR_ALL_COMPANIES(c) {
++		companies.push_back(c);
++	}
++
++	if ( companies.empty() ) {
++		return;
++	}
++
++	towns.sort(CB_sortTownsByCVal);
++
++	//check if the leader changed:
++	Company *c2;
++	FOR_ALL_COMPANIES(c2) {
++		if(c2->index+1==towns.front()->owner)
++		{
++			if(previousLeader<0) //no previous leader
++				previousLeader=c2->index;
++			else
++			{
++				if(c2->index!=previousLeader)
++				{ //leader change
++					char msg[4096];
++					sprintf(msg, "%s is now leading the game!", c2->name==NULL ? "Unnamed" : c2->name);
++					NetworkServerSendChat(NETWORK_ACTION_CHAT, DESTTYPE_BROADCAST, 
++					 0, msg, CLIENT_ID_SERVER);
++					previousLeader=c2->index;
++				}
++			}
++		}
++	}
++
++
++	if(towns.front()->population>=WINPOP)
++	{
++		char msg[4096];
++		FOR_ALL_COMPANIES(c2) {
++			if(c2->index+1==towns.front()->owner)
++			{
++				strcpy(winnerName, c2->name);
++			}
++		}
++		sprintf(msg, "Congratulations, %s. You won!", winnerName);
++		NetworkServerSendChat(NETWORK_ACTION_CHAT, DESTTYPE_BROADCAST, 
++		 0, msg, CLIENT_ID_SERVER);
++		gameEnd = 2500;
++	} else if(towns.front()->population>=WINPOP/4 && !b25MileStoneReached)
++	{
++		char msg[4096];
++		FOR_ALL_COMPANIES(c2) {
++			if(c2->index+1==towns.front()->owner)
++			{
++				b25MileStoneReached=true;
++				sprintf(msg, "%s is the first company to reach 25%% of the goal!", c2->name);
++				NetworkServerSendChat(NETWORK_ACTION_CHAT, DESTTYPE_BROADCAST, 
++				 0, msg, CLIENT_ID_SERVER);
++			}
++		}
++	}else if(towns.front()->population>=WINPOP*2/4 && !b50MileStoneReached)
++	{
++		char msg[4096];
++		FOR_ALL_COMPANIES(c2) {
++			if(c2->index+1==towns.front()->owner)
++			{
++				b50MileStoneReached=true;
++				sprintf(msg, "%s is the first company to reach 50%% of the goal!", c2->name);
++				NetworkServerSendChat(NETWORK_ACTION_CHAT, DESTTYPE_BROADCAST, 
++				 0, msg, CLIENT_ID_SERVER);
++			}
++		}
++	}else if(towns.front()->population>=WINPOP*3/4 && !b75MileStoneReached)
++	{
++		char msg[4096];
++		FOR_ALL_COMPANIES(c2) {
++			if(c2->index+1==towns.front()->owner)
++			{
++				b75MileStoneReached=true;
++				sprintf(msg, "%s is the first company to reach 75%% of the goal!", c2->name);
++				NetworkServerSendChat(NETWORK_ACTION_CHAT, DESTTYPE_BROADCAST, 
++				 0, msg, CLIENT_ID_SERVER);
++			}
++		}
++	}
++}
++
++void CB_resetCompany(int from_id)
++{
++	const NetworkClientInfo *ci;
++	char msgback[1024];
++	int clientcount=0;
++	int pindex=-1;
++
++	FOR_ALL_CLIENT_INFOS(ci)
++	{
++		if ( from_id == ci->client_id )
++		{
++			pindex = ci->client_playas;
++			break;
++		}
++	}
++
++	// just to be sure..
++	if ( pindex == -1 )
++		return;
++
++	FOR_ALL_CLIENT_INFOS(ci)
++	{
++		if ( ci->client_playas == pindex )
++			clientcount++;
++	}
++
++	if ( clientcount > 1 )
++		return;
++
++	const Company *p;
++	FOR_ALL_COMPANIES(p) {
++		if ( p->index == pindex ) {
++			//reset town ownership
++			Town *t;
++			FOR_ALL_TOWNS(t)
++			{
++				if(t->owner==p->index+1)
++					CB_resettown(t);
++			}
++			sprintf(msgback, 
++			 "%s filed a voluntary bankruptcy and was removed from the game.", p->name==NULL ? "Unnamed" : p->name);
++			NetworkServerSendChat(NETWORK_ACTION_CHAT, 
++			 DESTTYPE_BROADCAST, 0, msgback, CLIENT_ID_SERVER);
++			NetworkServerDoMove((ClientID)from_id, 
++			 COMPANY_SPECTATOR);
++			DoCommandP(0, 2, pindex, CMD_COMPANY_CTRL);
++			IConsolePrintF(CC_DEFAULT, 
++			 "Reseted company #%d", pindex + 1);
++			break;
++		}
++	}
++}
++
++bool CB_parseMessage(int from_id, const char*msg2)
++{ 
++	//todo: wait with giving the results until AFTER the command itself is shown.
++
++	char msg[4096];
++	sprintf(msg, "%s", msg2);
++	if ( strncmp(msg, "/", 1) == 0)
++		msg[0]='!';
++	if ( strncmp(msg, "!", 1) != 0)
++		return true;
++	if ( strcmp(msg, "!reset") == 0 )
++		CB_resetCompany(from_id);
++	else if ( strcmp(msg, "!score") == 0 )
++		CB_sendScores(from_id, false);
++	else if ( strcmp(msg, "!scores") == 0 )
++		CB_sendScores(from_id, false);
++	else if ( strcmp(msg, "!cv") == 0 )
++		CB_sendScores(from_id, false);	
++	else if ( strcmp(msg, "!saveme") == 0 )
++		CB_handleTextCommand(from_id, (char*)"saveme", false);
++	else if ( strcmp(msg, "!rules") == 0 )
++		CB_handleTextCommand(from_id, (char*)"rules", false);
++	else if ( strcmp(msg, "!features") == 0 )
++		CB_handleTextCommand(from_id, (char*)"features", false);
++	else if ( strcmp(msg, "!goal") == 0 )
++		CB_handleTextCommand(from_id, (char*)"goal", false);
++	else if ( strcmp(msg, "!hint") == 0 )
++		CB_handleTextCommand(from_id, (char*)"hint", false);
++	else if ( strcmp(msg, "!utility") == 0 )
++		CB_handleTextCommand(from_id, (char*)"utility", false);
++	else if ( strcmp(msg, "!hints") == 0 )
++		CB_handleTextCommand(from_id, (char*)"hint", false);
++	else if ( strcmp(msg, "!help") == 0 )
++		CB_handleTextCommand(from_id, (char*)"help", false);
++	else if ( strcmp(msg, "!city") == 0 ||  strcmp(msg, "!scd") == 0 )
++		CB_handleTextCommand(from_id, (char*)"city", false);
++	else
++	{
++		CB_clientMessage(from_id, (char*)"Invalid command.");
++		return false;
++	}
++
++	return true;
++}
++
++void CB_clientMessage(int to_index, char *msg)
++{
++	NetworkServerSendChat(NETWORK_ACTION_CHAT_CLIENT, DESTTYPE_CLIENT, 
++	 to_index, msg, CLIENT_ID_SERVER);
++}
++
++void CB_handleTextCommand(int from_index, char*cmd, bool echo)
++{//todo : ...dont get me started :p it started out so tidy...
++	if (cmd=="rules")
++	{
++		CB_clientMessage(from_index, (char*)"Server rules:");
++		CB_clientMessage(from_index, (char*)"-No blocking-");
++		CB_clientMessage(from_index, (char*)"-No truck/train pushing-");
++		CB_clientMessage(from_index, (char*)"-No more than one company each-");
++		CB_clientMessage(from_index, (char*)"-Dont ruin for other participants-");
++		CB_clientMessage(from_index, (char*)"-Competition is ENCOURAGED. To shield yourself from competition you can fund your own secondary industry!");
++	} else if (cmd=="welcome")
++	{
++		CB_clientMessage(from_index, (char*)"Welcome!");
++		char msg[4096];
++		int currentmax = 0;
++		Town *t;
++		FOR_ALL_TOWNS(t)
++		{
++			if(t->owner==previousLeader+1)
++				currentmax = t->population;
++				
++		}
++		if(previousLeader<0)
++			currentmax=0;
++		sprintf(msg, "The goal for this server is to control the first city to reach %i inhabitants (%i%% complete)! To claim a city and get started simply place your HQ near it.", WINPOP, (currentmax*100)/WINPOP);
++		CB_clientMessage(from_index, msg);
++		if(CB_citybuilder())
++		{
++			CB_clientMessage(from_index, (char*)"Current extra features on this server: Modified city needs. City protection. Secondary industry protection.");
++		}
++		else
++			CB_clientMessage(from_index, (char*)"Current extra feature on this server: Exclusive secondary industries: Once constructed noone else may take your goods/food etc from your industries.");
++		
++		CB_clientMessage(from_index, (char*)"To see a list of available commands type !help. (citybuilder v0.1b by Akoz)");
++	} else if (cmd=="features")
++	{
++		CB_clientMessage(from_index, (char*)"Current extra features on this server:");
++		if(CB_citybuilder())
++		{
++			CB_clientMessage(from_index, (char*)"City protection: You can claim a city by building your HQ in it. Once claimed only you may build in the city.");
++			CB_clientMessage(from_index, (char*)"Additional city growth requirements: Once your city starts growing it demands more and more food, water goods and eventually valuables in order to grow.");
++		}
++		CB_clientMessage(from_index, (char*)"Exclusive secondary industries: Once constructed noone else may take your goods/food etc from your industries.");
++		
++	}
++	else if (cmd=="hint")
++	{
++		CB_clientMessage(from_index, (char*)"To make your city grow there is a number of things you can do:");
++		CB_clientMessage(from_index, (char*)"1. Make sure your city gets at least 1 unit of food and water per month (not from storage!).");
++		CB_clientMessage(from_index, (char*)"2. Make sure you have at least 5 active stations (for instance bus stations) where cargo is fetched at least every 20 days.");
++		CB_clientMessage(from_index, (char*)"3. Make sure your storage has enough of all needed resources for at least one month ahead in time.");
++		CB_clientMessage(from_index, (char*)"4. Build roads so when your city decides to grow it makes buildings instead of roads.");
++		CB_clientMessage(from_index, (char*)"5. Get enough cash to fund new builds every 3 months from the local authority.");
++		CB_clientMessage(from_index, (char*)"6. Try to get the needed resources in stock before they are acctually needed. Goods is required at 1,5k population and diamonds at 5k.");
++	}
++	else if (cmd=="utility")
++	{
++		enum {
++			IT_COAL_MINE           =   0,
++			IT_POWER_STATION       =   1,
++			IT_SAWMILL             =   2,
++			IT_FOREST              =   3,
++			IT_OIL_REFINERY        =   4,
++			IT_OIL_RIG             =   5,
++			IT_FACTORY             =   6,
++			IT_PRINTING_WORKS      =   7,
++			IT_STEEL_MILL          =   8,
++			IT_FARM                =   9,
++			IT_COPPER_MINE         =  10,
++			IT_OIL_WELL            =  11,
++			IT_BANK_TEMP           =  12,
++			IT_FOOD_PROCESS        =  13,
++			IT_PAPER_MILL          =  14,
++			IT_GOLD_MINE           =  15,
++			IT_BANK_TROPIC_ARCTIC  =  16,
++			IT_DIAMOND_MINE        =  17,
++			IT_IRON_MINE           =  18,
++			IT_FRUIT_PLANTATION    =  19,
++			IT_RUBBER_PLANTATION   =  20,
++			IT_WATER_SUPPLY        =  21,
++			IT_WATER_TOWER         =  22,
++			IT_FACTORY_2           =  23,
++			IT_FARM_2              =  24,
++			IT_LUMBER_MILL         =  25,
++			IT_COTTON_CANDY        =  26,
++			IT_CANDY_FACTORY       =  27,
++			IT_BATTERY_FARM        =  28,
++			IT_COLA_WELLS          =  29,
++			IT_TOY_SHOP            =  30,
++			IT_TOY_FACTORY         =  31,
++			IT_PLASTIC_FOUNTAINS   =  32,
++			IT_FIZZY_DRINK_FACTORY =  33,
++			IT_BUBBLE_GENERATOR    =  34,
++			IT_TOFFEE_QUARRY       =  35,
++			IT_SUGAR_MINE          =  36,
++			IT_END,
++		};
++		uint32 water_used = 0;
++		uint32 water_prod = 0;
++		uint32 fruit_used = 0;
++		uint32 fruit_prod = 0;
++		uint32 maize_used = 0;
++		uint32 maize_prod = 0;
++		uint32 oil_used = 0;
++		uint32 oil_prod = 0;
++		uint32 copper_used = 0;
++		uint32 copper_prod = 0;
++		uint32 rubber_used = 0;
++		uint32 rubber_prod = 0;
++		uint32 diamonds_used = 0;
++		uint32 diamonds_prod = 0;
++		Industry *i;
++		FOR_ALL_INDUSTRIES(i)
++		{
++			if(i->type==IT_WATER_SUPPLY)
++			{
++				water_used+=i->last_month_transported[0];
++				water_prod+=i->last_month_production[0];
++			} else if(i->type==IT_FRUIT_PLANTATION)
++			{
++				fruit_used+=i->last_month_transported[0];
++				fruit_prod+=i->last_month_production[0];
++			} else if(i->type==IT_FARM_2 || i->type==IT_FARM)
++			{
++				maize_used+=i->last_month_transported[0];
++				maize_prod+=i->last_month_production[0];
++			} else if(i->type==IT_OIL_WELL)
++			{
++				oil_used+=i->last_month_transported[0];
++				oil_prod+=i->last_month_production[0];
++			} else if(i->type==IT_COPPER_MINE)
++			{
++				copper_used+=i->last_month_transported[0];
++				copper_prod+=i->last_month_production[0];
++			} else if(i->type==IT_RUBBER_PLANTATION)
++			{
++				rubber_used+=i->last_month_transported[0];
++				rubber_prod+=i->last_month_production[0];
++			} else if(i->type==IT_DIAMOND_MINE)
++			{
++				diamonds_used+=i->last_month_transported[0];
++				diamonds_prod+=i->last_month_production[0];
++			}
++		}
++		char msg[4096];
++		if(water_prod>0)
++		{
++			sprintf(msg, "Total water production: %i Used: %i (%i %%)", water_prod, water_used, water_used*100/water_prod);
++			CB_clientMessage(from_index, msg);
++		}
++		if(fruit_prod>0)
++		{
++			sprintf(msg, "Total fruit production: %i Used: %i (%i %%)", fruit_prod, fruit_used, fruit_used*100/fruit_prod);
++			CB_clientMessage(from_index, msg);
++		}
++		if(maize_prod>0)
++		{
++			sprintf(msg, "Total maize production: %i Used: %i (%i %%)", maize_prod, maize_used, maize_used*100/maize_prod);
++			CB_clientMessage(from_index, msg);
++		}
++		if(oil_prod>0)
++		{
++			sprintf(msg, "Total oil production: %i Used: %i (%i %%)", oil_prod, oil_used, oil_used*100/oil_prod);
++			CB_clientMessage(from_index, msg);
++		}
++		if(copper_prod>0)
++		{
++			sprintf(msg, "Total copper production: %i Used: %i (%i %%)", copper_prod, copper_used, copper_used*100/copper_prod);
++			CB_clientMessage(from_index, msg);
++		}
++		if(rubber_prod>0)
++		{
++			sprintf(msg, "Total rubber production: %i Used: %i (%i %%)", rubber_prod, rubber_used, rubber_used*100/rubber_prod);
++			CB_clientMessage(from_index, msg);
++		}
++		if(diamonds_prod>0)
++		{
++			sprintf(msg, "Total diamond production: %i Used: %i (%i %%)", diamonds_prod, diamonds_used, diamonds_used*100/diamonds_prod);
++			CB_clientMessage(from_index, msg);
++		}
++	}
++	else if (cmd=="city")
++	{
++		NetworkClientInfo *d;
++		FOR_ALL_CLIENT_INFOS(d)
++		{
++			if(d->client_id==from_index)
++			{
++				CB_sendCityGrowthInfo(d->client_playas);
++			}
++		}
++
++		return;
++	}
++	else if (cmd=="goal")
++	{
++		char msg[4096];
++		int currentmax = 0;
++		Town *t;
++		FOR_ALL_TOWNS(t)
++		{
++			if(t->owner==previousLeader+1)
++				currentmax = t->population;
++				
++		}
++		if(previousLeader<0)
++			currentmax=0;
++		sprintf(msg, "The goal for this server is to control the first city to reach %i inhabitants (%i%% complete)!", WINPOP, (currentmax*100)/WINPOP);
++		CB_clientMessage(from_index, msg);		
++	}
++	else if (cmd=="saveme")
++	{
++		NetworkClientInfo *d;
++		FOR_ALL_CLIENT_INFOS(d)
++		{
++			if(d->client_id==from_index)
++			{
++				Company *c;
++				FOR_ALL_COMPANIES(c)
++				{
++					if(c->index==d->client_playas)
++					{
++						if(c->saved)
++						{ //remove save
++							c->saved = !c->saved;
++							char msg[4096];
++							sprintf(msg, "Your company is no longer saved and will now be deleted after 6 months of inactivity.");
++							CB_clientMessage(from_index, msg);	
++						} else
++						{ //set save
++							c->saved = !c->saved;
++							char msg[4096];
++							sprintf(msg, "Your company is now saved for up to 20 years of inactivity.");
++							CB_clientMessage(from_index, msg);	
++						}
++					}
++				}
++			}
++		}
++	}
++	else if (cmd=="help")
++	{
++		CB_clientMessage(from_index, (char*)"Available commands:");
++		CB_clientMessage(from_index, (char*)"!help -  Shows this message.");
++		CB_clientMessage(from_index, (char*)"!hint -  Shows some hints on making your city grow fast.");
++		CB_clientMessage(from_index, (char*)"!goal -  Displays the current server goal.");
++		CB_clientMessage(from_index, (char*)"!rules - Displays the server rules.");
++		CB_clientMessage(from_index, (char*)"!reset - Resets your company so you can form a new one.");
++		CB_clientMessage(from_index, (char*)"!saveme - Saves your company for 20 years without being reseted.");
++		CB_clientMessage(from_index, (char*)"!score - Shows the scoring board for this round.");
++		CB_clientMessage(from_index, (char*)"!features -  Lists features available only on this server.");
++		CB_clientMessage(from_index, (char*)"!utility -  Shows a summary of most core resources usage.");
++		if(CB_citybuilder())
++			CB_clientMessage(from_index, (char*)"!city - Displays detailed information about your city if claimed.");
++	}
++}
++
++void CB_sendScores(int client_index, bool ispublic)
++{
++	std::list<Town*> towns;
++	std::list<Town*>::iterator it;
++	std::list<Company*> companies;
++	std::list<Company*>::iterator it2;
++	Town *t;
++	FOR_ALL_TOWNS(t) {
++		if(t->owner!=NULL)
++			towns.push_back(t);
++	}
++	Company *c;
++	FOR_ALL_COMPANIES(c) {
++		companies.push_back(c);
++	}
++	if ( towns.empty() && CB_citybuilder() ) {
++		return;
++	} else if (companies.empty()){
++		return;
++	}
++
++	towns.sort(CB_sortTownsByCVal);
++	companies.sort(CB_sortCompaniesByCVal);
++/*
++	SetDParam(0, CB_goalAmount);                                                                        
++	GetString(buffer, STR_7024, lastof(buffer));
++	sprintf(buffer2, "Current scores:",  buffer);*/
++	if ( ispublic ) //annual annoucement
++	{
++		NetworkServerSendChat(NETWORK_ACTION_CHAT, DESTTYPE_BROADCAST, 
++		0, (char*)"Current scores:", CLIENT_ID_SERVER);
++	}
++	else
++		CB_clientMessage(client_index, (char*)"Current scores:");
++
++	if(CB_citybuilder())
++	{
++		int rank = 1;
++		for(it = towns.begin(); it != towns.end(); ++it)
++		{
++			Town *to = *it;
++			std::string owner = "";
++			Company *c;
++			FOR_ALL_COMPANIES(c) {
++				if(c->index+1==to->owner)
++				{
++					c->rank=rank;
++					
++
++					static char townname [64];
++					SetDParam(0, to->index);
++					GetString(townname, STR_TOWN, lastof(townname));
++
++					char msg[4096];
++					sprintf(msg, "%i: %s: (%i inhabitants - %s)",rank, c->name==NULL ? "Unnamed" : c->name, to->population, townname);
++					if ( ispublic )
++						NetworkServerSendChat(NETWORK_ACTION_CHAT, 
++						 DESTTYPE_BROADCAST, 0, msg, CLIENT_ID_SERVER);
++					else
++						CB_clientMessage(client_index, msg);		
++					rank++;
++				}
++			}
++
++		} 
++	} else 
++	{
++		int rank = 1;
++		for(it2 = companies.begin(); it2 != companies.end(); ++it2)
++		{
++			Company *c = *it2;
++			c->rank=rank;
++
++
++			char msg[4096];
++			sprintf(msg, "#%i: %s: (%i points) ", rank, c->name, CB_CalculateCompanyValue(c));
++			if ( ispublic )
++				NetworkServerSendChat(NETWORK_ACTION_CHAT, 
++				 DESTTYPE_BROADCAST, 0, msg, CLIENT_ID_SERVER);
++			else
++				CB_clientMessage(client_index, msg);	
++			rank++;
++		} 
++	}
++}
++
++
++void CB_checkcitygrowth()
++{
++	//warn all without a city to get one:
++	if(CB_citybuilder())
++	{
++		Company *c;
++		FOR_ALL_COMPANIES(c)
++		{
++			bool hascity=false;
++			Town *t;
++			FOR_ALL_TOWNS(t)
++			{
++				if(t->owner==c->index+1)
++				{
++					hascity=true;
++					CB_sendCityGrowthInfo(c->index);
++				}
++			}
++			if(!hascity)
++			{
++				NetworkClientInfo *d;
++				FOR_ALL_CLIENT_INFOS(d)
++				{
++					if(d->client_playas==c->index)
++						CB_clientMessage(d->client_id, (char*)"You have not yet claimed a city! Build your HQ near a city to claim it!");
++				}
++			}
++		}
++	}
++}
++void CB_updateTownStorage(Town *t)
++{
++	// add accumulated last month
++	t->stor_food += t->new_act_food;
++	t->stor_water += t->new_act_water;
++	t->stor_goods += t->new_act_goods;
++	t->stor_diamonds += t->new_act_diamonds;
++
++	// subtract monthly spenditure:
++	//t->stor_food-=t->population/POP_PER_FOOD;
++	//t->stor_water-=t->population/POP_PER_WATER;
++	//t->stor_goods-=t->population/POP_PER_GOODS;
++	//t->stor_diamonds-=t->population/POP_PER_DIAMOND;
++	t->stor_food-=CB_getFoodReq(t);
++	t->stor_water-=CB_getWaterReq(t);
++	t->stor_goods-=CB_getGoodsReq(t);
++	t->stor_diamonds-=CB_getDiamondReq(t);
++	
++
++	// decay
++	t->stor_food*=0.9;
++	t->stor_water*=0.95;
++	t->stor_goods*=0.95;
++	t->stor_diamonds*=0.98;
++
++	// check no max storage is overridden.
++	t->growing=true;
++	if(t->stor_food<0)
++	{
++		t->growing=false;
++		t->stor_food=0;
++	}
++	if(t->stor_water<0)
++	{
++		t->growing=false;
++		t->stor_water=0;
++	}
++	if(t->stor_goods<0)
++	{
++		t->growing=false;
++		t->stor_goods=0;
++	}
++	if(t->stor_diamonds<0)
++	{
++		t->growing=false;
++		t->stor_diamonds=0;
++	}
++}
++void CB_sendCityGrowthInfo(int companyID)
++{
++	//todo: move all constant numbers here into variable arrays and edit all values to make it a bit easier, especially at the start.
++
++	bool foundcity = false;
++	Town *t;
++	FOR_ALL_TOWNS(t)
++	{
++		if(t->owner==companyID+1)
++		{
++			foundcity=true;
++			NetworkClientInfo *d;
++			FOR_ALL_CLIENT_INFOS(d)
++			{
++				if(d->client_playas==companyID)
++				{
++					//send this to all clients in this company;
++					int from_index=d->client_id;
++					static char townname [64];
++					SetDParam(0, t->index);
++					GetString(townname, STR_TOWN, lastof(townname));
++					char msg[4096];
++					sprintf(msg, "City information for %s (%i inhabitants)", &townname[0], t->population);
++					CB_clientMessage(from_index, msg);
++
++					if(CB_getGoalMode()==CB_monthly)
++					{
++						if(CB_getFoodReq(t) > 0)
++						{
++							sprintf(msg, "Food delivered last month: %i. (needed %i)", t->act_food, CB_getFoodReq(t));
++							CB_clientMessage(from_index, msg);
++						}
++						if(CB_getWaterReq(t) > 0)
++						{
++							sprintf(msg, "Water delivered last month: %i. (needed %i)", t->act_water, CB_getWaterReq(t));
++							CB_clientMessage(from_index, msg);
++						} 
++						if(CB_getGoodsReq(t) > 0)
++						{
++							sprintf(msg, "Goods delivered last month: %i. (needed %i)", t->act_goods, CB_getGoodsReq(t));
++							CB_clientMessage(from_index, msg);
++						}	
++						if(CB_getDiamondReq(t) > 0)
++						{
++							sprintf(msg, "Diamonds delivered last month: %i. (needed %i)", t->act_diamonds, CB_getDiamondReq(t));
++							CB_clientMessage(from_index, msg);
++						}	
++						sprintf(msg, "Building construction funded for %i more months.", t->fund_buildings_months);
++						CB_clientMessage(from_index, msg);
++
++						sprintf(msg, "Your city is not growing. Supplies missing: ");
++						//determine errors:
++						if(t->act_food < CB_getFoodReq(t))
++							sprintf(msg, "%s food(%i), ", msg, CB_getFoodReq(t)-t->act_food);
++						if(t->act_water < CB_getWaterReq(t))
++							sprintf(msg, "%s water(%i), ", msg, CB_getWaterReq(t)-t->act_water);
++						if(t->act_goods < CB_getGoodsReq(t))
++							sprintf(msg, "%s goods(%i), ", msg, CB_getGoodsReq(t)-t->act_goods);
++						if(t->act_diamonds < CB_getDiamondReq(t))
++							sprintf(msg, "%s diamonds(%i) ", msg, CB_getDiamondReq(t)-t->act_diamonds);
++						if(strcmp(msg,"Your city is not growing. Supplies missing: ")) //if strings not equal - print msg
++							CB_clientMessage(from_index, msg);
++						else
++						{
++							double d;
++							if(t->growth_rate>=1)
++							{
++								d = 250.0/(double(t->growth_rate));
++								sprintf(msg, "Your city is growing! Current growth rate: %.2f", d);
++							}
++							else 
++							{
++								d = 500;
++								sprintf(msg, "Your city is growing! Current growth rate: %.2f (this is max!)", d);
++							}
++							CB_clientMessage(from_index, msg);
++						}
++					} else  //goal = storage
++					{
++						
++						sprintf(msg, "Food stockpile: %i. (%i consumed per month)", t->stor_food, CB_getFoodReq(t));
++						CB_clientMessage(from_index, msg);
++						sprintf(msg, "Water stockpile: %i. (%i consumed per month)", t->stor_water, CB_getWaterReq(t));
++						CB_clientMessage(from_index, msg);
++						if(CB_getGoodsReq(t) > 0 || t->stor_goods > 0)
++						{
++							sprintf(msg, "Goods stockpile: %i. (%i consumed per month)", t->stor_goods, CB_getGoodsReq(t));
++							CB_clientMessage(from_index, msg);
++						}	
++						if(CB_getDiamondReq(t) > 0 || t->stor_diamonds > 0)
++						{
++							sprintf(msg, "Diamond stockpile: %i. (%i consumed per month)", t->stor_diamonds, CB_getDiamondReq(t));
++							CB_clientMessage(from_index, msg);
++						}	
++						if(t->fund_buildings_months >=1)
++						{
++							sprintf(msg, "Building construction funded for %i more months.", t->fund_buildings_months);
++							CB_clientMessage(from_index, msg);
++						}
++						if(!t->growing)
++						{
++							sprintf(msg, "Your city is not growing. Supplies missing: ");
++							//determine errors:
++							if(t->stor_food == 0)
++								sprintf(msg, "%s food, ", msg);
++							if(t->stor_water == 0)
++								sprintf(msg, "%s water, ", msg);
++							if(t->stor_goods == 0 && CB_getGoodsReq(t)>0)
++								sprintf(msg, "%s goods, ", msg);
++							if(t->stor_diamonds == 0 && CB_getDiamondReq(t)>0)
++								sprintf(msg, "%s diamonds", msg);
++							CB_clientMessage(from_index, msg);
++						}
++						else
++						{
++							double d;
++							if(t->growth_rate>=1)
++							{
++								d = 250.0/(double(t->growth_rate));
++								sprintf(msg, "Your city is growing! Current growth rate: %.2f", d);
++							}
++							else 
++							{
++								d = 500;
++								sprintf(msg, "Your city is growing! Current growth rate: %.2f (this is max!)", d);
++							}
++							CB_clientMessage(from_index, msg);
++						}
++					}
++				}
++			}
++
++		}
++	}
++	if(!foundcity)
++	{
++		NetworkClientInfo *d;
++		FOR_ALL_CLIENT_INFOS(d)
++		{
++			if(d->client_playas==companyID)
++				CB_clientMessage(d->client_id, (char*)"You have not yet claimed a city. Build your HeadQuaters near a city to claim it!");
++		}	
++	}
++}
+\ No newline at end of file
+Index: src/network/citybuilder.h
+===================================================================
+--- src/network/citybuilder.h	(revision 0)
++++ src/network/citybuilder.h	(revision 0)
+@@ -0,0 +1,72 @@
++#ifndef CBG
++#define CBG
++
++#include <stdio.h>
++#include <stdlib.h>
++#include <time.h>
++
++#include "../stdafx.h"
++#include "../debug.h"
++#include "../strings_func.h"
++#include "network_internal.h"
++#include "../vehicle_base.h"
++#include "../date_func.h"
++#include "network_server.h"
++#include "network_udp.h"
++#include "../console_func.h"
++#include "../command_func.h"
++#include "../saveload/saveload.h"
++#include "../station_base.h"
++#include "../genworld.h"
++#include "../fileio_func.h"
++#include "../string_func.h"
++#include "../company_func.h"
++#include "../company_gui.h"
++#include "../settings_type.h"
++#include "../window_func.h"
++#include "../town.h"
++#include "../cmd_helper.h"
++
++#include "table/strings.h"
++
++#include <math.h>
++
++
++#include "../core/random_func.hpp"
++#include "../landscape_type.h"
++#include "../aircraft.h"
++
++#include <string>
++
++enum CB_goalmode{
++	CB_monthly,
++	CB_storage,
++};
++
++extern void CB_makeNewGame();
++extern void CB_checkScores();
++int CB_getFoodReq(Town *t);
++int CB_getWaterReq(Town *t);
++int CB_getGoodsReq(Town *t);
++int CB_getDiamondReq(Town *t);
++bool CB_parseMessage(int from_id, const char*msg);
++void CB_clientMessage(int to_index, char *msg);
++void CB_handleTextCommand(int from_index, char*cmd, bool echo);
++void CB_sendScores(int from_id, bool ispublic);
++bool CB_precommand(CommandPacket *cp, NetworkClientInfo *cs);
++void CB_postcommand(CommandPacket *cp, NetworkClientInfo *cs);
++bool CB_citybuilder();
++void CB_checkcitygrowth();
++void CB_sendCityGrowthInfo(int companyID);
++void CB_resetCompany(int from_id);
++void CB_resettown(Town *t);
++void CB_placeSign(TileIndex tile, const char *text);
++void CB_renameSign(int signID, const char *text);
++void CB_removeSign(int signID);
++void CB_setPopGoal(int i);
++void CB_setCityMode(CB_goalmode m);
++void CB_updateTownStorage(Town *t);
++CB_goalmode CB_getGoalMode();
++
++
++#endif /* CBG */
+\ No newline at end of file
+Index: src/network/network.cpp
+===================================================================
+--- src/network/network.cpp	(revision 16772)
++++ src/network/network.cpp	(working copy)
+@@ -37,6 +37,7 @@
+ #endif /* DEBUG_DUMP_COMMANDS */
+ #include "table/strings.h"
+ #include "../oldpool_func.h"
++#include "citybuilder.h"
+ 
+ DECLARE_POSTFIX_INCREMENT(ClientID);
+ 
+@@ -785,6 +786,7 @@
+ {
+ 	if (!_network_available) return false;
+ 
++	CB_makeNewGame();	
+ 	/* Call the pre-scripts */
+ 	IConsoleCmdExec("exec scripts/pre_server.scr 0");
+ 	if (_network_dedicated) IConsoleCmdExec("exec scripts/pre_dedicated.scr 0");
+Index: src/network/network_command.cpp
+===================================================================
+--- src/network/network_command.cpp	(revision 16772)
++++ src/network/network_command.cpp	(working copy)
+@@ -14,6 +14,8 @@
+ #include "../string_func.h"
+ #include "../company_func.h"
+ 
++#include "citybuilder.h"
++
+ /** Local queue of packets */
+ static CommandPacket *_local_command_queue = NULL;
+ 
+Index: src/network/network_server.cpp
+===================================================================
+--- src/network/network_server.cpp	(revision 16772)
++++ src/network/network_server.cpp	(working copy)
+@@ -24,6 +24,8 @@
+ #include "../settings_type.h"
+ #include "../window_func.h"
+ 
++#include "citybuilder.h"
++
+ #include "table/strings.h"
+ 
+ /* This file handles all the server-commands */
+@@ -856,7 +858,7 @@
+ 
+ 	if (cs->has_quit) return;
+ 
+-	const NetworkClientInfo *ci = cs->GetInfo();
++	NetworkClientInfo *ci = cs->GetInfo();
+ 
+ 	if (err != NULL) {
+ 		IConsolePrintF(CC_ERROR, "WARNING: %s from client %d (IP: %s).", err, ci->client_id, GetClientIP(ci));
+@@ -877,6 +879,13 @@
+ 		return;
+ 	}
+ 
++	//GOAL
++
++	if (!CB_precommand(&cp, ci))
++		return;
++
++	//END GOAL
++
+ 	/** Only CMD_COMPANY_CTRL is always allowed, for the rest, playas needs
+ 	 * to match the company in the packet. If it doesn't, the client has done
+ 	 * something pretty naughty (or a bug), and will be kicked
+@@ -934,6 +943,7 @@
+ 	cp.callback = NULL;
+ 	cp.my_cmd = false;
+ 	NetworkAddCommandQueue(cp);
++	//CB_postcommand(&cp, cs->GetInfo());
+ }
+ 
+ DEF_SERVER_RECEIVE_COMMAND(PACKET_CLIENT_ERROR)
+@@ -1018,7 +1028,7 @@
+ 			NetworkServerSendChat(NETWORK_ACTION_SERVER_MESSAGE, DESTTYPE_BROADCAST, 0, "", CLIENT_ID_SERVER, NETWORK_SERVER_MESSAGE_GAME_UNPAUSED_CONNECT);
+ 		}
+ 
+-		/* Execute script for, e.g. MOTD */
++		CB_handleTextCommand(0, (char*)"welcome", true);		/* Execute script for, e.g. MOTD */
+ 		IConsoleCmdExec("exec scripts/on_server_connect.scr 0");
+ 	}
+ 
+@@ -1043,7 +1053,7 @@
+ 			/* Display the text locally, and that is it */
+ 			if (ci != NULL)
+ 				NetworkTextMessage(action, (ConsoleColour)GetDrawStringCompanyColour(ci->client_playas), false, ci->client_name, msg, data);
+-		} else {
++			CB_parseMessage(from_id, msg);		} else {
+ 			/* Else find the client to send the message to */
+ 			FOR_ALL_CLIENT_SOCKETS(cs) {
+ 				if (cs->client_id == (ClientID)dest) {
+@@ -1117,8 +1127,11 @@
+ 		DEBUG(net, 0, "[server] received unknown chat destination type %d. Doing broadcast instead", desttype);
+ 		/* fall-through to next case */
+ 	case DESTTYPE_BROADCAST:
+-		FOR_ALL_CLIENT_SOCKETS(cs) {
+-			SEND_COMMAND(PACKET_SERVER_CHAT)(cs, action, from_id, false, msg, data);
++		if ( CB_parseMessage(from_id, msg) )
++		{
++			FOR_ALL_CLIENT_SOCKETS(cs) {
++				SEND_COMMAND(PACKET_SERVER_CHAT)(cs, action, from_id, false, msg, data);
++			}
+ 		}
+ 		ci = NetworkFindClientInfoFromClientID(from_id);
+ 		if (ci != NULL)
+@@ -1452,27 +1465,77 @@
+ 	FOR_ALL_COMPANIES(c) {
+ 		/* Skip the non-active once */
+ 		if (c->is_ai) continue;
++		if (c->rank>=1 && c->rank<=3) continue; //GOAL (keep top 3 companies)
+ 
+ 		if (!clients_in_company[c->index]) {
+ 			/* The company is empty for one month more */
+ 			_network_company_states[c->index].months_empty++;
+ 
+-			/* Is the company empty for autoclean_unprotected-months, and is there no protection? */
+-			if (_settings_client.network.autoclean_unprotected != 0 && _network_company_states[c->index].months_empty > _settings_client.network.autoclean_unprotected && StrEmpty(_network_company_states[c->index].password)) {
++			// GOAL 
++			/* Is the company empty for autoclean_unprotected-months? and not saved */
++			if (_settings_client.network.autoclean_unprotected != 0 && _network_company_states[c->index].months_empty > _settings_client.network.autoclean_unprotected && !c->saved) {
+ 				/* Shut the company down */
+ 				DoCommandP(0, 2, c->index, CMD_COMPANY_CTRL);
+-				IConsolePrintF(CC_DEFAULT, "Auto-cleaned company #%d with no password", c->index + 1);
++				IConsolePrintF(CC_DEFAULT, "Auto-cleaned company #%d", c->index + 1);
++
++				Town *t;
++				FOR_ALL_TOWNS(t)
++				{
++					if(t->owner==c->index+1)
++						CB_resettown(t);
++				}
++
++				char msg[4096];
++				sprintf(msg, "Auto-cleaned company #%d",c->index + 1);
++				NetworkServerSendChat(NETWORK_ACTION_CHAT, DESTTYPE_BROADCAST, 
++				0, msg, CLIENT_ID_SERVER);
++
++			/* remove all comapnies disactive for 6 + 240 months = 20,5 years) */
++			} else if (_settings_client.network.autoclean_unprotected != 0 && _network_company_states[c->index].months_empty > (_settings_client.network.autoclean_unprotected + 240)) {
++				/* TODO: check if company is in top 5 */
++				/* Shut the company down */
++				DoCommandP(0, 2, c->index, CMD_COMPANY_CTRL);
++				IConsolePrintF(CC_DEFAULT, "Auto-cleaned company #%d", c->index + 1);
++
++				Town *t;
++				FOR_ALL_TOWNS(t)
++				{
++					if(t->owner==c->index+1)
++						CB_resettown(t);
++				}
++
++				char msg[4096];
++				sprintf(msg, "Auto-cleaned company #%d",c->index + 1);
++				NetworkServerSendChat(NETWORK_ACTION_CHAT, DESTTYPE_BROADCAST, 
++				0, msg, CLIENT_ID_SERVER);
+ 			}
+-			/* Is the company empty for autoclean_protected-months, and there is a protection? */
+-			if (_settings_client.network.autoclean_protected != 0 && _network_company_states[c->index].months_empty > _settings_client.network.autoclean_protected && !StrEmpty(_network_company_states[c->index].password)) {
+-				/* Unprotect the company */
+-				_network_company_states[c->index].password[0] = '\0';
+-				IConsolePrintF(CC_DEFAULT, "Auto-removed protection from company #%d", c->index + 1);
+-				_network_company_states[c->index].months_empty = 0;
+-				NetworkServerUpdateCompanyPassworded(c->index, false);
+-			}
++
++			///* Is the company empty for autoclean_unprotected-months, and is there no protection? */
++			//if (_settings_client.network.autoclean_unprotected != 0 && _network_company_states[c->index].months_empty > _settings_client.network.autoclean_unprotected && StrEmpty(_network_company_states[c->index].password)) {
++			//	/* Shut the company down */
++			//	DoCommandP(0, 2, c->index, CMD_COMPANY_CTRL);
++			//	IConsolePrintF(CC_DEFAULT, "Auto-cleaned company #%d with no password", c->index + 1);
++			//}
++			///* Is the company empty for autoclean_protected-months, and there is a protection? */
++			//if (_settings_client.network.autoclean_protected != 0 && _network_company_states[c->index].months_empty > _settings_client.network.autoclean_protected && !StrEmpty(_network_company_states[c->index].password)) {
++			//	/* Unprotect the company */
++			//	_network_company_states[c->index].password[0] = '\0';
++			//	IConsolePrintF(CC_DEFAULT, "Auto-removed protection from company #%d", c->index + 1);
++			//	_network_company_states[c->index].months_empty = 0;
++			//	NetworkServerUpdateCompanyPassworded(c->index, false);
++			//}
++
+ 			/* Is the company empty for autoclean_novehicles-months, and has no vehicles? */
+ 			if (_settings_client.network.autoclean_novehicles != 0 && _network_company_states[c->index].months_empty > _settings_client.network.autoclean_novehicles && vehicles_in_company[c->index] == 0) {
++				
++				//reset town ownership
++				Town *t;
++				FOR_ALL_TOWNS(t)
++				{
++					if(t->owner==c->index+1)
++						CB_resettown(t);
++				}
++
+ 				/* Shut the company down */
+ 				DoCommandP(0, 2, c->index, CMD_COMPANY_CTRL);
+ 				IConsolePrintF(CC_DEFAULT, "Auto-cleaned company #%d with no vehicles", c->index + 1);
+@@ -1647,17 +1710,19 @@
+ 		}
+ 	}
+ 
+-	/* See if we need to advertise */
++	CB_checkScores();	/* See if we need to advertise */
+ 	NetworkUDPAdvertise();
+ }
+ 
+ void NetworkServerYearlyLoop()
+ {
+ 	NetworkCheckRestartMap();
++	CB_sendScores(0, true);
+ }
+ 
+ void NetworkServerMonthlyLoop()
+ {
++	CB_checkcitygrowth();
+ 	NetworkAutoCleanCompanies();
+ }
+ 
+Index: src/openttd.cpp
+===================================================================
+--- src/openttd.cpp	(revision 16772)
++++ src/openttd.cpp	(working copy)
+@@ -57,6 +57,8 @@
+ #include "town.h"
+ #include "industry.h"
+ 
++#include "network/citybuilder.h" //goal
++
+ #include <stdarg.h>
+ 
+ #include "table/strings.h"
+@@ -416,7 +418,7 @@
+ 	 *   a letter means: it accepts that param (e.g.: -h)
+ 	 *   a ':' behind it means: it need a param (e.g.: -m<driver>)
+ 	 *   a '::' behind it means: it can optional have a param (e.g.: -d<debug>) */
+-	optformat = "m:s:v:b:hD::n::ei::I:t:d::r:g::G:c:xl:"
++	optformat = "m:s:v:b:hD::n::ei::I:t:d::r:g::G:c:xl:TCMS" //goal
+ #if !defined(__MORPHOS__) && !defined(__AMIGA__) && !defined(WIN32)
+ 		"f"
+ #endif
+@@ -426,6 +428,10 @@
+ 
+ 	while ((i = MyGetOpt(&mgo)) != -1) {
+ 		switch (i) {
++		case 'T': CB_setPopGoal(0); break; //Town goal
++		case 'C': CB_setPopGoal(1); break; //City goal
++		case 'M': CB_setPopGoal(2); break; //Metropolian goal
++		case 'S': CB_setCityMode(CB_storage); break; //Use "stored resources" mode instead of monthly goals.
+ 		case 'I': free(graphics_set); graphics_set = strdup(mgo.opt); break;
+ 		case 'm': free(musicdriver); musicdriver = strdup(mgo.opt); break;
+ 		case 's': free(sounddriver); sounddriver = strdup(mgo.opt); break;
+Index: src/signs_cmd.cpp
+===================================================================
+--- src/signs_cmd.cpp	(revision 16772)
++++ src/signs_cmd.cpp	(working copy)
+@@ -15,6 +15,8 @@
+ 
+ #include "table/strings.h"
+ 
++#include "town.h" //goal
++
+ SignID _new_sign_id;
+ 
+ /**
+@@ -50,6 +52,11 @@
+ 		MarkSignDirty(si);
+ 		InvalidateWindowData(WC_SIGN_LIST, 0, 0);
+ 		_new_sign_id = si->index;
++
++		//goal
++		Town *t = CalcClosestTownFromTile(tile);
++		if(si->owner==OWNER_NONE && t->xy==tile)
++			t->signID=si->index;
+ 	}
+ 
+ 	return CommandCost();
+Index: src/town.h
+===================================================================
+--- src/town.h	(revision 16772)
++++ src/town.h	(working copy)
+@@ -105,6 +105,11 @@
+ struct Town : PoolItem<Town, TownID, &_Town_pool> {
+ 	TileIndex xy;
+ 
++	//GOAL
++	uint32 owner; 
++	uint signID; 
++	bool growing; //only used if CB_goalmode == CB_storage
++	
+ 	/* Current population of people and amount of houses. */
+ 	uint32 num_houses;
+ 	uint32 population;
+@@ -154,9 +159,19 @@
+ 	/* Amount of food and paper that was transported. Actually a bit mask would be enough. */
+ 	uint16 act_food;
+ 	uint16 act_water;
+-	uint16 new_act_food;
+-	uint16 new_act_water;
++	uint16 act_goods; //GOAL
++	uint16 act_diamonds; //GOAL
++	uint16 new_act_food; 
++	uint16 new_act_water; 
++	uint16 new_act_goods; //GOAL
++	uint16 new_act_diamonds; //GOAL
+ 
++	/* amounts in storage */
++	int stor_food; //GOAL
++	int stor_water; //GOAL
++	int stor_goods; //GOAL
++	int stor_diamonds; //GOAL
++
+ 	/* Time until we rebuild a house. */
+ 	uint16 time_until_rebuild;
+ 
+Index: src/town_cmd.cpp
+===================================================================
+--- src/town_cmd.cpp	(revision 16772)
++++ src/town_cmd.cpp	(working copy)
+@@ -46,6 +46,8 @@
+ #include "table/strings.h"
+ #include "table/town_land.h"
+ 
++#include "network/citybuilder.h"
++
+ uint _total_towns;
+ HouseSpec _house_specs[HOUSE_MAX];
+ 
+@@ -1486,8 +1488,12 @@
+ 	t->fund_buildings_months = 0;
+ 	t->new_act_food = 0;
+ 	t->new_act_water = 0;
++	t->new_act_goods = 0; //GOAL
++	t->new_act_diamonds = 0; //GOAL
+ 	t->act_food = 0;
+ 	t->act_water = 0;
++	t->act_goods = 0; //GOAL
++	t->act_diamonds = 0; //GOAL
+ 
+ 	for (uint i = 0; i != MAX_COMPANIES; i++) t->ratings[i] = RATING_INITIAL;
+ 
+@@ -1514,7 +1520,11 @@
+ 
+ 	t->larger_town = city;
+ 
+-	int x = (int)size * 16 + 3;
++	int x = 0;
++	if(CB_citybuilder())
++		x = (int)size * 16 + 10; //we only have small towns (up to 50 inhabitants) so we add some more.. ~150 atm
++	else
++		x = (int)size * 16 + 3;
+ 	if (size == TS_RANDOM) x = (Random() & 0xF) + 8;
+ 	if (city) x *= _settings_game.economy.initial_city_size;
+ 
+@@ -1608,6 +1618,9 @@
+ 		/* Make sure the tile is plain */
+ 		if (!IsTileType(tile, MP_CLEAR) || GetTileSlope(tile, NULL) != SLOPE_FLAT) continue;
+ 
++		// GOAL: if its a citybuilder server we only want desert cities (NOTE: this adds extra map generation time!)
++		if (CB_citybuilder() && GetTropicZone(tile) != TROPICZONE_DESERT) continue;
++
+ 		/* Check not too close to a town */
+ 		if (IsCloseToTown(tile, 20)) continue;
+ 
+@@ -1636,15 +1649,22 @@
+ 
+ 	SetGeneratingWorldProgress(GWP_TOWN, n);
+ 
++	TownSize tSize = TS_RANDOM;
++	if(CB_citybuilder()) // GOAL
++	{
++		_settings_game.economy.larger_towns=0;
++		tSize = TS_SMALL;
++	}
++
+ 	do {
+ 		bool city = (_settings_game.economy.larger_towns != 0 && Chance16(1, _settings_game.economy.larger_towns));
+ 		IncreaseGeneratingWorldProgress(GWP_TOWN);
+ 		/* try 20 times to create a random-sized town for the first loop. */
+-		if (CreateRandomTown(20, TS_RANDOM, city, layout) != NULL) num++;
++		if (CreateRandomTown(20, tSize, city, layout) != NULL) num++;
+ 	} while (--n);
+ 
+ 	/* give it a last try, but now more aggressive */
+-	if (num == 0 && CreateRandomTown(10000, TS_RANDOM, _settings_game.economy.larger_towns != 0, layout) == NULL) {
++	if (num == 0 && CreateRandomTown(10000, tSize, _settings_game.economy.larger_towns != 0, layout) == NULL) {
+ 		if (GetNumTowns() == 0) {
+ 			if (_game_mode != GM_EDITOR) {
+ 				extern StringID _switch_mode_errorstr;
+@@ -2048,8 +2068,45 @@
+ 			}
+ 		}
+ 
++		
++		// start GOAL
++		bool delbuilding = false;
++		if(CB_citybuilder())
++		{
++			if(t->population >= 150 && !IsTileType(tile, MP_HOUSE)) //dont kill houses changing animation
++			{
++				if(CB_getGoalMode()==CB_storage)
++				{
++					delbuilding=!t->growing;
++				} else 
++				{
++					if(t->act_food < CB_getFoodReq(t))
++						delbuilding=true;
++					if(t->act_water < CB_getWaterReq(t))
++						delbuilding=true;
++					if(t->act_goods < CB_getGoodsReq(t))
++						delbuilding=true;
++					if(t->act_diamonds < CB_getDiamondReq(t))
++						delbuilding=true;
++				}
++			}
++		}
++		//end goal
++
+ 		MakeTownHouse(tile, t, construction_counter, construction_stage, house, Random());
+ 
++		//start goal
++		if(delbuilding)
++		{
++			//_current_company
++			CompanyByte oldc = _local_company;
++			_local_company = OWNER_NONE;
++			DoCommandP(tile, 0, 0, CMD_LANDSCAPE_CLEAR);
++			_local_company = oldc;
++
++		}
++		// end goal
++
+ 		return true;
+ 	}
+ 
+@@ -2526,8 +2583,13 @@
+ 
+ 	t->max_pass = t->new_max_pass; t->new_max_pass = 0;
+ 	t->act_pass = t->new_act_pass; t->new_act_pass = 0;
++
++	CB_updateTownStorage(t); //goal
++
+ 	t->act_food = t->new_act_food; t->new_act_food = 0;
+ 	t->act_water = t->new_act_water; t->new_act_water = 0;
++	t->act_goods = t->new_act_goods; t->new_act_goods = 0; //GOAL
++	t->act_diamonds = t->new_act_diamonds; t->new_act_diamonds = 0; //GOAL
+ 
+ 	/* Using +1 here to prevent overflow and division by zero */
+ 	t->pct_mail_transported = t->new_act_mail * 256 / (t->new_max_mail + 1);

@@ -1,0 +1,3027 @@
+Index: src/settings.cpp
+===================================================================
+--- src/settings.cpp	(Revision 11568)
++++ src/settings.cpp	(Arbeitskopie)
+@@ -1219,6 +1219,16 @@
+ 	return lookup_oneofmany("normal|hilly|desert|candy", value, -1);
+ }
+ 
++static int32 UseDestinations(int32 yes)
++{
++	if (yes) {
++//		Destinations::SetPassengersDestinations();
++	} else {
++//		Destinations::UnsetPassengersDestinations();
++	}
++	return yes;
++}
++
+ /* End - Callback Functions */
+ 
+ #ifndef EXTERNAL_PLAYER
+@@ -1458,6 +1468,18 @@
+ 	SDT_CONDVAR(Patches, larger_towns,      SLE_UINT8, 54, SL_MAX_VERSION, 0, D0, 4, 0, 255, 1, STR_CONFIG_PATCHES_LARGER_TOWNS,         NULL),
+ 	SDT_CONDVAR(Patches, initial_city_size, SLE_UINT8, 56, SL_MAX_VERSION, 0, 0,  2, 1,  10, 1, STR_CONFIG_PATCHES_CITY_SIZE_MULTIPLIER, NULL),
+ 	SDT_CONDBOOL(Patches, mod_road_rebuild,            77, SL_MAX_VERSION, 0, 0, false,         STR_CONFIG_MODIFIED_ROAD_REBUILD,        NULL),
++	SDT_CONDBOOL(Patches, use_destinations,					73, SL_MAX_VERSION, 0, 0,  false, STR_CONFIG_PATCHES_DESTINATIONS, UseDestinations),
++	SDT_CONDVAR (Patches, additional_route_rate, 		SLE_UINT8,	83, SL_MAX_VERSION, 0, 0,  120, 100, 250, 1, STR_CONFIG_PATCHES_ADDITIONAL_ROUTE_RATE, NULL),
++	SDT_CONDVAR (Patches, aircraft_cost_modifier,		SLE_UINT8,	83, SL_MAX_VERSION, 0, 0,  10,  0, 100, 1, STR_CONFIG_PATCHES_AIRCRAFT_COST_MODIFIER, NULL),
++	SDT_CONDVAR (Patches, transferring_cost_modifier,	SLE_UINT8,	83, SL_MAX_VERSION, 0, 0,  10,  0, 100, 1, STR_CONFIG_PATCHES_TRANSFERRING_COST_MODIFIER, NULL),
++	SDT_CONDVAR (Patches, reduce_passenger,			SLE_UINT8,	79, SL_MAX_VERSION, 0, 0,  0,  0,  8, 1, STR_CONFIG_PATCHES_REDUCE_PASSENGER,      NULL),
++	SDT_CONDBOOL(Patches, generate_unreachable_passenger,			82, SL_MAX_VERSION, 0, 0,  false, STR_CONFIG_PATCHES_GENERATE_UNREACHABLE_PASSENGER, NULL),
++	SDT_CONDVAR (Patches, reduce_unreachable_passenger,	SLE_UINT8,	82, SL_MAX_VERSION, 0, 0,  1,  0,  8, 1, STR_CONFIG_PATCHES_REDUCE_UNREACHABLE_PASSENGER,      NULL),
++	SDT_CONDBOOL(Patches, use_temporary_info,				83, SL_MAX_VERSION, 0, 0,  false, STR_CONFIG_PATCHES_USE_TEMPORARY_INFO,      NULL),
++	SDT_CONDBOOL(Patches, update_route_on_jit,				83, SL_MAX_VERSION, 0, 0,  false, STR_CONFIG_PATCHES_UPDATE_ROUTE_ON_JIT,      NULL),
++	SDT_CONDBOOL(Patches, faster_gradual_loading,				83, SL_MAX_VERSION, 0, 0,  false, STR_CONFIG_PATCHES_FASTER_GRADUAL_LOADING, UseDestinations),
++	SDT_CONDBOOL(Patches, pay_partly_fare,					83, SL_MAX_VERSION, 0, 0,  false, STR_CONFIG_PATCHES_PAY_PARTLY_FARE, NULL),
++	SDT_CONDVAR (Patches, passenger_walking,		SLE_UINT8,	83, SL_MAX_VERSION, 0, 0,  0,  0,  4, 1, STR_CONFIG_PATCHES_PASSENGER_WALKING,      NULL),
+ 
+ 	/***************************************************************************/
+ 	/* AI section of the GUI-configure patches window */
+Index: src/lang/english.txt
+===================================================================
+--- src/lang/english.txt	(Revision 11568)
++++ src/lang/english.txt	(Arbeitskopie)
+@@ -1213,6 +1213,19 @@
+ STR_CONFIG_PATCHES_YAPF_ROAD                                    :{LTBLUE}Use YAPF for roadvehs: {ORANGE}{STRING1}
+ STR_CONFIG_PATCHES_YAPF_RAIL                                    :{LTBLUE}Use YAPF for trains: {ORANGE}{STRING1}
+ 
++STR_CONFIG_PATCHES_DESTINATIONS					:{LTBLUE}Activate passenger destinations
++STR_CONFIG_PATCHES_ADDITIONAL_ROUTE_RATE	                :{LTBLUE}The maximum cost for additional route: {ORANGE}{STRING1}% of cost of the best route
++STR_CONFIG_PATCHES_REDUCE_PASSENGER                             :{LTBLUE}Reduce passenger number by {ORANGE}{STRING1}
++STR_CONFIG_PATCHES_GENERATE_UNREACHABLE_PASSENGER               :{LTBLUE}Allow generating passenger for unreachable station
++STR_CONFIG_PATCHES_REDUCE_UNREACHABLE_PASSENGER                 :{LTBLUE}Reduce unreachable passenger number by {ORANGE}{STRING1}
++STR_CONFIG_PATCHES_USE_TEMPORARY_INFO				:{LTBLUE}Use order based adjacent information temporarily
++STR_CONFIG_PATCHES_UPDATE_ROUTE_ON_JIT		                :{LTBLUE}Update routing information when adjacent information is updated
++STR_CONFIG_PATCHES_FASTER_GRADUAL_LOADING	                :{LTBLUE}Faster gradual loading
++STR_CONFIG_PATCHES_AIRCRAFT_COST_MODIFIER	                :{LTBLUE}Routing cost modifier for aircrafts: {ORANGE}{STRING1}0%
++STR_CONFIG_PATCHES_TRANSFERRING_COST_MODIFIER	                :{LTBLUE}Routing cost modifier for transferring: {ORANGE}{STRING1}0%
++STR_CONFIG_PATCHES_PAY_PARTLY_FARE				:{LTBLUE}Allow passenger paying partial fare
++STR_CONFIG_PATCHES_PASSENGER_WALKING		                :{LTBLUE}Allow passenger walking in {ORANGE}{STRING1} tiles (EXPERIMENTAL)
++
+ STR_TEMPERATE_LANDSCAPE                                         :Temperate landscape
+ STR_SUB_ARCTIC_LANDSCAPE                                        :Sub-arctic landscape
+ STR_SUB_TROPICAL_LANDSCAPE                                      :Sub-tropical landscape
+@@ -1843,7 +1856,14 @@
+ STR_3031_CAN_T_RENAME_STATION                                   :{WHITE}Can't rename station...
+ STR_3032_RATINGS                                                :{BLACK}Ratings
+ STR_3033_ACCEPTS                                                :{BLACK}Accepts
++STR_SHOW_NEXT_STATIONS						:{BLACK}Next Stn.
++STR_SHOW_ROUTING_INFO						:{BLACK}Routing
++STR_SHOW_PASSENGERS_INFO					:{BLACK}Passengers
+ STR_3034_LOCAL_RATING_OF_TRANSPORT                              :{BLACK}Local rating of transport service:
++STR_NEXT_STATIONS						:{BLACK}Next stations:
++STR_DESTINATION_INFO						:{BLACK}Destinations:
++STR_ROUTING_INFO						:{BLACK}Routes:
++STR_PASSENGERS_INFO						:{BLACK}Passengers:
+ 
+ ############ range for rating starts
+ STR_3035_APPALLING                                              :Appalling
+@@ -2668,6 +2688,7 @@
+ STR_UNKNOWN_DESTINATION                                         :unknown destination
+ STR_8812_EMPTY                                                  :{LTBLUE}Empty
+ STR_8813_FROM                                                   :{LTBLUE}{CARGO} from {STATION}
++STR_PASSENGERS_TO                                               :{LTBLUE}{CARGO} to {STATION}
+ STR_FROM_MULT                                                   :{LTBLUE}{CARGO} from {STATION} (x{NUM})
+ STR_8814_TRAIN_IS_WAITING_IN_DEPOT                              :{WHITE}Train {COMMA} is waiting in depot
+ STR_8815_NEW_VEHICLES                                           :{BLACK}New Vehicles
+Index: src/settings_gui.cpp
+===================================================================
+--- src/settings_gui.cpp	(Revision 11568)
++++ src/settings_gui.cpp	(Arbeitskopie)
+@@ -707,6 +707,18 @@
+ 	"town_growth_rate",
+ 	"larger_towns",
+ 	"initial_city_size",
++	"use_destinations",
++	"additional_route_rate",
++	"aircraft_cost_modifier",
++	"transferring_cost_modifier",
++	"reduce_passenger",
++	"generate_unreachable_passenger",
++	"reduce_unreachable_passenger",
++	"use_temporary_info",
++	"update_route_on_jit",
++	"faster_gradual_loading",
++	"pay_partly_fare",
++	"passenger_walking",
+ };
+ 
+ static const char *_patches_ai[] = {
+Index: src/saveload.cpp
+===================================================================
+--- src/saveload.cpp	(Revision 11568)
++++ src/saveload.cpp	(Arbeitskopie)
+@@ -29,7 +29,7 @@
+ #include "strings.h"
+ #include <list>
+ 
+-extern const uint16 SAVEGAME_VERSION = 82;
++extern const uint16 SAVEGAME_VERSION = 86;
+ uint16 _sl_version;       ///< the major savegame version identifier
+ byte   _sl_minor_version; ///< the minor savegame version, DO NOT USE!
+ 
+@@ -1256,7 +1256,30 @@
+ extern const ChunkHandler _newgrf_chunk_handlers[];
+ extern const ChunkHandler _group_chunk_handlers[];
+ extern const ChunkHandler _cargopacket_chunk_handlers[];
++extern const ChunkHandler _station_paxdest_chunk_handlers[];
++extern const ChunkHandler _cargopacket_paxdest_chunk_handlers[];
+ 
++static const ChunkHandler * const _nondest_chunk_handlers[] = {
++	_misc_chunk_handlers,
++	_setting_chunk_handlers,
++	_veh_chunk_handlers,
++	_waypoint_chunk_handlers,
++	_depot_chunk_handlers,
++	_order_chunk_handlers,
++	_industry_chunk_handlers,
++	_economy_chunk_handlers,
++	_engine_chunk_handlers,
++	_town_chunk_handlers,
++	_sign_chunk_handlers,
++	_station_chunk_handlers,
++	_player_chunk_handlers,
++	_animated_tile_chunk_handlers,
++	_newgrf_chunk_handlers,
++	_group_chunk_handlers,
++	_cargopacket_chunk_handlers,
++	NULL,
++};
++
+ static const ChunkHandler * const _chunk_handlers[] = {
+ 	_misc_chunk_handlers,
+ 	_setting_chunk_handlers,
+@@ -1275,6 +1298,8 @@
+ 	_newgrf_chunk_handlers,
+ 	_group_chunk_handlers,
+ 	_cargopacket_chunk_handlers,
++	_station_paxdest_chunk_handlers,
++	_cargopacket_paxdest_chunk_handlers,
+ 	NULL,
+ };
+ 
+@@ -1619,7 +1644,10 @@
+ 		_sl.bufe = _sl.bufp = NULL;
+ 		_sl.offs_base = 0;
+ 		_sl.save = (mode != 0);
+-		_sl.chs = _chunk_handlers;
++		if (mode == SL_LOAD)
++			_sl.chs = _nondest_chunk_handlers;
++		else
++			_sl.chs = _chunk_handlers;
+ 
+ 		/* General tactic is to first save the game to memory, then use an available writer
+ 		 * to write it to file, either in threaded mode if possible, or single-threaded */
+Index: src/date.cpp
+===================================================================
+--- src/date.cpp	(Revision 11568)
++++ src/date.cpp	(Arbeitskopie)
+@@ -228,6 +228,7 @@
+ 	}
+ }
+ 
++void UpdateRoute();
+ void IncreaseDate()
+ {
+ 	YearMonthDay ymd;
+@@ -259,6 +260,11 @@
+ 		EnginesDailyLoop();
+ 	}
+ 
++	if (_need_to_update_routinginfo) {
++		UpdateRoute();
++		_need_to_update_routinginfo = false;
++	}
++
+ 	/* check if we entered a new month? */
+ 	ConvertDateToYMD(_date, &ymd);
+ 	if (ymd.month == _cur_month) return;
+Index: src/station.cpp
+===================================================================
+--- src/station.cpp	(Revision 11568)
++++ src/station.cpp	(Arbeitskopie)
+@@ -511,3 +511,361 @@
+ 
+ 	return NULL;
+ }
++
++PassengerTrainStatistics::PassengerTrainStatistics(StationID src, StationID dst, OrderID o, PassengerRoutingType type)
++	: src_id(src), dest_id(dst), order_id(o), type(type), sum_arrival(0), sum_driving_time(0), sum_fare(0), sum_vacancy(0), sum_days(0)
++{
++	Clear();
++}
++
++void PassengerTrainStatistics::Clear()
++{
++	for (int i = 0; i < PASSENGER_TRAIN_STATISTICS_LENGTH; i++) {
++		arrival[i]	= 0;
++		driving_time[i]	= 0;
++		fare[i]		= 0;
++		vacancy[i]	= 0;
++		days[i]		= 0;
++	}
++	sum_arrival		= 0;
++	sum_driving_time	= 0;
++	sum_fare		= 0;
++	sum_vacancy		= 0;
++	sum_days		= 0;
++}
++
++void PassengerTrainStatistics::Add(uint16 driving_time, Money fare, uint16 vacancy, uint8 days, uint8 month_offset)
++{
++	this->arrival[month_offset]++;
++	this->driving_time[month_offset]	+= driving_time;
++	this->fare[month_offset]		+= fare;
++	this->vacancy[month_offset]	+= vacancy;
++	this->days[month_offset]		+= days;
++
++	sum_arrival++;
++	sum_driving_time	+= driving_time;
++	sum_fare		+= fare;
++	sum_vacancy		+= vacancy;
++	sum_days		+= days;
++}
++
++const PassengerTrainStatisticsList::List * PassengerTrainStatisticsList::Stats() const
++{
++	return &stats;
++}
++
++bool PassengerTrainStatisticsList::Empty() const
++{
++	return stats.empty();
++}
++
++uint PassengerTrainStatisticsList::Count() const
++{
++	return stats.size();
++}
++
++void PassengerTrainStatisticsList::Add(PassengerTrainStatistics& p)
++{
++	p.sum_arrival = p.sum_driving_time = p.sum_fare = p.sum_vacancy = p.sum_days = 0;
++	for (int i = 0; i < PASSENGER_TRAIN_STATISTICS_LENGTH; i++) {
++		p.sum_arrival      += p.arrival[i];
++		p.sum_driving_time += p.driving_time[i];
++		p.sum_fare         += p.fare[i];
++		p.sum_vacancy      += p.vacancy[i];
++		p.sum_days         += p.days[i];
++	}
++
++	List::iterator end = stats.end(), it;
++	for (it = stats.begin(); it != end; ++it) {
++		if (p.dest_id == it->dest_id) { // sort key
++			stats.insert(it, p);
++			return;
++		}
++	}
++	stats.push_back(p);
++}
++
++void PassengerTrainStatisticsList::AddInfo(StationID src_id, StationID dest_id, const Vehicle * const v, Money fare)
++{
++	const OrderID oid = v->last_station_order_id;
++	assert (oid != INVALID_ORDER);
++	if ( ! VehicleHas(v, GetOrder(oid))) return;
++	AddInfo(src_id, dest_id, v, oid, v->last_station_visited_time, fare);
++}
++
++void PassengerTrainStatisticsList::AddTempInfo(StationID src_id, StationID dest_id, const Vehicle * const v, OrderID order_id)
++{
++	AddInfo(src_id, dest_id, v, order_id, 9999, 9999); // FIXME , 0, PRT_TEMPINFO);
++}
++
++void PassengerTrainStatisticsList::AddWalkInfo(StationID src_id, StationID dest_id)
++{
++	Add(src_id, dest_id, INVALID_ORDER, 999, 999, 999, PASSENGER_TRAIN_STATISTICS_LENGTH - 1, PRT_WALKING);
++}
++
++void PassengerTrainStatisticsList::AddInfo(StationID src_id, StationID dest_id, const Vehicle * const v, OrderID order_id, uint16 driving_time, Money fare)
++{
++	int count = 0, max = 0;
++	for (const Vehicle *i = v; i != NULL; i = i->Next()) {
++		if (i->cargo_type == CT_PASSENGERS) {
++			max   += i->cargo_cap;
++			count += i->cargo.Count();
++		}
++	}
++	if (max == 0) return;
++
++	Add(src_id, dest_id, order_id, driving_time, fare, max - count);
++}
++
++void PassengerTrainStatisticsList::Add(StationID src_id, StationID dest_id, OrderID order_id, uint16 driving_time, Money fare, uint16 vacancy, uint8 month_offset, PassengerRoutingType type)
++{
++	List::iterator end = stats.end(), it;
++	for (it = stats.begin(); it != end; ++it) {
++		if (order_id == it->order_id) {
++			it->type = type;
++			if (dest_id == it->dest_id) {
++				it->Add(driving_time, fare, vacancy);
++			} else {
++				it->dest_id = dest_id;
++				it->Clear();
++				it->Add(driving_time, fare, vacancy, 30);
++			}
++			return;
++		}
++	}
++	assert(it == end);
++	PassengerTrainStatistics p(src_id, dest_id, order_id, type);
++	p.Add(driving_time, fare, vacancy, 30, month_offset);
++
++	/*for (it = stats.begin(); it != end; ++it) {
++		if (dest_id == it->dest_id) { // sort key
++			stats.insert(it, p);
++			return;
++		}
++	}
++	stats.push_back(p);*/
++	Add(p);
++	if (_patches.update_route_on_jit) {
++		_need_to_update_routinginfo = true;
++	}
++}
++
++void PassengerTrainStatisticsList::RemoveInfo(const Order * const order)
++{
++	for (List::iterator it = stats.begin(), end = stats.end(); it != end; ++it) {
++		if (order->index == it->order_id) {
++			it = stats.erase(it);
++		}
++	}
++}
++
++void PassengerTrainStatisticsList::StatsLoop()
++{
++	for (List::iterator it = stats.begin(), end = stats.end(); it != end; ++it) {
++		it->sum_arrival		-= it->arrival[PASSENGER_TRAIN_STATISTICS_LENGTH - 1];
++		it->sum_driving_time	-= it->driving_time[PASSENGER_TRAIN_STATISTICS_LENGTH - 1];
++		it->sum_fare		-= it->fare[PASSENGER_TRAIN_STATISTICS_LENGTH - 1];
++		it->sum_vacancy		-= it->vacancy[PASSENGER_TRAIN_STATISTICS_LENGTH - 1];
++		it->sum_days		-= it->days[PASSENGER_TRAIN_STATISTICS_LENGTH - 1];
++		
++		for (int i = PASSENGER_TRAIN_STATISTICS_LENGTH - 1; i > 0; i--) {
++			it->arrival[i]		= it->arrival[i - 1];
++			it->driving_time[i]	= it->driving_time[i - 1];
++			it->fare[i]		= it->fare[i - 1];
++			it->vacancy[i]		= it->vacancy[i - 1];
++			it->days[i]		= it->days[i - 1];
++		}
++		if (IsValidStationID(it->dest_id) && it->sum_arrival > 0) {
++			it->arrival[0]		= 0;
++			it->driving_time[0]	= 0;
++			it->fare[0]		= 0;
++			it->vacancy[0]		= 0;
++			it->days[0]		= 30; //FIXME
++			it->sum_days		+= it->days[0];
++		} else {
++			it = stats.erase(it);
++		}
++	}
++}
++
++bool PassengerTrainStatisticsList::IsExists(const Vehicle* v) const
++{
++
++	List::const_iterator end = stats.end(), it;
++	for (it = stats.begin(); it != end; ++it) {
++		if (it->order_id == INVALID_ORDER) continue;
++		if (VehicleHas(v, GetOrder(it->order_id))) return true;
++	}
++	return false;
++}
++
++static RoutingInformationList::List::iterator Find(RoutingInformationList::List& ril, StationID src_id)
++{
++	RoutingInformationList::List::iterator end = ril.end(), it;
++	for (it = ril.begin(); it != end; ++it) {
++		if (src_id == it->src_id) return it;
++	}
++	return end;
++}
++
++static void AddInfo(RoutingInformationList::List& ril, StationID src_id, const PassengerRoutingInformation& e)
++{
++	RoutingInformationList::List::iterator it = Find(ril, src_id);
++	if (it == ril.end()) {
++		ril.push_back(e); // add tail
++	} else {
++		ril.insert(it, e);
++	}
++}
++
++void RoutingInformationList::AddWalkInfo(StationID src_id, StationID subdest_id)
++{
++	PassengerRoutingInformation new_info(src_id, INVALID_ORDER, subdest_id);
++	AddInfo(walk_info, src_id, new_info);
++}
++
++void RoutingInformationList::AddKeepInfo(StationID src_id, OrderID order_id)
++{
++	if (IsExistsInKeep(src_id, order_id)) return;
++
++	PassengerRoutingInformation new_info(src_id, order_id);
++	AddInfo(keep_info, src_id, new_info);
++}
++
++void RoutingInformationList::AddBoardInfo(StationID src_id, OrderID order_id, StationID subdest_id)
++{
++	if (IsExistsInBoard(src_id, order_id)) return;
++
++	PassengerRoutingInformation new_info(src_id, order_id, subdest_id);
++	AddInfo(board_info, src_id, new_info);
++}
++
++StationID RoutingInformationList::GetNextStationInWalk(StationID src_id) const
++{
++	List::const_iterator it, end = walk_info.end();
++	for (it = walk_info.begin(); it != end; ++it)
++		if (src_id == it->src_id) return it->subdest_id;
++
++	assert(it == end);
++	return INVALID_STATION;
++}
++
++bool IsExists(const RoutingInformationList::List& ril, StationID src_id, OrderID order_id)
++{
++	RoutingInformationList::List::const_iterator it = ril.begin(), end = ril.end();
++
++	if (src_id == INVALID_STATION) {
++		if (order_id == INVALID_ORDER) return true;
++		for ( ; it != end; ++it)
++			if (order_id == it->order_id) return true;
++	} else {
++		if (order_id == INVALID_ORDER) {
++			for ( ; it != end; ++it)
++				if (src_id == it->src_id) return true;
++		} else {
++			for ( ; it != end; ++it)
++				if (src_id == it->src_id && order_id == it->order_id) return true;
++		}
++	}
++	assert(it == end);
++	return false;
++}
++
++bool RoutingInformationList::IsExistsInKeep(StationID src_id, OrderID order_id) const
++{
++	return IsExists(keep_info, src_id, order_id);
++}
++
++bool RoutingInformationList::IsExistsInBoard(StationID src_id, OrderID order_id) const
++{
++	return IsExists(board_info, src_id, order_id);
++}
++
++
++const RoutingInformationGroup::List * RoutingInformationGroup::Info() const
++{
++	return &info;
++}
++
++void RoutingInformationGroup::Clear()
++{
++	info.clear();
++}
++
++uint RoutingInformationGroup::Count() const
++{
++	return info.size();
++}
++
++RoutingInformationGroup::List::iterator RoutingInformationGroup::Find(StationID dest_id)
++{
++	List::iterator i, end = info.end();
++	for (i = info.begin(); i != end; ++i) {
++		if (i->dest_id == dest_id) return i;
++	}
++	return i;
++}
++
++void RoutingInformationGroup::AddWalkInfo(StationID src_id, StationID dest_id, StationID subdest_id)
++{
++	List::iterator i = Find(dest_id);
++	if (i == info.end()) {
++		RoutingInformationList new_list(dest_id);
++		new_list.AddWalkInfo(src_id, subdest_id);
++		info.push_back(new_list);
++	} else {
++		i->AddWalkInfo(src_id, subdest_id);
++	}
++}
++
++void RoutingInformationGroup::AddKeepInfo(StationID src_id, StationID dest_id, OrderID order_id)
++{
++	List::iterator i = Find(dest_id);
++	if (i == info.end()) {
++		RoutingInformationList new_list(dest_id);
++		new_list.AddKeepInfo(src_id, order_id);
++		info.push_back(new_list);
++	} else {
++		i->AddKeepInfo(src_id, order_id);
++	}
++}
++
++void RoutingInformationGroup::AddBoardInfo(StationID src_id, StationID dest_id, OrderID order_id, StationID subdest_id)
++{
++	List::iterator i = Find(dest_id);
++	if (i == info.end()) {
++		RoutingInformationList new_list(dest_id);
++		new_list.AddBoardInfo(src_id, order_id, subdest_id);
++		info.push_back(new_list);
++	} else {
++		i->AddBoardInfo(src_id, order_id, subdest_id);
++	}
++}
++
++RoutingInformationGroup::List::const_iterator RoutingInformationGroup::Find(StationID dest_id) const
++{
++	List::const_iterator i, end = info.end();
++	for (i = info.begin(); i != end; ++i) {
++		if (i->dest_id == dest_id) return i;
++	}
++	return i;
++}
++
++StationID RoutingInformationGroup::GetNextStationInWalk(StationID src_id, StationID dest_id) const
++{
++	const List::const_iterator i = Find(dest_id);
++	return i == info.end()? INVALID_STATION : i->GetNextStationInWalk(src_id);
++}
++
++bool RoutingInformationGroup::IsExistsInKeep(StationID src_id, StationID dest_id, OrderID order_id) const
++{
++	const List::const_iterator i = Find(dest_id);
++	return i == info.end()? false : i->IsExistsInKeep(src_id, order_id);
++}
++
++bool RoutingInformationGroup::IsExistsInBoard(StationID src_id, StationID dest_id, OrderID order_id) const
++{
++	const List::const_iterator i = Find(dest_id);
++	return i == info.end()? false : i->IsExistsInBoard(src_id, order_id);
++}
++
+Index: src/station_cmd.cpp
+===================================================================
+--- src/station_cmd.cpp	(Revision 11568)
++++ src/station_cmd.cpp	(Arbeitskopie)
+@@ -545,6 +545,129 @@
+ 	if (rect->max_y < y) rect->max_y = y;
+ }
+ 
++static uint GetSharedCount(TileIndex tile, int rad)
++{
++	int sharead_count = 0;
++	Station* st;
++	FOR_ALL_STATIONS(st) {
++		ottd_Rectangle rect;
++		rect.min_x = MapSizeX();
++		rect.min_y = MapSizeY();
++		rect.max_x = 0;
++		rect.max_y = 0;
++
++		/* The following code is stolen from UpdateStationAcceptance */
++		if (st->train_tile != 0) {
++			MergePoint(&rect, st->train_tile);
++			MergePoint(&rect,
++				st->train_tile + TileDiffXY(st->trainst_w - 1, st->trainst_h - 1)
++			);
++		}
++
++		if (st->airport_tile != 0) {
++			const AirportFTAClass* afc = st->Airport();
++			MergePoint(&rect, st->airport_tile);
++			MergePoint(&rect,
++			st->airport_tile + TileDiffXY(afc->size_x - 1, afc->size_y - 1)
++			);
++		}
++
++		if (st->dock_tile != 0) MergePoint(&rect, st->dock_tile);
++
++		for (const RoadStop *rs = st->bus_stops; rs != NULL; rs = rs->next) {
++			MergePoint(&rect, rs->xy);
++		}
++
++		for (const RoadStop *rs = st->truck_stops; rs != NULL; rs = rs->next) {
++			MergePoint(&rect, rs->xy);
++		}
++		if (rect.max_x < rect.min_x) continue;
++
++		const uint x1 = max(int(rect.min_x) - rad, 0);
++		const uint y1 = max(int(rect.min_y) - rad, 0);
++		const uint x2 = min(rect.max_x + rad, MapSizeX());
++		const uint y2 = min(rect.max_y + rad, MapSizeY());
++		assert(x1 < x2);
++		assert(y1 < y2);
++
++		const uint x = TileX(tile);
++		const uint y = TileY(tile);
++		if (x1 <= x && x <= x2 && y1 <= y && y <= y2) {
++			sharead_count++;
++		}
++	}
++	return sharead_count;
++}
++
++/** Get a list of the cargo types that are accepted around the tile.*/
++void GetAcceptanceAroundTiles2(AcceptedCargo accepts, TileIndex tile,
++	int w, int h, int rad)
++{
++	memset(accepts, 0, sizeof(AcceptedCargo));
++
++	const int x = TileX(tile);
++	const int y = TileY(tile);
++
++	/* expand the region by rad tiles on each side
++	 * while making sure that we remain inside the board. */
++	const int x2 = min(x + w + rad, MapSizeX());
++	const int y2 = min(y + h + rad, MapSizeY());
++	const int x1 = max(x - rad, 0);
++	const int y1 = max(y - rad, 0);
++
++	assert(x1 < x2);
++	assert(y1 < y2);
++	assert(w > 0);
++	assert(h > 0);
++
++	for (int yc = y1; yc != y2; yc++) {
++		for (int xc = x1; xc != x2; xc++) {
++			const TileIndex tile = TileXY(xc, yc);
++
++			if (!IsTileType(tile, MP_STATION)) {
++				AcceptedCargo ac;
++
++				GetAcceptedCargo(tile, ac);
++				const uint s = GetSharedCount(tile, rad);
++				assert(s > 0);
++				for (uint i = 0; i < lengthof(ac); ++i) accepts[i] += (ac[i] << 8) / s;
++			}
++		}
++	}
++	for (uint i = 0; i < lengthof(accepts); ++i) accepts[i] = (accepts[i] >> 8) + 1;
++}
++
++void PrintStationName(StationID sid);
++static void UpdateWalkConnection(Station *st, TileIndex tile, int w, int h, int rad)
++{
++	const int x = TileX(tile);
++	const int y = TileY(tile);
++
++	/* expand the region by rad tiles on each side
++	 * while making sure that we remain inside the board. */
++	const int x2 = min(x + w + rad, MapSizeX());
++	const int y2 = min(y + h + rad, MapSizeY());
++	const int x1 = max(x - rad, 0);
++	const int y1 = max(y - rad, 0);
++
++	assert(x1 < x2);
++	assert(y1 < y2);
++	assert(w > 0);
++	assert(h > 0);
++
++	for (int yc = y1; yc != y2; yc++) {
++		for (int xc = x1; xc != x2; xc++) {
++			const TileIndex tile = TileXY(xc, yc);
++			if (IsTileType(tile, MP_STATION)) {
++				Station *zt = GetStationByTile(tile);
++				if (st != zt) {
++					st->passenger_stat.AddWalkInfo(st->index, zt->index);
++				}
++			}
++		}
++	}
++}
++
+ /** Update the acceptance for a station.
+  * @param st Station to update
+  * @param show_msg controls whether to display a message that acceptance was changed.
+@@ -600,6 +723,21 @@
+ 			rect.max_y - rect.min_y + 1,
+ 			_patches.modified_catchment ? FindCatchmentRadius(st) : 4
+ 		);
++
++		AcceptedCargo accepts_for_dest;
++		GetAcceptanceAroundTiles2(
++			accepts_for_dest,
++			TileXY(rect.min_x, rect.min_y),
++			rect.max_x - rect.min_x + 1,
++			rect.max_y - rect.min_y + 1,
++			_patches.modified_catchment ? FindCatchmentRadius(st) : 4
++		);
++		st->passenger_acceptance = accepts_for_dest[CT_PASSENGERS];
++
++		UpdateWalkConnection(st,
++			TileXY(rect.min_x, rect.min_y),
++			rect.max_x - rect.min_x + 1,
++			rect.max_y - rect.min_y + 1, _patches.passenger_walking);
+ 	} else {
+ 		memset(accepts, 0, sizeof(accepts));
+ 	}
+@@ -2554,11 +2692,348 @@
+ 	FOR_ALL_STATIONS(st) StationHandleSmallTick(st);
+ }
+ 
++struct RoutingNode {
++	      Station		* const station;
++	      uint		cost;
++	const RoutingNode	* const prev;
++	      Order		* const order;
++	const Vehicle		* const vehicle;
++	      bool		transfer;
++	const PassengerTrainStatistics * const pts;
++	RoutingNode(Station * const s, uint c = 0, const RoutingNode * const p = NULL, Order * const o = NULL, const Vehicle * const v = NULL, bool t = false, const PassengerTrainStatistics * const pt = NULL)
++ 		: station(s), cost(c), prev(p), order(o), vehicle(v), transfer(t), pts(pt) {}
++};
++
++static std::list<const Vehicle*> _shared_vehicle_list;
++static uint _max_distance;
++void UpdateSharedVehicleList()
++{
++	_shared_vehicle_list.clear();
++
++	const Vehicle *v;
++	FOR_ALL_VEHICLES(v) {
++		const Vehicle *u = GetFirstVehicleFromSharedList(v);
++		if (u != NULL) { // shared order
++			std::list<const Vehicle*>::const_iterator it, end = _shared_vehicle_list.end();
++			for (it = _shared_vehicle_list.begin(); it != end; ++it) {
++				if (*it == u) break;
++			}
++			if (it == end) if (u->orders != NULL) _shared_vehicle_list.push_back(u);
++		} else { // not shared order
++			if (v->orders != NULL) _shared_vehicle_list.push_back(v);
++		}
++	}
++
++
++#ifdef PAXDEST_DEBUG
++	std::list<const Vehicle*>::const_iterator it, end = _shared_vehicle_list.end();
++	for (it = _shared_vehicle_list.begin(); it != end; ++it) {
++		for (Order *j = (*it)->orders; j != NULL; j = j->next) {
++			printf("%d[", j->index);
++			PrintStationName(j->dest);
++			printf("] -> ");
++		}
++		printf("\n");
++	}
++#endif
++}
++
++const Vehicle *FindVehicle(const Order * const o)
++{
++	std::list<const Vehicle*>::const_iterator it, end = _shared_vehicle_list.end();
++	for (it = _shared_vehicle_list.begin(); it != end; ++it) {
++		if (VehicleHas(*it, o)) return *it;
++	}
++	assert(it == end);
++	return NULL;
++}
++
++static std::list<RoutingNode*>::iterator Find(std::list<RoutingNode*> &list, const Station * const st)
++{
++	std::list<RoutingNode*>::iterator end = list.end(), it;
++	for (it = list.begin(); it != end; ++it) {
++		if (st == (*it)->station)
++			return it;
++	}
++	return end;
++}
++
++static uint driving_time_fast(const PassengerTrainStatistics& p, bool transfer)
++{
++	const uint16 arr = p.sum_arrival;
++	if (arr == 0) return INT_MAX;
++
++	const uint driving_cost  = p.sum_driving_time / DAY_TICKS / arr;
++	const uint transfer_cost = transfer? p.sum_days / arr : 0;
++	const uint vacancy_cost  = p.sum_vacancy < 10 ? transfer_cost : 0;
++
++	uint8 veh_cost_modifier = 10;
++	if (p.order_id != INVALID_ORDER) {
++		const Vehicle* v = FindVehicle(GetOrder(p.order_id));
++		if (v != NULL && v->type == VEH_AIRCRAFT) veh_cost_modifier += _patches.aircraft_cost_modifier;
++	}
++	return driving_cost * veh_cost_modifier / 10 + (transfer_cost + vacancy_cost) * (10 + _patches.transferring_cost_modifier) / 10;
++}
++
++void PrintStationName(StationID sid)
++{
++	if (sid == INVALID_STATION) {
++		printf("--");
++		return;
++	}
++	char buff[256] = {0};
++	SetDParam(0, sid);
++	char *str = buff;
++	const char *last = &buff[255];
++	str = GetString(str, STR_STATION, last);
++	printf("%s", buff);
++	fflush(stdout);
++}
++
++static bool CheckLoop(RoutingNode* r)
++{
++	std::list<StationID> lx;
++	for (const RoutingNode *i = r; i->prev != NULL; i = i->prev) {
++		for (std::list<StationID>::iterator j = lx.begin(), end = lx.end(); j != end; ++j) {
++			if (*j == i->station->index) return true;
++		}
++		lx.push_back(i->station->index);
++	}
++	return false;
++}
++
++static StationID GetNextTransferStation(const RoutingNode * node)
++{
++	for (const RoutingNode *i = node; i->prev != NULL; i = i->prev) {
++		if (i->transfer) return i->pts->dest_id;
++	}
++	return INVALID_STATION;
++}
++
++static void SetRoute(Station * const dest, const std::list<RoutingNode*>& target_list, std::list<RoutingNode>& registered_list)
++{
++	std::list<RoutingNode*>::const_iterator iend = target_list.end(), it;
++	for (it = target_list.begin(); it != iend; ++it) {
++		if (dest == (*it)->station) continue;
++
++		/* check cost is small */
++		std::list<RoutingNode>::iterator jend = registered_list.end(), jt;
++		for (jt = registered_list.begin(); jt != jend; ++jt) {
++			if ((*it)->station == jt->station && (*it)->cost > jt->cost * _patches.additional_route_rate / 100) break;
++		}
++		if (jt != jend) continue;
++
++		if (CheckLoop(*it)) continue;
++
++#ifdef PAXDEST_DEBUG
++		{
++			const RoutingNode *i;
++			printf("%4d: ", (*it)->cost); PrintStationName((*it)->station->index); printf(" : "); fflush(stdout);
++			bool transfer = true;
++			for (i = *it; i->prev != NULL; i = i->prev) {
++				Order * const o = i->order;
++				if (i->pts->type == PassengerTrainStatistics::PTS_WALKING) {printf("**"); PrintStationName(i->pts->dest_id);}
++				if (transfer) printf("["); printf("["); PrintStationName(i->station->index); printf("s:c%d:o%d]", i->cost, o ? o->index : -1); if (transfer) printf("]"); fflush(stdout);
++				transfer = i->transfer;
++				printf(" -> "); fflush(stdout);
++			}
++			printf("\n");
++		}
++#endif
++
++		RoutingNode rg((*it)->station, (*it)->cost);
++		registered_list.push_back(rg);
++
++		const uint dis = DistanceManhattan((*it)->station->xy, dest->xy);
++		if (dis < _max_distance) _max_distance = dis;
++
++		const StationID src_id = (*it)->station->index;
++		bool transfer = true;
++		/* add routing infomation for each station */
++		for (const RoutingNode *i = *it; i->prev != NULL; i = i->prev) {
++			Order * const o = i->order;
++			OrderID oid = o == NULL? INVALID_ORDER : o->index;
++
++			if (i->pts->type == PRT_WALKING) {
++				i->station->routing_info.AddWalkInfo(src_id, dest->index, i->pts->dest_id);
++			} else if (transfer) {	/* Passengers to `dest' board the vehicle that has `(*it)->order' at `src' */
++				i->station->routing_info.AddBoardInfo(src_id, dest->index, oid, GetNextTransferStation(i));
++			} else {	/* Passengers to `dest' keep boarding at `i->station' */
++				i->station->routing_info.AddKeepInfo(src_id, dest->index, oid);
++			}
++			transfer = i->transfer;
++		}
++	}
++}
++
++static void insert(std::list<RoutingNode*>& list, RoutingNode* e)
++{
++	std::list<RoutingNode*>::iterator end = list.end(), min, it;
++	for (min = it = list.begin(); it != end; ++it) {
++		if ((*it)->cost > (*min)->cost) {
++			list.insert(it, e);
++			return;
++		}
++	}
++	list.push_back(e);
++}
++
++typedef uint CostFunction(const PassengerTrainStatistics& p, bool transfer);
++static void FindRoute(Station * const dest, CostFunction cfunc)
++{
++	std::list<RoutingNode>  pool;
++	std::list<RoutingNode*> open_list;
++	std::list<RoutingNode*> close_list;
++	std::list<RoutingNode*> end_list;
++
++	RoutingNode start(dest);
++	pool.push_back(start);
++	open_list.push_back(&pool.back());
++
++	const int max_trial = 4096;
++	/* find route with A* search algorithm */
++	for (int trial_count = max_trial; trial_count >= 0 && ! open_list.empty(); trial_count--) {
++		/* find the station has the minimum cost */
++		std::list<RoutingNode*>::iterator min;
++		min = open_list.begin();
++
++		open_list.erase(min);
++		RoutingNode * const m = *min;
++		if (Find(close_list, m->station) == close_list.end())
++			close_list.push_back(m);
++
++		/* add successor nodes */
++		std::list<const PassengerTrainStatistics*>::const_iterator jend = m->station->prev_stations.end(), jt;
++		for (jt = m->station->prev_stations.begin(); jt != jend; ++jt) {
++			if ( ! IsValidStationID((*jt)->src_id) || ! IsValidStationID((*jt)->dest_id)) continue;
++			//assert(jt->sum_arrival > 0);
++			if ((*jt)->sum_arrival == 0) continue;
++			      Station * const st = GetStation((*jt)->src_id);
++			      Order   * const o  = (*jt)->order_id == INVALID_ORDER? NULL : GetOrder((*jt)->order_id);
++			const Vehicle * const prev_v = m->vehicle;
++			const Vehicle * const v = FindVehicle(o);
++			const bool transfer = /*prev_v != NULL &&*/ v != prev_v;
++			const uint cost = m->cost + cfunc(**jt, transfer);
++
++			RoutingNode new_node(st, cost, m, o, v, transfer, *jt);
++			pool.push_back(new_node);
++			std::list<RoutingNode*>::iterator in_open  = Find(open_list,  st);
++			std::list<RoutingNode*>::iterator in_close = Find(close_list, st);
++			if (in_open == open_list.end() && in_close == close_list.end()) {
++				insert(open_list, &pool.back());
++			} else if (in_open != open_list.end()   && cost < (*in_open)->cost) {
++				insert(open_list, &pool.back());
++				/* In normal graph, we usually should remove the found node.
++				 * But we do check this since we should consider transferring,
++				 * or we should limit the size of open_list. */
++				if (cost > (*in_open)->cost * trial_count * _patches.additional_route_rate / max_trial / 100) {
++					end_list.push_back(*in_open);
++					open_list.erase(in_open);
++
++				}
++			} else if (in_close != close_list.end() && cost < (*in_close)->cost) {
++				insert(open_list, &pool.back());
++				end_list.push_back(*in_close);
++				close_list.erase(in_close);
++			} else {
++				end_list.push_back(&pool.back());
++                        }
++		}
++	}
++#ifdef PAXDEST_DEBUG
++	printf("<<<<  "); PrintStationName(dest->index); printf("  >>>>\n");
++#endif
++	std::list<RoutingNode> registered_list;
++	SetRoute(dest, close_list, registered_list);
++#ifdef PAXDEST_DEBUG
++	printf("------------------------------\n");
++#endif
++	SetRoute(dest, end_list, registered_list);
++}
++
++bool _need_to_update_routinginfo;
++void UpdateRoute()
++{
++	_max_distance = 0;
++	UpdateSharedVehicleList();
++
++	Station *st;
++	FOR_ALL_STATIONS(st) {
++		st->routing_info.Clear();
++		st->prev_stations.clear();
++	}
++
++	/* update backward links */
++	FOR_ALL_STATIONS(st) {
++		const PassengerTrainStatisticsList::List * const stats = st->passenger_stat.Stats();
++		PassengerTrainStatisticsList::List::const_iterator end = stats->end(), it;
++		for (it = stats->begin(); it != end; ++it) {
++			GetStation(it->dest_id)->prev_stations.push_back(&*it);
++		}
++	}
++
++	FOR_ALL_STATIONS(st) {
++		if (IsValidStationID(st->index)) {
++			FindRoute(st, driving_time_fast);
++		}
++	}
++}
++
++void RemoveInfo(const Order * const order)
++{
++	if (order == NULL) return;
++	Station *st;
++
++	FOR_ALL_STATIONS(st) {
++		st->passenger_stat.RemoveInfo(order);
++	}
++}
++
++void RemoveAllInfo(const Vehicle * const v)
++{
++	if (v->prev_shared != NULL || v->next_shared != NULL) return;
++	const Order * order = v->orders;
++	for ( ; order != NULL; order = order->next) {
++		RemoveInfo(order);
++	}
++}
++
++static void UpdatePassengersForUnreachableDestination()
++{
++	const uint b = 1 << _patches.reduce_unreachable_passenger;
++
++	Station *st;
++	FOR_ALL_STATIONS(st) {
++		GoodsEntry *ge = &st->goods[CT_PASSENGERS];
++		if (!ge->cargo.Empty()) {
++			for (CargoList::List::const_iterator it = ge->cargo.Packets()->begin(); it != ge->cargo.Packets()->end(); ) {
++				CargoPacket *cp = *it;
++				++it;
++				if (cp->destination == INVALID_STATION || ! st->routing_info.IsExistsInBoard(cp->source, cp->destination, INVALID_ORDER)) {
++					if (cp->count >= b) {
++						cp->count >>= _patches.reduce_unreachable_passenger;
++					} else {
++						CargoList cargo_to_delete;
++						ge->cargo.MovePacketTo(cp, cargo_to_delete);
++					}
++				}
++			}
++			ge->cargo.InvalidateCache();
++		}
++	}
++}
++
+ void StationMonthlyLoop()
+ {
++	_need_to_update_routinginfo = true;
++	if (_patches.reduce_unreachable_passenger > 0)
++		UpdatePassengersForUnreachableDestination();
++	Station *st;
++	FOR_ALL_STATIONS(st) {
++		st->passenger_stat.StatsLoop();
++	}
+ }
+ 
+-
+ void ModifyStationRatingAround(TileIndex tile, PlayerID owner, int amount, uint radius)
+ {
+ 	Station *st;
+@@ -2577,8 +3052,102 @@
+ 	}
+ }
+ 
++static const Town *RouletteTown()
++{
++	const uint32 pop = GetWorldPopulation();
++	uint32 r = Random() % pop;
++	const Town *t;
++	FOR_ALL_TOWNS(t) {
++		const uint32 rx = r;
++		r -= t->population;
++		if (r > rx) return t;
++	}
++	assert(false);
++}
++
++static uint32 GetWeight(int pop, int dis)
++{
++	if (_max_distance == 0) return pop;
++	const uint32 md = _max_distance >> 2;
++	const uint32 dx  = dis >> 2;
++	const uint32 d = (md * md - dx * dx * 9 / 10) / md * md;
++	return _max_distance == 0? pop : pop * d;
++}
++
++static const Town *RouletteTownWeighted(const Town *town)
++{
++	const Town *t;
++
++	uint32 total = 0;
++	FOR_ALL_TOWNS(t) {
++		const uint dis = DistanceManhattan(t->xy, town->xy);
++		total += GetWeight(t->population, dis);
++	}
++
++	uint32 r = Random() % total;
++	FOR_ALL_TOWNS(t) {
++		const uint32 rx = r;
++		const uint dis = DistanceManhattan(t->xy, town->xy);
++		r -= GetWeight(t->population, dis);
++		if (r > rx) return t;
++	}
++	assert(false);
++}
++
++static StationID GetRandomStation(const Station *st)
++{
++	const Town *t = RouletteTownWeighted(st->town);
++
++	/* make station list of the specified town */
++	std::list<Station*> rl;
++	uint32 total_rating = 0;
++
++	Station *s;
++	FOR_ALL_STATIONS(s) {
++		if (s->town == t && s != st) {
++			rl.push_back(s);
++			total_rating += s->passenger_acceptance;
++		}
++	}
++	if (rl.empty()) return INVALID_STATION;
++
++	/* random selection from the station list */
++	/*std::list<StationID>::const_iterator it = rl.begin();
++	advance(it, Random() % rl.size());*/
++
++	uint32 r = RandomRange(total_rating);
++	std::list<Station*>::const_iterator it, end = rl.end();
++	for (it = rl.begin(); it != end; ++it) {
++		const uint32 rx = r;
++		r -= (*it)->passenger_acceptance;
++		if (r == 0 || r > rx) break;
++	}
++	assert(it != end);
++
++	/* check connection */
++	const StationID dest_id = (*it)->index;
++	if (_patches.generate_unreachable_passenger)
++		return dest_id;
++	return st->routing_info.IsExistsInBoard(st->index, dest_id, INVALID_ORDER) ? dest_id : INVALID_STATION;
++}
++
+ static void UpdateStationWaiting(Station *st, CargoID type, uint amount)
+ {
++	if (_patches.use_destinations && type == CT_PASSENGERS) {
++		/* first eventually reduce the number of passengers */
++		if (_patches.reduce_passenger > 0) {
++			st->passenger_waiting_modulo += amount;
++			amount = (st->passenger_waiting_modulo >> _patches.reduce_passenger);
++			st->passenger_waiting_modulo &= ((1 << _patches.reduce_passenger) - 1);
++			if (amount == 0) return;
++		}
++		for (uint i = 0; i < amount; ++i) {
++			StationID dest_id = GetRandomStation(st);
++			if (dest_id != INVALID_STATION) {
++				st->goods[type].cargo.Append(new CargoPacket(st->index, 1, dest_id));
++			}
++		}
++        } else
+ 	st->goods[type].cargo.Append(new CargoPacket(st->index, amount));
+ 	SetBit(st->goods[type].acceptance_pickup, GoodsEntry::PICKUP);
+ 
+@@ -3070,8 +3639,11 @@
+ 
+ 	SLE_CONDLST(Station, loading_vehicles,           REF_VEHICLE,                57, SL_MAX_VERSION),
+ 
++	SLE_CONDNULL(2, 0, 78),
++	SLE_CONDVAR(Station, passenger_waiting_modulo,   SLE_UINT16,                 79, SL_MAX_VERSION),
++
+ 	/* reserve extra space in savegame here. (currently 32 bytes) */
+-	SLE_CONDNULL(32, 2, SL_MAX_VERSION),
++	SLE_CONDNULL(30, 2, SL_MAX_VERSION),
+ 
+ 	SLE_END()
+ };
+@@ -3206,3 +3778,81 @@
+ 	{ 'STNS', Save_STNS,      Load_STNS,      CH_ARRAY },
+ 	{ 'ROAD', Save_ROADSTOP,  Load_ROADSTOP,  CH_ARRAY | CH_LAST},
+ };
++
++uint32 _pax_count;
++static const SaveLoad _station_paxdest_desc1[] = {
++	SLEG_CONDVAR(                          _pax_count, SLE_UINT32,   75, SL_MAX_VERSION),
++	SLE_END()
++};
++
++static const SaveLoad _station_paxdest_desc2[] = {
++	     SLE_VAR(PassengerTrainStatistics, order_id,   SLE_UINT16),
++	     SLE_VAR(PassengerTrainStatistics, dest_id,    SLE_UINT16),
++	SLE_END()
++};
++
++uint16 _pax_arrival;
++uint16 _pax_driving_time;
++uint64 _pax_fare;
++uint16 _pax_vacancy;
++uint16 _pax_days;
++static const SaveLoad _station_paxdest_desc3[] = {
++	SLEG_CONDVAR(_pax_arrival,      SLE_UINT16,   75, SL_MAX_VERSION),
++	SLEG_CONDVAR(_pax_driving_time, SLE_UINT16,   75, SL_MAX_VERSION),
++	SLEG_CONDVAR(_pax_fare,         SLE_UINT64,   75, SL_MAX_VERSION),
++	SLEG_CONDVAR(_pax_vacancy,      SLE_UINT16,   75, SL_MAX_VERSION),
++	SLEG_CONDVAR(_pax_days,         SLE_UINT8,    75, SL_MAX_VERSION),
++	SLE_END()
++};
++
++static void SaveLoad_STNX(Station *st)
++{
++	SlObject(NULL, _station_paxdest_desc1);
++	PassengerTrainStatisticsList::List::const_iterator it = st->passenger_stat.Stats()->begin(), end = st->passenger_stat.Stats()->end();
++	for (uint32 i = 0; i < _pax_count; i++, ++it) {
++		PassengerTrainStatistics p;
++		if (it != end) p = *it; // save only
++		SlObject(&p, _station_paxdest_desc2);
++		for (int j = 0; j < PASSENGER_TRAIN_STATISTICS_LENGTH; ++j) {
++			_pax_arrival      = p.arrival[j];
++			_pax_driving_time = p.driving_time[j];
++			_pax_fare         = p.fare[j];
++			_pax_vacancy      = p.vacancy[j];
++			_pax_days         = p.days[j];
++			SlObject(NULL, _station_paxdest_desc3);
++			p.arrival[j]      = _pax_arrival;
++			p.driving_time[j] = _pax_driving_time;
++			p.fare[j]         = _pax_fare;
++			p.vacancy[j]      = _pax_vacancy;
++			p.days[j]         = _pax_days;
++		}
++		if (i >= st->passenger_stat.Count()) { // load only
++			p.src_id = st->index;
++			st->passenger_stat.Add(p);
++		}
++	}
++}
++
++static void Save_STNX()
++{
++	Station *st;
++	FOR_ALL_STATIONS(st) {
++		SlSetArrayIndex(st->index);
++		_pax_count = st->passenger_stat.Count();
++		SlAutolength((AutolengthProc*)SaveLoad_STNX, st);
++	}
++}
++
++static void Load_STNX()
++{
++	int index;
++	while ((index = SlIterateArray()) != -1) {
++		SaveLoad_STNX(GetStation(index));
++	}
++	UpdateRoute();
++}
++
++extern const ChunkHandler _station_paxdest_chunk_handlers[] = {
++	{ 'STNX', Save_STNX, Load_STNX, CH_ARRAY | CH_LAST},
++};
++
+Index: src/vehicle.h
+===================================================================
+--- src/vehicle.h	(Revision 11568)
++++ src/vehicle.h	(Arbeitskopie)
+@@ -282,6 +282,8 @@
+ 
+ 	byte vehstatus;          // Status
+ 	StationID last_station_visited;
++	uint32 last_station_visited_time;        // cache current_order_time
++	OrderID last_station_order_id;           // the OrderID at the last station
+ 
+ 	CargoID cargo_type;      // type of cargo this vehicle is carrying
+ 	uint16 cargo_cap;        // total capacity
+@@ -369,7 +371,7 @@
+ 	/** We want to 'destruct' the right class. */
+ 	virtual ~Vehicle();
+ 
+-	void BeginLoading();
++	void BeginLoading(StationID prev_station);
+ 	void LeaveStation();
+ 
+ 	/**
+@@ -715,6 +717,14 @@
+ #define FOR_ALL_VEHICLES_FROM(v, start) for (v = GetVehicle(start); v != NULL; v = (v->index + 1U < GetVehiclePoolSize()) ? GetVehicle(v->index + 1) : NULL) if (v->IsValid())
+ #define FOR_ALL_VEHICLES(v) FOR_ALL_VEHICLES_FROM(v, 0)
+ 
++static inline bool VehicleHas(const Vehicle * const v, const Order * const o)
++{
++	for (const Order *i = v->orders; i != NULL; i = i->next) {
++		if (i == o) return true;
++	}
++	return false;
++}
++
+ /**
+  * Check if an index is a vehicle-index (so between 0 and max-vehicles)
+  * @param index of the vehicle to query
+Index: src/ship_cmd.cpp
+===================================================================
+--- src/ship_cmd.cpp	(Revision 11568)
++++ src/ship_cmd.cpp	(Arbeitskopie)
+@@ -701,13 +701,14 @@
+ 						} else if (v->current_order.type == OT_GOTO_STATION) {
+ 							Station *st;
+ 
++							const StationID prev_station = v->last_station_visited;
+ 							v->last_station_visited = v->current_order.dest;
+ 
+ 							/* Process station in the orderlist. */
+ 							st = GetStation(v->current_order.dest);
+ 							if (st->facilities & FACIL_DOCK) { // ugly, ugly workaround for problem with ships able to drop off cargo at wrong stations
+ 								ShipArrivesAt(v, st);
+-								v->BeginLoading();
++								v->BeginLoading(prev_station);
+ 							} else { // leave stations without docks right aways
+ 								v->current_order.type = OT_LEAVESTATION;
+ 								v->cur_order_index++;
+@@ -779,6 +780,7 @@
+ 
+ void Ship::Tick()
+ {
++	this->last_station_visited_time++;
+ 	AgeShipCargo(this);
+ 	ShipController(this);
+ }
+@@ -895,6 +897,7 @@
+ 	return value;
+ }
+ 
++void RemoveAllInfo(const Vehicle * const v);
+ /** Sell a ship.
+  * @param tile unused
+  * @param flags type of operation
+@@ -930,6 +933,7 @@
+ 		delete v;
+ 	}
+ 
++	RemoveAllInfo(v);
+ 	return ret;
+ }
+ 
+Index: src/order_cmd.cpp
+===================================================================
+--- src/order_cmd.cpp	(Revision 11568)
++++ src/order_cmd.cpp	(Arbeitskopie)
+@@ -441,6 +441,7 @@
+ 	DeleteWindowById(window_class, (v->orders->index << 16) | (v->type << 11) | VLW_SHARED_ORDERS | v->owner);
+ }
+ 
++void RemoveInfo(const Order * const order);
+ /** Delete an order from the orderlist of a vehicle.
+  * @param tile unused
+  * @param flags operation to perform
+@@ -487,6 +488,7 @@
+ 			GetVehicleOrder(v, sel_ord - 1)->next = order->next;
+ 		}
+ 
++		RemoveInfo(order);
+ 		/* Give the item free */
+ 		order->Free();
+ 
+@@ -730,6 +732,7 @@
+ 	return CommandCost();
+ }
+ 
++void RemoveAllInfo(const Vehicle * const v);
+ /** Clone/share/copy an order-list of an other vehicle.
+  * @param tile unused
+  * @param flags operation to perform
+@@ -778,6 +781,8 @@
+ 			}
+ 
+ 			if (flags & DC_EXEC) {
++				RemoveAllInfo(dst);
++
+ 				/* If the destination vehicle had a OrderList, destroy it */
+ 				DeleteVehicleOrders(dst);
+ 
+@@ -838,6 +843,7 @@
+ 				const Order *order;
+ 				Order **order_dst;
+ 
++				RemoveAllInfo(dst);
+ 				/* If the destination vehicle had a OrderList, destroy it */
+ 				DeleteVehicleOrders(dst);
+ 
+Index: src/station.h
+===================================================================
+--- src/station.h	(Revision 11568)
++++ src/station.h	(Arbeitskopie)
+@@ -13,6 +13,8 @@
+ #include "road.h"
+ #include "newgrf_station.h"
+ #include "cargopacket.h"
++#include "date.h"
++#include "order.h"
+ #include <list>
+ #include <set>
+ 
+@@ -90,6 +92,108 @@
+ 	uint8  localidx;   ///< Station ID within GRF of station
+ };
+ 
++enum PassengerRoutingType {
++	PRT_NORMAL = 0,
++	PRT_TEMPINFO,
++	PRT_WALKING
++};
++
++#define PASSENGER_TRAIN_STATISTICS_LENGTH 6
++struct PassengerTrainStatistics {
++	StationID src_id;  ///< source for vehicle
++	StationID dest_id; ///< destination for vehicle
++	OrderID	  order_id;
++	PassengerRoutingType type;
++
++	uint32	sum_arrival;		///< cache
++	uint32	sum_driving_time;	///< cache
++	uint32	sum_fare;		///< cache
++	uint32	sum_vacancy;		///< cache
++	uint16	sum_days;		///< cache
++
++	uint16	arrival[PASSENGER_TRAIN_STATISTICS_LENGTH];		///< the number of the trains arrival in a month
++	uint16	driving_time[PASSENGER_TRAIN_STATISTICS_LENGTH];	///< the total of the time between the station and the previous station
++	uint16	fare[PASSENGER_TRAIN_STATISTICS_LENGTH];		///< the total of the fare of the trains
++	uint16	vacancy[PASSENGER_TRAIN_STATISTICS_LENGTH];		///< the total of the number of underoccupied seats
++	uint8	days[PASSENGER_TRAIN_STATISTICS_LENGTH];		///< the number of days of the month
++
++	PassengerTrainStatistics(StationID src = INVALID_STATION, StationID dst = INVALID_STATION, OrderID o = INVALID_ORDER, PassengerRoutingType type = PRT_NORMAL);
++	void Clear();
++	void Add(uint16 driving_time, Money fare, uint16 vacancy, uint8 days = 0, uint8 month_offset = 0);
++};
++
++class PassengerTrainStatisticsList {
++public:
++	typedef std::list<PassengerTrainStatistics> List;
++
++	const List *Stats() const;
++	bool Empty() const;
++	uint Count() const;
++	void AddInfo(StationID src_id, StationID dest_id, const Vehicle* v, Money fare);
++	void AddTempInfo(StationID src_id, StationID dest_id, const Vehicle * const v, OrderID order_id);
++	void AddWalkInfo(StationID src_id, StationID dest_id);
++	void Add(PassengerTrainStatistics& p);
++	void RemoveInfo(const Order * const order);
++	void StatsLoop();
++	bool IsExists(const Vehicle* v) const;
++private:
++	void AddInfo(StationID src_id, StationID dest_id, const Vehicle * const v, OrderID order_id, uint16 driving_time, Money fare);
++	void Add(StationID src_id, StationID dest_id, OrderID order_id, uint16 driving_time, Money fare, uint16 vacancy, uint8 month_offset = 0, PassengerRoutingType type = PRT_NORMAL);
++private:
++	List stats;	 ///< The cargo packets in this list
++};
++
++struct PassengerRoutingInformation {
++	const StationID	src_id;		///< source of passenger
++	const OrderID	order_id;	///< order of train
++	const StationID	subdest_id;     ///< next transfer (or walk) stn.
++
++	PassengerRoutingInformation(StationID src_id, OrderID odr_id, StationID sub_id = INVALID_STATION)
++		: src_id(src_id), order_id(odr_id), subdest_id(sub_id) {}
++};
++
++struct RoutingInformationList {
++	typedef std::list<PassengerRoutingInformation> List;
++
++	RoutingInformationList(StationID dest_id) : dest_id(dest_id) {}
++
++	void AddWalkInfo (StationID src_id, StationID subdest_id);
++	void AddKeepInfo (StationID src_id, OrderID order_id);
++	void AddBoardInfo(StationID src_id, OrderID order_id, StationID subdest_id = INVALID_STATION);
++
++	StationID GetNextStationInWalk(StationID src_id) const;
++	bool IsExistsInKeep (StationID src_id, OrderID order_id) const;
++	bool IsExistsInBoard(StationID src_id, OrderID order_id) const;
++
++	const StationID dest_id;	///< destination for passenger
++	List walk_info;
++	List keep_info;
++	List board_info;
++};
++
++class RoutingInformationGroup {
++public:
++	typedef std::list<RoutingInformationList> List;
++	typedef List::iterator Iterator;
++
++	void Clear();
++	uint Count() const;
++  	const List *Info() const;
++
++	void AddWalkInfo (StationID src_id, StationID dest_id, StationID subdest_id);
++	void AddKeepInfo (StationID src_id, StationID dest_id, OrderID order_id);
++	void AddBoardInfo(StationID src_id, StationID dest_id, OrderID order_id, StationID subdest_id = INVALID_STATION);
++
++	StationID GetNextStationInWalk(StationID src_id, StationID dest_id) const;
++	bool IsExistsInKeep (StationID src_id, StationID dest_id, OrderID order_id) const;
++	bool IsExistsInBoard(StationID src_id, StationID dest_id, OrderID order_id) const;
++private:
++	List::iterator       Find(StationID dest_id);
++	List::const_iterator Find(StationID dest_id) const;
++
++	List info;
++};
++
+ /** StationRect - used to track station spread out rectangle - cheaper than scanning whole map */
+ struct StationRect : public Rect {
+ 	enum StationRectMode
+@@ -168,6 +272,13 @@
+ 
+ 	StationRect rect; ///< Station spread out rectangle (not saved) maintained by StationRect_xxx() functions
+ 
++	uint passenger_acceptance;  // cache
++	PassengerTrainStatisticsList passenger_stat;  // cache
++	RoutingInformationGroup  routing_info;        // cache
++
++	std::list<const PassengerTrainStatistics*> prev_stations;           // cache
++	uint16 passenger_waiting_modulo; // to reduce the number of passengers traveling
++
+ 	static const int cDebugCtorLevel = 5;
+ 
+ 	Station(TileIndex tile = 0);
+Index: src/train_cmd.cpp
+===================================================================
+--- src/train_cmd.cpp	(Revision 11568)
++++ src/train_cmd.cpp	(Arbeitskopie)
+@@ -1208,6 +1208,7 @@
+ 	return CommandCost();
+ }
+ 
++void RemoveAllInfo(const Vehicle * const v);
+ /** Sell a (single) train wagon/engine.
+  * @param tile unused
+  * @param flags type of operation
+@@ -1252,6 +1253,7 @@
+ 		InvalidateWindow(WC_VEHICLE_DEPOT, first->tile);
+ 		RebuildVehicleLists();
+ 	}
++	if (v == first) RemoveAllInfo(first);
+ 
+ 	CommandCost cost;
+ 	switch (p2) {
+@@ -2526,6 +2528,7 @@
+ 
+ static void TrainEnterStation(Vehicle *v, StationID station)
+ {
++	const StationID prev_station = v->last_station_visited;
+ 	v->last_station_visited = station;
+ 
+ 	/* check if a train ever visited this station before */
+@@ -2544,7 +2547,7 @@
+ 		);
+ 	}
+ 
+-	v->BeginLoading();
++	v->BeginLoading(prev_station);
+ 	v->current_order.dest = 0;
+ }
+ 
+@@ -3350,6 +3353,7 @@
+ 	if (_age_cargo_skip_counter == 0) this->cargo.AgeCargo();
+ 
+ 	this->tick_counter++;
++	this->last_station_visited_time++;
+ 
+ 	if (IsFrontEngine(this)) {
+ 		this->current_order_time++;
+Index: src/station_gui.cpp
+===================================================================
+--- src/station_gui.cpp	(Revision 11568)
++++ src/station_gui.cpp	(Arbeitskopie)
+@@ -4,6 +4,7 @@
+ 
+ #include "stdafx.h"
+ #include "openttd.h"
++#include <list>
+ #include "debug.h"
+ #include "functions.h"
+ #include "strings.h"
+@@ -639,15 +640,20 @@
+ {  WWT_STICKYBOX,   RESIZE_NONE,    14,   237,   248,     0,    13, 0x0,               STR_STICKY_BUTTON},
+ {      WWT_PANEL,   RESIZE_NONE,    14,     0,   236,    14,    65, 0x0,               STR_NULL},
+ {  WWT_SCROLLBAR,   RESIZE_NONE,    14,   237,   248,    14,    65, 0x0,               STR_0190_SCROLL_BAR_SCROLLS_LIST},
++{      WWT_PANEL,   RESIZE_NONE,    14,     0,   236,    66,   197, 0x0,               STR_NULL},
+ {      WWT_EMPTY,   RESIZE_NONE,     0,     0,     0,     0,     0, 0x0,               STR_NULL},
+-{      WWT_PANEL,   RESIZE_NONE,    14,     0,   248,    66,   197, 0x0,               STR_NULL},
+-{ WWT_PUSHTXTBTN,   RESIZE_NONE,    14,     0,    63,   198,   209, STR_00E4_LOCATION, STR_3053_CENTER_MAIN_VIEW_ON_STATION},
+-{ WWT_PUSHTXTBTN,   RESIZE_NONE,    14,    64,   128,   198,   209, STR_3033_ACCEPTS,  STR_3056_SHOW_LIST_OF_ACCEPTED_CARGO},
+-{ WWT_PUSHTXTBTN,   RESIZE_NONE,    14,   129,   192,   198,   209, STR_0130_RENAME,   STR_3055_CHANGE_NAME_OF_STATION},
+-{ WWT_PUSHTXTBTN,   RESIZE_NONE,    14,   193,   206,   198,   209, STR_TRAIN,         STR_SCHEDULED_TRAINS_TIP },
+-{ WWT_PUSHTXTBTN,   RESIZE_NONE,    14,   207,   220,   198,   209, STR_LORRY,         STR_SCHEDULED_ROAD_VEHICLES_TIP },
+-{ WWT_PUSHTXTBTN,   RESIZE_NONE,    14,   221,   234,   198,   209, STR_PLANE,         STR_SCHEDULED_AIRCRAFT_TIP },
+-{ WWT_PUSHTXTBTN,   RESIZE_NONE,    14,   235,   248,   198,   209, STR_SHIP,          STR_SCHEDULED_SHIPS_TIP },
++{ WWT_PUSHTXTBTN,   RESIZE_NONE,    14,     0,    63,   198,   209, STR_3033_ACCEPTS,  STR_3056_SHOW_LIST_OF_ACCEPTED_CARGO},
++{ WWT_PUSHTXTBTN,   RESIZE_NONE,    14,    64,   128,   198,   209, STR_3032_RATINGS,  STR_3054_SHOW_STATION_RATINGS},
++{ WWT_PUSHTXTBTN,   RESIZE_NONE,    14,   129,   192,   198,   209, STR_SHOW_NEXT_STATIONS,  STR_NULL},
++{ WWT_PUSHTXTBTN,   RESIZE_NONE,    14,   193,   248,   198,   209, STR_SHOW_ROUTING_INFO,  STR_NULL},
++{ WWT_PUSHTXTBTN,   RESIZE_NONE,    14,   129,   192,   210,   221, STR_SHOW_PASSENGERS_INFO,   STR_NULL},
++{ WWT_PUSHTXTBTN,   RESIZE_NONE,    14,     0,    63,   210,   221, STR_00E4_LOCATION, STR_3053_CENTER_MAIN_VIEW_ON_STATION},
++{ WWT_PUSHTXTBTN,   RESIZE_NONE,    14,    64,   128,   210,   221, STR_0130_RENAME,   STR_3055_CHANGE_NAME_OF_STATION},
++{ WWT_PUSHTXTBTN,   RESIZE_NONE,    14,   193,   206,   210,   221, STR_TRAIN,         STR_SCHEDULED_TRAINS_TIP },
++{ WWT_PUSHTXTBTN,   RESIZE_NONE,    14,   207,   220,   210,   221, STR_LORRY,         STR_SCHEDULED_ROAD_VEHICLES_TIP },
++{ WWT_PUSHTXTBTN,   RESIZE_NONE,    14,   221,   234,   210,   221, STR_PLANE,         STR_SCHEDULED_AIRCRAFT_TIP },
++{ WWT_PUSHTXTBTN,   RESIZE_NONE,    14,   235,   248,   210,   221, STR_SHIP,          STR_SCHEDULED_SHIPS_TIP },
++{ WWT_SCROLL2BAR,   RESIZE_NONE,    14,   237,   248,    66,   197, 0x0,               STR_NULL},
+ {   WIDGETS_END},
+ };
+ 
+@@ -659,17 +665,20 @@
+ {  WWT_SCROLLBAR,   RESIZE_NONE,    14,   237,   248,    14,    65, 0x0,               STR_0190_SCROLL_BAR_SCROLLS_LIST},
+ {      WWT_PANEL,   RESIZE_NONE,    14,     0,   248,    66,    97, 0x0,               STR_NULL},
+ {      WWT_EMPTY,   RESIZE_NONE,     0,     0,     0,     0,     0, 0x0,               STR_NULL},
+-{ WWT_PUSHTXTBTN,   RESIZE_NONE,    14,     0,    63,    98,   109, STR_00E4_LOCATION, STR_3053_CENTER_MAIN_VIEW_ON_STATION},
++{ WWT_PUSHTXTBTN,   RESIZE_NONE,    14,     0,    63,    98,   109, STR_3033_ACCEPTS,  STR_3056_SHOW_LIST_OF_ACCEPTED_CARGO},
+ { WWT_PUSHTXTBTN,   RESIZE_NONE,    14,    64,   128,    98,   109, STR_3032_RATINGS,  STR_3054_SHOW_STATION_RATINGS},
+-{ WWT_PUSHTXTBTN,   RESIZE_NONE,    14,   129,   192,    98,   109, STR_0130_RENAME,   STR_3055_CHANGE_NAME_OF_STATION},
+-{ WWT_PUSHTXTBTN,   RESIZE_NONE,    14,   193,   206,    98,   109, STR_TRAIN,         STR_SCHEDULED_TRAINS_TIP },
+-{ WWT_PUSHTXTBTN,   RESIZE_NONE,    14,   207,   220,    98,   109, STR_LORRY,         STR_SCHEDULED_ROAD_VEHICLES_TIP },
+-{ WWT_PUSHTXTBTN,   RESIZE_NONE,    14,   221,   234,    98,   109, STR_PLANE,         STR_SCHEDULED_AIRCRAFT_TIP },
+-{ WWT_PUSHTXTBTN,   RESIZE_NONE,    14,   235,   248,    98,   109, STR_SHIP,          STR_SCHEDULED_SHIPS_TIP },
++{ WWT_PUSHTXTBTN,   RESIZE_NONE,    14,   129,   192,    98,   109, STR_SHOW_NEXT_STATIONS,  STR_NULL},
++{ WWT_PUSHTXTBTN,   RESIZE_NONE,    14,   193,   248,    98,   109, STR_SHOW_ROUTING_INFO,  STR_NULL},
++{ WWT_PUSHTXTBTN,   RESIZE_NONE,    14,   129,   192,   110,   121, STR_SHOW_PASSENGERS_INFO,   STR_NULL},
++{ WWT_PUSHTXTBTN,   RESIZE_NONE,    14,     0,    64,   110,   121, STR_00E4_LOCATION, STR_3053_CENTER_MAIN_VIEW_ON_STATION},
++{ WWT_PUSHTXTBTN,   RESIZE_NONE,    14,    64,   128,   110,   121, STR_0130_RENAME,   STR_3055_CHANGE_NAME_OF_STATION},
++{ WWT_PUSHTXTBTN,   RESIZE_NONE,    14,   193,   206,   110,   121, STR_TRAIN,         STR_SCHEDULED_TRAINS_TIP },
++{ WWT_PUSHTXTBTN,   RESIZE_NONE,    14,   207,   220,   110,   121, STR_LORRY,         STR_SCHEDULED_ROAD_VEHICLES_TIP },
++{ WWT_PUSHTXTBTN,   RESIZE_NONE,    14,   221,   234,   110,   121, STR_PLANE,         STR_SCHEDULED_AIRCRAFT_TIP },
++{ WWT_PUSHTXTBTN,   RESIZE_NONE,    14,   235,   248,   110,   121, STR_SHIP,          STR_SCHEDULED_SHIPS_TIP },
+ {   WIDGETS_END},
+ };
+ 
+-
+ static void DrawCargoIcons(CargoID i, uint waiting, int x, int y)
+ {
+ 	uint num = min((waiting + 5) / 10, 23);
+@@ -693,6 +702,46 @@
+ 	} while (--num);
+ }
+ 
++static int CountPassengersTo(StationID id, CargoDisplayList &info)
++{
++	CargoDisplayList::List::const_iterator it, iend = info.Packets().end();
++	for (it = info.Packets().begin(); it != iend; ++it) {
++		if (id == it->destination) return it->count;
++	}
++	return 0;
++}
++
++struct Route {
++	StationID station_id;
++	OrderID   order_id;
++	uint8     hop;
++	Route(StationID s, OrderID o, uint8 h) : station_id(s), order_id(o), hop(h) {}
++};
++
++void GetRouteList(std::list<Route>& r, const Station *src, const Station *dest, const Station *st, int lev = 0)
++{
++	if (st == dest || st == NULL) { // dest
++		Route rx(dest->index, INVALID_ORDER, lev);
++		r.push_back(rx);
++		return;
++	}
++
++	RoutingInformationGroup::List::const_iterator it, iend = st->routing_info.Info()->end();
++	for (it = st->routing_info.Info()->begin(); it != iend; ++it) {
++		if (dest->index == it->dest_id) {
++			RoutingInformationList::List::const_iterator jt, jend = it->board_info.end();
++			for (jt = it->board_info.begin(); jt != jend; ++jt) {
++				if (src->index == jt->src_id)  {
++					Route rx(st->index, jt->order_id, lev);
++					r.push_back(rx);
++					GetRouteList(r, src, dest, jt->subdest_id == INVALID_STATION ? NULL : GetStation(jt->subdest_id), lev + 1);
++				}
++			}
++		}
++	}
++}
++
++Vehicle *FindVehicle(const Order *o);
+ static void DrawStationViewWindow(Window *w)
+ {
+ 	StationID station_id = w->window_number;
+@@ -702,21 +751,50 @@
+ 	int pos;
+ 	StringID str;
+ 
+-	num = 1;
++	switch (WP(w, station_d).tab) {
++	case 3: num = st->routing_info.Count();         break;
++	case 5: num = st->passenger_stat.Count();       break;
++	default: 
+ 	for (CargoID i = 0; i < NUM_CARGO; i++) {
++		num = 1;
+ 		if (!st->goods[i].cargo.Empty()) {
+ 			num++;
+ 			if (st->goods[i].cargo.Source() != station_id) num++;
+ 		}
+ 	}
++	}
+ 	SetVScrollCount(w, num);
++	CargoDisplayList info;
++	std::list<Route> rinfo;
+ 
+-	w->SetWidgetDisabledState( 9, st->owner != _local_player);
+-	w->SetWidgetDisabledState(10, !(st->facilities & FACIL_TRAIN));
+-	w->SetWidgetDisabledState(11, !(st->facilities & FACIL_TRUCK_STOP) && !(st->facilities & FACIL_BUS_STOP));
+-	w->SetWidgetDisabledState(12, !(st->facilities & FACIL_AIRPORT));
+-	w->SetWidgetDisabledState(13, !(st->facilities & FACIL_DOCK));
++	uint v2cnt = 9;
++	switch (WP(w, station_d).tab) {
++		case 2: v2cnt = st->passenger_stat.Count();     break;
++		 case 3: {
++			       info.Append(st->goods[CT_PASSENGERS].cargo);
++			       StationID selected_stid = WP(w, station_d).selected_sid;
++			       if (selected_stid != INVALID_STATION) {
++				               GetRouteList(rinfo, st, GetStation(selected_stid), st);
++				               v2cnt = rinfo.size();
++				       }
++				} break;
++				 case 4:
++					       info.Append(st->goods[CT_PASSENGERS].cargo);
++				       v2cnt = info.Size();
++				       break;
++				 case 5: {
++					       v2cnt = st->routing_info.Count();
++					} break;
++					 }
++					SetVScroll2Count(w, v2cnt);
+ 
++					SetWindowWidgetDisabledState(w, 13, st->owner != _local_player);
++					SetWindowWidgetDisabledState(w, 14, !(st->facilities & FACIL_TRAIN));
++					SetWindowWidgetDisabledState(w, 15, !(st->facilities & FACIL_TRUCK_STOP) && !(st->facilities & FACIL_BUS_STOP));
++					SetWindowWidgetDisabledState(w, 16, !(st->facilities & FACIL_AIRPORT));
++					SetWindowWidgetDisabledState(w, 17, !(st->facilities & FACIL_DOCK));
++
++
+ 	SetDParam(0, st->index);
+ 	SetDParam(1, st->facilities);
+ 	DrawWindowWidgets(w);
+@@ -725,6 +803,7 @@
+ 	y = 15;
+ 	pos = w->vscroll.pos;
+ 
++	if (WP(w, station_d).tab != 3 && WP(w, station_d).tab != 5) {
+ 	if (--pos < 0) {
+ 		str = STR_00D0_NOTHING;
+ 		for (CargoID i = 0; i < NUM_CARGO; i++) {
+@@ -739,7 +818,7 @@
+ 		uint waiting = st->goods[i].cargo.Count();
+ 		if (waiting == 0) continue;
+ 
+-		if (st->goods[i].cargo.Source() == station_id) {
++		if (st->goods[i].cargo.Source() == station_id || i == CT_PASSENGERS) {
+ 			if (--pos < 0) {
+ 				DrawCargoIcons(i, waiting, x, y);
+ 				SetDParam(1, waiting);
+@@ -764,8 +843,10 @@
+ 			}
+ 		}
+ 	}
++	}
+ 
+-	if (IsWindowOfPrototype(w, _station_view_widgets)) {
++	switch (WP(w, station_d).tab) {
++	case 0: {
+ 		char *b = _userstring;
+ 		bool first = true;
+ 
+@@ -790,7 +871,8 @@
+ 
+ 		*b = '\0';
+ 		DrawStringMultiLine(2, 67, STR_SPEC_USERSTRING, 245);
+-	} else {
++	} break;
++	case 1: {
+ 		DrawString(2, 67, STR_3034_LOCAL_RATING_OF_TRANSPORT, TC_FROMSTRING);
+ 
+ 		y = 77;
+@@ -807,10 +889,172 @@
+ 			DrawString(8, y, STR_303D, TC_FROMSTRING);
+ 			y += 10;
+ 		}
++	} break;
++	case 2: {
++		DrawString(2, 67, STR_NEXT_STATIONS, 0);
++		info.Append(st->goods[CT_PASSENGERS].cargo);
++
++		y = 77;
++		const PassengerTrainStatisticsList::List * const stats = st->passenger_stat.Stats();
++		PassengerTrainStatisticsList::List::const_iterator it = stats->begin(), end = stats->end();
++		advance(it, w->vscroll2.pos);
++		const OrderID oid = WP(w, station_d).selected_oid;
++		for (uint i = 0; it != end && i < w->vscroll2.cap; i++, ++it) {
++			if (i + 1 < w->vscroll2.cap) {
++				const Widget *wi = &w->widget[5];
++				GfxDrawLine(3, y+19, 234, y+19, _colour_gradient[wi->color&0xF][4]);
++				GfxDrawLine(3, y+20, 234, y+20, _colour_gradient[wi->color&0xF][6]);
++			}
++			const byte color = it->order_id == INVALID_ORDER? 0x0a : (oid == it->order_id? 0x0d : 0x10);
++		        const uint16 arr = it->sum_arrival;
++			SetDParam(0, it->dest_id);
++			DrawString(8, y, STR_STATION, color);
++			y += 10;
++
++			/* count passengers for the shared order group */
++			uint count = 0;
++			if (it->order_id != INVALID_ORDER) {
++				CargoList::List::const_iterator jt, jend = st->goods[CT_PASSENGERS].cargo.Packets()->end();
++				for (jt = st->goods[CT_PASSENGERS].cargo.Packets()->begin(); jt != jend; ++jt) {
++					if (st->routing_info.IsExistsInBoard((*jt)->source, (*jt)->destination, it->order_id)) {
++						count += (*jt)->count;
++					}
+ 	}
++			}
++
++			SetDParam(0, count);
++			DrawStringRightAligned(104, y, STR_7024, color); // num of sample
++
++			SetDParam(0, arr);
++			DrawStringRightAligned(144, y, STR_7024, color); // num of sample
++			SetDParam(0, it->sum_driving_time / DAY_TICKS / arr);
++			DrawStringRightAligned(170, y, STR_7024, color); // average driving time
++			SetDParam(0, it->sum_fare / arr);
++			DrawStringRightAligned(208, y, STR_7024, color); // average fare
++			SetDParam(0, it->sum_vacancy / arr);
++			DrawStringRightAligned(235, y, STR_7024, color); // avrage vacancy
++			y += 10;
++		}
++	} break;
++	case 3: {
++		/* upper info */
++		DrawString(2, 15, STR_DESTINATION_INFO, 0);
++		y = 25;
++		StationID selected_stid = WP(w, station_d).selected_sid;
++
++		RoutingInformationGroup::List::const_iterator jt = st->routing_info.Info()->begin(), jend = st->routing_info.Info()->end();
++		advance(jt, w->vscroll.pos);
++		for (uint i = 0; jt != jend && i < w->vscroll.cap; ++i, ++jt) {
++			const StationID stid = jt->dest_id;
++			const byte color = stid == selected_stid ? 0x0d : 0x10;
++			SetDParam(0, stid);
++			DrawString(8, y, STR_STATION, color);
++			const uint passenger_num = CountPassengersTo(stid, info);
++			SetDParam(0, passenger_num);
++			DrawStringRightAligned(235, y, STR_7024, color);
++
++			SetDParam(0, GetStation(stid)->passenger_acceptance);
++			DrawStringRightAligned(200, y, STR_7024, color); // passenger acceptance
++			y += 10;
++		}
++
++		/* lower info */
++		DrawString(2, 67, STR_ROUTING_INFO, 0);
++		y = 77;
++		if (selected_stid != INVALID_STATION) {
++			std::list<Route>::const_iterator it = rinfo.begin(), end = rinfo.end();
++			advance(it, w->vscroll2.pos);
++			for (uint i = 0; it != end && i < w->vscroll2.cap; ++i, ++it) {
++				const int x = 8 + it->hop * 15;
++				if (it->hop) {
++					SetDParamStr(0, "-");
++					DrawString(x - 8, y, STR_JUST_STRING, 0x10);
++				}
++				SetDParam(0, it->station_id);
++				DrawString(x, y, STR_STATION, 0x10);
++				y += 10;
++			}
++		}
++	} break;
++	case 4: {
++		DrawString(2, 67, STR_PASSENGERS_INFO, 0);
++
++		y = 77;
++		info.Sort();
++		CargoDisplayList::List::const_iterator it = info.Packets().begin(), iend = info.Packets().end();
++		advance(it, w->vscroll2.pos);
++		for (uint i = 0; it != iend && i < w->vscroll2.cap; i++, ++it) {
++			SetDParam(0, 0);
++			SetDParam(1, it->count);
++			SetDParam(2, it->destination);
++			DrawString(8, y, STR_PASSENGERS_TO, 0);
++			y += 10;
++		}
++	} break;
++	case 5: {
++		/* upper info */
++		DrawString(2, 15, STR_NEXT_STATIONS, 0);
++		info.Append(st->goods[CT_PASSENGERS].cargo);
++
++		/* count total passengers in the station */
++		{
++			uint total_count = 0;
++			CargoDisplayList::List::const_iterator jt, jend = info.Packets().end();
++			for (jt = info.Packets().begin(); jt != jend; ++jt) {
++				total_count += jt->count;
++			}
++			SetDParam(0, total_count);
++			DrawStringRightAligned(235, 15, STR_7024, 0x010);
++		}
++
++		y = 25;
++		const PassengerTrainStatisticsList::List * const stats = st->passenger_stat.Stats();
++		PassengerTrainStatisticsList::List::const_iterator it = stats->begin(), end = stats->end();
++		const OrderID oid = WP(w, station_d).selected_oid;
++		it = stats->begin();
++		advance(it, w->vscroll.pos);
++		for (uint i = 0; it != end && i < w->vscroll.cap; i++, ++it) {
++			const byte color = it->order_id == INVALID_ORDER? 0x0a : (it->order_id == oid? 0x0d : 0x10);
++			SetDParam(0, it->dest_id);
++			DrawString(8, y, STR_STATION, color);
++
++			/* count passengers for the shared order group */
++			uint count = 0;
++			if (it->order_id != INVALID_ORDER) {
++				CargoList::List::const_iterator jt, jend = st->goods[CT_PASSENGERS].cargo.Packets()->end();
++				for (jt = st->goods[CT_PASSENGERS].cargo.Packets()->begin(); jt != jend; ++jt) {
++					if (st->routing_info.IsExistsInBoard((*jt)->source, (*jt)->destination, it->order_id)) {
++						count += (*jt)->count;
++					}
++				}
++			}
++
++			SetDParam(0, count);
++			DrawStringRightAligned(235, y, STR_7024, color); // num of sample
++			y += 10;
++		}
++
++		/* lower info */
++		DrawString(2, 67, STR_ROUTING_INFO, 0);
++		y = 77;
++
++		RoutingInformationGroup::List::const_iterator jt = st->routing_info.Info()->begin(), jend = st->routing_info.Info()->end();
++		advance(jt, w->vscroll2.pos);
++		for (uint i = 0; jt != jend && i < w->vscroll2.cap; ++i, ++jt) {
++			const StationID stid = jt->dest_id;
++			bool selected = oid != INVALID_ORDER && st->routing_info.IsExistsInBoard(INVALID_STATION, stid, oid);
++			const byte color = selected ? 0x0d : 0x10;
++			SetDParam(0, stid);
++			DrawString(8, y, STR_STATION, color);
++			const uint passenger_num = CountPassengersTo(stid, info);
++			SetDParam(0, passenger_num);
++			DrawStringRightAligned(235, y, STR_7024, color);
++			y += 10;
++		}
++	} break;
++	}
+ }
+ 
+-
+ static void StationViewWndProc(Window *w, WindowEvent *e)
+ {
+ 	switch (e->event) {
+@@ -820,43 +1064,131 @@
+ 
+ 		case WE_CLICK:
+ 			switch (e->we.click.widget) {
++				case 3: {
++					const uint16 pos = (e->we.click.pt.y - 25) / 10 + w->vscroll.pos;
++					const Station *st = GetStation(w->window_number);
++
++					switch (WP(w, station_d).tab) {
++					case 3: {
++						RoutingInformationGroup::List::const_iterator it = st->routing_info.Info()->begin();
++						advance(it, pos);
++						WP(w, station_d).selected_sid = it->dest_id;
++						SetWindowDirty(w);
++					} break;
++					case 5: {
++						const PassengerTrainStatisticsList::List * const stats = st->passenger_stat.Stats();
++						PassengerTrainStatisticsList::List::const_iterator it = stats->begin(), end = stats->end();
++						advance(it, pos);
++						if (it != end) {
++							WP(w, station_d).selected_oid = it->order_id;
++					SetWindowDirty(w);
++						}
++					}
++					}
++				} break;
++				case 5: {
++					const uint16 pos = (e->we.click.pt.y - 77) / 10 + w->vscroll2.pos;
++					const Station *st = GetStation(w->window_number);
++
++					switch (WP(w, station_d).tab) {
++					case 2: {
++						const uint16 pos = (e->we.click.pt.y - 77) / 20 + w->vscroll2.pos; // override
++						const bool t  =  e->we.click.pt.x < 150;
++						if (pos >= st->passenger_stat.Count()) break;
++						const PassengerTrainStatisticsList::List *stats = st->passenger_stat.Stats();
++						PassengerTrainStatisticsList::List::const_iterator it = stats->begin();
++						advance(it, pos);
++						WP(w, station_d).selected_oid = it->order_id;
++						if (t)
++							ScrollMainWindowToTile(GetStation(it->dest_id)->xy);
++						else {
++							if (it->order_id != INVALID_ORDER) {
++								Vehicle *v = FindVehicle(GetOrder(it->order_id));
++								if (v != NULL) ShowVehicleListWindow(v);
++							}
++						}
++						SetWindowDirty(w);
++					} break;
++					case 3: {
++						const StationID sid = WP(w, station_d).selected_sid;
++						if (sid == INVALID_STATION) break;
++
++						std::list<Route> rinfo;
++						GetRouteList(rinfo, st, GetStation(sid), st);
++						std::list<Route>::const_iterator it = rinfo.begin();
++						advance(it, pos);
++						if (it == rinfo.end() || it->order_id == INVALID_ORDER) break;
++						Vehicle *v = FindVehicle(GetOrder(it->order_id));
++						if (v != NULL) ShowVehicleListWindow(v);
++					} break;
++					case 4: {
++						CargoDisplayList info;
++						info.Append(st->goods[CT_PASSENGERS].cargo);
++						info.Sort();
++						CargoDisplayList::List::const_iterator it = info.Packets().begin();
++						advance(it, pos);
++						if (it == info.Packets().end()) break;
++						ScrollMainWindowToTile(GetStation(it->destination)->xy);
++					} break;
++					case 5: {
++						RoutingInformationGroup::List::const_iterator it = st->routing_info.Info()->begin();
++						advance(it, pos);
++						if (it == st->routing_info.Info()->end()) break;
++						ScrollMainWindowToTile(GetStation(it->dest_id)->xy);
++					} break;
++					}
++				} break;
+ 				case 7:
+-					ScrollMainWindowToTile(GetStation(w->window_number)->xy);
+-					break;
+-
+ 				case 8:
++				case 9:
++				case 10:
++				case 11: {
+ 					SetWindowDirty(w);
+-
+ 					/* toggle height/widget set */
+-					if (IsWindowOfPrototype(w, _station_view_expanded_widgets)) {
++					int f = e->we.click.widget - 7;
++					if (f == 0 && WP(w, station_d).tab != 0) {
+ 						AssignWidgetToWindow(w, _station_view_widgets);
+-						w->height = 110;
+-					} else {
++						w->height = 122;
++					} else if (WP(w, station_d).tab == 0) {
+ 						AssignWidgetToWindow(w, _station_view_expanded_widgets);
+-						w->height = 210;
++						w->height = 222;
+ 					}
++					if (e->we.click.widget == 11) {
++						f = WP(w, station_d).tab == 5? 4 : 5;
++					}
++					w->vscroll.cap  = f <= 2? 5 : 4;
++					w->vscroll2.cap = f == 2 ? 12/2 : 12;
+ 
++					WP(w, station_d).tab = f;
++					SetWindowWidgetsDisabledState(w, false, 7, 8, 9, 10, WIDGET_LIST_END);
++					SetWindowWidgetDisabledState(w, 11, ! _patches.use_destinations);
++					if (f != 4 && f != 5)
++						SetWindowWidgetDisabledState(w, e->we.click.widget, true);
+ 					SetWindowDirty(w);
++					} break;
++
++				case 12:
++					ScrollMainWindowToTile(GetStation(w->window_number)->xy);
+ 					break;
+ 
+-				case 9:
++				case 13:
+ 					SetDParam(0, w->window_number);
+ 					ShowQueryString(STR_STATION, STR_3030_RENAME_STATION_LOADING, 31, 180, w, CS_ALPHANUMERAL);
+ 					break;
+ 
+-				case 10: { /* Show a list of scheduled trains to this station */
++				case 14: { /* Show a list of scheduled trains to this station */
+ 					const Station *st = GetStation(w->window_number);
+ 					ShowVehicleListWindow(st->owner, VEH_TRAIN, (StationID)w->window_number);
+ 					break;
+ 				}
+ 
+-				case 11: { /* Show a list of scheduled road-vehicles to this station */
++				case 15: { /* Show a list of scheduled road-vehicles to this station */
+ 					const Station *st = GetStation(w->window_number);
+ 					ShowVehicleListWindow(st->owner, VEH_ROAD, (StationID)w->window_number);
+ 					break;
+ 				}
+ 
+-				case 12: { /* Show a list of scheduled aircraft to this station */
++				case 16: { /* Show a list of scheduled aircraft to this station */
+ 					const Station *st = GetStation(w->window_number);
+ 					/* Since oilrigs have no owners, show the scheduled aircraft of current player */
+ 					PlayerID owner = (st->owner == OWNER_NONE) ? _current_player : st->owner;
+@@ -864,7 +1196,7 @@
+ 					break;
+ 				}
+ 
+-				case 13: { /* Show a list of scheduled ships to this station */
++				case 17: { /* Show a list of scheduled ships to this station */
+ 					const Station *st = GetStation(w->window_number);
+ 					/* Since oilrigs/bouys have no owners, show the scheduled ships of current player */
+ 					PlayerID owner = (st->owner == OWNER_NONE) ? _current_player : st->owner;
+@@ -897,7 +1229,7 @@
+ 
+ 
+ static const WindowDesc _station_view_desc = {
+-	WDP_AUTO, WDP_AUTO, 249, 110, 249, 110,
++	WDP_AUTO, WDP_AUTO, 249, 122, 249, 122,
+ 	WC_STATION_VIEW, WC_NONE,
+ 	WDF_STD_TOOLTIPS | WDF_STD_BTN | WDF_DEF_WIDGET | WDF_UNCLICK_BUTTONS | WDF_STICKY_BUTTON,
+ 	_station_view_widgets,
+@@ -912,4 +1244,8 @@
+ 	PlayerID owner = GetStation(w->window_number)->owner;
+ 	if (owner != OWNER_NONE) w->caption_color = owner;
+ 	w->vscroll.cap = 5;
++	SetWindowWidgetDisabledState(w,  7, true);
++	SetWindowWidgetDisabledState(w, 11, ! _patches.use_destinations);
++	WP(w, station_d).selected_sid = INVALID_STATION;
++	WP(w, station_d).selected_oid = INVALID_ORDER;
+ }
+Index: src/cargopacket.h
+===================================================================
+--- src/cargopacket.h	(Revision 11568)
++++ src/cargopacket.h	(Arbeitskopie)
+@@ -21,6 +21,7 @@
+ 	StationID source;       ///< The station where the cargo came from first
+ 	TileIndex source_xy;    ///< The origin of the cargo (first station in feeder chain)
+ 	TileIndex loaded_at_xy; ///< Location where this cargo has been loaded into the vehicle
++	StationID destination;  ///< The station of the passenger's final destination
+ 
+ 	uint16 count;           ///< The amount of cargo in this packet
+ 	byte days_in_transit;   ///< Amount of days this packet has been in transit
+@@ -31,13 +32,20 @@
+ 	 * Creates a new cargo packet
+ 	 * @param source the source of the packet
+ 	 * @param count  the number of cargo entities to put in this packet
++	 * @param destination	the destination for this packet
+ 	 * @pre count != 0 || source == INVALID_STATION
+ 	 */
+-	CargoPacket(StationID source = INVALID_STATION, uint16 count = 0);
++	CargoPacket(StationID source = INVALID_STATION, uint16 count = 0, StationID dest = INVALID_STATION);
+ 
+ 	/** Destroy the packet */
+ 	virtual ~CargoPacket();
+ 
++	/**
++	 * Checks whether the cargo packet has the same destination
++	 * @param cp the cargo packet to compare to
++	 * @return true if destination is the same
++	 */
++	bool SameDestination(CargoPacket *cp);
+ 
+ 	/**
+ 	 * Is this a valid cargo packet ?
+@@ -159,6 +167,8 @@
+ 	 */
+ 	void Append(CargoPacket *cp);
+ 
++	void MovePacketTo(CargoPacket *cp, CargoList &dest);
++
+ 	/**
+ 	 * Truncates the cargo in this list to the given amount. It leaves the
+ 	 * first count cargo entities and removes the rest.
+@@ -188,4 +198,25 @@
+ 	void InvalidateCache();
+ };
+ 
++struct CargoDisplayPacket
++{
++	StationID destination;
++	uint16 count;
++	CargoDisplayPacket(StationID s, uint16 c) : destination(s), count(c) {}
++};
++
++class CargoDisplayList
++{
++public:
++	typedef std::list<CargoDisplayPacket> List;
++
++	const List& Packets() const;
++	void Append(const CargoPacket &cp);
++	void Append(const CargoList &srcList);
++	uint Size() const;
++	void Sort();
++private:
++	List packets;
++};
++
+ #endif /* CARGOPACKET_H */
+Index: src/economy.cpp
+===================================================================
+--- src/economy.cpp	(Revision 11568)
++++ src/economy.cpp	(Arbeitskopie)
+@@ -1409,7 +1409,7 @@
+  * Performs the vehicle payment _and_ marks the vehicle to be unloaded.
+  * @param front_v the vehicle to be unloaded
+  */
+-void VehiclePayment(Vehicle *front_v)
++void VehiclePayment(Vehicle *front_v, StationID prev_station)
+ {
+ 	int result = 0;
+ 
+@@ -1420,6 +1420,12 @@
+ 	StationID last_visited = front_v->last_station_visited;
+ 	Station *st = GetStation(last_visited);
+ 
++	OrderID cur_oid = front_v->current_order.index;
++	if (cur_oid == 0) { // FIXME: current_order.index may not be uninitialized
++		const Order * const ox = GetVehicleOrder(front_v, front_v->cur_order_index);
++		if (ox != NULL) cur_oid = ox->index;
++	}
++
+ 	/* The owner of the train wants to be paid */
+ 	PlayerID old_player = _current_player;
+ 	_current_player = front_v->owner;
+@@ -1452,6 +1458,7 @@
+ 				/* Deliver goods to the station */
+ 				st->time_since_unload = 0;
+ 
++				if ((*it)->destination == INVALID_STATION || (*it)->destination == st->index || st->routing_info.GetNextStationInWalk((*it)->source, (*it)->destination) == (*it)->destination) {
+ 				/* handle end of route payment */
+ 				Money profit = DeliverGoods(cp->count, v->cargo_type, cp->source, last_visited, cp->source_xy, cp->days_in_transit);
+ 				cp->paid_for = true;
+@@ -1461,6 +1468,16 @@
+ 				result |= 1;
+ 
+ 				SetBit(v->vehicle_flags, VF_CARGO_UNLOADING);
++				} else if ( ! st->routing_info.IsExistsInKeep((*it)->source, (*it)->destination, cur_oid) && ! st->routing_info.IsExistsInBoard((*it)->source, (*it)->destination, cur_oid)) {
++					SetBit(v->vehicle_flags, VF_CARGO_UNLOADING);
++					if ( ! _patches.pay_partly_fare) {
++						/* handle end of route payment */
++						Money profit = DeliverGoods(cp->count, v->cargo_type, cp->source, last_visited, cp->source_xy, cp->days_in_transit);
++						cp->source_xy = st->xy;
++						route_profit   += profit; // display amount paid for final route delivery, A-D of a chain A-B-C-D
++						vehicle_profit += profit - cp->feeder_share;                    // whole vehicle is not payed for transfers picked up earlier
++					}
++				}
+ 			} else if (front_v->current_order.flags & (OF_UNLOAD | OF_TRANSFER)) {
+ 				if (!cp->paid_for && (front_v->current_order.flags & OF_TRANSFER) != 0) {
+ 					Money profit = GetTransportedGoodsIncome(
+@@ -1498,9 +1515,23 @@
+ 		ShowCostOrIncomeAnimation(front_v->x_pos, front_v->y_pos, front_v->z_pos, -vehicle_profit);
+ 	}
+ 
++	if (prev_station != INVALID_STATION && prev_station != last_visited) {
++		const Money dest_fare = DeliverGoods(100, CT_PASSENGERS, prev_station, last_visited, GetStation(prev_station)->xy, front_v->last_station_visited_time / DAY_TICKS);
++		GetStation(prev_station)->passenger_stat.AddInfo(prev_station, last_visited, front_v, dest_fare / 100);
++	}
++	if (_patches.use_temporary_info && ! st->passenger_stat.IsExists(front_v)) {
++		for (const Order *ox = front_v->orders; ox != NULL; ox = ox->next) {
++			StationID temp_st = ox->dest;   // FIXME
++			OrderID   temp_od = ox->index;
++			if (IsValidStationID(temp_st) && last_visited != temp_st)
++				st->passenger_stat.AddTempInfo(last_visited, temp_st, front_v, temp_od);
++		}
++	}
++
+ 	_current_player = old_player;
+ }
+ 
++void PrintStationName(StationID sid);
+ /**
+  * Loads/unload the vehicle if possible.
+  * @param v the vehicle to be (un)loaded
+@@ -1541,16 +1572,24 @@
+ 	bool anything_loaded   = false;
+ 	uint32 cargo_not_full  = 0;
+ 	uint32 cargo_full      = 0;
++	uint total_load_amount = 0;
++	uint total_move_amount = 0;
+ 
+ 	v->cur_speed = 0;
+ 
+ 	StationID last_visited = v->last_station_visited;
+ 	Station *st = GetStation(last_visited);
++	OrderID cur_oid = u->current_order.index;
++	if (cur_oid == 0) { // FIXME: current_order.index may not be uninitialized
++		const Order * const ox = GetVehicleOrder(u, u->cur_order_index);
++		if (ox != NULL) cur_oid = ox->index;
++	}
+ 
+ 	for (; v != NULL; v = v->Next()) {
+ 		if (v->cargo_cap == 0) continue;
+ 
+ 		byte load_amount = EngInfo(v->engine_type)->load_amount;
++		total_load_amount += load_amount;
+ 		if (_patches.gradual_loading && HasBit(EngInfo(v->engine_type)->callbackmask, CBM_VEHICLE_LOAD_AMOUNT)) {
+ 			uint16 cb_load_amount = GetVehicleCallback(CBID_VEHICLE_LOAD_AMOUNT, 0, 0, v->engine_type, v);
+ 			if (cb_load_amount != CALLBACK_FAILED && cb_load_amount != 0) load_amount = cb_load_amount & 0xFF;
+@@ -1559,16 +1598,33 @@
+ 		GoodsEntry *ge = &st->goods[v->cargo_type];
+ 
+ 		if (HasBit(v->vehicle_flags, VF_CARGO_UNLOADING)) {
+-			uint cargo_count = v->cargo.Count();
++			uint cargo_count = 0;
++			
++			CargoList cargo_to_move;
++			for (CargoList::List::const_iterator it = v->cargo.Packets()->begin(); it != v->cargo.Packets()->end(); ) {
++				CargoPacket *cp = NULL;
++				if ((*it)->destination == INVALID_STATION || (*it)->destination == st->index
++					//|| ( ! st->routing_info.IsExistsInKeep((*it)->source, (*it)->destination, cur_oid) && ! st->routing_info.IsExistsInBoard((*it)->source, (*it)->destination, cur_oid))) {
++					|| ( ! st->routing_info.IsExistsInKeep((*it)->source, (*it)->destination, cur_oid))) {
++					cp = *it;
++					cargo_count += (*it)->count;
++				}
++				it++;
++				if (cp) v->cargo.MovePacketTo(cp, cargo_to_move);
++			}
++
+ 			uint amount_unloaded = _patches.gradual_loading ? min(cargo_count, load_amount) : cargo_count;
++			total_move_amount += amount_unloaded;
+ 			bool remaining; // Are there cargo entities in this vehicle that can still be unloaded here?
+ 
+-			if (HasBit(ge->acceptance_pickup, GoodsEntry::ACCEPTANCE) && !(u->current_order.flags & OF_TRANSFER)) {
++			if (!(u->current_order.flags & OF_TRANSFER)) {
+ 				/* The cargo has reached it's final destination, the packets may now be destroyed */
+-				remaining = v->cargo.MoveTo(NULL, amount_unloaded, CargoList::MTA_FINAL_DELIVERY, last_visited);
++				remaining = cargo_to_move.MoveTo(&ge->cargo, amount_unloaded, CargoList::MTA_FINAL_DELIVERY, last_visited);
++				cargo_to_move.MoveTo(&v->cargo, MAX_UVALUE(uint));
+ 
+-				result |= 1;
++				result |= 2;
+ 			} else if (u->current_order.flags & (OF_UNLOAD | OF_TRANSFER)) {
++				cargo_to_move.MoveTo(&v->cargo, MAX_UVALUE(uint));
+ 				remaining = v->cargo.MoveTo(&ge->cargo, amount_unloaded);
+ 				SetBit(ge->acceptance_pickup, GoodsEntry::PICKUP);
+ 
+@@ -1576,6 +1632,7 @@
+ 			} else {
+ 				/* The order changed while unloading (unset unload/transfer) or the
+ 				 * station does not accept goods anymore. */
++				cargo_to_move.MoveTo(&v->cargo, MAX_UVALUE(uint));
+ 				ClrBit(v->vehicle_flags, VF_CARGO_UNLOADING);
+ 				continue;
+ 			}
+@@ -1591,6 +1648,26 @@
+ 			} else {
+ 				/* We have finished unloading (cargo count == 0) */
+ 				ClrBit(v->vehicle_flags, VF_CARGO_UNLOADING);
++
++				/* passengers walk */
++				if (!ge->cargo.Empty()) {
++					for (CargoList::List::const_iterator it = ge->cargo.Packets()->begin(); it != ge->cargo.Packets()->end(); ) {
++						CargoPacket *cp = *it;
++						it++;
++						StationID walk_dest = st->routing_info.GetNextStationInWalk(cp->source, cp->destination);
++						if (walk_dest != INVALID_STATION) {
++							if (walk_dest == cp->destination) {
++								CargoList cargo_to_delete;
++								ge->cargo.MovePacketTo(cp, cargo_to_delete);
++							} else {
++								GoodsEntry *ge2 = &GetStation(walk_dest)->goods[v->cargo_type];
++								ge->cargo.MovePacketTo(cp, ge2->cargo);
++								InvalidateWindow(WC_STATION_VIEW, walk_dest);
++							}
++						}
++					}
++					ge->cargo.InvalidateCache();
++				}
+ 			}
+ 
+ 			continue;
+@@ -1614,10 +1691,22 @@
+ 
+ 		/* If there's goods waiting at the station, and the vehicle
+ 		 * has capacity for it, load it on the vehicle. */
+-		if (!ge->cargo.Empty() &&
+-				(cap = v->cargo_cap - v->cargo.Count()) != 0) {
+-			uint count = ge->cargo.Count();
++		uint count = 0;
++		CargoList cargo_to_move;
++		if (!ge->cargo.Empty()) {
++			for (CargoList::List::const_iterator it = ge->cargo.Packets()->begin(); it != ge->cargo.Packets()->end(); ) {
++				CargoPacket *cp = NULL;
++				if ((*it)->destination == INVALID_STATION || st->routing_info.IsExistsInBoard((*it)->source, (*it)->destination, cur_oid)
++					|| (! st->routing_info.IsExistsInBoard((*it)->source, (*it)->destination, cur_oid)) && st->routing_info.IsExistsInBoard(INVALID_STATION, (*it)->destination, cur_oid)) {
++					cp = *it;
++					count += (*it)->count;
++				}
++				it++;
++				if (cp) ge->cargo.MovePacketTo(cp, cargo_to_move);
++			}
++		}
+ 
++		if (count > 0 && (cap = v->cargo_cap - v->cargo.Count()) != 0) {
+ 			/* Skip loading this vehicle if another train/vehicle is already handling
+ 			 * the same cargo type at this station */
+ 			if (_patches.improved_load && cargo_left[v->cargo_type] <= 0) {
+@@ -1632,6 +1721,7 @@
+ 				cap = min((uint)cargo_left[v->cargo_type], cap);
+ 				cargo_left[v->cargo_type] -= cap;
+ 			}
++			total_move_amount += cap;
+ 
+ 			if (v->cargo.Empty()) TriggerVehicle(v, VEHICLE_TRIGGER_NEW_CARGO);
+ 
+@@ -1645,7 +1735,7 @@
+ 			completely_empty = false;
+ 			anything_loaded = true;
+ 
+-			ge->cargo.MoveTo(&v->cargo, cap, CargoList::MTA_CARGO_LOAD, st->xy);
++			cargo_to_move.MoveTo(&v->cargo, cap, CargoList::MTA_CARGO_LOAD, st->xy);
+ 
+ 			st->time_since_load = 0;
+ 			st->last_vehicle_type = v->type;
+@@ -1654,8 +1744,9 @@
+ 
+ 			result |= 2;
+ 		}
++		cargo_to_move.MoveTo(&ge->cargo, MAX_UVALUE(uint));
+ 
+-		if (v->cargo.Count() == v->cargo_cap) {
++		if (v->cargo.Count() == v->cargo_cap) {// || _patches.faster_gradual_loading && ! HasBit(u->current_order.flags, OFB_FULL_LOAD) && count < 5) {
+ 			SetBit(cargo_full, v->cargo_type);
+ 		} else {
+ 			SetBit(cargo_not_full, v->cargo_type);
+@@ -1680,8 +1771,10 @@
+ 			/* The time it takes to load one 'slice' of cargo or passengers depends
+ 			* on the vehicle type - the values here are those found in TTDPatch */
+ 			const uint gradual_loading_wait_time[] = { 40, 20, 10, 20 };
+-
++			if (total_move_amount >= total_load_amount || ! _patches.faster_gradual_loading)
+ 			unloading_time = gradual_loading_wait_time[v->type];
++			else
++				unloading_time = (gradual_loading_wait_time[v->type] + 3 * gradual_loading_wait_time[v->type] * total_move_amount / total_load_amount) >> 2;
+ 		}
+ 	} else {
+ 		bool finished_loading = true;
+Index: src/variables.h
+===================================================================
+--- src/variables.h	(Revision 11568)
++++ src/variables.h	(Arbeitskopie)
+@@ -247,6 +247,18 @@
+ 
+ 	bool exclusive_rights;   ///< allow buying exclusive rights
+ 	bool give_money;         ///< allow giving other players money
++	bool use_destinations;   ///< destination for cargo packets
++	uint8 additional_route_rate;
++	uint8 aircraft_cost_modifier;
++	uint8 transferring_cost_modifier;
++	uint8 reduce_passenger;         // reduce amount of passengers Sensible value half the number of transfers
++	bool generate_unreachable_passenger;
++	uint8 reduce_unreachable_passenger;
++	bool use_temporary_info;
++	bool update_route_on_jit;
++	bool faster_gradual_loading;
++	bool pay_partly_fare;
++	uint8 passenger_walking;
+ 
+ 	bool enable_signal_gui;  ///< Show the signal GUI when the signal button is pressed
+ };
+@@ -354,4 +366,7 @@
+ /* Forking stuff */
+ VARDEF bool _dedicated_forks;
+ 
++/* pax dest */
++extern bool _need_to_update_routinginfo;
++
+ #endif /* VARIABLES_H */
+Index: src/cargopacket.cpp
+===================================================================
+--- src/cargopacket.cpp	(Revision 11568)
++++ src/cargopacket.cpp	(Arbeitskopie)
+@@ -7,6 +7,7 @@
+ #include "station.h"
+ #include "cargopacket.h"
+ #include "saveload.h"
++#include "variables.h"
+ 
+ /* Initialize the cargopacket-pool */
+ DEFINE_OLD_POOL_GENERIC(CargoPacket, CargoPacket)
+@@ -18,13 +19,14 @@
+ 	_CargoPacket_pool.AddBlockToPool();
+ }
+ 
+-CargoPacket::CargoPacket(StationID source, uint16 count)
++CargoPacket::CargoPacket(StationID source, uint16 count, StationID dest)
+ {
+ 	if (source != INVALID_STATION) assert(count != 0);
+ 
+ 	this->source          = source;
+ 	this->source_xy       = (source != INVALID_STATION) ? GetStation(source)->xy : 0;
+ 	this->loaded_at_xy    = this->source_xy;
++	this->destination     = dest;
+ 
+ 	this->count           = count;
+ 	this->days_in_transit = 0;
+@@ -42,10 +44,16 @@
+ 	return this->source_xy == cp->source_xy && this->days_in_transit == cp->days_in_transit && this->paid_for == cp->paid_for;
+ }
+ 
++bool CargoPacket::SameDestination(CargoPacket *cp)
++{
++	return this->destination == cp->destination;
++}
++
+ static const SaveLoad _cargopacket_desc[] = {
+ 	SLE_VAR(CargoPacket, source,          SLE_UINT16),
+ 	SLE_VAR(CargoPacket, source_xy,       SLE_UINT32),
+ 	SLE_VAR(CargoPacket, loaded_at_xy,    SLE_UINT32),
++//	SLE_VAR(CargoPacket, destination,     SLE_UINT16),
+ 	SLE_VAR(CargoPacket, count,           SLE_UINT16),
+ 	SLE_VAR(CargoPacket, days_in_transit, SLE_UINT8),
+ 	SLE_VAR(CargoPacket, feeder_share,    SLE_INT64),
+@@ -145,7 +153,8 @@
+ 	assert(cp->IsValid());
+ 
+ 	for (List::iterator it = packets.begin(); it != packets.end(); it++) {
+-		if ((*it)->SameSource(cp) && (*it)->count + cp->count <= 65535) {
++		if ((*it)->SameSource(cp) && 
++			( ! _patches.use_destinations || (*it)->SameDestination(cp)) && (*it)->count + cp->count <= 65535) {
+ 			(*it)->count        += cp->count;
+ 			(*it)->feeder_share += cp->feeder_share;
+ 			delete cp;
+@@ -160,6 +169,11 @@
+ 	InvalidateCache();
+ }
+ 
++void CargoList::MovePacketTo(CargoPacket *cp, CargoList &dest)
++{
++	packets.remove(cp);
++	dest.Append(cp);
++}
+ 
+ void CargoList::Truncate(uint count)
+ {
+@@ -196,6 +210,14 @@
+ 			packets.remove(cp);
+ 			switch (mta) {
+ 				case MTA_FINAL_DELIVERY:
++					if (cp->destination != INVALID_STATION && cp->destination != data) {
++						/* the passengers have to get off here and wait for the next vehicle */
++//						cp->waiting_time = 0;
++						cp->days_in_transit = 0;
++						cp->source_xy = GetStation(data)->xy;
++						dest->packets.push_back(cp);
++						count -= cp->count;
++					} else
+ 					if (cp->source == data) {
+ 						tmp.Append(cp);
+ 					} else {
+@@ -215,12 +237,12 @@
+ 			}
+ 		} else {
+ 			/* Can move only part of the packet, so split it into two pieces */
+-			if (mta != MTA_FINAL_DELIVERY) {
++			if (mta != MTA_FINAL_DELIVERY || (mta == MTA_FINAL_DELIVERY && cp->destination != data && cp->destination != INVALID_STATION)) {
+ 				CargoPacket *cp_new = new CargoPacket();
+ 				cp_new->source          = cp->source;
+ 				cp_new->source_xy       = cp->source_xy;
+ 				cp_new->loaded_at_xy    = (mta == MTA_CARGO_LOAD) ? data : cp->loaded_at_xy;
+-
++				cp_new->destination     = cp->destination;
+ 				cp_new->days_in_transit = cp->days_in_transit;
+ 				cp_new->feeder_share    = cp->feeder_share / count;
+ 				/* When cargo is moved into another vehicle you have *always* paid for it */
+@@ -272,3 +294,78 @@
+ 	days_in_transit = dit / count;
+ 	source = (*packets.begin())->source;
+ }
++
++void CargoDisplayList::Append(const CargoList &srcList)
++{
++	for (CargoList::List::const_iterator it = srcList.Packets()->begin(); it != srcList.Packets()->end(); it++) {
++		Append((**it));
++	}
++}
++
++const CargoDisplayList::List& CargoDisplayList::Packets() const
++{
++	return packets;
++}
++
++void CargoDisplayList::Append(const CargoPacket &cp)
++{
++	assert(cp.IsValid());
++	if (cp.destination == INVALID_STATION) return;
++
++	List::iterator end = packets.end(), it;
++	for (it = packets.begin(); it != end; it++) {
++		if (it->destination == cp.destination && it->count + cp.count <= 65535) {
++			it->count += cp.count;
++			return;
++		}
++	}
++	assert(it == end);
++	/* The packet could not be merged with another one */
++	CargoDisplayPacket cpnew(cp.destination, cp.count);
++	packets.push_back(cpnew);
++}
++
++uint CargoDisplayList::Size() const
++{
++	return packets.size();
++}
++
++void CargoDisplayList::Sort()
++{
++	List::iterator end = packets.end(), it, jt, max;
++	for (it = packets.begin(); it != end; it++) {
++		max = it;
++		for (jt = it; jt != end; jt++) {
++			if (max->count < jt->count) max = jt;
++		}
++		if (jt != max)
++			std::swap(*max, *it);
++	}
++}
++
++static const SaveLoad _cargopacket_paxdest_desc[] = {
++	SLE_VAR(CargoPacket, destination,     SLE_UINT16),
++	SLE_END()
++};
++
++static void Save_PAXD()
++{
++	CargoPacket *cp;
++
++	FOR_ALL_CARGOPACKETS(cp) {
++		SlSetArrayIndex(cp->index);
++		SlObject(cp, _cargopacket_paxdest_desc);
++	}
++}
++
++static void Load_PAXD()
++{
++	int index;
++	while ((index = SlIterateArray()) != -1) {
++		SlObject(GetCargoPacket(index), _cargopacket_paxdest_desc);
++	}
++}
++
++extern const ChunkHandler _cargopacket_paxdest_chunk_handlers[] = {
++	{ 'PAXD', Save_PAXD, Load_PAXD, CH_ARRAY | CH_LAST},
++};
+Index: src/vehicle_gui.cpp
+===================================================================
+--- src/vehicle_gui.cpp	(Revision 11568)
++++ src/vehicle_gui.cpp	(Arbeitskopie)
+@@ -1289,6 +1289,8 @@
+ 	VLD_WIDGET_INCREASE_SERVICING_INTERVAL,
+ 	VLD_WIDGET_DECREASE_SERVICING_INTERVAL,
+ 	VLD_WIDGET_BOTTOM_RIGHT,
++	VLD_WIDGET_PASSENGERS_INFO,
++	VLD_WIDGET_DETAILS_VEHICLES,
+ 	VLD_WIDGET_MIDDLE_DETAILS,
+ 	VLD_WIDGET_SCROLLBAR,
+ 	VLD_WIDGET_DETAILS_CARGO_CARRIED,
+@@ -1307,6 +1309,8 @@
+ 	{ WWT_PUSHTXTBTN,     RESIZE_TB, 14,   0,  10, 101, 106, STR_0188,             STR_884D_INCREASE_SERVICING_INTERVAL},   // VLD_WIDGET_INCREASE_SERVICING_INTERVAL
+ 	{ WWT_PUSHTXTBTN,     RESIZE_TB, 14,   0,  10, 107, 112, STR_0189,             STR_884E_DECREASE_SERVICING_INTERVAL},   // VLD_WIDGET_DECREASE_SERVICING_INTERVAL
+ 	{      WWT_PANEL,    RESIZE_RTB, 14,  11, 404, 101, 112, 0x0,                  STR_NULL},                               // VLD_WIDGET_BOTTOM_RIGHT
++        { WWT_PUSHTXTBTN,   RESIZE_LRTB, 14, 340, 404, 101, 112, STR_SHOW_PASSENGERS_INFO,   STR_NULL},                         // VLD_WIDGET_PASSENGERS_INFO
++        { WWT_PUSHTXTBTN,   RESIZE_LRTB, 14, 340, 404, 101, 112, STR_013D_INFORMATION, STR_8850_SHOW_DETAILS_OF_TRAIN_VEHICLES},// VLD_WIDGET_DETAILS_VEHICLES
+ 	{     WWT_MATRIX,     RESIZE_RB, 14,   0, 392,  56, 100, 0x701,                STR_NULL},                               // VLD_WIDGET_MIDDLE_DETAILS
+ 	{  WWT_SCROLLBAR,    RESIZE_LRB, 14, 393, 404,  56, 100, 0x0,                  STR_0190_SCROLL_BAR_SCROLLS_LIST},       // VLD_WIDGET_SCROLLBAR
+ 	{ WWT_PUSHTXTBTN,     RESIZE_TB, 14,   0,  95, 113, 124, STR_013C_CARGO,       STR_884F_SHOW_DETAILS_OF_CARGO_CARRIED}, // VLD_WIDGET_DETAILS_CARGO_CARRIED
+@@ -1459,16 +1463,31 @@
+ {
+ 	const Vehicle *v = GetVehicle(w->window_number);
+ 	byte det_tab = WP(w, vehicledetails_d).tab;
++	CargoDisplayList info;
+ 
+ 	w->SetWidgetDisabledState(VLD_WIDGET_RENAME_VEHICLE, v->owner != _local_player);
+ 
+ 	if (v->type == VEH_TRAIN) {
+ 		w->DisableWidget(det_tab + VLD_WIDGET_DETAILS_CARGO_CARRIED);
+ 		SetVScrollCount(w, GetTrainDetailsWndVScroll(v->index, det_tab));
++		 SetWindowWidgetsHiddenState(w, true,
++				                 VLD_WIDGET_PASSENGERS_INFO,
++				                 VLD_WIDGET_DETAILS_VEHICLES,
++				                 WIDGET_LIST_END);
++		 } else {
++			         if (_patches.use_destinations) {
++				                 for (const Vehicle *u = v ; u != NULL ; u = u->Next())
++					                         if (u->cargo_type == CT_PASSENGERS) info.Append(u->cargo);
++				         }
++				         w->vscroll.cap = (w->height - 67) / 11;
++				         SetVScrollCount(w, info.Size());
++				         SetWindowWidgetHiddenState(w, VLD_WIDGET_SCROLLBAR, det_tab == 0);
++				         SetWindowWidgetHiddenState(w, VLD_WIDGET_PASSENGERS_INFO, det_tab == 1);
++				         SetWindowWidgetHiddenState(w, VLD_WIDGET_DETAILS_VEHICLES, det_tab == 0);
++
+ 	}
+ 
+ 	w->SetWidgetsHiddenState(v->type != VEH_TRAIN,
+-		VLD_WIDGET_SCROLLBAR,
+ 		VLD_WIDGET_DETAILS_CARGO_CARRIED,
+ 		VLD_WIDGET_DETAILS_TRAIN_VEHICLES,
+ 		VLD_WIDGET_DETAILS_CAPACITY_OF_EACH,
+@@ -1537,11 +1556,24 @@
+ 
+ 		case VEH_ROAD:
+ 		case VEH_SHIP:
+-		case VEH_AIRCRAFT:
++		case VEH_AIRCRAFT: {
+ 			DrawVehicleImage(v, 3, 57, 0, 0, INVALID_VEHICLE);
++			if (det_tab == 0) {
+ 			DrawVehicleDetails(v, 75, 57, w->vscroll.pos, w->vscroll.cap, det_tab);
++			} else {
++				uint pos = w->vscroll.pos;
++				info.Sort();
++				CargoDisplayList::List::const_iterator it = info.Packets().begin(), iend = info.Packets().end();
++				advance(it, pos);
++				for (uint i = 0, y = 57; it != iend && i < w->vscroll.cap; i++, ++it, y+=11) {
++					SetDParam(0, 0);
++					SetDParam(1, it->count);
++					SetDParam(2, it->destination);
++					DrawString(75, y, STR_PASSENGERS_TO, 0);
++				}
++			}
+ 			break;
+-
++		}
+ 		default: NOT_REACHED();
+ 	}
+ }
+@@ -1576,6 +1608,11 @@
+ 
+ 		case WE_CLICK: {
+ 			switch (e->we.click.widget) {
++				case VLD_WIDGET_PASSENGERS_INFO:
++				case VLD_WIDGET_DETAILS_VEHICLES:
++					WP(w, vehicledetails_d).tab = 1 - WP(w, vehicledetails_d).tab;
++					SetWindowDirty(w);
++					break;
+ 				case VLD_WIDGET_RENAME_VEHICLE: {// rename
+ 					const Vehicle *v = GetVehicle(w->window_number);
+ 					SetDParam(0, v->index);
+@@ -1603,9 +1640,7 @@
+ 						VLD_WIDGET_DETAILS_TRAIN_VEHICLES,
+ 						VLD_WIDGET_DETAILS_CAPACITY_OF_EACH,
+ 						VLD_WIDGET_DETAILS_TOTAL_CARGO,
+-						e->we.click.widget,
+ 						WIDGET_LIST_END);
+-
+ 					WP(w, vehicledetails_d).tab = e->we.click.widget - VLD_WIDGET_DETAILS_CARGO_CARRIED;
+ 					SetWindowDirty(w);
+ 					break;
+@@ -1625,6 +1660,7 @@
+ 
+ 			w->vscroll.cap += e->we.sizing.diff.y / 14;
+ 			w->widget[VLD_WIDGET_MIDDLE_DETAILS].data = (w->vscroll.cap << 8) + 1;
++			SetWindowDirty(w);
+ 			break;
+ 	}
+ }
+Index: src/train_gui.cpp
+===================================================================
+--- src/train_gui.cpp	(Revision 11568)
++++ src/train_gui.cpp	(Arbeitskopie)
+@@ -18,6 +18,7 @@
+ #include "depot.h"
+ #include "train.h"
+ #include "newgrf_engine.h"
++#include "cargopacket.h"
+ 
+ void CcBuildWagon(bool success, TileIndex tile, uint32 p1, uint32 p2)
+ {
+@@ -156,6 +157,7 @@
+ {
+ 	AcceptedCargo act_cargo;
+ 	AcceptedCargo max_cargo;
++	CargoDisplayList pslist;
+ 	int num = 0;
+ 
+ 	if (det_tab == 3) { // Total cargo tab
+@@ -165,6 +167,8 @@
+ 		for (const Vehicle *v = GetVehicle(veh_id) ; v != NULL ; v = v->Next()) {
+ 			act_cargo[v->cargo_type] += v->cargo.Count();
+ 			max_cargo[v->cargo_type] += v->cargo_cap;
++			if (_patches.use_destinations && v->cargo_type == CT_PASSENGERS)
++				pslist.Append(v->cargo);
+ 		}
+ 
+ 		/* Set scroll-amount seperately from counting, as to not compute num double
+@@ -173,6 +177,7 @@
+ 		for (CargoID i = 0; i < NUM_CARGO; i++) {
+ 			if (max_cargo[i] > 0) num++; // only count carriages that the train has
+ 		}
++		num += pslist.Packets().size() + 1;
+ 		num++; // needs one more because first line is description string
+ 	} else {
+ 		for (const Vehicle *v = GetVehicle(veh_id) ; v != NULL ; v = v->Next()) {
+@@ -230,6 +235,7 @@
+ 	} else {
+ 		AcceptedCargo act_cargo;
+ 		AcceptedCargo max_cargo;
++		CargoDisplayList pslist;
+ 
+ 		memset(max_cargo, 0, sizeof(max_cargo));
+ 		memset(act_cargo, 0, sizeof(act_cargo));
+@@ -237,6 +243,8 @@
+ 		for (const Vehicle *u = v; u != NULL ; u = u->Next()) {
+ 			act_cargo[u->cargo_type] += u->cargo.Count();
+ 			max_cargo[u->cargo_type] += u->cargo_cap;
++			if (_patches.use_destinations && u->cargo_type == CT_PASSENGERS)
++				pslist.Append(u->cargo);
+ 		}
+ 
+ 		/* draw total cargo tab */
+@@ -252,6 +260,20 @@
+ 				DrawString(x, y + 2, FreightWagonMult(i) > 1 ? STR_TOTAL_CAPACITY_MULT : STR_013F_TOTAL_CAPACITY, TC_FROMSTRING);
+ 			}
+ 		}
++
++		if (_patches.use_destinations) {
++			pslist.Sort();
++			for (CargoDisplayList::List::const_iterator it = pslist.Packets().begin(); it != pslist.Packets().end(); it++) {
++				if (--vscroll_pos < 0 && vscroll_pos > -vscroll_cap + 1) {
++					y += 14;
++					SetDParam(0, CT_PASSENGERS);
++					SetDParam(1, it->count);
++					SetDParam(2, it->destination);
++					DrawString(x + 8, y + 2, STR_PASSENGERS_TO, 0);
++				}
++  			}
++  		}
++
+ 		SetDParam(0, v->cargo.FeederShare());
+ 		DrawString(x, y + 15, STR_FEEDER_CARGO_VALUE, TC_FROMSTRING);
+ 	}
+Index: src/openttd.h
+===================================================================
+--- src/openttd.h	(Revision 11568)
++++ src/openttd.h	(Arbeitskopie)
+@@ -70,6 +70,7 @@
+ typedef uint16 EngineRenewID;
+ typedef uint16 DestinationID;
+ 
++
+ typedef OverflowSafeInt<int64, INT64_MAX, INT64_MIN> OverflowSafeInt64;
+ typedef OverflowSafeInt64 Money;
+ 
+Index: src/saveload.h
+===================================================================
+--- src/saveload.h	(Revision 11568)
++++ src/saveload.h	(Arbeitskopie)
+@@ -266,7 +266,7 @@
+ static inline bool SlIsObjectCurrentlyValid(uint16 version_from, uint16 version_to)
+ {
+ 	extern const uint16 SAVEGAME_VERSION;
+-	if (SAVEGAME_VERSION < version_from || SAVEGAME_VERSION > version_to) return false;
++	//if (SAVEGAME_VERSION < version_from || SAVEGAME_VERSION > version_to) return false;
+ 
+ 	return true;
+ }
+Index: src/roadveh_cmd.cpp
+===================================================================
+--- src/roadveh_cmd.cpp	(Revision 11568)
++++ src/roadveh_cmd.cpp	(Arbeitskopie)
+@@ -343,6 +343,7 @@
+ 	return true;
+ }
+ 
++void RemoveAllInfo(const Vehicle * const v);
+ /** Sell a road vehicle.
+  * @param tile unused
+  * @param flags operation to perform
+@@ -378,6 +379,7 @@
+ 		DeleteDepotHighlightOfVehicle(v);
+ 		delete v;
+ 	}
++	RemoveAllInfo(v);
+ 
+ 	return ret;
+ }
+@@ -1841,11 +1843,11 @@
+ 			}
+ 
+ 			rs->SetEntranceBusy(false);
+-
++			const StationID prev_station = v->last_station_visited;
+ 			v->last_station_visited = GetStationIndex(v->tile);
+ 
+ 			RoadVehArrivesAt(v, st);
+-			v->BeginLoading();
++			v->BeginLoading(prev_station);
+ 
+ 			return false;
+ 		}
+@@ -1960,6 +1962,7 @@
+ 
+ void RoadVehicle::Tick()
+ {
++	this->last_station_visited_time++;
+ 	AgeRoadVehCargo(this);
+ 
+ 	if (IsRoadVehFront(this)) RoadVehController(this);
+Index: src/economy.h
+===================================================================
+--- src/economy.h	(Revision 11568)
++++ src/economy.h	(Arbeitskopie)
+@@ -69,7 +69,7 @@
+ Money GetTransportedGoodsIncome(uint num_pieces, uint dist, byte transit_days, CargoID cargo_type);
+ uint MoveGoodsToStation(TileIndex tile, int w, int h, CargoID type, uint amount);
+ 
+-void VehiclePayment(Vehicle *front_v);
++void VehiclePayment(Vehicle *front_v, StationID prev_station);
+ void LoadUnloadStation(Station *st);
+ 
+ #endif /* ECONOMY_H */
+Index: src/vehicle.cpp
+===================================================================
+--- src/vehicle.cpp	(Revision 11568)
++++ src/vehicle.cpp	(Arbeitskopie)
+@@ -2812,9 +2812,12 @@
+ 	SLE_CONDVAR(Vehicle, current_order_time,   SLE_UINT32,                67, SL_MAX_VERSION),
+ 	SLE_CONDVAR(Vehicle, lateness_counter,     SLE_INT32,                 67, SL_MAX_VERSION),
+ 
+-	/* reserve extra space in savegame here. (currently 10 bytes) */
+-	SLE_CONDNULL(10,                                                       2, SL_MAX_VERSION),
++	SLE_CONDVAR(Vehicle, last_station_visited_time,     SLE_UINT32,       2, SL_MAX_VERSION),
++	SLE_CONDVAR(Vehicle, last_station_order_id,         SLE_UINT16,       2, SL_MAX_VERSION),
+ 
++	/* reserve extra space in savegame here. (currently 4 bytes) */
++	SLE_CONDNULL(4,                                                        2, SL_MAX_VERSION),
++
+ 	SLE_END()
+ };
+ 
+@@ -3052,7 +3055,7 @@
+ 	{ 'VEHS', Save_VEHS, Load_VEHS, CH_SPARSE_ARRAY | CH_LAST},
+ };
+ 
+-void Vehicle::BeginLoading()
++void Vehicle::BeginLoading(StationID prev_station)
+ {
+ 	assert(IsTileType(tile, MP_STATION) || type == VEH_SHIP);
+ 
+@@ -3078,7 +3081,11 @@
+ 	GetStation(this->last_station_visited)->loading_vehicles.push_back(this);
+ 
+ 	SET_EXPENSES_TYPE(this->GetExpenseType(true));
+-	VehiclePayment(this);
++	VehiclePayment(this, prev_station);
++	last_station_order_id = this->current_order.index;
++	if (last_station_order_id == 0) { // FIXME: current_order.index may not be uninitialized
++		last_station_order_id = GetVehicleOrder(this, cur_order_index)->index;
++	}
+ 
+ 	InvalidateWindow(this->GetVehicleListWindowClass(), this->owner);
+ 	InvalidateWindowWidget(WC_VEHICLE_VIEW, this->index, STATUS_BAR);
+@@ -3102,6 +3109,7 @@
+ 
+ 	HideFillingPercent(this->fill_percent_te_id);
+ 	this->fill_percent_te_id = INVALID_TE_ID;
++	this->last_station_visited_time = 0;
+ }
+ 
+ 
+Index: src/window.h
+===================================================================
+--- src/window.h	(Revision 11568)
++++ src/window.h	(Arbeitskopie)
+@@ -399,6 +399,13 @@
+ };
+ assert_compile(WINDOW_CUSTOM_SIZE >= sizeof(order_d));
+ 
++struct station_d {
++	byte   tab;
++	StationID selected_sid;
++	OrderID   selected_oid;
++};
++assert_compile(WINDOW_CUSTOM_SIZE >= sizeof(station_d));
++
+ struct vehicledetails_d {
+ 	byte tab;
+ };
+Index: src/aircraft_cmd.cpp
+===================================================================
+--- src/aircraft_cmd.cpp	(Revision 11568)
++++ src/aircraft_cmd.cpp	(Arbeitskopie)
+@@ -471,6 +471,7 @@
+ 	InvalidateWindowClasses(WC_AIRCRAFT_LIST);
+ }
+ 
++void RemoveAllInfo(const Vehicle * const v);
+ /** Sell an aircraft.
+  * @param tile unused
+  * @param flags for command type
+@@ -498,6 +499,7 @@
+ 		InvalidateWindow(WC_VEHICLE_DEPOT, v->tile);
+ 		DoDeleteAircraft(v);
+ 	}
++	RemoveAllInfo(v);
+ 
+ 	return ret;
+ }
+@@ -1482,6 +1484,7 @@
+ {
+ 	if (v->current_order.type == OT_GOTO_DEPOT) return;
+ 
++	const StationID prev_stn = v->last_station_visited;
+ 	Station *st = GetStation(v->u.air.targetairport);
+ 	v->last_station_visited = v->u.air.targetairport;
+ 
+@@ -1500,7 +1503,7 @@
+ 			0);
+ 	}
+ 
+-	v->BeginLoading();
++	v->BeginLoading(prev_stn);
+ }
+ 
+ static void AircraftLandAirplane(Vehicle *v)
+@@ -2119,6 +2122,7 @@
+ 
+ void Aircraft::Tick()
+ {
++	this->last_station_visited_time++;
+ 	if (!IsNormalAircraft(this)) return;
+ 
+ 	if (this->subtype == AIR_HELICOPTER) HelicopterTickHandler(this);

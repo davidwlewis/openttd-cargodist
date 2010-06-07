@@ -1,0 +1,4971 @@
+Index: configure
+===================================================================
+--- configure	(Revision 14405)
++++ configure	(Arbeitskopie)
+@@ -98,6 +98,8 @@
+ 		if ($0 == "DIRECTMUSIC" && "'$with_direct_music'" == "0")  { next; }
+ 		if ($0 == "LIBTIMIDITY" && "'$libtimidity'" == "" )        { next; }
+ 		if ($0 == "HAVE_THREAD" && "'$with_threads'" == "0")       { next; }
++		if ($0 == "OPENGL"      && "'$with_sdlgl'" == "0" &&
++				"'$with_win32gl'" == "0")                  { next; }
+ 
+ 		skip += 1;
+ 
+Index: src/settings.cpp
+===================================================================
+--- src/settings.cpp	(Revision 14405)
++++ src/settings.cpp	(Arbeitskopie)
+@@ -1179,13 +1179,14 @@
+ 	 SDTG_BOOL("medium_aa",                  S, 0, _freetype.medium_aa,   false,    STR_NULL, NULL),
+ 	 SDTG_BOOL("large_aa",                   S, 0, _freetype.large_aa,    false,    STR_NULL, NULL),
+ #endif
+-	  SDTG_VAR("sprite_cache_size",SLE_UINT, S, 0, _sprite_cache_size,     4, 1, 64, 0, STR_NULL, NULL),
+-	  SDTG_VAR("player_face",    SLE_UINT32, S, 0, _player_face,      0,0,0xFFFFFFFF,0, STR_NULL, NULL),
+-	  SDTG_VAR("transparency_options", SLE_UINT, S, 0, _transparency_opt,  0,0,0x1FF,0, STR_NULL, NULL),
+-	  SDTG_VAR("transparency_locks", SLE_UINT, S, 0, _transparency_lock,   0,0,0x1FF,0, STR_NULL, NULL),
+-	  SDTG_VAR("invisibility_options", SLE_UINT, S, 0, _invisibility_opt,  0,0, 0xFF,0, STR_NULL, NULL),
+-	  SDTG_STR("keyboard",         SLE_STRB, S, 0, _keyboard_opt[0],       NULL,    STR_NULL, NULL),
+-	  SDTG_STR("keyboard_caps",    SLE_STRB, S, 0, _keyboard_opt[1],       NULL,    STR_NULL, NULL),
++	  SDTG_VAR("sprite_cache_size",    SLE_UINT, S, 0, _sprite_cache_size,    4, 1,         64, 0, STR_NULL, NULL),
++	  SDTG_VAR("transparent_opacity",  SLE_UINT, S, 0, _transparent_opacity, 64, 0,        255, 0, STR_NULL, NULL),
++	  SDTG_VAR("player_face",        SLE_UINT32, S, 0, _player_face,          0, 0, 0xFFFFFFFF, 0, STR_NULL, NULL),
++	  SDTG_VAR("transparency_options", SLE_UINT, S, 0, _transparency_opt,     0, 0,      0x1FF, 0, STR_NULL, NULL),
++	  SDTG_VAR("transparency_locks",   SLE_UINT, S, 0, _transparency_lock,    0, 0,      0x1FF, 0, STR_NULL, NULL),
++	  SDTG_VAR("invisibility_options", SLE_UINT, S, 0, _invisibility_opt,     0, 0,       0xFF, 0, STR_NULL, NULL),
++	  SDTG_STR("keyboard",             SLE_STRB, S, 0, _keyboard_opt[0],   NULL,    STR_NULL, NULL),
++	  SDTG_STR("keyboard_caps",        SLE_STRB, S, 0, _keyboard_opt[1],   NULL,    STR_NULL, NULL),
+ 	  SDTG_END()
+ };
+ 
+Index: src/gfx_func.h
+===================================================================
+--- src/gfx_func.h	(Revision 14405)
++++ src/gfx_func.h	(Arbeitskopie)
+@@ -64,6 +64,11 @@
+ extern Dimension _cur_resolution;
+ extern Colour _cur_palette[256]; ///< Current palette. Entry 0 has to be always fully transparent!
+ 
++extern int _transparent_opacity;
++
++extern const byte *_color_remap_ptr;
++extern byte _string_colorremap[3];
++
+ void HandleKeypress(uint32 key);
+ void HandleCtrlChanged();
+ void HandleMouseEvents();
+@@ -153,6 +158,7 @@
+ /* gfx.cpp */
+ #define ASCII_LETTERSTART 32
+ extern FontSize _cur_fontsize;
++extern uint8 _cursor_backup[];
+ 
+ byte GetCharacterWidth(FontSize size, uint32 key);
+ 
+Index: src/video/sdlgl_v.h
+===================================================================
+--- src/video/sdlgl_v.h	(Revision 0)
++++ src/video/sdlgl_v.h	(Revision 0)
+@@ -0,0 +1,33 @@
++/* $Id$ */
++
++/** @file sdlgl_v.h Base of the SDL OpenGL video driver. */
++
++#ifndef VIDEO_SDLGL_H
++#define VIDEO_SDLGL_H
++
++#include "video_driver.hpp"
++
++class VideoDriver_SDLGL: public VideoDriver {
++public:
++	/* virtual */ const char *Start(const char * const *param);
++
++	/* virtual */ void Stop();
++
++	/* virtual */ void MakeDirty(int left, int top, int width, int height);
++
++	/* virtual */ void MainLoop();
++
++	/* virtual */ bool ChangeResolution(int w, int h);
++
++	/* virtual */ bool ToggleFullscreen(bool fullscreen);
++};
++
++class FVideoDriver_SDLGL: public VideoDriverFactory<FVideoDriver_SDLGL> {
++public:
++	static const int priority = 5;
++	/* virtual */ const char *GetName() { return "sdlgl"; }
++	/* virtual */ const char *GetDescription() { return "SDL OpenGL Video Driver"; }
++	/* virtual */ Driver *CreateInstance() { return new VideoDriver_SDLGL(); }
++};
++
++#endif /* VIDEO_SDLGL_H */
+Index: src/video/win32gl_v.h
+===================================================================
+--- src/video/win32gl_v.h	(Revision 0)
++++ src/video/win32gl_v.h	(Revision 0)
+@@ -0,0 +1,33 @@
++/* $Id$ */
++
++/** @file win32_v.h Base of the Windows video driver. */
++
++#ifndef VIDEO_WIN32GL_H
++#define VIDEO_WIN32GL_H
++
++#include "video_driver.hpp"
++
++class VideoDriver_Win32GL: public VideoDriver {
++public:
++	/* virtual */ const char *Start(const char * const *param);
++
++	/* virtual */ void Stop();
++
++	/* virtual */ void MakeDirty(int left, int top, int width, int height);
++
++	/* virtual */ void MainLoop();
++
++	/* virtual */ bool ChangeResolution(int w, int h);
++
++	/* virtual */ bool ToggleFullscreen(bool fullscreen);
++};
++
++class FVideoDriver_Win32GL: public VideoDriverFactory<FVideoDriver_Win32GL> {
++public:
++	static const int priority = 10;
++	/* virtual */ const char *GetName() { return "win32gl"; }
++	/* virtual */ const char *GetDescription() { return "Win32 OpenGL Video Driver"; }
++	/* virtual */ Driver *CreateInstance() { return new VideoDriver_Win32GL(); }
++};
++
++#endif /* VIDEO_WIN32GL_H */
+Index: src/video/sdlgl_v.cpp
+===================================================================
+--- src/video/sdlgl_v.cpp	(Revision 0)
++++ src/video/sdlgl_v.cpp	(Revision 0)
+@@ -0,0 +1,605 @@
++/* $Id$ */
++
++/** @file sdlgl_v.cpp Implementation of the SDL OpenGL video driver. */
++
++#ifdef WITH_SDLGL
++
++#include "../stdafx.h"
++#include "../openttd.h"
++#include "../debug.h"
++#include "../gfx_func.h"
++#include "../sdl.h"
++#include "../variables.h"
++#include "../rev.h"
++#include "../blitter/factory.hpp"
++#include "../network/network.h"
++#include "../core/math_func.hpp"
++#include "../core/random_func.hpp"
++#include "../functions.h"
++#include "../texteff.hpp"
++#include "sdlgl_v.h"
++#include <SDL.h>
++
++#include "../GLee.h"
++
++static FVideoDriver_SDLGL iFVideoDriver_SDLGL;
++
++static SDL_Surface *_sdl_screen;
++static bool _all_modes;
++
++#define MAX_DIRTY_RECTS 100
++static SDL_Rect _dirty_rects[MAX_DIRTY_RECTS];
++static int _num_dirty_rects;
++
++void VideoDriver_SDLGL::MakeDirty(int left, int top, int width, int height)
++{
++	// UNUSED FOR OPENGL, but left because other things still use it.
++	if (_num_dirty_rects < MAX_DIRTY_RECTS) {
++		_dirty_rects[_num_dirty_rects].x = left;
++		_dirty_rects[_num_dirty_rects].y = top;
++		_dirty_rects[_num_dirty_rects].w = width;
++		_dirty_rects[_num_dirty_rects].h = height;
++	}
++	_num_dirty_rects++;
++}
++
++static void UpdatePalette(uint start, uint count)
++{
++	SDL_Color pal[256];
++	uint i;
++
++	for (i = 0; i != count; i++) {
++		pal[i].r = _cur_palette[start + i].r;
++		pal[i].g = _cur_palette[start + i].g;
++		pal[i].b = _cur_palette[start + i].b;
++		pal[i].unused = 0;
++	}
++
++	SDL_CALL SDL_SetColors(_sdl_screen, pal, start, count);
++}
++
++/* UNUSED BY OPENGL.
++static void InitPalette()
++{
++	UpdatePalette(0, 256);
++}
++*/
++
++static void CheckPaletteAnim()
++{
++	if (_pal_count_dirty != 0) {
++		Blitter *blitter = BlitterFactoryBase::GetCurrentBlitter();
++
++		switch (blitter->UsePaletteAnimation()) {
++			case Blitter::PALETTE_ANIMATION_VIDEO_BACKEND:
++				UpdatePalette(_pal_first_dirty, _pal_count_dirty);
++				break;
++
++			case Blitter::PALETTE_ANIMATION_BLITTER:
++				blitter->PaletteAnimate(_pal_first_dirty, _pal_count_dirty);
++				break;
++
++			case Blitter::PALETTE_ANIMATION_NONE:
++				break;
++
++			default:
++				NOT_REACHED();
++		}
++		_pal_count_dirty = 0;
++	}
++}
++
++static void DrawSurfaceToScreen()
++{
++	Blitter *blitter = BlitterFactoryBase::GetCurrentBlitter(); // I dunno if this belongs here, but it fixes errors...
++	blitter->PreFlip();
++	SDL_CALL SDL_GL_SwapBuffers();
++	blitter->PostFlip();
++	return;
++	/*
++	// UNUSED FOR OPENGL...
++	int n = _num_dirty_rects;
++	if (n != 0) {
++		_num_dirty_rects = 0;
++		if (n > MAX_DIRTY_RECTS)
++			SDL_CALL SDL_UpdateRect(_sdl_screen, 0, 0, 0, 0);
++		else
++			SDL_CALL SDL_UpdateRects(_sdl_screen, n, _dirty_rects);
++	}
++	*/
++}
++
++static const Dimension default_resolutions[] = {
++	{ 640,  480},
++	{ 800,  600},
++	{1024,  768},
++	{1152,  864},
++	{1280,  800},
++	{1280,  960},
++	{1280, 1024},
++	{1400, 1050},
++	{1600, 1200},
++	{1680, 1050},
++	{1920, 1200}
++};
++
++static void GetVideoModes()
++{
++	int i;
++	SDL_Rect **modes;
++
++	modes = SDL_CALL SDL_ListModes(NULL, SDL_SWSURFACE + (_fullscreen ? SDL_FULLSCREEN : 0));
++
++	if (modes == NULL)
++		usererror("sdl: no modes available");
++
++	_all_modes = (modes == (void*)-1);
++
++	if (_all_modes) {
++		// all modes available, put some default ones here
++		memcpy(_resolutions, default_resolutions, sizeof(default_resolutions));
++		_num_resolutions = lengthof(default_resolutions);
++	} else {
++		int n = 0;
++		for (i = 0; modes[i]; i++) {
++			int w = modes[i]->w;
++			int h = modes[i]->h;
++			if (w >= 640 && h >= 480) {
++				int j;
++				for (j = 0; j < n; j++) {
++					if (_resolutions[j].width == w && _resolutions[j].height == h) break;
++				}
++
++				if (j == n) {
++					_resolutions[j].width  = w;
++					_resolutions[j].height = h;
++					if (++n == lengthof(_resolutions)) break;
++				}
++			}
++		}
++		_num_resolutions = n;
++		SortResolutions(_num_resolutions);
++	}
++}
++
++static void GetAvailableVideoMode(int *w, int *h)
++{
++	int i;
++	int best;
++	uint delta;
++
++	// all modes available?
++	if (_all_modes) return;
++
++	// is the wanted mode among the available modes?
++	for (i = 0; i != _num_resolutions; i++) {
++		if (*w == _resolutions[i].width && *h == _resolutions[i].height) return;
++	}
++
++	// use the closest possible resolution
++	best = 0;
++	delta = abs((_resolutions[0].width - *w) * (_resolutions[0].height - *h));
++	for (i = 1; i != _num_resolutions; ++i) {
++		uint newdelta = abs((_resolutions[i].width - *w) * (_resolutions[i].height - *h));
++		if (newdelta < delta) {
++			best = i;
++			delta = newdelta;
++		}
++	}
++	*w = _resolutions[best].width;
++	*h = _resolutions[best].height;
++}
++
++#ifndef ICON_DIR
++#define ICON_DIR "media"
++#endif
++
++#ifdef WIN32
++/* Let's redefine the LoadBMP macro with because we are dynamically
++ * loading SDL and need to 'SDL_CALL' all functions */
++#undef SDL_LoadBMP
++#define SDL_LoadBMP(file)	SDL_LoadBMP_RW(SDL_CALL SDL_RWFromFile(file, "rb"), 1)
++#endif
++
++static bool CreateMainSurface(int w, int h)
++{
++	SDL_Surface *newscreen, *icon;
++	char caption[50];
++	int bpp = BlitterFactoryBase::GetCurrentBlitter()->GetScreenDepth();
++
++	GetAvailableVideoMode(&w, &h);
++
++	DEBUG(driver, 1, "SDL: using mode %dx%dx%d", w, h, bpp);
++
++	if (bpp == 0) usererror("Can't use a blitter that blits 0 bpp for normal visuals");
++
++	/* Give the application an icon */
++	icon = SDL_CALL SDL_LoadBMP(ICON_DIR PATHSEP "openttd.32.bmp");
++	if (icon != NULL) {
++		/* Get the colourkey, which will be magenta */
++		uint32 rgbmap = SDL_CALL SDL_MapRGB(icon->format, 255, 0, 255);
++
++		SDL_CALL SDL_SetColorKey(icon, SDL_SRCCOLORKEY, rgbmap);
++		SDL_CALL SDL_WM_SetIcon(icon, NULL);
++		SDL_CALL SDL_FreeSurface(icon);
++	}
++
++	// DO NOT CHANGE TO HWSURFACE, IT DOES NOT WORK
++	/*
++	newscreen = SDL_CALL SDL_SetVideoMode(w, h, bpp, SDL_SWSURFACE | SDL_HWPALETTE | (_fullscreen ? SDL_FULLSCREEN : SDL_RESIZABLE));
++	if (newscreen == NULL)
++		return false;
++	*/
++
++	debug("sdlgl", "Set newscreen");
++	newscreen = SDL_CALL SDL_SetVideoMode(w, h, bpp, SDL_OPENGL | SDL_HWSURFACE | SDL_HWPALETTE | (_fullscreen ? SDL_FULLSCREEN : SDL_RESIZABLE));
++
++	debug("sdlgl", "Check newscreen");
++	if (newscreen == NULL) {
++		debug("sdlgl", "newscreen failed!");
++		return false;
++	}
++
++	//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
++
++	#ifdef WIN32
++	if (GLEE_WGL_EXT_swap_control) wglSwapIntervalEXT(0); // Turn off v-sync.
++	#endif /* WIN32 */
++
++	_screen.width = newscreen->w;
++	_screen.height = newscreen->h;
++	_screen.pitch = newscreen->pitch / (bpp / 8);
++	_sdl_screen = newscreen;
++	//InitPalette();
++
++	snprintf(caption, sizeof(caption), "OpenTTD %s", _openttd_revision);
++	SDL_CALL SDL_WM_SetCaption(caption, caption);
++	SDL_CALL SDL_ShowCursor(0);
++
++	GameSizeChanged();
++
++	return true;
++}
++
++struct VkMapping {
++	uint16 vk_from;
++	byte vk_count;
++	byte map_to;
++};
++
++#define AS(x, z) {x, 0, z}
++#define AM(x, y, z, w) {x, y - x, z}
++
++static const VkMapping _vk_mapping[] = {
++	/* Pageup stuff + up/down */
++	AM(SDLK_PAGEUP, SDLK_PAGEDOWN, WKC_PAGEUP, WKC_PAGEDOWN),
++	AS(SDLK_UP,     WKC_UP),
++	AS(SDLK_DOWN,   WKC_DOWN),
++	AS(SDLK_LEFT,   WKC_LEFT),
++	AS(SDLK_RIGHT,  WKC_RIGHT),
++
++	AS(SDLK_HOME,   WKC_HOME),
++	AS(SDLK_END,    WKC_END),
++
++	AS(SDLK_INSERT, WKC_INSERT),
++	AS(SDLK_DELETE, WKC_DELETE),
++
++	/* Map letters & digits */
++	AM(SDLK_a, SDLK_z, 'A', 'Z'),
++	AM(SDLK_0, SDLK_9, '0', '9'),
++
++	AS(SDLK_ESCAPE,    WKC_ESC),
++	AS(SDLK_PAUSE,     WKC_PAUSE),
++	AS(SDLK_BACKSPACE, WKC_BACKSPACE),
++
++	AS(SDLK_SPACE,     WKC_SPACE),
++	AS(SDLK_RETURN,    WKC_RETURN),
++	AS(SDLK_TAB,       WKC_TAB),
++
++	/* Function keys */
++	AM(SDLK_F1, SDLK_F12, WKC_F1, WKC_F12),
++
++	/* Numeric part. */
++	AM(SDLK_KP0, SDLK_KP9, '0', '9'),
++	AS(SDLK_KP_DIVIDE,   WKC_NUM_DIV),
++	AS(SDLK_KP_MULTIPLY, WKC_NUM_MUL),
++	AS(SDLK_KP_MINUS,    WKC_NUM_MINUS),
++	AS(SDLK_KP_PLUS,     WKC_NUM_PLUS),
++	AS(SDLK_KP_ENTER,    WKC_NUM_ENTER),
++	AS(SDLK_KP_PERIOD,   WKC_NUM_DECIMAL),
++
++	/* Other non-letter keys */
++	AS(SDLK_SLASH,        WKC_SLASH),
++	AS(SDLK_SEMICOLON,    WKC_SEMICOLON),
++	AS(SDLK_EQUALS,       WKC_EQUALS),
++	AS(SDLK_LEFTBRACKET,  WKC_L_BRACKET),
++	AS(SDLK_BACKSLASH,    WKC_BACKSLASH),
++	AS(SDLK_RIGHTBRACKET, WKC_R_BRACKET),
++
++	AS(SDLK_QUOTE,   WKC_SINGLEQUOTE),
++	AS(SDLK_COMMA,   WKC_COMMA),
++	AS(SDLK_MINUS,   WKC_MINUS),
++	AS(SDLK_PERIOD,  WKC_PERIOD)
++};
++
++static uint32 ConvertSdlKeyIntoMy(SDL_keysym *sym)
++{
++	const VkMapping *map;
++	uint key = 0;
++
++	for (map = _vk_mapping; map != endof(_vk_mapping); ++map) {
++		if ((uint)(sym->sym - map->vk_from) <= map->vk_count) {
++			key = sym->sym - map->vk_from + map->map_to;
++			break;
++		}
++	}
++
++	// check scancode for BACKQUOTE key, because we want the key left of "1", not anything else (on non-US keyboards)
++#if defined(WIN32) || defined(__OS2__)
++	if (sym->scancode == 41) key = WKC_BACKQUOTE;
++#elif defined(__APPLE__)
++	if (sym->scancode == 10) key = WKC_BACKQUOTE;
++#elif defined(__MORPHOS__)
++	if (sym->scancode == 0)  key = WKC_BACKQUOTE;  // yes, that key is code '0' under MorphOS :)
++#elif defined(__BEOS__)
++	if (sym->scancode == 17) key = WKC_BACKQUOTE;
++#elif defined(__SVR4) && defined(__sun)
++	if (sym->scancode == 60) key = WKC_BACKQUOTE;
++	if (sym->scancode == 49) key = WKC_BACKSPACE;
++#elif defined(__sgi__)
++	if (sym->scancode == 22) key = WKC_BACKQUOTE;
++#else
++	if (sym->scancode == 49) key = WKC_BACKQUOTE;
++#endif
++
++	// META are the command keys on mac
++	if (sym->mod & KMOD_META)  key |= WKC_META;
++	if (sym->mod & KMOD_SHIFT) key |= WKC_SHIFT;
++	if (sym->mod & KMOD_CTRL)  key |= WKC_CTRL;
++	if (sym->mod & KMOD_ALT)   key |= WKC_ALT;
++	// these two lines really help porting hotkey combos. Uncomment to use -- Bjarni
++#if 0
++	DEBUG(driver, 0, "Scancode character pressed %u", sym->scancode);
++	DEBUG(driver, 0, "Unicode character pressed %u", sym->unicode);
++#endif
++	return (key << 16) + sym->unicode;
++}
++
++static int PollEvent()
++{
++	SDL_Event ev;
++
++	Blitter *blitter = BlitterFactoryBase::GetCurrentBlitter();
++
++	if (!SDL_CALL SDL_PollEvent(&ev)) return -2;
++
++	switch (ev.type) {
++		case SDL_MOUSEMOTION:
++			if (_cursor.fix_at) {
++				int dx = ev.motion.x - _cursor.pos.x;
++				int dy = ev.motion.y - _cursor.pos.y;
++				if (dx != 0 || dy != 0) {
++					_cursor.delta.x += dx;
++					_cursor.delta.y += dy;
++					SDL_CALL SDL_WarpMouse(_cursor.pos.x, _cursor.pos.y);
++				}
++			} else {
++				_cursor.delta.x = ev.motion.x - _cursor.pos.x;
++				_cursor.delta.y = ev.motion.y - _cursor.pos.y;
++				_cursor.pos.x = ev.motion.x;
++				_cursor.pos.y = ev.motion.y;
++				_cursor.dirty = true;
++			}
++			HandleMouseEvents();
++			break;
++
++		case SDL_MOUSEBUTTONDOWN:
++			if (_rightclick_emulate && SDL_CALL SDL_GetModState() & KMOD_CTRL) {
++				ev.button.button = SDL_BUTTON_RIGHT;
++			}
++
++			switch (ev.button.button) {
++				case SDL_BUTTON_LEFT:
++					_left_button_down = true;
++					break;
++
++				case SDL_BUTTON_RIGHT:
++					_right_button_down = true;
++					_right_button_clicked = true;
++					break;
++
++				case SDL_BUTTON_WHEELUP:   _cursor.wheel--; break;
++				case SDL_BUTTON_WHEELDOWN: _cursor.wheel++; break;
++
++				default: break;
++			}
++			HandleMouseEvents();
++			break;
++
++		case SDL_MOUSEBUTTONUP:
++			if (_rightclick_emulate) {
++				_right_button_down = false;
++				_left_button_down = false;
++				_left_button_clicked = false;
++			} else if (ev.button.button == SDL_BUTTON_LEFT) {
++				_left_button_down = false;
++				_left_button_clicked = false;
++			} else if (ev.button.button == SDL_BUTTON_RIGHT) {
++				_right_button_down = false;
++			}
++			HandleMouseEvents();
++			break;
++
++		case SDL_ACTIVEEVENT:
++			if (!(ev.active.state & SDL_APPMOUSEFOCUS)) break;
++
++			if (ev.active.gain) { // mouse entered the window, enable cursor
++				_cursor.in_window = true;
++			} else {
++				UndrawMouseCursor(); // mouse left the window, undraw cursor
++				_cursor.in_window = false;
++			}
++			break;
++
++		case SDL_QUIT: HandleExitGameRequest(); break;
++
++		case SDL_KEYDOWN: /* Toggle full-screen on ALT + ENTER/F */
++			if ((ev.key.keysym.mod & (KMOD_ALT | KMOD_META)) &&
++					(ev.key.keysym.sym == SDLK_RETURN || ev.key.keysym.sym == SDLK_f)) {
++				ToggleFullScreen(!_fullscreen);
++			} else {
++				HandleKeypress(ConvertSdlKeyIntoMy(&ev.key.keysym));
++			}
++			break;
++
++		case SDL_VIDEORESIZE: {
++			// NOTE: OpenGL context probably requires cleaning on each resize.
++			int w = max(ev.resize.w, 64);
++			int h = max(ev.resize.h, 64);
++			debug("sdlgl", "SDL_VIDEORESIZE: %i,%i",w,h);
++			CreateMainSurface(w,h);
++			blitter->ClientSizeChanged(w,h);
++			MarkWholeScreenDirty();
++			GameSizeChanged();
++			UpdateWindows();
++			break;
++		}
++
++		case SDL_VIDEOEXPOSE: {
++			MarkWholeScreenDirty();
++			break;
++		}
++	}
++	return -1;
++}
++
++const char *VideoDriver_SDLGL::Start(const char * const *parm)
++{
++	char buf[30];
++
++	const char *s = SdlOpen(SDL_INIT_VIDEO);
++	if (s != NULL) return s;
++
++	SDL_CALL SDL_VideoDriverName(buf, 30);
++	DEBUG(driver, 1, "SDL: using driver '%s'", buf);
++
++	GetVideoModes();
++
++	debug("sdlgl", "Initialize opengl");
++	/* Perform OpenGL initialization */
++	SDL_CALL SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
++	SDL_CALL SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 8);
++	SDL_CALL SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
++	SDL_CALL SDL_GL_SetAttribute(SDL_GL_BUFFER_SIZE, 32);
++	SDL_CALL SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 0);
++	SDL_CALL SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
++	CreateMainSurface(_cur_resolution.width, _cur_resolution.height);
++	debug("sdlgl", "PostDriverInit()");
++	Blitter *blitter = BlitterFactoryBase::GetCurrentBlitter();
++	blitter->PostDriverInit();
++	debug("sdlgl", "Set first screen size");
++	blitter->ClientSizeChanged(_cur_resolution.width,_cur_resolution.height);
++	MarkWholeScreenDirty();
++
++	SDL_CALL SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
++	SDL_CALL SDL_EnableUNICODE(1);
++	return NULL;
++}
++
++void VideoDriver_SDLGL::Stop()
++{
++	SdlClose(SDL_INIT_VIDEO);
++}
++
++void VideoDriver_SDLGL::MainLoop()
++{
++	uint32 cur_ticks = SDL_CALL SDL_GetTicks();
++	uint32 last_cur_ticks = cur_ticks;
++	uint32 next_tick = cur_ticks + 30;
++	uint32 pal_tick = 0;
++	uint32 mod;
++	int numkeys;
++	Uint8 *keys;
++
++	for (;;) {
++		uint32 prev_cur_ticks = cur_ticks; // to check for wrapping
++		InteractiveRandom(); // randomness
++
++		while (PollEvent() == -1) {}
++		if (_exit_game) return;
++
++		mod = SDL_CALL SDL_GetModState();
++		keys = SDL_CALL SDL_GetKeyState(&numkeys);
++#if defined(_DEBUG)
++		if (_shift_pressed)
++#else
++		/* Speedup when pressing tab, except when using ALT+TAB
++		 * to switch to another application */
++		if (keys[SDLK_TAB] && (mod & KMOD_ALT) == 0)
++#endif
++		{
++			if (!_networking && _game_mode != GM_MENU) _fast_forward |= 2;
++		} else if (_fast_forward & 2) {
++			_fast_forward = 0;
++		}
++
++		cur_ticks = SDL_CALL SDL_GetTicks();
++		if (cur_ticks >= next_tick || (_fast_forward && !_pause_game) || cur_ticks < prev_cur_ticks) {
++			_realtime_tick += cur_ticks - last_cur_ticks;
++			last_cur_ticks = cur_ticks;
++			next_tick = cur_ticks + 30;
++
++			bool old_ctrl_pressed = _ctrl_pressed;
++
++			_ctrl_pressed  = !!(mod & KMOD_CTRL);
++			_shift_pressed = !!(mod & KMOD_SHIFT);
++
++			// determine which directional keys are down
++			_dirkeys =
++				(keys[SDLK_LEFT]  ? 1 : 0) |
++				(keys[SDLK_UP]    ? 2 : 0) |
++				(keys[SDLK_RIGHT] ? 4 : 0) |
++				(keys[SDLK_DOWN]  ? 8 : 0);
++
++			if (old_ctrl_pressed != _ctrl_pressed) HandleCtrlChanged();
++
++			GameLoop();
++
++			_screen.dst_ptr = _sdl_screen->pixels;
++			UpdateWindows();
++			if (++pal_tick > 4) {
++				CheckPaletteAnim();
++				pal_tick = 1;
++			}
++			DrawSurfaceToScreen();
++		} else {
++			SDL_CALL SDL_Delay(1);
++			_screen.dst_ptr = _sdl_screen->pixels;
++			NetworkDrawChatMessage();
++			DrawMouseCursor();
++			DrawSurfaceToScreen();
++		}
++	}
++}
++
++bool VideoDriver_SDLGL::ChangeResolution(int w, int h)
++{
++	return CreateMainSurface(w, h);
++}
++
++bool VideoDriver_SDLGL::ToggleFullscreen(bool fullscreen)
++{
++	_fullscreen = fullscreen;
++	GetVideoModes(); // get the list of available video modes
++	if (_num_resolutions == 0 || !this->ChangeResolution(_cur_resolution.width, _cur_resolution.height)) {
++		// switching resolution failed, put back full_screen to original status
++		_fullscreen ^= true;
++		return false;
++	}
++	else {
++	MarkWholeScreenDirty();
++	}
++	return true;
++}
++
++#endif /* WITH_SDLGL */
+Index: src/video/win32gl_v.cpp
+===================================================================
+--- src/video/win32gl_v.cpp	(Revision 0)
++++ src/video/win32gl_v.cpp	(Revision 0)
+@@ -0,0 +1,1057 @@
++/* $Id$ */
++
++/** @file win32gl_v.cpp Implementation of the Windows OpenGL video driver. */
++
++/* Hacked from win32_v */
++
++#ifdef WITH_WIN32GL
++
++#include "../stdafx.h"
++#include "../openttd.h"
++#include "../gfx_func.h"
++#include "../variables.h"
++#include "../win32.h"
++#include "../rev.h"
++#include "../blitter/factory.hpp"
++#include "../network/network.h"
++#include "../core/math_func.hpp"
++#include "../core/random_func.hpp"
++#include "../functions.h"
++#include "../texteff.hpp"
++#include "win32gl_v.h"
++#include <windows.h>
++#include <tchar.h>
++
++#include "../GLee.h"
++
++static struct {
++	HWND main_wnd;
++	HDC dc;
++	HBITMAP dib_sect;
++	void *buffer_bits;
++	int width;
++	int height;
++	int width_org;
++	int height_org;
++	bool fullscreen;
++	bool has_focus;
++	bool running;
++} _wnd;
++
++extern bool _force_full_redraw;
++extern bool _window_maximize;
++extern uint _display_hz;
++extern uint _fullscreen_bpp;
++static Dimension _bck_resolution;
++
++#if !defined(UNICODE)
++uint _codepage;
++#endif
++
++struct VkMapping {
++	byte vk_from;
++	byte vk_count;
++	byte map_to;
++};
++
++#define AS(x, z) {x, 0, z}
++#define AM(x, y, z, w) {x, y - x, z}
++
++static const VkMapping _vk_mapping[] = {
++	/* Pageup stuff + up/down */
++	AM(VK_PRIOR,VK_DOWN, WKC_PAGEUP, WKC_DOWN),
++	/* Map letters & digits */
++	AM('A','Z','A','Z'),
++	AM('0','9','0','9'),
++
++	AS(VK_ESCAPE,   WKC_ESC),
++	AS(VK_PAUSE,    WKC_PAUSE),
++	AS(VK_BACK,     WKC_BACKSPACE),
++	AM(VK_INSERT,   VK_DELETE, WKC_INSERT, WKC_DELETE),
++
++	AS(VK_SPACE,    WKC_SPACE),
++	AS(VK_RETURN,   WKC_RETURN),
++	AS(VK_TAB,      WKC_TAB),
++
++	/* Function keys */
++	AM(VK_F1, VK_F12, WKC_F1, WKC_F12),
++
++	/* Numeric part */
++	AM(VK_NUMPAD0, VK_NUMPAD9, WKC_NUM_0, WKC_NUM_9),
++	AS(VK_DIVIDE,   WKC_NUM_DIV),
++	AS(VK_MULTIPLY, WKC_NUM_MUL),
++	AS(VK_SUBTRACT, WKC_NUM_MINUS),
++	AS(VK_ADD,      WKC_NUM_PLUS),
++	AS(VK_DECIMAL,  WKC_NUM_DECIMAL),
++
++	/* Other non-letter keys */
++	AS(0xBF,  WKC_SLASH),
++	AS(0xBA,  WKC_SEMICOLON),
++	AS(0xBB,  WKC_EQUALS),
++	AS(0xDB,  WKC_L_BRACKET),
++	AS(0xDC,  WKC_BACKSLASH),
++	AS(0xDD,  WKC_R_BRACKET),
++
++	AS(0xDE,  WKC_SINGLEQUOTE),
++	AS(0xBC,  WKC_COMMA),
++	AS(0xBD,  WKC_MINUS),
++	AS(0xBE,  WKC_PERIOD)
++};
++
++static uint MapWindowsKey(uint sym)
++{
++	const VkMapping *map;
++	uint key = 0;
++
++	for (map = _vk_mapping; map != endof(_vk_mapping); ++map) {
++		if ((uint)(sym - map->vk_from) <= map->vk_count) {
++			key = sym - map->vk_from + map->map_to;
++			break;
++		}
++	}
++
++	if (GetAsyncKeyState(VK_SHIFT)   < 0) key |= WKC_SHIFT;
++	if (GetAsyncKeyState(VK_CONTROL) < 0) key |= WKC_CTRL;
++	if (GetAsyncKeyState(VK_MENU)    < 0) key |= WKC_ALT;
++	return key;
++}
++
++static bool AllocateDibSection(int w, int h);
++
++static bool MakeWindow(bool full_screen);
++
++static void InitializeOpenGL()
++{
++	HDC hdc;
++
++	_wnd.dc = hdc = GetDC(_wnd.main_wnd);
++
++	PIXELFORMATDESCRIPTOR pfd;
++	memset(&pfd, 0, sizeof(PIXELFORMATDESCRIPTOR));
++
++	pfd.nSize      = sizeof(PIXELFORMATDESCRIPTOR); 
++	pfd.nVersion   = 1 ; 
++	pfd.dwFlags    = PFD_DOUBLEBUFFER | PFD_SUPPORT_OPENGL | PFD_DRAW_TO_WINDOW;
++	pfd.iPixelType = PFD_TYPE_RGBA;
++	pfd.cColorBits = 24;
++	pfd.cDepthBits = 32;
++	pfd.iLayerType = PFD_MAIN_PLANE;
++
++	int pf = ChoosePixelFormat(hdc, &pfd);
++	
++	if (pf == 0)
++	{
++		DEBUG(driver, 0, "ChoosePixelFormat Failed %d\n", GetLastError());
++	}
++	DEBUG(driver, 0, "Pixel Format %d\r\n", pf);
++
++	SetPixelFormat(hdc, pf, &pfd);
++
++	HGLRC hglrc;
++
++	hglrc = wglCreateContext(hdc);
++	wglMakeCurrent(hdc, hglrc);
++
++	// We must have a OpenGL context before checking for multisample support ...
++
++	if (GLEE_ARB_multisample) {
++		float fAttrib[] = {0, 0};
++		int iAttrib[] = {
++			WGL_SAMPLES_ARB,			8, // Check For 4x Multisampling
++			WGL_DRAW_TO_WINDOW_ARB,		GL_TRUE,
++			WGL_SUPPORT_OPENGL_ARB,		GL_TRUE,
++			WGL_ACCELERATION_ARB,		WGL_FULL_ACCELERATION_ARB,
++			WGL_COLOR_BITS_ARB,			24,
++			WGL_ALPHA_BITS_ARB,			8,
++			WGL_DEPTH_BITS_ARB,			24,
++			WGL_STENCIL_BITS_ARB,		0,
++			WGL_DOUBLE_BUFFER_ARB,		GL_TRUE,
++			WGL_SAMPLE_BUFFERS_ARB,		GL_TRUE,
++			0,0,
++		};
++
++		UINT num_formats;
++		BOOL valid = false;
++		
++		// try 8xAA, 4xAA, 2xAA
++		for (int s=8; s>1; s>>=1) {
++			iAttrib[1] = s;
++			valid = wglChoosePixelFormatARB(hdc, iAttrib, fAttrib, 1, &pf, &num_formats);
++			if (valid) break;
++		}
++
++		if (valid && num_formats > 1) {
++			DEBUG(driver, 0, "Multisample is supported (pixelformat %d num_formats %d)", pf, num_formats);
++
++			// Release current context
++			wglMakeCurrent(NULL, NULL);
++			wglDeleteContext(hglrc);
++			ReleaseDC(_wnd.main_wnd, _wnd.dc);
++
++			// Recreate the window
++			DestroyWindow(_wnd.main_wnd);
++			_wnd.main_wnd = 0;
++
++			MakeWindow(false);
++
++			// Initialize OpenGL again
++			_wnd.dc = hdc = GetDC(_wnd.main_wnd);
++			SetPixelFormat(hdc, pf, &pfd);
++			hglrc = wglCreateContext(hdc);
++			wglMakeCurrent(hdc, hglrc);
++
++			glEnable(GL_MULTISAMPLE_ARB);
++			glHint(GL_MULTISAMPLE_FILTER_HINT_NV, GL_NICEST);
++		}
++		else {
++			DEBUG(driver, 0, "ARB_multisample is supported but no usable pixel format, not enabling multisample.");
++		}
++	} else {
++		DEBUG(driver, 0, "ARB_multisample is NOT supported.");
++	}
++
++	// END MULTISAMPLE
++
++	// Press the TURBO button
++	// we really don't want OTTD being clamped by VSync while fast-forwarding
++	if (GLEE_WGL_EXT_swap_control)
++		wglSwapIntervalEXT(0);
++
++	RECT r;
++	GetClientRect(_wnd.main_wnd, &r);
++	
++	Blitter *b = BlitterFactoryBase::GetCurrentBlitter();
++
++	b->PostDriverInit();
++	b->ClientSizeChanged(r.right, r.bottom);
++}
++
++static void CleanupOpenGL()
++{
++	DEBUG(driver, 0, "Cleaning up OpenGL");
++
++	HGLRC hglrc;
++
++	hglrc = wglGetCurrentContext();
++
++	if (hglrc != NULL) {
++		DEBUG(driver, 0, "Deleting OpenGL context");
++		wglMakeCurrent(NULL, NULL);
++		wglDeleteContext(hglrc);
++		ReleaseDC(_wnd.main_wnd, _wnd.dc);
++	}
++
++}
++
++static void ClientSizeChanged(int w, int h)
++{
++	// allocate new dib section of the new size
++	if (AllocateDibSection(w, h)) {
++		// mark all palette colors dirty
++		_pal_first_dirty = 0;
++		_pal_count_dirty = 256;
++		GameSizeChanged();
++
++		BlitterFactoryBase::GetCurrentBlitter()->ClientSizeChanged(w, h);
++
++		// redraw screen
++		if (_wnd.running) {
++			_screen.dst_ptr = _wnd.buffer_bits;
++			UpdateWindows();
++		}
++	}
++}
++
++#ifdef _DEBUG
++// Keep this function here..
++// It allows you to redraw the screen from within the MSVC debugger
++static int RedrawScreenDebug()
++{
++	// WON'T WORK with OpenGL.
++
++	/*
++	HDC dc,dc2;
++	static int _fooctr;
++	HBITMAP old_bmp;
++	HPALETTE old_palette;
++
++	_screen.dst_ptr = _wnd.buffer_bits;
++	UpdateWindows();
++
++	dc = GetDC(_wnd.main_wnd);
++	dc2 = CreateCompatibleDC(dc);
++
++	old_bmp = (HBITMAP)SelectObject(dc2, _wnd.dib_sect);
++	old_palette = SelectPalette(dc, _wnd.gdi_palette, FALSE);
++	BitBlt(dc, 0, 0, _wnd.width, _wnd.height, dc2, 0, 0, SRCCOPY);
++	SelectPalette(dc, old_palette, TRUE);
++	SelectObject(dc2, old_bmp);
++	DeleteDC(dc2);
++	ReleaseDC(_wnd.main_wnd, dc);
++
++	return _fooctr++;
++	*/
++}
++#endif
++
++/* Windows 95 will not have a WM_MOUSELEAVE message, so define it if needed */
++#if !defined(WM_MOUSELEAVE)
++#define WM_MOUSELEAVE 0x02A3
++#endif
++#define TID_POLLMOUSE 1
++#define MOUSE_POLL_DELAY 75
++
++static void CALLBACK TrackMouseTimerProc(HWND hwnd, UINT msg, UINT event, DWORD time)
++{
++	RECT rc;
++	POINT pt;
++
++	/* Get the rectangle of our window and translate it to screen coordinates.
++	 * Compare this with the current screen coordinates of the mouse and if it
++	 * falls outside of the area or our window we have left the window. */
++	GetClientRect(hwnd, &rc);
++	MapWindowPoints(hwnd, HWND_DESKTOP, (LPPOINT)(LPRECT)&rc, 2);
++	GetCursorPos(&pt);
++
++	if (!PtInRect(&rc, pt) || (WindowFromPoint(pt) != hwnd)) {
++		KillTimer(hwnd, event);
++		PostMessage(hwnd, WM_MOUSELEAVE, 0, 0L);
++	}
++}
++
++static bool MakeWindow(bool full_screen)
++{
++	_fullscreen = full_screen;
++
++	// recreate window?
++	if ((full_screen || _wnd.fullscreen) && _wnd.main_wnd) {
++		DestroyWindow(_wnd.main_wnd);
++		_wnd.main_wnd = 0;
++	}
++
++#if defined(WINCE)
++	/* WinCE is always fullscreen */
++#else
++	/*
++	if (full_screen) {
++		DEVMODE settings;
++
++		// Make sure we are always at least the screen-depth of the blitter
++		if (_fullscreen_bpp < BlitterFactoryBase::GetCurrentBlitter()->GetScreenDepth()) _fullscreen_bpp = BlitterFactoryBase::GetCurrentBlitter()->GetScreenDepth();
++
++		memset(&settings, 0, sizeof(settings));
++		settings.dmSize = sizeof(settings);
++		settings.dmFields =
++			(_fullscreen_bpp != 0 ? DM_BITSPERPEL : 0) |
++			DM_PELSWIDTH |
++			DM_PELSHEIGHT |
++			(_display_hz != 0 ? DM_DISPLAYFREQUENCY : 0);
++		settings.dmBitsPerPel = _fullscreen_bpp;
++		settings.dmPelsWidth  = _wnd.width_org;
++		settings.dmPelsHeight = _wnd.height_org;
++		settings.dmDisplayFrequency = _display_hz;
++
++		if (ChangeDisplaySettings(&settings, CDS_FULLSCREEN) != DISP_CHANGE_SUCCESSFUL) {
++			MakeWindow(false);  // don't care about the result
++			return false;  // the request failed
++		}
++	} else if (_wnd.fullscreen) {
++		// restore display?
++		ChangeDisplaySettings(NULL, 0);
++	}
++	*/
++#endif
++
++	{
++		RECT r;
++		DWORD style, showstyle;
++		int x, y, w, h;
++
++		showstyle = SW_SHOWNORMAL;
++		_wnd.fullscreen = full_screen;
++		if (_wnd.fullscreen) {
++			style = WS_POPUP;
++			SetRect(&r, 0, 0, _wnd.width_org, _wnd.height_org);
++		} else {
++			style = WS_OVERLAPPEDWINDOW;
++			/* On window creation, check if we were in maximize mode before */
++			if (_window_maximize) showstyle = SW_SHOWMAXIMIZED;
++			SetRect(&r, 0, 0, _wnd.width, _wnd.height);
++		}
++
++#if !defined(WINCE)
++		AdjustWindowRect(&r, style, FALSE);
++#endif
++		w = r.right - r.left;
++		h = r.bottom - r.top;
++		x = (GetSystemMetrics(SM_CXSCREEN) - w) / 2;
++		y = (GetSystemMetrics(SM_CYSCREEN) - h) / 2;
++
++		if (_wnd.main_wnd) {
++			ShowWindow(_wnd.main_wnd, SW_SHOWNORMAL); // remove maximize-flag
++			SetWindowPos(_wnd.main_wnd, 0, x, y, w, h, SWP_NOACTIVATE | SWP_NOOWNERZORDER | SWP_NOZORDER);
++		} else {
++			TCHAR Windowtitle[50];
++
++			_sntprintf(Windowtitle, sizeof(Windowtitle), _T("OpenTTD %s"), MB_TO_WIDE(_openttd_revision));
++
++			_wnd.main_wnd = CreateWindow(_T("OTTD"), Windowtitle, style, x, y, w, h, 0, 0, GetModuleHandle(NULL), 0);
++			if (_wnd.main_wnd == NULL) error("CreateWindow failed");
++			ShowWindow(_wnd.main_wnd, showstyle);
++		}
++	}
++
++	//InitializeOpenGL();
++	GameSizeChanged(); // invalidate all windows, force redraw
++	return true; // the request succedded
++}
++
++static LRESULT CALLBACK WndProcGdi(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
++{
++	static uint32 keycode = 0;
++	static bool console = false;
++
++	switch (msg) {
++		case WM_CREATE:
++			SetTimer(hwnd, TID_POLLMOUSE, MOUSE_POLL_DELAY, (TIMERPROC)TrackMouseTimerProc);
++			break;
++
++		/*
++		case WM_PAINT: {
++			PAINTSTRUCT ps;
++			HDC dc, dc2;
++			HBITMAP old_bmp;
++			HPALETTE old_palette;
++
++			BeginPaint(hwnd, &ps);
++			dc = ps.hdc;
++			dc2 = CreateCompatibleDC(dc);
++			old_bmp = (HBITMAP)SelectObject(dc2, _wnd.dib_sect);
++			old_palette = SelectPalette(dc, _wnd.gdi_palette, FALSE);
++
++			if (_pal_count_dirty != 0) {
++				Blitter *blitter = BlitterFactoryBase::GetCurrentBlitter();
++
++				switch (blitter->UsePaletteAnimation()) {
++					case Blitter::PALETTE_ANIMATION_VIDEO_BACKEND:
++						UpdatePalette(dc2, _pal_first_dirty, _pal_count_dirty);
++						break;
++
++					case Blitter::PALETTE_ANIMATION_BLITTER:
++						blitter->PaletteAnimate(_pal_first_dirty, _pal_count_dirty);
++						break;
++
++					case Blitter::PALETTE_ANIMATION_NONE:
++						break;
++
++					default:
++						NOT_REACHED();
++				}
++				_pal_count_dirty = 0;
++			}
++
++			BitBlt(dc, 0, 0, _wnd.width, _wnd.height, dc2, 0, 0, SRCCOPY);
++			SelectPalette(dc, old_palette, TRUE);
++			SelectObject(dc2, old_bmp);
++			DeleteDC(dc2);
++			EndPaint(hwnd, &ps);
++
++			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
++	
++			glBegin(GL_TRIANGLES);
++			glVertex3f(0.0f, 0.0f, 0.1f);
++			glVertex3f(50.0f, 0.0f, 0.1f);
++			glVertex3f(50.0f, 50.0f, 0.1f);
++			glEnd();
++
++			glFlush();
++			SwapBuffers(_wnd.dc);
++
++			return 0;
++		}
++		*/
++
++
++		/* case WM_PALETTECHANGED:
++			if ((HWND)wParam == hwnd) return 0; */
++			/* FALLTHROUGH */
++
++			/*
++		case WM_QUERYNEWPALETTE: {
++			HDC hDC = GetWindowDC(hwnd);
++			HPALETTE hOldPalette = SelectPalette(hDC, _wnd.gdi_palette, FALSE);
++			UINT nChanged = RealizePalette(hDC);
++
++			SelectPalette(hDC, hOldPalette, TRUE);
++			ReleaseDC(hwnd, hDC);
++			if (nChanged) InvalidateRect(hwnd, NULL, FALSE);
++			return 0;
++		}
++			*/
++
++		case WM_CLOSE:
++			HandleExitGameRequest();
++			return 0;
++
++		case WM_DESTROY:
++			if (_window_maximize) _cur_resolution = _bck_resolution;
++			return 0;
++
++		case WM_LBUTTONDOWN:
++			SetCapture(hwnd);
++			_left_button_down = true;
++			HandleMouseEvents();
++			return 0;
++
++		case WM_LBUTTONUP:
++			ReleaseCapture();
++			_left_button_down = false;
++			_left_button_clicked = false;
++			HandleMouseEvents();
++			return 0;
++
++		case WM_RBUTTONDOWN:
++			SetCapture(hwnd);
++			_right_button_down = true;
++			_right_button_clicked = true;
++			HandleMouseEvents();
++			return 0;
++
++		case WM_RBUTTONUP:
++			ReleaseCapture();
++			_right_button_down = false;
++			HandleMouseEvents();
++			return 0;
++
++		case WM_MOUSELEAVE:
++			UndrawMouseCursor();
++			_cursor.in_window = false;
++
++			if (!_left_button_down && !_right_button_down) MyShowCursor(true);
++			HandleMouseEvents();
++			return 0;
++
++		case WM_MOUSEMOVE: {
++			int x = (int16)LOWORD(lParam);
++			int y = (int16)HIWORD(lParam);
++			POINT pt;
++
++			/* If the mouse was not in the window and it has moved it means it has
++			 * come into the window, so start drawing the mouse. Also start
++			 * tracking the mouse for exiting the window */
++			if (!_cursor.in_window) {
++				_cursor.in_window = true;
++				SetTimer(hwnd, TID_POLLMOUSE, MOUSE_POLL_DELAY, (TIMERPROC)TrackMouseTimerProc);
++
++				DrawMouseCursor();
++			}
++
++			if (_cursor.fix_at) {
++				int dx = x - _cursor.pos.x;
++				int dy = y - _cursor.pos.y;
++				if (dx != 0 || dy != 0) {
++					_cursor.delta.x += dx;
++					_cursor.delta.y += dy;
++
++					pt.x = _cursor.pos.x;
++					pt.y = _cursor.pos.y;
++
++					ClientToScreen(hwnd, &pt);
++					SetCursorPos(pt.x, pt.y);
++				}
++			} else {
++				_cursor.delta.x += x - _cursor.pos.x;
++				_cursor.delta.y += y - _cursor.pos.y;
++				_cursor.pos.x = x;
++				_cursor.pos.y = y;
++				_cursor.dirty = true;
++			}
++			MyShowCursor(false);
++			HandleMouseEvents();
++			return 0;
++		}
++
++#if !defined(UNICODE)
++		case WM_INPUTLANGCHANGE: {
++			TCHAR locale[6];
++			LCID lcid = GB(lParam, 0, 16);
++
++			int len = GetLocaleInfo(lcid, LOCALE_IDEFAULTANSICODEPAGE, locale, lengthof(locale));
++			if (len != 0) _codepage = _ttoi(locale);
++			return 1;
++		}
++#endif /* UNICODE */
++
++		case WM_DEADCHAR:
++			console = GB(lParam, 16, 8) == 41;
++			return 0;
++
++		case WM_CHAR: {
++			/* Silently drop all non-text messages as those were handled by WM_KEYDOWN */
++			if (wParam < VK_SPACE) return 0;
++			uint scancode = GB(lParam, 16, 8);
++			uint charcode = wParam;
++
++			/* If the console key is a dead-key, we need to press it twice to get a WM_CHAR message.
++			 * But we then get two WM_CHAR messages, so ignore the first one */
++			if (console && scancode == 41) {
++				console = false;
++				return 0;
++			}
++
++#if !defined(UNICODE)
++			wchar_t w;
++			int len = MultiByteToWideChar(_codepage, 0, (char*)&charcode, 1, &w, 1);
++			charcode = len == 1 ? w : 0;
++#endif /* UNICODE */
++
++			/* No matter the keyboard layout, we will map the '~' to the console */
++			scancode = scancode == 41 ? (int)WKC_BACKQUOTE : keycode;
++
++			HandleKeypress(GB(charcode, 0, 16) | (scancode << 16));
++			return 0;
++		}
++
++		case WM_KEYDOWN: {
++			keycode = MapWindowsKey(wParam);
++
++			/* Silently drop all text messages as those will be handled by WM_CHAR
++			 * WM_KEYDOWN only handles CTRL+ commands and special keys like VK_LEFT, etc. */
++			if (keycode == 0 || (keycode > WKC_PAUSE && GB(keycode, 13, 4) == 0)) return 0;
++
++			/* Keys handled in WM_CHAR */
++			if ((uint)(GB(keycode, 0, 12) - WKC_NUM_DIV) <= WKC_MINUS - WKC_NUM_DIV) return 0;
++
++			HandleKeypress(0 | (keycode << 16));
++			return 0;
++		}
++
++		case WM_SYSKEYDOWN: /* user presses F10 or Alt, both activating the title-menu */
++			switch (wParam) {
++				case VK_RETURN:
++				case 'F': /* Full Screen on ALT + ENTER/F */
++					//ToggleFullScreen(!_wnd.fullscreen);
++					return 0;
++
++				case VK_MENU: /* Just ALT */
++					return 0; // do nothing
++
++				case VK_F10: /* F10, ignore activation of menu */
++					HandleKeypress(MapWindowsKey(wParam) << 16);
++					return 0;
++
++				default: /* ALT in combination with something else */
++					HandleKeypress(MapWindowsKey(wParam) << 16);
++					break;
++			}
++			break;
++
++		case WM_SIZE:
++			if (wParam != SIZE_MINIMIZED) {
++				/* Set maximized flag when we maximize (obviously), but also when we
++				 * switched to fullscreen from a maximized state */
++				_window_maximize = (wParam == SIZE_MAXIMIZED || (_window_maximize && _fullscreen));
++				if (_window_maximize) _bck_resolution = _cur_resolution;
++				ClientSizeChanged(LOWORD(lParam), HIWORD(lParam));
++			}
++			return 0;
++
++#if !defined(WINCE)
++		case WM_SIZING: {
++			RECT* r = (RECT*)lParam;
++			RECT r2;
++			int w, h;
++
++			SetRect(&r2, 0, 0, 0, 0);
++			AdjustWindowRect(&r2, GetWindowLong(hwnd, GWL_STYLE), FALSE);
++
++			w = r->right - r->left - (r2.right - r2.left);
++			h = r->bottom - r->top - (r2.bottom - r2.top);
++			w = max(w, 64);
++			h = max(h, 64);
++			SetRect(&r2, 0, 0, w, h);
++
++			AdjustWindowRect(&r2, GetWindowLong(hwnd, GWL_STYLE), FALSE);
++			w = r2.right - r2.left;
++			h = r2.bottom - r2.top;
++
++			switch (wParam) {
++				case WMSZ_BOTTOM:
++					r->bottom = r->top + h;
++					break;
++
++				case WMSZ_BOTTOMLEFT:
++					r->bottom = r->top + h;
++					r->left = r->right - w;
++					break;
++
++				case WMSZ_BOTTOMRIGHT:
++					r->bottom = r->top + h;
++					r->right = r->left + w;
++					break;
++
++				case WMSZ_LEFT:
++					r->left = r->right - w;
++					break;
++
++				case WMSZ_RIGHT:
++					r->right = r->left + w;
++					break;
++
++				case WMSZ_TOP:
++					r->top = r->bottom - h;
++					break;
++
++				case WMSZ_TOPLEFT:
++					r->top = r->bottom - h;
++					r->left = r->right - w;
++					break;
++
++				case WMSZ_TOPRIGHT:
++					r->top = r->bottom - h;
++					r->right = r->left + w;
++					break;
++			}
++			return TRUE;
++		}
++#endif
++
++// needed for wheel
++#if !defined(WM_MOUSEWHEEL)
++# define WM_MOUSEWHEEL 0x020A
++#endif  //WM_MOUSEWHEEL
++#if !defined(GET_WHEEL_DELTA_WPARAM)
++# define GET_WHEEL_DELTA_WPARAM(wparam) ((short)HIWORD(wparam))
++#endif  //GET_WHEEL_DELTA_WPARAM
++
++		case WM_MOUSEWHEEL: {
++			int delta = GET_WHEEL_DELTA_WPARAM(wParam);
++
++			if (delta < 0) {
++				_cursor.wheel++;
++			} else if (delta > 0) {
++				_cursor.wheel--;
++			}
++			HandleMouseEvents();
++			return 0;
++		}
++
++		case WM_SETFOCUS:
++			_wnd.has_focus = true;
++			break;
++
++		case WM_KILLFOCUS:
++			_wnd.has_focus = false;
++			break;
++
++#if !defined(WINCE)
++		case WM_ACTIVATE: {
++			/* Don't do anything if we are closing openttd */
++			if (_exit_game) break;
++
++			bool active = (LOWORD(wParam) != WA_INACTIVE);
++			bool minimized = (HIWORD(wParam) != 0);
++			/*
++			if (_wnd.fullscreen) {
++				if (active && minimized) {
++					// Restore the game window
++					ShowWindow(hwnd, SW_RESTORE);
++					MakeWindow(true);
++				} else if (!active && !minimized) {
++					// Minimise the window and restore desktop
++					ShowWindow(hwnd, SW_MINIMIZE);
++					ChangeDisplaySettings(NULL, 0);
++				}
++			}
++			*/
++		} break;
++#endif
++	}
++
++	return DefWindowProc(hwnd, msg, wParam, lParam);
++}
++
++static void RegisterWndClass()
++{
++	static bool registered = false;
++
++	if (!registered) {
++		HINSTANCE hinst = GetModuleHandle(NULL);
++		WNDCLASS wnd = {
++			0,
++			WndProcGdi,
++			0,
++			0,
++			hinst,
++			LoadIcon(hinst, MAKEINTRESOURCE(100)),
++			LoadCursor(NULL, IDC_ARROW),
++			0,
++			0,
++			_T("OTTD")
++		};
++
++		registered = true;
++		if (!RegisterClass(&wnd)) error("RegisterClass failed");
++	}
++}
++
++static bool AllocateDibSection(int w, int h)
++{
++	BITMAPINFO *bi;
++	HDC dc;
++	int bpp = BlitterFactoryBase::GetCurrentBlitter()->GetScreenDepth();
++
++	w = max(w, 64);
++	h = max(h, 64);
++
++	if (bpp == 0) error("Can't use a blitter that blits 0 bpp for normal visuals");
++
++	if (w == _screen.width && h == _screen.height)
++		return false;
++
++	_screen.width = w;
++	_screen.pitch = (bpp == 8) ? Align(w, 4) : w;
++	_screen.height = h;
++
++	bi = (BITMAPINFO*)alloca(sizeof(BITMAPINFOHEADER) + sizeof(RGBQUAD) * 256);
++	memset(bi, 0, sizeof(BITMAPINFOHEADER) + sizeof(RGBQUAD) * 256);
++	bi->bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
++
++	bi->bmiHeader.biWidth = _wnd.width = w;
++	bi->bmiHeader.biHeight = -(_wnd.height = h);
++
++	bi->bmiHeader.biPlanes = 1;
++	bi->bmiHeader.biBitCount = BlitterFactoryBase::GetCurrentBlitter()->GetScreenDepth();
++	bi->bmiHeader.biCompression = BI_RGB;
++
++	if (_wnd.dib_sect) DeleteObject(_wnd.dib_sect);
++
++	dc = GetDC(0);
++	_wnd.dib_sect = CreateDIBSection(dc, bi, DIB_RGB_COLORS, (VOID**)&_wnd.buffer_bits, NULL, 0);
++	if (_wnd.dib_sect == NULL) error("CreateDIBSection failed");
++	ReleaseDC(0, dc);
++	
++	return true;
++}
++
++static const uint16 default_resolutions[][2] = {
++	{  640,  480 },
++	{  800,  600 },
++	{ 1024,  768 },
++	{ 1152,  864 },
++	{ 1280,  800 },
++	{ 1280,  960 },
++	{ 1280, 1024 },
++	{ 1400, 1050 },
++	{ 1600, 1200 },
++	{ 1680, 1050 },
++	{ 1920, 1200 }
++};
++
++static void FindResolutions()
++{
++	uint n = 0;
++#if defined(WINCE)
++	/* EnumDisplaySettingsW is only supported in CE 4.2+ */
++	/* XXX -- One might argue that we assume 4.2+ on every system. Then we can use this function safely */
++#else
++	uint i;
++	DEVMODEA dm;
++
++	/* XXX - EnumDisplaySettingsW crashes with unicows.dll on Windows95
++	 * Doesn't really matter since we don't pass a string anyways, but still
++	 * a letdown */
++	for (i = 0; EnumDisplaySettingsA(NULL, i, &dm) != 0; i++) {
++		if (dm.dmBitsPerPel == BlitterFactoryBase::GetCurrentBlitter()->GetScreenDepth() &&
++				dm.dmPelsWidth >= 640 && dm.dmPelsHeight >= 480) {
++			uint j;
++
++			for (j = 0; j < n; j++) {
++				if (_resolutions[j].width == (int)dm.dmPelsWidth && _resolutions[j].height == (int)dm.dmPelsHeight) break;
++			}
++
++			/* In the previous loop we have checked already existing/added resolutions if
++			 * they are the same as the new ones. If this is not the case (j == n); we have
++			 * looped all and found none, add the new one to the list. If we have reached the
++			 * maximum amount of resolutions, then quit querying the display */
++			if (j == n) {
++				_resolutions[j].width = (int)dm.dmPelsWidth;
++				_resolutions[j].height = (int)dm.dmPelsHeight;
++				if (++n == lengthof(_resolutions)) break;
++			}
++		}
++	}
++#endif
++
++	/* We have found no resolutions, show the default list */
++	if (n == 0) {
++		memcpy(_resolutions, default_resolutions, sizeof(default_resolutions));
++		n = lengthof(default_resolutions);
++	}
++
++	_num_resolutions = n;
++	SortResolutions(_num_resolutions);
++}
++
++static FVideoDriver_Win32GL iFVideoDriver_Win32GL;
++
++const char *VideoDriver_Win32GL::Start(const char * const *parm)
++{
++	memset(&_wnd, 0, sizeof(_wnd));
++
++	RegisterWndClass();
++
++	FindResolutions();
++
++	DEBUG(driver, 2, "Resolution for display: %dx%d", _cur_resolution.width, _cur_resolution.height);
++
++	// fullscreen uses those
++	_wnd.width_org = _cur_resolution.width;
++	_wnd.height_org = _cur_resolution.height;
++
++	AllocateDibSection(_cur_resolution.width, _cur_resolution.height);
++	MakeWindow(_fullscreen);
++	InitializeOpenGL();
++
++	MarkWholeScreenDirty();
++
++	return NULL;
++}
++
++void VideoDriver_Win32GL::Stop()
++{
++	CleanupOpenGL();
++	DeleteObject(_wnd.dib_sect);
++	DestroyWindow(_wnd.main_wnd);
++
++#if !defined(WINCE)
++	if (_wnd.fullscreen) ChangeDisplaySettings(NULL, 0);
++#endif
++	MyShowCursor(true);
++}
++
++void VideoDriver_Win32GL::MakeDirty(int left, int top, int width, int height)
++{
++	return; // OpenGL
++
++	RECT r = { left, top, left + width, top + height };
++
++	InvalidateRect(_wnd.main_wnd, &r, FALSE);
++}
++
++static void CheckPaletteAnim()
++{
++	if (_pal_count_dirty == 0)
++		return;
++	InvalidateRect(_wnd.main_wnd, NULL, FALSE);
++}
++
++void VideoDriver_Win32GL::MainLoop()
++{
++	MSG mesg;
++	uint32 cur_ticks = GetTickCount();
++	uint32 last_cur_ticks = cur_ticks;
++	uint32 next_tick = cur_ticks + 30;
++
++	_wnd.running = true;
++
++	for (;;) {
++		uint32 prev_cur_ticks = cur_ticks; // to check for wrapping
++
++		while (PeekMessage(&mesg, NULL, 0, 0, PM_REMOVE)) {
++			InteractiveRandom(); // randomness
++			TranslateMessage(&mesg);
++			DispatchMessage(&mesg);
++		}
++		if (_exit_game) return;
++
++#if defined(_DEBUG)
++		if (_wnd.has_focus && GetAsyncKeyState(VK_SHIFT) < 0 &&
++#else
++		/* Speed up using TAB, but disable for ALT+TAB of course */
++		if (_wnd.has_focus && GetAsyncKeyState(VK_TAB) < 0 && GetAsyncKeyState(VK_MENU) >= 0 &&
++#endif
++			  !_networking && _game_mode != GM_MENU) {
++			_fast_forward |= 2;
++		} else if (_fast_forward & 2) {
++			_fast_forward = 0;
++		}
++
++		cur_ticks = GetTickCount();
++		if (cur_ticks >= next_tick || (_fast_forward && !_pause_game) || cur_ticks < prev_cur_ticks) {
++			_realtime_tick += cur_ticks - last_cur_ticks;
++			last_cur_ticks = cur_ticks;
++			next_tick = cur_ticks + 30;
++
++			bool old_ctrl_pressed = _ctrl_pressed;
++
++			_ctrl_pressed = _wnd.has_focus && GetAsyncKeyState(VK_CONTROL)<0;
++			_shift_pressed = _wnd.has_focus && GetAsyncKeyState(VK_SHIFT)<0;
++
++			// determine which directional keys are down
++			if (_wnd.has_focus) {
++				_dirkeys =
++					(GetAsyncKeyState(VK_LEFT) < 0 ? 1 : 0) +
++					(GetAsyncKeyState(VK_UP) < 0 ? 2 : 0) +
++					(GetAsyncKeyState(VK_RIGHT) < 0 ? 4 : 0) +
++					(GetAsyncKeyState(VK_DOWN) < 0 ? 8 : 0);
++			} else {
++				_dirkeys = 0;
++			}
++
++			if (old_ctrl_pressed != _ctrl_pressed) HandleCtrlChanged();
++
++			GameLoop();
++			_cursor.delta.x = _cursor.delta.y = 0;
++
++			if (_force_full_redraw) MarkWholeScreenDirty();
++
++#if !defined(WINCE)
++			GdiFlush();
++#endif
++			_screen.dst_ptr = _wnd.buffer_bits;
++			UpdateWindows();
++			CheckPaletteAnim();
++		} else {
++			Sleep(1);
++#if !defined(WINCE)
++			GdiFlush();
++#endif
++			_screen.dst_ptr = _wnd.buffer_bits;
++			DrawChatMessage();
++			DrawMouseCursor();
++		}
++
++		Blitter *blitter = BlitterFactoryBase::GetCurrentBlitter();
++
++		blitter->PreFlip();
++
++		SwapBuffers(_wnd.dc);
++
++		blitter->PostFlip();
++
++		if (_pal_count_dirty != 0) {
++			blitter->PaletteAnimate(_pal_first_dirty, _pal_count_dirty);
++			_pal_count_dirty = 0;
++		}
++	}
++}
++
++bool VideoDriver_Win32GL::ChangeResolution(int w, int h)
++{
++	/*
++	_wnd.width = _wnd.width_org = w;
++	_wnd.height = _wnd.height_org = h;
++
++	return MakeWindow(_fullscreen); // _wnd.fullscreen screws up ingame resolution switching
++	*/
++	return false;
++}
++
++bool VideoDriver_Win32GL::ToggleFullscreen(bool full_screen)
++{
++	//return MakeWindow(full_screen);
++	return false;
++}
++
++#endif /* WITH_WIN32GL */
+Index: src/fontcache.cpp
+===================================================================
+--- src/fontcache.cpp	(Revision 14405)
++++ src/fontcache.cpp	(Arbeitskopie)
+@@ -361,6 +361,21 @@
+ 	_glyph_ptr[size][GB(key, 8, 8)][GB(key, 0, 8)].width  = glyph->width;
+ }
+ 
++void ClearFontCache()
++{
++	for (int s=0; s<FS_END; ++s) {
++		if (_glyph_ptr[s] == NULL) continue;
++		
++		for (int t=0; t<256; ++t) {
++			if (_glyph_ptr[s][t] == NULL) continue;
++			free(_glyph_ptr[s][t]);
++		}
++
++		free(_glyph_ptr[s]);
++		_glyph_ptr[s] = NULL;
++	}
++}
++
+ void *AllocateFont(size_t size)
+ {
+ 	return MallocT<byte>(size);
+@@ -432,6 +447,7 @@
+ 	sprite.y_offs = GetCharacterHeight(size) - slot->bitmap_top - y_adj;
+ 
+ 	/* Draw shadow for medium size */
++	/*
+ 	if (size == FS_NORMAL) {
+ 		for (y = 0; y < slot->bitmap.rows; y++) {
+ 			for (x = 0; x < slot->bitmap.width; x++) {
+@@ -442,6 +458,7 @@
+ 			}
+ 		}
+ 	}
++	*/
+ 
+ 	for (y = 0; y < slot->bitmap.rows; y++) {
+ 		for (x = 0; x < slot->bitmap.width; x++) {
+Index: src/fileio_func.h
+===================================================================
+--- src/fileio_func.h	(Revision 14405)
++++ src/fileio_func.h	(Arbeitskopie)
+@@ -8,9 +8,9 @@
+ #include "fileio_type.h"
+ 
+ void FioSeekTo(size_t pos, int mode);
+-void FioSeekToFile(uint8 slot, size_t pos);
++void FioSeekToFile(int slot, size_t pos);
+ size_t FioGetPos();
+-const char *FioGetFilename(uint8 slot);
++const char *FioGetFilename(int slot);
+ byte FioReadByte();
+ uint16 FioReadWord();
+ uint32 FioReadDword();
+Index: src/fontcache.h
+===================================================================
+--- src/fontcache.h	(Revision 14405)
++++ src/fontcache.h	(Arbeitskopie)
+@@ -33,6 +33,7 @@
+ extern FreeTypeSettings _freetype;
+ 
+ void InitFreeType();
++void ClearFontCache();
+ const struct Sprite *GetGlyph(FontSize size, uint32 key);
+ uint GetGlyphWidth(FontSize size, uint32 key);
+ 
+Index: src/fios.h
+===================================================================
+--- src/fios.h	(Revision 14405)
++++ src/fios.h	(Arbeitskopie)
+@@ -21,9 +21,12 @@
+ 	/** First slot useable for (New)GRFs used during the game. */
+ 	FIRST_GRF_SLOT =  2,
+ 	/** Last slot useable for (New)GRFs used during the game. */
+-	LAST_GRF_SLOT  = 63,
++	LAST_GRF_SLOT  = 510,
++#ifdef WITH_PNG
++	PNG_SLOT       = 511,
++#endif
+ 	/** Maximum number of slots. */
+-	MAX_FILE_SLOTS = 64
++	MAX_FILE_SLOTS = 512
+ };
+ 
+ enum SaveLoadDialogMode{
+Index: src/spriteloader/png.cpp
+===================================================================
+--- src/spriteloader/png.cpp	(Revision 14405)
++++ src/spriteloader/png.cpp	(Arbeitskopie)
+@@ -7,12 +7,13 @@
+ #include "../stdafx.h"
+ #include "../gfx_func.h"
+ #include "../fileio_func.h"
++#include "../fios.h"
+ #include "../debug.h"
+ #include "../core/alloc_func.hpp"
+ #include "png.hpp"
+ #include <png.h>
+ 
+-#define PNG_SLOT 62
++//#define PNG_SLOT 62
+ 
+ static void PNGAPI png_my_read(png_structp png_ptr, png_bytep data, png_size_t length)
+ {
+Index: src/spritecache.cpp
+===================================================================
+--- src/spritecache.cpp	(Revision 14405)
++++ src/spritecache.cpp	(Arbeitskopie)
+@@ -8,6 +8,7 @@
+ #include "debug.h"
+ #include "spritecache.h"
+ #include "fileio_func.h"
++#include "fontcache.h"
+ #include "spriteloader/grf.hpp"
+ #include "core/alloc_func.hpp"
+ #include "core/math_func.hpp"
+@@ -150,30 +151,6 @@
+ 		file_pos  = GetSpriteCache(SPR_IMG_QUERY)->file_pos;
+ 	}
+ 
+-	if (sprite_type == ST_NORMAL && BlitterFactoryBase::GetCurrentBlitter()->GetScreenDepth() == 32) {
+-#ifdef WITH_PNG
+-		/* Try loading 32bpp graphics in case we are 32bpp output */
+-		SpriteLoaderPNG sprite_loader;
+-		SpriteLoader::Sprite sprite;
+-
+-		if (sprite_loader.LoadSprite(&sprite, file_slot, sc->id, sprite_type)) {
+-			sc->ptr = BlitterFactoryBase::GetCurrentBlitter()->Encode(&sprite, &AllocSprite);
+-			free(sprite.data);
+-
+-			sc->type = sprite_type;
+-
+-			return sc->ptr;
+-		}
+-		/* If the PNG couldn't be loaded, fall back to 8bpp grfs */
+-#else
+-		static bool show_once = true;
+-		if (show_once) {
+-			DEBUG(misc, 0, "You are running a 32bpp blitter, but this build is without libpng support; falling back to 8bpp graphics");
+-			show_once = false;
+-		}
+-#endif /* WITH_PNG */
+-	}
+-
+ 	FioSeekToFile(file_slot, file_pos);
+ 
+ 	/* Read the size and type */
+@@ -266,6 +243,30 @@
+ 		return (void*)GetRawSprite(id, ST_NORMAL);
+ 	}
+ 
++	if (sprite_type == ST_NORMAL && BlitterFactoryBase::GetCurrentBlitter()->GetScreenDepth() == 32) {
++#ifdef WITH_PNG
++		/* Try loading 32bpp graphics in case we are 32bpp output */
++		SpriteLoaderPNG sprite_loader;
++		SpriteLoader::Sprite sprite;
++
++		if (sprite_loader.LoadSprite(&sprite, file_slot, sc->id, sprite_type)) {
++			sc->ptr = BlitterFactoryBase::GetCurrentBlitter()->Encode(&sprite, &AllocSprite);
++			free(sprite.data);
++
++			sc->type = sprite_type;
++
++			return sc->ptr;
++		}
++		/* If the PNG couldn't be loaded, fall back to 8bpp grfs */
++#else
++		static bool show_once = true;
++		if (show_once) {
++			DEBUG(misc, 0, "You are running a 32bpp blitter, but this build is without libpng support; falling back to 8bpp graphics");
++			show_once = false;
++		}
++#endif /* WITH_PNG */
++	}
++
+ 	SpriteLoaderGrf sprite_loader;
+ 	SpriteLoader::Sprite sprite;
+ 
+@@ -428,10 +429,12 @@
+ 	if (best == (uint)-1) error("Out of sprite memory");
+ 
+ 	/* Mark the block as free (the block must be in use) */
+-	s = (MemBlock*)GetSpriteCache(best)->ptr - 1;
++	SpriteCache *sc = GetSpriteCache(best);
++	BlitterFactoryBase::GetCurrentBlitter()->ReleaseSprite((Sprite *)sc->ptr);
++	s = (MemBlock*)sc->ptr - 1;
+ 	assert(!(s->size & S_FREE_MASK));
+ 	s->size |= S_FREE_MASK;
+-	GetSpriteCache(best)->ptr = NULL;
++	sc->ptr = NULL;
+ 
+ 	/* And coalesce adjacent free blocks */
+ 	for (s = _spritecache_ptr; s->size != 0; s = NextBlock(s)) {
+@@ -512,7 +515,12 @@
+ 	/* Sentinel block (identified by size == 0) */
+ 	NextBlock(_spritecache_ptr)->size = 0;
+ 
++	BlitterFactoryBase::GetCurrentBlitter()->ReleaseAllSprites();
++
+ 	/* Reset the spritecache 'pool' */
++#ifdef WITH_FREETYPE
++	ClearFontCache();
++#endif
+ 	free(_spritecache);
+ 	_spritecache_items = 0;
+ 	_spritecache = NULL;
+Index: src/fileio.cpp
+===================================================================
+--- src/fileio.cpp	(Revision 14405)
++++ src/fileio.cpp	(Arbeitskopie)
+@@ -49,7 +49,7 @@
+ 	return _fio.pos + (_fio.buffer - _fio.buffer_end);
+ }
+ 
+-const char *FioGetFilename(uint8 slot)
++const char *FioGetFilename(int slot)
+ {
+ 	return _fio.shortnames[slot];
+ }
+@@ -75,7 +75,7 @@
+ #endif /* LIMITED_FDS */
+ 
+ /* Seek to a file and a position */
+-void FioSeekToFile(uint8 slot, size_t pos)
++void FioSeekToFile(int slot, size_t pos)
+ {
+ 	FILE *f;
+ #if defined(LIMITED_FDS)
+Index: src/sdl.cpp
+===================================================================
+--- src/sdl.cpp	(Revision 14405)
++++ src/sdl.cpp	(Arbeitskopie)
+@@ -61,6 +61,8 @@
+ 	M("SDL_SetColorKey")
+ 	M("SDL_WM_SetIcon")
+ 	M("SDL_MapRGB")
++	M("SDL_GL_SwapBuffers")
++	M("SDL_GL_SetAttribute")
+ 	M("")
+ ;
+ #undef M
+Index: src/blitter/base.hpp
+===================================================================
+--- src/blitter/base.hpp	(Revision 14405)
++++ src/blitter/base.hpp	(Arbeitskopie)
+@@ -70,6 +70,23 @@
+ 	virtual Sprite *Encode(SpriteLoader::Sprite *sprite, Blitter::AllocatorProc *allocator) = 0;
+ 
+ 	/**
++	 * Cleanup an unused sprite data.
++	 * @param sprite the sprite pointer returned by Encode (do not free or delete it yourself!)
++	 */
++	virtual void ReleaseSprite(Sprite *sprite) {};
++	virtual void ReleaseAllSprites() {};
++
++	/**
++	 * Called by driver to do any initialization work that need to be done after driver init.
++	 */
++	virtual void PostDriverInit() {};
++
++	virtual void ClientSizeChanged(int w, int h) {};
++
++	virtual void PreFlip() {};
++	virtual void PostFlip() {};
++
++	/**
+ 	 * Move the destination pointer the requested amount x and y, keeping in mind
+ 	 *  any pitch and bpp of the renderer.
+ 	 * @param video The destination pointer (video-buffer) to scroll.
+Index: src/blitter/opengl.cpp
+===================================================================
+--- src/blitter/opengl.cpp	(Revision 0)
++++ src/blitter/opengl.cpp	(Revision 0)
+@@ -0,0 +1,1909 @@
++/* $Id$ */
++
++/** @file opengl.cpp Implementation of the OpenGL blitter. */
++
++#ifdef WITH_OPENGL
++
++#include "../stdafx.h"
++
++#include "../debug.h"
++#include "../gfx_func.h"
++#include "../spritecache.h"
++#include "../core/alloc_func.hpp"
++#include "../core/math_func.hpp"
++#include "../table/sprites.h"
++
++#include "opengl.hpp"
++#include <stdarg.h>
++#include <GL/glu.h>
++
++/**
++ * This file uses _debug_driver_level to control various outputs.
++ * Each bit controls an individual function, so you can add them together.
++ *
++ * bit value
++ *   1     1  [Message] Resources (swap texture, framebuffer object, shader etc.)
++ *   2     2
++ *   3     4  [Message] Function calls
++ *   4     8
++ *   5    16     [Draw] bounding box of scroll buffers
++ *   6    32     [Draw] Solid sprite colors
++ */
++
++#define DO_DEBUG(level) (_debug_driver_level & level)
++
++#if defined(__GNUC__) && (__GNUC__ < 3)
++	#define GLDEBUG(level, args...) if ((level == 0) || ( DO_DEBUG(level) ) debug("GL", args)
++#else
++	#define GLDEBUG(level, ...) if (level == 0 || DO_DEBUG(level) ) debug("GL", __VA_ARGS__)
++#endif
++
++static void CheckGLError(const char *dbg, ...)
++{
++	va_list va;
++	va_start(va, dbg);
++	char buf[1024];
++
++	GLenum errCode;
++	const GLubyte *errString;
++
++	while ((errCode = glGetError()) != GL_NO_ERROR) {
++		vsnprintf(buf, lengthof(buf), dbg, va);
++		va_end(va);
++
++		errString = gluErrorString(errCode);
++		GLDEBUG(0, "OpenGL Error at %s: %s\n", buf, errString);
++	}
++}
++
++static void DebugBox(uint8 color, int x, int y, int w, int h)
++{
++	glPushAttrib(GL_CURRENT_BIT); // backup the color
++
++ 	glColor4ub(_cur_palette[color].r, _cur_palette[color].g, _cur_palette[color].b, 255);
++
++	glBegin(GL_LINE_STRIP);
++		glVertex2i(    x,     y);
++		glVertex2i(x+w-1,     y);
++		glVertex2i(x+w-1, y+h-1);
++		glVertex2i(    x, y+h-1);
++		glVertex2i(    x,     y);
++	glEnd();
++
++	glPopAttrib();
++}
++
++// palette-texture support code from WINE dlls/wined3d/surface.c
++
++/*
++const char *fragment_palette_conversion =
++    "!!ARBfp1.0\n"
++    "TEMP index;\n"
++    "PARAM constants = { 0.996, 0.00195, 0, 0 };\n" // { 255/256, 0.5/255*255/256, 0, 0 }
++    "TEX index, fragment.texcoord[0], texture[0], 2D;\n" // The alpha-component contains the palette index
++    "MAD index.a, index.a, constants.x, constants.y;\n" // Scale the index by 255/256 and add a bias of '0.5' in order to sample in the middle
++    "TEX result.color, index.a, texture[1], 1D;\n" // use the alpha-component as a index in the palette to get the final color
++    "END";
++*/
++
++//! shader for rendering sprite (palette lookup & store color index for further animation)
++static const char *fragment_sprite =
++    "!!ARBfp1.0\n"
++	"OPTION ARB_precision_hint_fastest;"
++	"OPTION ATI_draw_buffers;"
++
++	"TEMP index, r, s, l, c, p, q;"
++
++	"PARAM constants = { 0.996, 0.00195, 0, 0 };"        // { 255/256, 0.5/255*255/256, 0, 0 }
++	"PARAM solid = { 0, 0, 0, 1 };"
++
++	"TEX c,     fragment.texcoord[0], texture[0], 2D;"   // c = base-color part (basically PNG; GRF have {0 0 0 A} here)
++
++	"TEX index, fragment.texcoord[0], texture[1], 2D;"   // The alpha-component contains the palette index
++	/*
++	"MOV s,     solid;"
++	"SGE r,     fragment.color.primary.a, constants.x;"
++	"MUL s.rgb, index.a, r;"
++	*/
++	"MOV s.rgb, index.a;"                                // store the value *before conversion* since the buffer have precision problem
++
++	"MAD index.x,  index.a, constants.x, constants.y;"   // Scale the index by 255/256 and add a bias of '0.5' in order to sample in the middle
++	"MOV index.y,  fragment.texcoord[0].z;"              //
++    "TEX l,        index,             texture[2], 2D;"   // use the alpha-component as a index in the palette to get the final color
++
++	"ADD r, c, l;"                                       // combine base color and looked-up palette color
++	"MIN r.a, c.a, l.a;"                                 // remapped color transparency
++	"MUL result.color[0], r, fragment.color.primary;"    // take the sprite alpha into account
++
++	"MIN s.a, c.a, l.a;"
++	//"SGE s.a, fragment.color.primary.a, constants.x;"    // store the color index for palette animation
++	"MOV result.color[1], s;"
++	"END";
++
++//! shader to replace color-animated pixels in backbuffer
++static const char *fragment_palette_anim =
++    "!!ARBfp1.0\n"
++	"OPTION ARB_precision_hint_fastest;"
++
++    "TEMP index, r, l, c, p, q, s, t;"
++
++	"PARAM constants = { 0.996, 0.00195, 0, 0 };"    // { 255/256, 0.5/255*255/256, 0, 0 }
++	"PARAM anim_bound = { 0.84375, 0.95703, 1, 0 };" // { 1/256*216, 1/256*245, 1, 0 }; 217-246 being TTD windows palette animated colors range
++
++	"TEX c,       fragment.texcoord[0], texture[0], 2D;" // c = base color part
++    "TEX index,   fragment.texcoord[0], texture[1], 2D;" // this time index's in RGB (easier to dump check)
++    "MAD index.x, index.r, constants.x, constants.y;"    // Scale to sample in the middle (see sprite shader)
++	"MOV index.y, constants.z;"
++    "TEX l,       index,                texture[2], 2D;" // l = looked up palette color
++
++	"SGE p, index.r, anim_bound.x;" // p = (idx > first_dirty)
++	"SLT q, index.r, anim_bound.y;" // q = (idx < last_dirty)
++	"MUL s, p, q;"					// s = anim = (p && q)
++	"SUB t, anim_bound.z, s;"		// t = !anim
++
++	"MUL r, l, s;"					// r = (s * lookup) + (t * base)
++	"MAD r, c, t, r;"
++	"MOV r.a, anim_bound.z;"
++
++	"MOV result.color, r;"
++	"END";
++
++//! shader to convert a texture into greyscale (e.g. newspaper)
++static const char *fragment_greyscalize =
++    "!!ARBfp1.0\n"
++	"OPTION ARB_precision_hint_fastest;"
++	"OPTION ATI_draw_buffers;"
++
++	"TEMP c, r;"
++
++	"PARAM const = { 0.299, 0.587, 0.114, 0 };"    // Y = (R * 0.299) + (G * 0.587) + (B * 0.114)
++	"PARAM one = { 0, 0, 0, 1 };"
++
++	"TEX c, fragment.texcoord[0], texture[0], 2D;" // c = texture color
++	"DP3 r, c, const;"                             // RGB -> greyscale
++	"ADD result.color[0], r, one;"                 // full opaque
++	"MOV result.color[1], one;"                    // clear the colorindex buffer
++	"END";
++
++//! shader to make an area darker (e.g. chat background)
++static const char *fragment_darken =
++    "!!ARBfp1.0\n"
++	"OPTION ARB_precision_hint_fastest;"
++	"OPTION ATI_draw_buffers;"
++
++	"TEMP c, r;"
++
++	"PARAM const = { %0.3f, %0.3f, %0.3f, 0 };"    // will be filled with (1 - _transparent_opacity / 256.0) in PostDriverInit()
++	"PARAM one = { 0, 0, 0, 1 };"
++
++	"TEX c, fragment.texcoord[0], texture[0], 2D;" // texture color
++	"MUL r, c, const;"                             // make the color darker
++	"ADD result.color[0], r, one;"                 // full opaque
++	"MOV result.color[1], one;"                    // clear the colorindex buffer
++	"END";
++
++
++
++Blitter_GL::Blitter_GL()
++{
++	// point buffer
++	this->point_color_array[0]  = MallocT<GLubyte>(512 * 4);
++	this->point_color_array[1]  = MallocT<GLubyte>(512 * 4);
++	this->point_vertex_array[0] = MallocT<GLint>  (512 * 2);
++	this->point_vertex_array[1] = MallocT<GLint>  (512 * 2);
++
++	this->point_buffer_size[0] = this->point_buffer_size[1] = 512;
++	this->point_count[0] = this->point_count[1] = 0;
++
++	// line buffer
++	this->line_color_array  = MallocT<GLubyte>(32 * 8);
++	this->line_vertex_array = MallocT<GLfloat>(32 * 4);
++
++	this->line_buffer_size = 32;
++	this->line_count = 0;
++
++	// sprite buffer
++	this->sprite_color_array    = MallocT<GLubyte>(512 * 4 * 4);
++	this->sprite_texcoord_array = MallocT<GLfloat>(512 * 3 * 4);
++	this->sprite_vertex_array   = MallocT<GLint>  (512 * 2 * 4);
++
++	this->sprite_remap = NULL;
++	this->sprite_string_color = -1;
++
++	this->sprite_buffer_size = 512;
++	this->sprite_count = 0;
++
++	// palette
++	this->current_palette_base = MallocT<uint8>(320 * 4);
++	this->current_palette = (uint8 *)Align((size_t)this->current_palette_base, 4);
++
++	for (int i=0; i<256; ++i)
++		this->string_palette[i] = 0;
++
++	this->palette_size = 1024;
++
++	this->palette_map = MallocT<RemapPair>(1024);
++	this->palette_map_size = 1024;
++	this->palette_map_count = 0;
++
++	this->sprite_remap = NULL;
++
++	// opengl resource state cache
++	this->gl_tex2d  = false;
++	this->gl_shader = false;
++
++	this->gl_active_tex = 0;
++
++	this->gl_bind2d_rgb = 0;
++	this->gl_bind2d_m   = 0;
++
++	this->gl_color_ptr    = NULL;
++	this->gl_texcoord_ptr = NULL;
++	this->gl_vertex_ptr   = NULL;
++
++	this->gl_r = 0;
++	this->gl_g = 0;
++	this->gl_b = 0;
++	this->gl_a = 0;
++
++	this->gl_drawbuf = 0;
++
++	this->swap_tex       = 0;
++	this->buffer_rgb_tex = 0;
++	this->buffer_idx_tex = 0;
++	this->scroll_tex     = 0;
++	this->colorindex_tex = 0;
++}
++
++Blitter_GL::~Blitter_GL()
++{
++	this->DoRelease(true);
++
++	free(this->current_palette_base);
++
++	for (int i=0; i<2; ++i) {
++		free(this->point_color_array[i]);
++		free(this->point_vertex_array[i]);
++	}
++
++	free(this->line_color_array);
++	free(this->line_vertex_array);
++
++	free(this->sprite_color_array);
++	free(this->sprite_texcoord_array);
++	free(this->sprite_vertex_array);
++
++	free(this->atlases);
++	free(this->palette_map);
++}
++
++void Blitter_GL::SetGLColorPointer(GLubyte *ptr)
++{
++	if (ptr == this->gl_color_ptr) return;
++
++	if (ptr) {
++		if (!this->gl_color_ptr)
++			glEnableClientState(GL_COLOR_ARRAY);
++		glColorPointer(4, GL_UNSIGNED_BYTE, 0, ptr);
++		this->gl_color_ptr = ptr;
++	} else {
++		glDisableClientState(GL_COLOR_ARRAY);
++		this->gl_color_ptr = NULL;
++	}
++}
++
++void Blitter_GL::SetGLTexCoordPointer(GLfloat *ptr)
++{
++	if (ptr == this->gl_texcoord_ptr) return;
++
++	if (ptr) {
++		if (!this->gl_texcoord_ptr)
++			glEnableClientState(GL_TEXTURE_COORD_ARRAY);
++		glTexCoordPointer(3, GL_FLOAT, 0, ptr);
++		this->gl_texcoord_ptr = ptr;
++	} else {
++		glDisableClientState(GL_TEXTURE_COORD_ARRAY);
++		this->gl_texcoord_ptr = NULL;
++	}
++}
++
++void Blitter_GL::SetGLVertexPointer(GLenum type, GLvoid *ptr)
++{
++	if (ptr == this->gl_vertex_ptr) return;
++
++	if (ptr) {
++		if (!this->gl_vertex_ptr)
++			glEnableClientState(GL_VERTEX_ARRAY);
++		glVertexPointer(2, type, 0, ptr);
++		this->gl_vertex_ptr = ptr;
++	} else {
++		glDisableClientState(GL_VERTEX_ARRAY);
++		this->gl_vertex_ptr = NULL;
++	}
++}
++
++void Blitter_GL::SetGLShader(bool state)
++{
++	if (state == this->gl_shader) return;
++	this->gl_shader = state;
++
++	if (state)
++		glEnable (GL_FRAGMENT_PROGRAM_ARB);
++	else
++		glDisable(GL_FRAGMENT_PROGRAM_ARB);
++}
++
++void Blitter_GL::SetGLShaderProgram(GLuint shader_program)
++{
++	if (shader_program == this->gl_shader_program) return;
++	this->gl_shader_program = shader_program;
++
++	glBindProgramARB(GL_FRAGMENT_PROGRAM_ARB, shader_program);
++}
++
++void Blitter_GL::SetGLActiveTex(int tex)
++{
++	if (tex == this->gl_active_tex) return;
++	this->gl_active_tex = tex;
++
++	glActiveTexture(GL_TEXTURE0 + tex);
++}
++
++void Blitter_GL::SetGLTex2D(bool state)
++{
++	if (state == this->gl_tex2d) return;
++	this->gl_tex2d = state;
++
++	this->SetGLActiveTex(0);
++
++	if (state)
++		glEnable (GL_TEXTURE_2D);
++	else
++		glDisable(GL_TEXTURE_2D);
++}
++
++void Blitter_GL::SetGLBind2D(GLuint tex1, GLuint tex2)
++{
++	if (tex1 != this->gl_bind2d_rgb) {
++		this->gl_bind2d_rgb = tex1;
++		if (this->sprite_count != 0) this->DrawSpriteBuffer();
++
++		this->SetGLActiveTex(0);
++		glBindTexture(GL_TEXTURE_2D, tex1);
++	}
++
++	if (tex2 && tex2 != this->gl_bind2d_m) {
++		this->gl_bind2d_m = tex2;
++		if (this->sprite_count != 0) this->DrawSpriteBuffer();
++
++		this->SetGLActiveTex(1);
++		glBindTexture(GL_TEXTURE_2D, tex2);
++	}
++}
++
++void Blitter_GL::SetGLColor(GLubyte r, GLubyte g, GLubyte b, GLubyte a)
++{
++	if (r == this->gl_r && g == this->gl_g && b == this->gl_b && a == this->gl_a) return;
++	this->gl_r = r;
++	this->gl_g = g;
++	this->gl_b = b;
++	this->gl_a = a;
++
++	glColor4ub(r, g, b, a);
++}
++
++void Blitter_GL::SetGLDraw(GLBuffer newbuf)
++{
++	if (this->fbo_msaa || this->fbo_nv_csaa)
++		glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, this->msaa_fbo);
++
++	if (this->gl_drawbuf == newbuf) return;
++	this->gl_drawbuf = newbuf;
++
++	GLenum buf[2];
++
++	if (this->use_palette_anim) {
++		buf[0] = GL_COLOR_ATTACHMENT0_EXT;
++		buf[1] = GL_COLOR_ATTACHMENT1_EXT;
++	} else {
++		buf[0] = GL_BACK_LEFT;
++		buf[1] = GL_NONE;
++	}
++
++	switch (newbuf) {
++		case NORMAL:
++			glDrawBuffersATI(2, buf);
++			break;
++
++		case RGBA_ONLY:
++			glDrawBuffer(buf[0]);
++			break;
++
++		case COLORINDEX_ONLY:
++			glDrawBuffer(buf[1]);
++			break;
++	}
++}
++
++void Blitter_GL::SetGLRead(GLBuffer newbuf)
++{
++	if (this->fbo_msaa || this->fbo_nv_csaa) {
++		this->SyncFBO();
++		glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, this->drawtex_fbo);
++	}
++
++	if (this->gl_readbuf == newbuf) return;
++	this->gl_readbuf = newbuf;
++
++	GLenum buf[2];
++
++	if (this->use_palette_anim) {
++		buf[0] = GL_COLOR_ATTACHMENT0_EXT;
++		buf[1] = GL_COLOR_ATTACHMENT1_EXT;
++	} else {
++		buf[0] = GL_BACK_LEFT;
++		buf[1] = GL_NONE;
++	}
++
++	switch (newbuf) {
++		case RGBA_ONLY:
++			glReadBuffer(buf[0]);
++			break;
++
++		case COLORINDEX_ONLY:
++			glReadBuffer(buf[1]);
++			break;
++
++		case NORMAL:
++			NOT_REACHED();
++	}
++}
++
++static void CompileShader(GLuint *shader, const char *shader_dbgname, const char *shader_source)
++{
++	glEnable(GL_FRAGMENT_PROGRAM_ARB);
++
++	glGenProgramsARB(1, shader);						CheckGLError("glGenProgramsARB (%s)", shader_dbgname);
++	glBindProgramARB(GL_FRAGMENT_PROGRAM_ARB, *shader); CheckGLError("glBindProgramARB (%s)", shader_dbgname);
++
++	glProgramStringARB(
++			GL_FRAGMENT_PROGRAM_ARB,
++			GL_PROGRAM_FORMAT_ASCII_ARB,
++			strlen(shader_source),
++			(const GLbyte *)shader_source);
++
++	CheckGLError("glProgramStringARB (%s)", shader_dbgname);
++
++	glDisable(GL_FRAGMENT_PROGRAM_ARB);
++}
++
++/**
++ * Shortcut for creating an 2D texture, applying common settings.
++ */
++GLuint Blitter_GL::CreateTexture2D(bool interpolate)
++{
++	GLuint tex;
++
++	this->SetGLActiveTex(0);
++
++	glGenTextures(1, &tex);
++
++	glBindTexture(GL_TEXTURE_2D, tex);
++
++	// prevent wrap-around artifact
++	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
++	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
++
++	// filtering? what are you talking about? ;)
++	// (O)TT(D) is by tradition blocky
++	// and seriously, filtering will break pixel indexes
++	if (interpolate && GLEE_SGIS_generate_mipmap) {
++		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
++		// We always do 2x-step zooming
++		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
++		//glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
++		//glTexParameterf(GL_TEXTURE_2D, GL_GENERATE_MIPMAP_SGIS, GL_TRUE);
++	} else {
++		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
++		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
++	}
++
++	this->gl_bind2d_rgb = tex;
++
++	return tex;
++}
++
++GLuint Blitter_GL::CreateTexturePalette()
++{
++	GLuint tex;
++
++	if (this->sprite_count != 0) this->DrawSpriteBuffer();
++
++	glGenTextures(1, &tex);
++
++	this->SetGLActiveTex(2);
++	glBindTexture(GL_TEXTURE_2D, tex);
++
++	// Make sure we have discrete color levels
++	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
++	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
++	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
++	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
++
++	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 256, this->palette_size, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
++
++	this->palette_count = 0;
++
++	return tex;
++}
++
++void Blitter_GL::InitAtlas(int pos)
++{
++	GLTexAtlas *a = &this->atlases[pos];
++
++	int w, h;
++
++	for (w = 1; w < 1024 && w < this->tex_size_limit; w *= 2) {}
++	for (h = 1; h < 4096 && h < this->tex_size_limit; h *= 2) {}
++
++	a->width  = w;
++	a->height = h;
++
++	a->stripe_bottom = 0;
++	a->stripe_height = 0;
++	a->stripe_left   = 0;
++
++	this->SetGLTex2D(true);
++
++	a->rgb_tex = this->CreateTexture2D(true);
++	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
++
++	a->mod_tex = this->CreateTexture2D();
++	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_ALPHA, GL_UNSIGNED_BYTE, NULL);
++}
++
++void Blitter_GL::CreateWhiteSprite()
++{
++	// Generate the solid-white texture
++	// It would sit at bottom left of first atlas
++
++	GLubyte *raw_head, *raw;
++
++	raw_head = MallocT<uint8>((8 * 8 + 1) * 4);
++	raw = (uint8 *)Align((size_t)raw_head, 4);
++
++	this->SetGLTex2D(true);
++
++	GLSprite   *s = &this->solid_white;
++	GLTexAtlas *a = &this->atlases[0];
++
++	s->rgb_tex = a->rgb_tex;
++	s->mod_tex = a->mod_tex;
++
++	s->bottom  = this->TexCoordScale(a->height, 2);
++	s->top     = this->TexCoordScale(a->height, 5);
++	s->left    = this->TexCoordScale(a->width,  2);
++	s->right   = this->TexCoordScale(a->width,  5);
++
++	a->stripe_height = 8;
++	a->stripe_left = 8;
++
++	for (int i=0; i<256; ++i) raw[i] = 255;
++
++	this->SetGLBind2D(s->rgb_tex);
++	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 8, 8, GL_RGBA, GL_UNSIGNED_BYTE, raw);
++
++	for (int i=0; i<256; ++i) raw[i] = 0;
++
++	this->SetGLBind2D(s->mod_tex);
++	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 8, 8, GL_RGBA, GL_UNSIGNED_BYTE, raw);
++
++	free(raw_head);
++}
++
++float Blitter_GL::TexCoordScale(int total, int val)
++{
++	return (val + 0.5f) / total;
++	//return ((val + 0.5f) / (total - 1)) * (float)(total - 1) / total;
++}
++
++/**
++ * Initialization.
++ * These initialization can only be done after OpenGL environment has been created.
++ */
++void Blitter_GL::PostDriverInit()
++{
++	if (!GLEE_VERSION_1_2) {
++		const char *msg = "OpenGL 1.2 or above is required but NOT AVAILABLE. Can't do batch rendering!\nYou won't see anything rendered without it ...";
++		#if !defined(WIN32) && !defined(WIN64)
++			printf(msg);
++		#else
++			ShowInfo(msg);
++		#endif
++		exit(0);
++	}
++
++	glEnable(GL_BLEND);
++	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
++	glClear(GL_COLOR_BUFFER_BIT);
++
++	int tex_units;
++
++	if (GLEE_ARB_multitexture) {
++		glGetIntegerv(GL_MAX_TEXTURE_UNITS_ARB, &tex_units);
++		GLDEBUG(0, "%35s: %d", "Texture units", tex_units);
++	} else {
++		tex_units = 1;
++	}
++
++	glGetIntegerv(GL_MAX_TEXTURE_SIZE, &this->tex_size_limit);
++	GLDEBUG(0, "%35s: %d", "Texture size limit", this->tex_size_limit);
++
++	if (GLEE_ARB_texture_non_power_of_two) {
++		GLDEBUG(0, "%35s: %s", "Non power-of-two sized textures", "supported");
++		this->easy_texture_size = true;
++	} else {
++		this->easy_texture_size = false;
++	}
++
++	if (GLEE_ATI_draw_buffers && GLEE_ARB_fragment_program && tex_units >= 3) {
++		// Fragment program is supported, and we got enough texture units to do the trick
++		// compile and upload the shader
++
++		// create and compile palette-lookup shader
++		CompileShader(&this->sprite_shader, "sprite", fragment_sprite);
++		GLDEBUG(1, "%35s: %d", "palette sprite shader", this->sprite_shader);
++
++		CompileShader(&this->greyscalize_shader, "greyscalize", fragment_greyscalize);
++		GLDEBUG(1, "%35s: %d", "greyscalize shader", this->greyscalize_shader);
++
++		char buf[1024];
++		float scale = 1.0f - _transparent_opacity / 256.0f;
++		sprintf(buf, fragment_darken, scale, scale, scale);
++
++		CompileShader(&this->darken_shader, "darken", buf);
++		GLDEBUG(1, "%35s: %d", "make transparent shader", this->darken_shader);
++
++		CompileShader(&this->palette_anim_shader, "palette-anim", fragment_palette_anim);
++		GLDEBUG(1, "%35s: %d", "palette animation shader", this->palette_anim_shader);
++
++		this->palette_tex = this->CreateTexturePalette();
++		this->PaletteAnimate(0, 256); // initialize the palette
++
++		this->use_palette_texture = true;
++	} else {
++		this->use_palette_texture = false;
++	}
++
++	if (this->use_palette_texture && GLEE_EXT_framebuffer_object) {
++		GLDEBUG(0, "%35s: %s", "palette animation", "enabled");
++		this->use_palette_anim = true;
++
++		glGenFramebuffersEXT(1, &this->drawtex_fbo);
++
++		if (GLEE_EXT_framebuffer_multisample && GLEE_EXT_framebuffer_blit)
++			this->fbo_msaa = true;
++		else
++			this->fbo_msaa = false;
++
++		if (GLEE_NV_framebuffer_multisample_coverage && GLEE_EXT_framebuffer_blit)
++			this->fbo_nv_csaa = true;
++		else
++			this->fbo_nv_csaa = false;
++
++		// XXX force disable them
++		this->fbo_msaa = this->fbo_nv_csaa = false;
++
++		if (this->fbo_msaa || this->fbo_nv_csaa) {
++			glGenFramebuffersEXT(1, &this->msaa_fbo);
++			glGenRenderbuffersEXT(1, &this->colorindex_rbo);
++			glGenRenderbuffersEXT(1, &this->swap_rbo);
++			glGetIntegerv(GL_MAX_SAMPLES_EXT, &this->msaa_samples);
++		}
++
++		// Can't set draw buffers yet, since we don't have backing textures
++
++	} else {
++		if (!GLEE_ATI_draw_buffers)
++			GLDEBUG(0, "%35s: %s", "ATI_draw_buffers", "NOT SUPPORTED (palette animation disabled)");
++		if (!GLEE_EXT_framebuffer_object)
++			GLDEBUG(0, "%35s: %s", "EXT_framebuffer_object", "NOT SUPPORTED (palette animation disabled)");
++		this->use_palette_anim = false;
++	}
++
++	// Initialize the texture atlas
++	this->atlases = MallocT<GLTexAtlas>(4);
++	this->atlas_size = 4;
++	this->atlas_count = 1;
++	this->encoded_sprite_count = 0;
++
++	this->InitAtlas(0);
++	this->CreateWhiteSprite();
++}
++
++void Blitter_GL::ClientSizeChanged(int w, int h)
++{
++	this->cli_width = w;
++	this->cli_height = h;
++
++	// OpenGL projection change
++	glViewport(0, 0, w, h);
++	glMatrixMode(GL_PROJECTION);
++	glLoadIdentity();
++	glOrtho(0.0, w, h, 0.0, -1.0, 1.0);
++	glMatrixMode(GL_MODELVIEW);
++	glLoadIdentity();
++
++	// Recreate swap buffer & color index texture
++	this->SetGLTex2D(true);
++
++	int texw, texh;
++
++	if (this->easy_texture_size) {
++		texw = w;
++		texh = h;
++	} else {
++		texw = texh = 1;
++		while (texw < w) texw *= 2;
++		while (texh < h) texh *= 2;
++	}
++
++	if (this->swap_tex)
++		glDeleteTextures(1, &this->swap_tex);
++
++	this->swap_tex = this->CreateTexture2D();
++	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, texw, texh, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
++
++	GLDEBUG(1, "%35s: %d", "main swap texture", this->swap_tex);
++
++	if (this->colorindex_tex)
++		glDeleteTextures(1, &this->colorindex_tex);
++
++	this->colorindex_tex = this->CreateTexture2D();
++	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, texw, texh, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
++
++	GLDEBUG(1, "%35s: %d", "colorindex swap texture", this->colorindex_tex);
++
++	if (this->scroll_tex)
++		glDeleteTextures(1, &this->scroll_tex);
++
++	this->scroll_tex = this->CreateTexture2D();
++	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, texw, texh, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
++
++	GLDEBUG(1, "%35s: %d", "scrolling texture", this->colorindex_tex);
++
++	if (this->buffer_idx_tex)
++		glDeleteTextures(1, &this->buffer_idx_tex);
++
++	this->buffer_idx_tex = this->CreateTexture2D();
++	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 128, 128, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
++
++	GLDEBUG(1, "%35s: %d", "mouse cursor colorindex buffer texture", this->colorindex_tex);
++
++	if (this->buffer_rgb_tex)
++		glDeleteTextures(1, &this->buffer_rgb_tex);
++
++	this->buffer_rgb_tex = this->CreateTexture2D();
++	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 128, 128, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
++
++	GLDEBUG(1, "%35s: %d", "mouse cursor rgb buffer texture", this->colorindex_tex);
++
++	if (this->use_palette_anim) {
++
++		glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, this->drawtex_fbo);
++
++		glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, this->swap_tex, 0);
++		glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT1_EXT, GL_TEXTURE_2D, this->colorindex_tex, 0);
++
++		if (this->fbo_msaa || this->fbo_nv_csaa) {
++			int samples;
++			GLenum status;
++
++			for (samples = this->msaa_samples; samples > 1; --samples) {
++				glBindRenderbufferEXT(GL_RENDERBUFFER_EXT, this->swap_rbo);
++				glRenderbufferStorageMultisampleEXT(GL_RENDERBUFFER_EXT, this->msaa_samples / 2, GL_RGBA, texw, texh);
++				glBindRenderbufferEXT(GL_RENDERBUFFER_EXT, this->colorindex_rbo);
++				glRenderbufferStorageMultisampleEXT(GL_RENDERBUFFER_EXT, this->msaa_samples / 2, GL_RGBA, texw, texh);
++
++				glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, this->msaa_fbo);
++				glFramebufferRenderbufferEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_RENDERBUFFER_EXT, this->swap_rbo);
++				glFramebufferRenderbufferEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT1_EXT, GL_RENDERBUFFER_EXT, this->colorindex_rbo);
++
++				status = glCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT);
++				if (status == GL_FRAMEBUFFER_COMPLETE_EXT) break;
++			}
++
++			GLDEBUG(0, "MSAA/CSAA Samples: %d", samples);
++			this->msaa_samples = samples;
++
++			// Couldn't find a usable MSAA sample count
++			if (status != GL_FRAMEBUFFER_COMPLETE_EXT) {
++				this->fbo_msaa = this->fbo_nv_csaa = false;
++			}
++		}
++
++		// make sure we bind the framebuffer again
++		this->gl_drawbuf = -1;
++	}
++}
++
++void Blitter_GL::RedrawAnimatedPixels()
++{
++	this->SetGLDraw(RGBA_ONLY);
++	this->SetGLTex2D(true);
++
++	// base color & color index
++	this->SetGLBind2D(this->swap_tex, this->colorindex_tex);
++
++	// fragment program that does palette lookup
++	if (this->use_palette_anim) {
++		this->SetGLShader(true);
++		this->SetGLShaderProgram(this->palette_anim_shader);
++	} else {
++		this->SetGLShader(false);
++	}
++
++	this->SetGLColor(255, 255, 255, 255);
++
++	float w, h;
++
++	if (this->easy_texture_size) {
++		w = h = 1.0f;
++	} else {
++		int texw = 1, texh = 1;
++		while (texw < this->cli_width)  texw *= 2;
++		while (texh < this->cli_height) texh *= 2;
++		w = (float)this->cli_width  / texw;
++		h = (float)this->cli_height / texh;
++	}
++
++	glBegin(GL_QUADS);
++		glTexCoord2f(0, h); glVertex2i(              0,                0);
++		glTexCoord2f(w, h); glVertex2i(this->cli_width,                0);
++		glTexCoord2f(w, 0); glVertex2i(this->cli_width, this->cli_height);
++		glTexCoord2f(0, 0);	glVertex2i(              0, this->cli_height);
++	glEnd();
++
++	if (this->use_palette_anim) {
++		// dump the content of swap_tex into back buffer
++		glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
++		glBegin(GL_QUADS);
++			glTexCoord2f(0, h); glVertex2i(              0,                0);
++			glTexCoord2f(w, h); glVertex2i(this->cli_width,                0);
++			glTexCoord2f(w, 0); glVertex2i(this->cli_width, this->cli_height);
++			glTexCoord2f(0, 0);	glVertex2i(              0, this->cli_height);
++		glEnd();
++
++		// will bind FBO in PostFlip() for pretty Fraps display ;)
++	}
++}
++
++void Blitter_GL::SyncFBO()
++{
++	if (this->fbo_msaa || this->fbo_nv_csaa) {
++		glBindFramebufferEXT(GL_READ_FRAMEBUFFER_EXT, this->msaa_fbo);
++		glBindFramebufferEXT(GL_DRAW_FRAMEBUFFER_EXT, this->drawtex_fbo);
++
++		glBlitFramebufferEXT(
++			0, 0, this->cli_width, this->cli_height,
++			0, 0, this->cli_width, this->cli_height,
++			GL_COLOR_BUFFER_BIT, GL_NEAREST);
++
++		glBindFramebufferEXT(GL_READ_FRAMEBUFFER_EXT, 0);
++		glBindFramebufferEXT(GL_DRAW_FRAMEBUFFER_EXT, 0);
++	}
++}
++
++void Blitter_GL::PreFlip()
++{
++	this->FlushDeferredDraws();
++
++	// Downsample the framebuffer
++	this->SyncFBO();
++
++	// Copy current backbuffer into a texture
++
++	// If we can do palette animation, everything will keep intact in colorindex_tex, swap_tex already
++	// so we don't have to do anything.
++
++	if (!this->use_palette_anim) {
++		this->SetGLShader(false);
++		this->SetGLTex2D(true);
++		this->SetGLBind2D(this->swap_tex);
++		this->SetGLRead(RGBA_ONLY);
++		glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, this->cli_width, this->cli_height);
++	}
++
++	// The TTRS hack (it draws buildings beautifully, we should help keeping the quality! ;)
++	// Animated colors in remapped palettes won't be updated
++	// so we should redraw them before put it on screen
++	this->RedrawAnimatedPixels();
++
++	glFlush();
++}
++
++void Blitter_GL::PostFlip()
++{
++	// The backbuffer is cleared by now
++	// Restore previous backbuffer with new (animated) palette if we don't have FBO
++	// (swap_tex, colorindex_tex attached on FBO won't get cleared)
++
++	if (!this->use_palette_anim)
++		this->RedrawAnimatedPixels();
++	else {
++		// the Fraps hack
++		if (this->fbo_msaa || this->fbo_nv_csaa)
++			glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, this->msaa_fbo);
++		else
++			glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, this->drawtex_fbo);
++	}
++}
++
++void Blitter_GL::AddPointBuffer(int a, int x, int y, uint8 color)
++{
++	int p = this->point_count[a]++;
++
++	if (this->point_count[a] == this->point_buffer_size[a]) {
++		this->point_buffer_size [a] *= 2;
++		this->point_color_array [a]  = ReallocT<GLubyte>(this->point_color_array[a],  this->point_buffer_size[a] * 4);
++		this->point_vertex_array[a]  = ReallocT<GLint>  (this->point_vertex_array[a], this->point_buffer_size[a] * 2);
++		GLDEBUG(0, "Grow Pointbuffer %d capacity to %d", a, this->point_buffer_size[a]);
++	}
++
++	GLubyte *c = &this->point_color_array [a][p * 4];
++	GLint   *v = &this->point_vertex_array[a][p * 2];
++
++	*c++ = _cur_palette[color].r;
++	*c++ = _cur_palette[color].g;
++	*c++ = _cur_palette[color].b;
++	*c++ = 255;
++
++	*v++ = x;
++	*v++ = y;
++}
++
++void Blitter_GL::AddLineBuffer(float x, float y, float x2, float y2, uint8 color)
++{
++	int p = this->line_count++;
++
++	if (this->line_count == this->line_buffer_size) {
++		this->line_buffer_size *= 2;
++		this->line_color_array  = ReallocT<GLubyte>(this->line_color_array,  this->line_buffer_size * 4 * 2);
++		this->line_vertex_array = ReallocT<GLfloat>(this->line_vertex_array, this->line_buffer_size * 2 * 2);
++		GLDEBUG(0, "Grow Linebuffer capacity to %d", this->line_buffer_size);
++	}
++
++	GLubyte *c = &this->line_color_array [p * 8];
++	GLfloat *v = &this->line_vertex_array[p * 4];
++
++	for (int i=0; i<2; ++i) {
++		*c++ = _cur_palette[color].r;
++		*c++ = _cur_palette[color].g;
++		*c++ = _cur_palette[color].b;
++		*c++ = 255;
++	}
++
++	*v++ =  x + 0.5f;
++	*v++ =  y + 0.5f;
++	*v++ = x2 + 0.5f;
++	*v++ = y2 + 0.5f;
++}
++
++void Blitter_GL::AddSpriteBuffer(bool rotated, float lc, float rc, float tc, float bc, float pal, int x, int y, int x2, int y2, uint8 r, uint8 g, uint8 b, uint8 a)
++{
++	int p = this->sprite_count++;
++
++	if (this->sprite_count == this->sprite_buffer_size) {
++		this->sprite_buffer_size *= 2;
++		this->sprite_color_array    = ReallocT<GLubyte>(this->sprite_color_array,    this->sprite_buffer_size * 4 * 4);
++		this->sprite_texcoord_array = ReallocT<GLfloat>(this->sprite_texcoord_array, this->sprite_buffer_size * 3 * 4);
++		this->sprite_vertex_array   = ReallocT<GLint>  (this->sprite_vertex_array,   this->sprite_buffer_size * 2 * 4);
++		GLDEBUG(0, "Grow Spritebuffer capacity to %d", this->sprite_buffer_size);
++	}
++
++	GLubyte *c = &this->sprite_color_array[p * 16];
++	GLfloat *t = &this->sprite_texcoord_array[p * 12];
++	GLint   *v = &this->sprite_vertex_array[p * 8];
++
++	for (int i=0; i<4; ++i) {
++		*c++ = r;
++		*c++ = g;
++		*c++ = b;
++		*c++ = a;
++	}
++
++	if (!rotated) {
++		*t++ = lc; *t++ = tc; *t++ = pal;
++		*t++ = rc; *t++ = tc; *t++ = pal;
++		*t++ = rc; *t++ = bc; *t++ = pal;
++		*t++ = lc; *t++ = bc; *t++ = pal;
++	} else {
++		*t++ = tc; *t++ = lc; *t++ = pal;
++		*t++ = tc; *t++ = rc; *t++ = pal;
++		*t++ = bc; *t++ = rc; *t++ = pal;
++		*t++ = bc; *t++ = lc; *t++ = pal;
++	}
++
++	*v++ =  x; *v++ = y;
++	*v++ = x2; *v++ = y;
++	*v++ = x2; *v++ = y2;
++	*v++ =  x; *v++ = y2;
++}
++
++
++void Blitter_GL::FlushDeferredDraws()
++{
++	// Draw buffered sprites
++	if (this->sprite_count != 0) {
++		this->DrawSpriteBuffer();
++	}
++
++	// Draw buffered lines
++	if (this->line_count != 0) {
++		this->DrawLineBuffer();
++	}
++
++	// Draw buffered pixels
++	if (this->point_count[0] != 0) {
++		// SetPixel()
++		this->DrawPointBuffer(0);
++	}
++
++	if (this->point_count[1] != 0) {
++		// SetPixelIfEmpty()
++		glBlendFunc(GL_ONE_MINUS_DST_COLOR, GL_ONE);
++		this->DrawPointBuffer(1);
++		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
++	}
++}
++
++void Blitter_GL::DrawPointBuffer(int a)
++{
++	this->SetGLShader(false);
++	this->SetGLTex2D(false);
++
++	this->SetGLDraw(RGBA_ONLY);
++
++	// XXX: Why using VBO's even slower?
++	// Use traditional array pointers to pass points and colors
++	this->SetGLColorPointer   (this->point_color_array[a]);
++	this->SetGLTexCoordPointer(NULL);
++	this->SetGLVertexPointer  (GL_INT, this->point_vertex_array[a]);
++
++	glDrawArrays(GL_POINTS, 0, this->point_count[a]);
++
++	this->point_count[a] = 0;
++
++	// Invalidate the color
++	this->gl_r = -1;
++}
++
++void Blitter_GL::DrawLineBuffer()
++{
++	this->SetGLShader(false);
++	this->SetGLTex2D(false);
++
++	this->SetGLDraw(RGBA_ONLY);
++
++	// XXX: Why using VBO's even slower?
++	// Use traditional array pointers to pass points and colors
++	this->SetGLColorPointer   (this->line_color_array);
++	this->SetGLTexCoordPointer(NULL);
++	this->SetGLVertexPointer  (GL_FLOAT, this->line_vertex_array);
++
++	glDrawArrays(GL_LINES, 0, this->line_count * 2);
++
++	this->line_count = 0;
++
++	// Invalidate the color
++	this->gl_r = -1;
++}
++
++void Blitter_GL::DrawSpriteBuffer()
++{
++	if (this->point_count[0] != 0)
++		this->DrawPointBuffer(0);
++
++	if (this->line_count != 0)
++		this->DrawLineBuffer();
++
++	this->SetGLDraw(NORMAL);
++	this->SetGLTex2D(true);
++
++	if (this->use_palette_texture) {
++		this->SetGLShader(true);
++		this->SetGLShaderProgram(this->sprite_shader);
++	}
++
++	// State changes could already flush the sprite cache.
++	if (this->sprite_count == 0) return;
++
++	this->SetGLColorPointer   (this->sprite_color_array);
++	this->SetGLTexCoordPointer(this->sprite_texcoord_array);
++	this->SetGLVertexPointer  (GL_INT, this->sprite_vertex_array);
++
++	glDrawArrays(GL_QUADS, 0, this->sprite_count * 4);
++
++	this->sprite_count = 0;
++
++	// Invalidate the color
++	this->gl_r = -1;
++}
++
++void Blitter_GL::Draw(Blitter::BlitterParams *bp, BlitterMode mode, ZoomLevel zoom)
++{
++	if (_screen_disable_anim) {
++		GLDEBUG(0, "OpenGL blitter didn't support screenshot yet!");
++		return;
++	}
++
++	int origin_x = ((uint8*)bp->dst - (uint8*)_screen.dst_ptr) % _screen.pitch;
++	int origin_y = ((uint8*)bp->dst - (uint8*)_screen.dst_ptr) / _screen.pitch;
++
++	int x = origin_x + bp->left;
++	int y = origin_y + bp->top;
++	int x2 = x + bp->width;
++	int y2 = y + bp->height;
++
++	float lc = (float)ScaleByZoom(            bp->skip_left, zoom) / bp->sprite_width;
++	float rc = (float)ScaleByZoom(bp->width + bp->skip_left, zoom) / bp->sprite_width;
++	float tc = (float)ScaleByZoom(             bp->skip_top, zoom) / bp->sprite_height;
++	float bc = (float)ScaleByZoom(bp->height + bp->skip_top, zoom) / bp->sprite_height;
++
++	GLSprite *gls = (GLSprite *)bp->sprite;
++	if (!gls->encoded) this->DoEncode(gls);
++
++	float width_unit  = gls->right - gls->left;
++	float height_unit = gls->top - gls->bottom;
++
++	lc = gls->left   + lc * width_unit;
++	rc = gls->left   + rc * width_unit;
++	tc = gls->bottom + tc * height_unit;
++	bc = gls->bottom + bc * height_unit;
++
++	GLubyte r, g, b, a;
++
++	if (mode == BM_TRANSPARENT) {
++		r = g = b = 0;
++		a = _transparent_opacity;
++	} else {
++		r = g = b = a = 255;
++	}
++
++	this->SetGLTex2D(true);
++
++	float color_row = 0;
++
++	if (this->use_palette_texture) {
++		// Identify the palette to use
++		if (mode != BM_COLOUR_REMAP) {
++			color_row = this->TexCoordScale(this->palette_size, 0);
++		} else {
++			color_row = this->TexCoordScale(this->palette_size, GetRemapPalette(bp->remap));
++		}
++
++		// bind the base color texture & modulated pixel index texture
++		this->SetGLBind2D(gls->rgb_tex, gls->mod_tex);
++	} else {
++		// we can only use (unmodulated) base color texture
++		this->SetGLBind2D(gls->rgb_tex);
++	}
++
++	this->AddSpriteBuffer(gls->rotated, lc, rc, tc, bc, color_row, x, y, x2, y2, r, g, b, a);
++}
++
++//! Color-casts a specified rectangle region.
++void Blitter_GL::DrawColorMappingRect(void *dst, int width, int height, int pal)
++{
++	if (!this->use_palette_texture) return;
++
++	this->FlushDeferredDraws();
++
++	this->SetGLDraw(NORMAL);
++
++	int sx = ((uint8*)dst - (uint8*)_screen.dst_ptr) % _screen.pitch;
++	int sy = ((uint8*)dst - (uint8*)_screen.dst_ptr) / _screen.pitch;
++
++	GLuint rect_tex;
++
++	this->SetGLTex2D(true);
++
++	// Fetch the area to be color-mapped
++	rect_tex = this->CreateTexture2D();
++	glCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, sx, _screen.height - sy - height, width, height, 0);
++
++	this->SetGLShader(true);
++
++	if        (pal == PALETTE_TO_STRUCT_GREY) {
++		this->SetGLShaderProgram(this->greyscalize_shader);
++	} else if (pal == PALETTE_TO_TRANSPARENT) {
++		this->SetGLShaderProgram(this->darken_shader);
++	}
++
++	glBegin(GL_QUADS);
++		// textures generated by glCopyTexSubImage2D have its lower-left corner (0, 0)
++		glTexCoord2i(0, 1); glVertex2i(        sx,          sy);
++		glTexCoord2i(1, 1); glVertex2i(sx + width,          sy);
++		glTexCoord2i(1, 0); glVertex2i(sx + width, sy + height);
++		glTexCoord2i(0, 0); glVertex2i(        sx, sy + height);
++	glEnd();
++
++	glDeleteTextures(1, &rect_tex);
++}
++
++/** Caches a sprite for lazy encoding.
++ * It's called by spritecache to encode a loaded sprite.
++ * OpenGL context is thread-specific, however the map-generator thread also
++ * loads some sprites to determine their dimensions, so we store the sprite bitmap
++ * and encode it when drawing it the first time.
++ *
++ * Also rotate the sprite making it 'lies down' to conserve precious atlas area.
++ */
++Sprite *Blitter_GL::Encode(SpriteLoader::Sprite *sprite, Blitter::AllocatorProc *allocator)
++{
++	Sprite *dest_sprite;
++
++	dest_sprite = (Sprite *)allocator(sizeof(Sprite) + sizeof(GLSprite));
++
++	dest_sprite->height = sprite->height;
++	dest_sprite->width  = sprite->width;
++	dest_sprite->x_offs = sprite->x_offs;
++	dest_sprite->y_offs = sprite->y_offs;
++
++	GLSprite *gls = (GLSprite *)&(dest_sprite->data);
++
++	gls->encoded = false;
++	gls->src     = MallocT<SpriteLoader::CommonPixel>(sprite->width * sprite->height);
++
++	this->sprite_list.push_back(gls);
++
++	// rotate the sprite so the longer edge is always horizontal,
++	// saving precious texture space (to reduce texture switches)
++
++	if (sprite->height < sprite->width) {
++		gls->width   = sprite->width;
++		gls->height  = sprite->height;
++		gls->rotated = false;
++
++		memcpy(gls->src, sprite->data, sizeof(SpriteLoader::CommonPixel) * sprite->width * sprite->height);
++
++	} else {
++		gls->width   = sprite->height;
++		gls->height  = sprite->width;
++		gls->rotated = true;
++
++		for (int x=0; x<gls->width;  ++x)
++		for (int y=0; y<gls->height; ++y)
++			gls->src[y * gls->width + x] = sprite->data[x * gls->height + y];
++	}
++
++	return dest_sprite;
++}
++
++void Blitter_GL::DoEncode(GLSprite *gls)
++{
++	SpriteLoader::CommonPixel *src = gls->src;
++
++	this->encoded_sprite_count += 1;
++	GLDEBUG(4, "Encode %d BEGIN", this->encoded_sprite_count);
++
++	// Find the place in the atlas
++	GLTexAtlas *a = &this->atlases[this->atlas_count - 1];
++
++	if ((a->width - a->stripe_left) < gls->width) {
++		// the remaining space on the stripe is unable to fit
++		a->stripe_bottom += a->stripe_height;
++		a->stripe_height = 0;
++		a->stripe_left   = 0;
++		GLDEBUG(4, "Sprite %d hit atlas %d bottom %d\n", this->encoded_sprite_count, this->atlas_count - 1, a->stripe_bottom);
++	}
++
++	if ((a->height - a->stripe_bottom) < gls->height) {
++		// Texture atlas has filled ...
++		if (this->atlas_count == this->atlas_size) {
++			this->atlas_size *= 2;
++			this->atlases = ReallocT<GLTexAtlas>(this->atlases, this->atlas_size);
++			GLDEBUG(0, "Grow texture atlas capacity to %d", this->atlas_size);
++		}
++		this->InitAtlas(this->atlas_count);
++		a = &this->atlases[this->atlas_count];
++		this->atlas_count += 1;
++	}
++
++	int atlas_offx = a->stripe_left;
++	int atlas_offy = a->stripe_bottom;
++
++	if (!gls->rotated) {
++		gls->left    = this->TexCoordScale(a->width,  atlas_offx);
++		gls->right   = this->TexCoordScale(a->width,  atlas_offx + gls->width - 1);
++		gls->bottom  = this->TexCoordScale(a->height, atlas_offy);
++		gls->top     = this->TexCoordScale(a->height, atlas_offy + gls->height - 1);
++	} else {
++		gls->left    = this->TexCoordScale(a->height, atlas_offy);
++		gls->right   = this->TexCoordScale(a->height, atlas_offy + gls->height - 1);
++		gls->bottom  = this->TexCoordScale(a->width,  atlas_offx);
++		gls->top     = this->TexCoordScale(a->width,  atlas_offx + gls->width - 1);
++	}
++
++	a->stripe_height = max(a->stripe_height, gls->height);
++	a->stripe_left += gls->width;
++
++	uint8 *p, *rgba, *rgba_head;
++	uint8 *q,  *mod,  *mod_head;
++
++	rgba_head = MallocT<uint8>((gls->width * gls->height + 1) * 4);
++	p = rgba = (uint8 *)Align((size_t)rgba_head, 4);
++
++	this->SetGLTex2D(true);
++	this->SetGLActiveTex(0);
++
++	if (this->use_palette_texture)
++	{
++		mod_head = MallocT<uint8>((gls->width * gls->height + 1) * 4);
++		q = mod = (uint8 *)Align((size_t)mod_head, 4);
++
++		// Base color part (rgb=0 if the pixel is paletted)
++		for (int i = 0; i < gls->height; ++i) {
++			for (int j = 0; j < gls->width; ++j, ++src) {
++				*p++ = src->r;
++				*p++ = src->g;
++				*p++ = src->b;
++				*p++ = src->a;
++				*q++ = 0;
++				*q++ = 0;
++				*q++ = 0;
++				*q++ = src->m;
++			}
++		}
++
++		// Modulated (palette index) texture
++
++		gls->mod_tex = a->mod_tex;
++		this->SetGLBind2D(gls->mod_tex);
++		GLDEBUG(4, "Texture MOD # %d\n", gls->mod_tex);
++		glTexSubImage2D(GL_TEXTURE_2D, 0, atlas_offx, atlas_offy, gls->width, gls->height, GL_RGBA, GL_UNSIGNED_BYTE, mod);
++
++		free(mod_head);
++
++	} else {
++		// NOT supporting palette texture
++		// so decode in place.
++		//
++		// We DO NOT support color-mapping, company colors, text colors etc.
++		// under this situation (for now).
++
++		for (int i = 0; i < gls->width * gls->height; ++i,++src) {
++			*p++ = _cur_palette[src->m].r;
++			*p++ = _cur_palette[src->m].g;
++			*p++ = _cur_palette[src->m].b;
++			*p++ = src->m ? 255 : 0;
++		}
++	}
++
++	// RGB base color texture
++
++	gls->rgb_tex = a->rgb_tex;
++	this->SetGLBind2D(gls->rgb_tex);
++	GLDEBUG(4, "Texture RGB # %d\n", gls->rgb_tex);
++	glTexSubImage2D(GL_TEXTURE_2D, 0, atlas_offx, atlas_offy, gls->width, gls->height, GL_RGBA, GL_UNSIGNED_BYTE, rgba);
++
++	GLDEBUG(4, "Encode %d DONE", this->encoded_sprite_count);
++
++	free(rgba_head);
++
++	gls->encoded = true;
++	free(gls->src);
++}
++
++void Blitter_GL::ReleaseSprite(Sprite *sprite)
++{
++	// Because we're using texture atlas
++	// There's nothing we can do to release a single sprite
++}
++
++void Blitter_GL::DoRelease(bool cleanup)
++{
++	for (int i=0; i<this->atlas_count; ++i) {
++		GLTexAtlas *a = &this->atlases[i];
++		glDeleteTextures(1, &a->mod_tex);
++		glDeleteTextures(1, &a->rgb_tex);
++	}
++	this->atlas_count  = 1;
++	this->encoded_sprite_count = 0;
++
++	for (std::list<GLSprite *>::iterator i = this->sprite_list.begin(); i != this->sprite_list.end(); ++i) {
++		if (!(*i)->encoded) {
++			free((*i)->src);
++		}
++	}
++	this->sprite_list.clear();
++
++	if (cleanup) {
++		printf("(cleanup)\n");
++
++		if (glIsTexture(this->swap_tex))
++			glDeleteTextures(1, &this->swap_tex);
++
++		if (glIsTexture(this->colorindex_tex))
++			glDeleteTextures(1, &this->colorindex_tex);
++
++		if (glIsTexture(this->palette_tex))
++			glDeleteTextures(1, &this->palette_tex);
++	}
++}
++
++//! Delete all sprites.
++void Blitter_GL::ReleaseAllSprites()
++{
++	// If we got here without initializing atlases,
++	// we're most likely called by an videodriver that doesn't support OpenGL
++
++	if (!this->atlases) {
++		const char *msg = "OpenGL is most likely not initialized. Make sure you used an OpenGL-compatible video driver.";
++		#if !defined(WIN32) && !defined(WIN64)
++			printf(msg);
++		#else
++			ShowInfo(msg);
++		#endif
++		exit(0);
++	}
++
++	this->DoRelease();
++
++	this->InitAtlas(0);
++	this->CreateWhiteSprite();
++
++	// Discard previously created palettes
++	this->palette_count = 0;
++	this->palette_map_count = 0;
++	for (int i=0; i<256; ++i)
++		this->string_palette[i] = 0;
++
++	this->PaletteAnimate(0, 256);
++}
++
++int Blitter_GL::BufferSize(int width, int height)
++{
++	// Not necessarily this size, since we often just passes back the texture handler(s).
++	return width * height * 4;
++}
++
++//! Returns an offset indicator to specified location.
++void *Blitter_GL::MoveTo(const void *video, int x, int y)
++{
++	return (uint8*)video + x + y * _screen.pitch;
++}
++
++//! Change a pixel to specified color.
++void Blitter_GL::SetPixel(void *video, int x, int y, uint8 color)
++{
++	int sx = ((uint8*)video - (uint8*)_screen.dst_ptr) % _screen.pitch + x;
++	int sy = ((uint8*)video - (uint8*)_screen.dst_ptr) / _screen.pitch + y;
++
++	if (this->sprite_count != 0) this->DrawSpriteBuffer();
++
++	this->AddPointBuffer(0, sx, sy, color);
++}
++
++//! Change a pixel to specified color IF the pixel is still black (uncolored)
++void Blitter_GL::SetPixelIfEmpty(void *video, int x, int y, uint8 color)
++{
++	int sx = ((uint8*)video - (uint8*)_screen.dst_ptr) % _screen.pitch + x;
++	int sy = ((uint8*)video - (uint8*)_screen.dst_ptr) / _screen.pitch + y;
++
++	if (this->sprite_count != 0) this->DrawSpriteBuffer();
++
++	this->AddPointBuffer(1, sx, sy, color);
++}
++
++//! Draw a solid-colored rectangle.
++void Blitter_GL::DrawRect(void *video, int width, int height, uint8 color)
++{
++	int sx = ((uint8*)video - (uint8*)_screen.dst_ptr) % _screen.pitch;
++	int sy = ((uint8*)video - (uint8*)_screen.dst_ptr) / _screen.pitch;
++
++	GLSprite *s = &this->solid_white;
++
++	this->SetGLTex2D(true);
++
++	if (this->use_palette_texture) {
++		// fragment program that does palette lookup
++		//this->SetGLTex1D(true);
++		//this->SetGLBind1D(this->palette_tex);
++
++		// bind the base color texture & modulated pixel index texture
++		this->SetGLBind2D(s->rgb_tex, s->mod_tex);
++	} else {
++		this->SetGLBind2D(s->rgb_tex);
++	}
++
++	this->AddSpriteBuffer(
++		false, s->left, s->right, s->top, s->bottom, this->TexCoordScale(this->palette_size, 0),
++		sx, sy, sx + width, sy + height,
++		_cur_palette[color].r, _cur_palette[color].g, _cur_palette[color].b, 255);
++}
++
++void Blitter_GL::DrawLine(void *video, int x, int y, int x2, int y2, int screen_width, int screen_height, uint8 color)
++{
++	int sx = ((uint8*)video - (uint8*)_screen.dst_ptr) % _screen.pitch;
++	int sy = ((uint8*)video - (uint8*)_screen.dst_ptr) / _screen.pitch;
++
++	// The lines will sit on some rect (window background)
++	this->FlushDeferredDraws();
++
++	this->AddLineBuffer(sx + x, sy + y, sx + x2, sy + y2, color);
++}
++
++/**
++ * Assumption: strictly paired CopyToBuffer -> CopyFromBuffer, one to one.
++ * The area copied will (theoretically) always stay on the graphics hardware as a texture for best efficiency.
++ **/
++
++void Blitter_GL::CopyToBuffer(const void *video, void *dst, int width, int height)
++{
++	int sx = ((uint8*)video - (uint8*)_screen.dst_ptr) % _screen.pitch;
++	int sy = ((uint8*)video - (uint8*)_screen.dst_ptr) / _screen.pitch;
++
++	this->FlushDeferredDraws();
++
++	GLDEBUG(4, "CopyToBuffer %d x %d", width, height);
++
++	height = min(height, _screen.height - sy);
++
++	// Copy the source region into a texture ...
++	//this->SetGLTex1D(false);
++	this->SetGLTex2D(true);
++
++	//GLuint *buf_tex = (GLuint *)dst;
++
++	for (int t=0; t<2; ++t) {
++		if (t == 0) {
++			if (!this->use_palette_anim) continue;
++			this->SetGLRead(COLORINDEX_ONLY);
++			this->SetGLBind2D(this->buffer_idx_tex);
++			//*buf_tex = this->CreateTexture2D();
++		}
++		if (t == 1) {
++			this->SetGLRead(RGBA_ONLY);
++			//buf_tex = ((GLuint *)dst) + 1;
++			this->SetGLBind2D(this->buffer_rgb_tex);
++			//*buf_tex = this->CreateTexture2D();
++		}
++
++		/*
++		if (this->easy_texture_size) {
++			glCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, sx, _screen.height - sy - height, width, height, 0);
++		} else {
++			int texw = 1, texh = 1;
++
++			while (texw < width)  texw *= 2;
++			while (texh < height) texh *= 2;
++
++			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, texw, texh, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
++			glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, sx, _screen.height - sy - height, width, height);
++		}
++		*/
++		glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, sx, _screen.height - sy - height, width, height);
++	}
++
++	GLDEBUG(4, "CopyToBuffer DONE");
++}
++
++void Blitter_GL::CopyFromBuffer(void *video, const void *src, int width, int height)
++{
++	int sx = ((uint8*)video - (uint8*)_screen.dst_ptr) % _screen.pitch;
++	int sy = ((uint8*)video - (uint8*)_screen.dst_ptr) / _screen.pitch;
++
++	this->FlushDeferredDraws();
++
++	GLDEBUG(4, "CopyFromBuffer %d x %d", width, height);
++
++	height = min(height, _screen.height - sy);
++
++	this->SetGLShader(false);
++	this->SetGLTex2D(true);
++
++	//GLuint *buf_tex;
++
++	for (int t=0; t<2; ++t) {
++		if (t == 0) {
++			if (!this->use_palette_anim) continue;
++			this->SetGLDraw(COLORINDEX_ONLY);
++			//buf_tex = (GLuint *)src;
++			this->SetGLBind2D(this->buffer_idx_tex);
++		}
++		if (t == 1) {
++			this->SetGLDraw(RGBA_ONLY);
++			//buf_tex = ((GLuint *)src) + 1;
++			this->SetGLBind2D(this->buffer_rgb_tex);
++		}
++
++		//this->SetGLBind2D(*buf_tex);
++		this->SetGLColor(255, 255, 255, 255);
++
++		float w, h;
++
++		//if (this->easy_texture_size) {
++		//	w = h = 1.0f;
++		//} else {
++		//	int texw = 1, texh = 1;
++		//	while (texw < width)  texw *= 2;
++		//	while (texh < height) texh *= 2;
++			w = (float)width  / 128;
++			h = (float)height / 128;
++		//}
++
++		glBlendFunc(GL_ONE, GL_ZERO);
++		glBegin(GL_QUADS);
++			// textures generated by glCopyTexSubImage2D have its lower-left corner (0, 0)
++			glTexCoord2f(0, h); glVertex2i(        sx,          sy);
++			glTexCoord2f(w, h); glVertex2i(sx + width,          sy);
++			glTexCoord2f(w, 0); glVertex2i(sx + width, sy + height);
++			glTexCoord2f(0, 0); glVertex2i(        sx, sy + height);
++		glEnd();
++		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
++
++		//glDeleteTextures(1, buf_tex);
++	}
++
++	GLDEBUG(4, "CopyFromBuffer DONE", width, height);
++}
++
++void Blitter_GL::CopyImageToBuffer(const void *video, void *dst, int width, int height, int dst_pitch)
++{
++	int sx = ((uint8*)video - (uint8*)_screen.dst_ptr) % _screen.pitch;
++	int sy = ((uint8*)video - (uint8*)_screen.dst_ptr) / _screen.pitch;
++	uint32 *tmp = new uint32[width * height];
++
++	this->FlushDeferredDraws();
++
++	GLDEBUG(4, "CopyImageToBuffer %d x %d", width, height);
++
++	height = min(height, _screen.height - sy);
++
++	this->SetGLRead(RGBA_ONLY);
++
++	// XXX check if it really works under BIG ENDIAN
++	#if TTD_ENDIAN == TTD_BIG_ENDIAN
++		glReadPixels(sx, _screen.height - sy - height, width, height, GL_RGBA    , GL_UNSIGNED_BYTE, tmp);
++	#else
++		glReadPixels(sx, _screen.height - sy - height, width, height, GL_BGRA_EXT, GL_UNSIGNED_BYTE, tmp);
++	#endif
++
++	uint32 *dst_line = (uint32*)dst;
++
++	/* Copy from tmp to dst correcting RGB order, vertical directon and pitch */
++	for (int y = height - 1; y >= 0; y--) {
++		uint32 *dst_p = dst_line;
++		for (int x = 0; x < width; x++) {
++			*dst_p = tmp[x + y * width];
++			dst_p++;
++		}
++		dst_line += dst_pitch;
++	}
++
++	GLDEBUG(4, "CopyImageToBuffer DONE");
++
++	delete[] tmp;
++}
++
++void Blitter_GL::ScrollBuffer(void *video, int &left, int &top, int &width, int &height, int scroll_x, int scroll_y)
++{
++	/* scroll_x is positive for right and negative for left */
++	/* scroll_y is positive for up and negative for down */
++
++	int x = left;
++	int y = top;
++
++	this->FlushDeferredDraws();
++
++	GLDEBUG(4, "ScrollBuffer (%d %d %d %d) -> (%d %d)", left, top, width, height, scroll_x, scroll_y);
++
++	if (scroll_x > 0) {
++		left += scroll_x;
++		width -= scroll_x;
++	} else {
++		x -= scroll_x;
++		width += scroll_x;
++	}
++
++	if (scroll_y > 0) {
++		top += scroll_y;
++		height -= scroll_y;
++	} else {
++		y -= scroll_y;
++		height += scroll_y;
++	}
++
++	this->SetGLShader(false);
++	//this->SetGLTex1D(false);
++	this->SetGLTex2D(true);
++
++	//GLuint buf_tex;
++	//buf_tex = this->CreateTexture2D();
++	this->SetGLBind2D(this->scroll_tex);
++
++	float w, h;
++	int texw = 1, texh = 1;
++
++	if (this->easy_texture_size) {
++		texw = this->cli_width;
++		texh = this->cli_height;
++	} else {
++		while (texw < this->cli_width)  texw *= 2;
++		while (texh < this->cli_height) texh *= 2;
++	}
++
++	w = (float)width  / texw;
++	h = (float)height / texh;
++
++	for (int t=0; t<2; ++t) {
++		// Two copy operations, once for color-index buffer and once for backbuffer
++		// Do the color-index buffer first, so we only have to glReadBuffer() twice
++		if (t == 0) {
++			if (!this->use_palette_anim) continue;
++			this->SetGLRead(COLORINDEX_ONLY);
++			this->SetGLDraw(COLORINDEX_ONLY);
++		}
++		if (t == 1) {
++			this->SetGLRead(RGBA_ONLY);
++			this->SetGLDraw(RGBA_ONLY);
++		}
++
++		// Copy the source region into a texture ...
++		//if (this->easy_texture_size) {
++		//	w = h = 1.0f;
++			//glCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, x, _screen.height - y - height, width, height, 0);
++		//} else {
++
++			//glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, texw, texh, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
++			//glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, x, _screen.height - y - height, width, height);
++		//}
++		glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, x, _screen.height - y - height, width, height);
++
++		// ... then paste it to destination
++		this->SetGLColor(255, 255, 255, 255);
++
++		int sx = left;
++		int sy = top;
++
++		glBlendFunc(GL_ONE, GL_ZERO);
++		glBegin(GL_QUADS);
++			// textures generated by glCopyTexSubImage2D have its lower-left corner (0, 0)
++			glTexCoord2f(0, h); glVertex2i(        sx,          sy);
++			glTexCoord2f(w, h);	glVertex2i(sx + width,          sy);
++			glTexCoord2f(w, 0);	glVertex2i(sx + width, sy + height);
++			glTexCoord2f(0, 0);	glVertex2i(        sx, sy + height);
++		glEnd();
++		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
++	}
++
++	//glDeleteTextures(1, &buf_tex);
++
++	if (DO_DEBUG(16)) {
++		// Draw source/dest bounding box
++		// RED(240)   - source
++		// GREEN(209) - dest
++		DebugBox(240, x, _screen.height - y - height, width, height);
++		DebugBox(209, left, top, width, height);
++	}
++
++	GLDEBUG(4, "ScrollBuffer DONE");
++}
++
++//! Create a texture for the palette.
++void Blitter_GL::UploadPalette(const byte *palette, int row)
++{
++	// Upload the palette
++	this->SetGLActiveTex(2);
++	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, row, 256, 1, GL_RGBA, GL_UNSIGNED_BYTE, palette);
++}
++
++//! Create or lookup the palette texture for given remapping table.
++int Blitter_GL::GetRemapPalette(const byte *remap)
++{
++	if (!this->use_palette_texture) return -1;
++
++	this->sprite_remap = remap;
++
++	bool create_palette = true;
++	int row = -1;
++
++	//this->SetGLTex1D(true);
++
++	// Look for previously created palette texture
++	// String remapping is specially handled since they're all from the same array
++	if (remap == _string_colorremap) {
++		// String remapping
++		if (this->string_palette[remap[1]] != 0) {
++			create_palette = false;
++			return this->string_palette[remap[1]];
++		} else {
++			row = this->string_palette[remap[1]] = this->palette_count++;
++		}
++		this->sprite_string_color = remap[1];
++
++	} else {
++		// GRF palette sprite, etc.
++
++		// Search in the map table first.
++		// Linear search since used palettes are often just a few (less than 10)
++
++		for (int i=0; i<this->palette_map_count; ++i) {
++			if (this->palette_map[i].remap == remap) {
++				row = this->palette_map[i].row;
++				break;
++			}
++		}
++
++		if (row != -1) {
++			return row;
++		} else {
++			if (this->palette_map_count == this->palette_map_size) {
++				this->palette_map_size *= 2;
++				this->palette_map = ReallocT<RemapPair>(this->palette_map, this->palette_map_size);
++				GLDEBUG(0, "Grow palette map capacity to %d", this->palette_map_size);
++			}
++			RemapPair *p = &this->palette_map[this->palette_map_count++];
++			p->remap = remap;
++			p->row   = row = this->palette_count++;
++		}
++	}
++
++	if (create_palette) {
++		byte *new_palette_base, *new_palette;
++
++		new_palette_base = MallocT<uint8>(320 * 4);
++		new_palette = (uint8 *)Align((size_t)new_palette_base, 4);
++
++		for (int i=0,j=0; i<256; ++i,j+=4)
++		{
++			int color_index = remap[i] ? remap[i] : i;
++			Colour c = _cur_palette[color_index];
++
++			new_palette[j]   = c.r;
++			new_palette[j+1] = c.g;
++			new_palette[j+2] = c.b;
++			new_palette[j+3] = remap[i] ? 255 : 0;
++		}
++
++		UploadPalette(new_palette, row);
++
++		free(new_palette_base);
++	}
++
++	return row;
++}
++
++//! Update the palette texture with current palette content (possibly animated).
++void Blitter_GL::PaletteAnimate(uint start, uint count)
++{
++	if (!this->use_palette_texture)
++		return;
++
++	int end = start + count;
++
++	for (int i=start,j=start*4; i<end; ++i,j+=4) {
++		this->current_palette[j]   = _cur_palette[i].r;
++		this->current_palette[j+1] = _cur_palette[i].g;
++		this->current_palette[j+2] = _cur_palette[i].b;
++		this->current_palette[j+3] = 255; // yes, even [0] should be drawn (perhaps remapped!)
++	}
++
++	this->sprite_remap = NULL;
++	UploadPalette(this->current_palette, 0);
++
++	if (this->palette_count == 0) {
++		// We just put the first palette into the palette atlas
++		this->palette_count = 1;
++	}
++}
++
++Blitter::PaletteAnimation Blitter_GL::UsePaletteAnimation()
++{
++	return Blitter::PALETTE_ANIMATION_BLITTER;
++}
++
++static FBlitter_GL iFBlitter_GL;
++
++#endif /* WITH_OPENGL */
+Index: src/blitter/32bpp_base.hpp
+===================================================================
+--- src/blitter/32bpp_base.hpp	(Revision 14405)
++++ src/blitter/32bpp_base.hpp	(Arbeitskopie)
+@@ -7,6 +7,7 @@
+ 
+ #include "base.hpp"
+ #include "../core/bitmath_func.hpp"
++#include "../gfx_func.h"
+ 
+ class Blitter_32bppBase : public Blitter {
+ public:
+Index: src/blitter/opengl.hpp
+===================================================================
+--- src/blitter/opengl.hpp	(Revision 0)
++++ src/blitter/opengl.hpp	(Revision 0)
+@@ -0,0 +1,260 @@
++/* $Id$ */
++
++/** @file opengl.hpp An blitter using OpenGL capable of hardware-assisted 32bpp animated blitting. */
++
++#ifndef BLITTER_GL_HPP
++#define BLITTER_GL_HPP
++
++#include <list>
++
++#include "base.hpp"
++#include "factory.hpp"
++
++#include "../core/bitmath_func.hpp"
++#include "../gfx_func.h"
++#include "../zoom_func.h"
++
++#include "../GLee.h"
++
++//! For Framebuffer Object offset calculation.
++#define BUFFER_OFFSET(i) ((char *)NULL + (i))
++
++struct GLSprite
++{
++	GLuint rgb_tex; ///< Base color texture
++	GLuint mod_tex; ///< Indexed color mask texture (for e.g. color-mapping)
++
++	//! sprite position, size in the texture
++	GLfloat left,  top;
++	GLfloat right, bottom;
++
++	//! deferred encoding
++	bool encoded;
++	bool rotated;
++	int  width, height;
++	SpriteLoader::CommonPixel *src;
++};
++
++struct GLTexAtlas
++{
++	GLuint rgb_tex, mod_tex;
++
++	int width, height;
++	int stripe_bottom, stripe_height, stripe_left;
++};
++
++struct RemapPair
++{
++	const byte *remap; ///< remapped pointer (sprite id)
++	int row;           ///< corresponding palette position
++};
++
++enum GLBuffer {
++	NORMAL = 0,
++	RGBA_ONLY,
++	COLORINDEX_ONLY
++};
++
++class Blitter_GL : public Blitter {
++protected:
++	/* OpenGL extensions */
++
++	bool easy_texture_size;
++	bool use_palette_texture;
++	bool use_palette_anim;
++	int tex_size_limit;
++
++	/* client area info */
++
++	int cli_width;
++	int cli_height;
++
++	/* global textures and framebuffer objects */
++
++	GLuint swap_tex;        ///< double-buffer swapping buffer
++	GLuint swap_rbo;
++
++	GLuint colorindex_tex;  ///< color index buffer
++	GLuint colorindex_rbo;
++
++	GLuint drawtex_fbo;  ///< color index framebuffer object (for palette animation)
++	GLuint msaa_fbo;
++
++	FORCEINLINE void SyncFBO();
++
++	GLuint scroll_tex;
++	GLuint buffer_rgb_tex;
++	GLuint buffer_idx_tex;
++
++	bool fbo_msaa;
++	bool fbo_nv_csaa;
++	GLint msaa_samples;
++
++	GLSprite solid_white;	///< the surface of lines/boxes
++
++	std::list<GLSprite *> sprite_list;
++
++	/* texture atlas */
++
++	GLTexAtlas *atlases;
++	int atlas_size;         ///< allocated atlas objects
++	int atlas_count;        ///< actually used
++	int encoded_sprite_count;
++
++	void InitAtlas(int pos);
++	void CreateWhiteSprite();
++	void DoEncode(GLSprite *gls);
++	void DoRelease(bool cleanup = false);
++
++	FORCEINLINE float TexCoordScale(int total, int val);
++
++	/* palette management and animation */
++
++	GLuint greyscalize_shader;  ///< shader to convert a texture into greyscale (e.g. newspaper)
++	GLuint darken_shader;       ///< shader to make an area darker (e.g. chat background)
++	GLuint sprite_shader;       ///< shader for rendering sprite (palette lookup & store color index for further animation)
++	GLuint palette_anim_shader;	///< shader to replace color-animated pixels in backbuffer
++
++	int string_palette[256];	///< palettes for color-remapped strings
++
++	RemapPair *palette_map;
++	int palette_map_size;
++	int palette_map_count;
++
++	GLuint palette_tex;         ///< current normal palette (animated)
++	int palette_count;
++
++	uint8 *current_palette_base;
++	uint8 *current_palette;		///< current normal palette raw data (aligned on 4)
++
++	int  palette_size;
++
++	int  GetRemapPalette(const byte *remap);
++	void RedrawAnimatedPixels();
++	void UploadPalette(const byte *palette, int row);
++
++	/* OpenGL helpers */
++
++	GLuint CreateTexture2D(bool interpolate = false);
++	GLuint CreateTexturePalette();
++
++	/* Lazy drawing buffers */
++
++	// for aggregated SetPoint(), SetPointIfEmpty()
++	GLubyte *point_color_array[2];
++	GLint   *point_vertex_array[2];
++	int point_buffer_size[2];
++	int point_count[2];
++
++	// for aggregated DrawLine()
++	GLubyte *line_color_array;
++	GLfloat *line_vertex_array;
++	int line_buffer_size;
++	int line_count;
++
++	// for aggregated quad (sprite) draws
++	GLubyte *sprite_color_array;
++	GLfloat *sprite_texcoord_array;
++	GLint   *sprite_vertex_array;
++	GLuint   sprite_rgb_tex;
++	GLuint   sprite_mod_tex;
++
++	const byte *sprite_remap;			///< current remapping pointer
++	int         sprite_string_color;	///< current string color
++
++	int sprite_buffer_size;
++	int sprite_count;
++
++	// Lazy-drawing functions
++	void FlushDeferredDraws();
++
++	FORCEINLINE void AddPointBuffer(int a, int x, int y, uint8 color);
++	FORCEINLINE void AddLineBuffer(float x, float y, float x2, float y2, uint8 color);
++	FORCEINLINE void AddSpriteBuffer(bool rotated, float lc, float rc, float tc, float bc, float pal, int x, int y, int x2, int y2, uint8 r, uint8 g, uint8 b, uint8 a);
++
++	void DrawPointBuffer(int a);
++	void DrawLineBuffer();
++	void DrawSpriteBuffer();
++
++	/* state changing helper */
++
++	//bool gl_tex1d;
++	bool gl_tex2d;
++	bool gl_shader;
++
++	int gl_active_tex;
++
++	//GLuint gl_bind1d;
++	GLuint gl_bind2d_rgb;
++	GLuint gl_bind2d_m;
++	GLuint gl_shader_program;
++
++	int gl_drawbuf;
++	int gl_readbuf;
++
++	int gl_r, gl_g, gl_b, gl_a;
++
++	GLubyte *gl_color_ptr;
++	GLfloat *gl_texcoord_ptr;
++	GLvoid  *gl_vertex_ptr;
++
++	FORCEINLINE void SetGLColorPointer(GLubyte *ptr);
++	FORCEINLINE void SetGLTexCoordPointer(GLfloat *ptr);
++	FORCEINLINE void SetGLVertexPointer(GLenum type, GLvoid *ptr);
++
++	FORCEINLINE void SetGLActiveTex(int tex);
++	FORCEINLINE void SetGLColor(GLubyte r, GLubyte g, GLubyte b, GLubyte a);
++	FORCEINLINE void SetGLDraw(GLBuffer newbuf);
++	FORCEINLINE void SetGLRead(GLBuffer newbuf);
++	//FORCEINLINE void SetGLTex1D(bool state);
++	FORCEINLINE void SetGLTex2D(bool state);
++	FORCEINLINE void SetGLShader(bool state);
++	FORCEINLINE void SetGLShaderProgram(GLuint shader);
++	//FORCEINLINE void SetGLBind1D(GLuint tex);
++	FORCEINLINE void SetGLBind2D(GLuint tex1, GLuint tex2 = 0);
++
++public:
++	Blitter_GL();
++	virtual ~Blitter_GL();
++
++	/* virtual */ void PostDriverInit();
++	/* virtual */ void ClientSizeChanged(int w, int h);
++	/* virtual */ void PreFlip();
++	/* virtual */ void PostFlip();
++
++	/* virtual */ int BufferSize(int width, int height);
++	/* virtual */ const char *GetName() { return "opengl"; }
++	/* virtual */ uint8 GetScreenDepth() { return 32; }
++	/* virtual */ int GetBytesPerPixel() {return 5; }
++
++	/* virtual */ void Draw(Blitter::BlitterParams *bp, BlitterMode mode, ZoomLevel zoom);
++	/* virtual */ void DrawColorMappingRect(void *dst, int width, int height, int pal);
++	/* virtual */ void DrawLine(void *video, int x, int y, int x2, int y2, int screen_width, int screen_height, uint8 color);
++	/* virtual */ void DrawRect(void *video, int width, int height, uint8 color);
++
++	/* virtual */ Sprite *Encode(SpriteLoader::Sprite *sprite, Blitter::AllocatorProc *allocator);
++	/* virtual */ void ReleaseSprite(Sprite *sprite);
++	/* virtual */ void ReleaseAllSprites();
++
++	/* virtual */ void *MoveTo(const void *video, int x, int y);
++
++	/* virtual */ void SetPixel(void *video, int x, int y, uint8 color);
++	/* virtual */ void SetPixelIfEmpty(void *video, int x, int y, uint8 color);
++
++	/* virtual */ void CopyFromBuffer(void *video, const void *src, int width, int height);
++	/* virtual */ void CopyToBuffer(const void *video, void *dst, int width, int height);
++	/* virtual */ void CopyImageToBuffer(const void *video, void *dst, int width, int height, int dst_pitch);
++	/* virtual */ void ScrollBuffer(void *video, int &left, int &top, int &width, int &height, int scroll_x, int scroll_y);
++
++	/* virtual */ void PaletteAnimate(uint start, uint count);
++	/* virtual */ Blitter::PaletteAnimation UsePaletteAnimation();
++};
++
++class FBlitter_GL: public BlitterFactory<FBlitter_GL> {
++public:
++	/* virtual */ const char *GetName() { return "opengl"; }
++	/* virtual */ const char *GetDescription() { return "OpenGL Blitter (Experimental)"; }
++	/* virtual */ Blitter *CreateInstance() { return new Blitter_GL(); }
++};
++
++#endif /* BLITTER_GL_HPP */
+Index: src/sdl.h
+===================================================================
+--- src/sdl.h	(Revision 14405)
++++ src/sdl.h	(Arbeitskopie)
+@@ -48,6 +48,8 @@
+ 		int (SDLCALL *SDL_SetColorKey)(SDL_Surface *, Uint32, Uint32);
+ 		void (SDLCALL *SDL_WM_SetIcon)(SDL_Surface *, Uint8 *);
+ 		Uint32 (SDLCALL *SDL_MapRGB)(SDL_PixelFormat *, Uint8, Uint8, Uint8);
++		void (SDLCALL *SDL_GL_SwapBuffers)(void);
++		int (SDLCALL *SDL_GL_SetAttribute)(SDL_GLattr, int);
+ 	};
+ 
+ 	extern SDLProcs sdl_proc;
+Index: src/gfx.cpp
+===================================================================
+--- src/gfx.cpp	(Revision 14405)
++++ src/gfx.cpp	(Arbeitskopie)
+@@ -49,12 +49,13 @@
+ byte _stringwidth_table[FS_END][224]; ///< Cache containing width of often used characters. @see GetCharacterWidth()
+ DrawPixelInfo *_cur_dpi;
+ byte _colour_gradient[COLOUR_END][8];
++int _transparent_opacity;
+ 
+ static void GfxMainBlitter(const Sprite *sprite, int x, int y, BlitterMode mode, const SubSprite *sub = NULL);
+ 
+ FontSize _cur_fontsize;
+ static FontSize _last_fontsize;
+-static uint8 _cursor_backup[64 * 64 * 4];
++uint8 _cursor_backup[64 * 64 * 4];
+ 
+ /**
+  * The rect for repaint.
+@@ -64,8 +65,8 @@
+  * @ingroup dirty
+  */
+ static Rect _invalid_rect;
+-static const byte *_color_remap_ptr;
+-static byte _string_colorremap[3];
++const byte *_color_remap_ptr;
++byte _string_colorremap[3];
+ 
+ enum {
+ 	DIRTY_BLOCK_HEIGHT   = 8,
+@@ -320,7 +321,6 @@
+ int DrawString(int x, int y, StringID str, uint16 color)
+ {
+ 	char buffer[DRAW_STRING_BUFFER];
+-
+ 	GetString(buffer, str, lastof(buffer));
+ 	return DoDrawString(buffer, x, y, color);
+ }
+@@ -757,10 +757,14 @@
+ 	byte color = real_color & 0xFF;
+ 	int w = GetCharacterWidth(size, c);
+ 
+-	_string_colorremap[1] = _string_colormap[_use_palette][color].text;
+-	_string_colorremap[2] = _string_colormap[_use_palette][color].shadow;
+ 	_color_remap_ptr = _string_colorremap;
++	_string_colorremap[1] = _string_colormap[_use_palette][color].shadow;
++	_string_colorremap[2] = 0;
+ 
++	GfxMainBlitter(GetGlyph(size, c), x - w / 2 + 1, y + 1, BM_COLOUR_REMAP);
++
++	_string_colorremap[1] = _string_colormap[_use_palette][color].text;
++
+ 	GfxMainBlitter(GetGlyph(size, c), x - w / 2, y, BM_COLOUR_REMAP);
+ }
+ 
+@@ -828,7 +832,23 @@
+ 		if (IsPrintable(c)) {
+ 			if (x >= dpi->left + dpi->width) goto skip_char;
+ 			if (x + 26 >= dpi->left) {
++				byte face   = _string_colorremap[1];
++				byte shadow = _string_colorremap[2];
++
++				// Don't draw shadows for original glyphs
++				_string_colorremap[2] = 0;
++
++				if (size == FS_NORMAL) {
++					// Only draw shadow for normal-size text
++					_string_colorremap[1] = shadow;
++					GfxMainBlitter(GetGlyph(size, c), x + 1, y + 1, BM_COLOUR_REMAP);
++				}
++
++				_string_colorremap[1] = face;
+ 				GfxMainBlitter(GetGlyph(size, c), x, y, BM_COLOUR_REMAP);
++
++				// Restore the colormap in case someone needs it
++				_string_colorremap[2] = shadow;
+ 			}
+ 			x += GetCharacterWidth(size, c);
+ 		} else if (c == '\n') { // newline = {}
+Index: projects/generate.vbs
+===================================================================
+--- projects/generate.vbs	(Revision 14405)
++++ projects/generate.vbs	(Arbeitskopie)
+@@ -151,6 +151,7 @@
+ 						line = "WIN32" Or _
+ 						line = "MSVC" Or _
+ 						line = "DIRECTMUSIC" Or _
++						line = "OPENGL" Or _
+ 						line = "HAVE_THREAD" _
+ 					) Then skip = skip + 1
+ 					deep = deep + 1
+Index: projects/generate
+===================================================================
+--- projects/generate	(Revision 14405)
++++ projects/generate	(Arbeitskopie)
+@@ -35,6 +35,7 @@
+ with_cocoa="0"
+ enable_directmusic="1"
+ with_threads="1"
++with_win32gl="1"
+ file_prefix="..\\\\src\\\\"
+ 
+ safety_check() {
+@@ -87,12 +88,14 @@
+ 			if ($0 == "COCOA"       && "'$with_cocoa'" == "0")         { next; }
+ 			if ($0 == "BEOS"        && "'$os'" != "BEOS")              { next; }
+ 			if ($0 == "WIN32"       && "'$os'" != "MINGW" &&
+-											"'$os'" != "CYGWIN" && "'$os'" != "MSVC" ) { next; }
++					"'$os'" != "CYGWIN" && "'$os'" != "MSVC" ) { next; }
+ 			if ($0 == "WINCE"       && "'$os'" != "WINCE")             { next; }
+ 			if ($0 == "MSVC"        && "'$os'" != "MSVC")              { next; }
+ 			if ($0 == "DIRECTMUSIC" && "'$enable_directmusic'" != "1") { next; }
+ 			if ($0 == "LIBTIMIDITY" && "'$libtimidity'" == "" )        { next; }
+ 			if ($0 == "HAVE_THREAD" && "'$with_threads'" == "0")       { next; }
++			if ($0 == "OPENGL"      && "'$with_sdlgl'" == "0" &&
++				"'$with_win32gl'" == "0")                          { next; }
+ 
+ 			skip += 1;
+ 
+Index: projects/openttd_vs80.vcproj
+===================================================================
+--- projects/openttd_vs80.vcproj	(Revision 14405)
++++ projects/openttd_vs80.vcproj	(Arbeitskopie)
+@@ -59,7 +59,7 @@
+ 				FavorSizeOrSpeed="2"
+ 				OmitFramePointers="true"
+ 				AdditionalIncludeDirectories="..\objs\langs"
+-				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE;WIN32_EXCEPTION_TRACKER;WIN32_ENABLE_DIRECTMUSIC_SUPPORT;WITH_ZLIB;WITH_PNG;WITH_FREETYPE;ENABLE_NETWORK;WITH_PERSONAL_DIR;PERSONAL_DIR=\&quot;OpenTTD\&quot;;WITH_ASSERT"
++				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE;WIN32_EXCEPTION_TRACKER;WIN32_ENABLE_DIRECTMUSIC_SUPPORT;WITH_ZLIB;WITH_PNG;WITH_FREETYPE;WITH_OPENGL;WITH_WIN32GL;ENABLE_NETWORK;WITH_PERSONAL_DIR;PERSONAL_DIR=\&quot;OpenTTD\&quot;;WITH_ASSERT"
+ 				StringPooling="true"
+ 				ExceptionHandling="1"
+ 				RuntimeLibrary="0"
+@@ -96,7 +96,7 @@
+ 			/>
+ 			<Tool
+ 				Name="VCLinkerTool"
+-				AdditionalDependencies="winmm.lib ws2_32.lib libpng.lib zlibstat.lib dxguid.lib libfreetype2.lib"
++				AdditionalDependencies="winmm.lib ws2_32.lib libpng.lib zlibstat.lib dxguid.lib libfreetype2.lib opengl32.lib glu32.lib"
+ 				LinkIncremental="1"
+ 				SuppressStartupBanner="true"
+ 				IgnoreDefaultLibraryNames=""
+@@ -165,7 +165,7 @@
+ 				Name="VCCLCompilerTool"
+ 				Optimization="0"
+ 				AdditionalIncludeDirectories="..\objs\langs"
+-				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;WIN32_ENABLE_DIRECTMUSIC_SUPPORT;WITH_ZLIB;WITH_PNG;WITH_FREETYPE;ENABLE_NETWORK;WITH_PERSONAL_DIR;PERSONAL_DIR=\&quot;OpenTTD\&quot;"
++				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;WIN32_ENABLE_DIRECTMUSIC_SUPPORT;WITH_ZLIB;WITH_PNG;WITH_FREETYPE;WITH_OPENGL;WITH_WIN32GL;ENABLE_NETWORK;WITH_PERSONAL_DIR;PERSONAL_DIR=\&quot;OpenTTD\&quot;"
+ 				BasicRuntimeChecks="3"
+ 				RuntimeLibrary="1"
+ 				UsePrecompiledHeader="0"
+@@ -193,7 +193,7 @@
+ 			/>
+ 			<Tool
+ 				Name="VCLinkerTool"
+-				AdditionalDependencies="winmm.lib ws2_32.lib libpng.lib zlibstat.lib dxguid.lib libfreetype2.lib"
++				AdditionalDependencies="winmm.lib ws2_32.lib libpng.lib zlibstat.lib dxguid.lib libfreetype2.lib opengl32.lib glu32.lib"
+ 				LinkIncremental="0"
+ 				SuppressStartupBanner="true"
+ 				IgnoreDefaultLibraryNames="LIBCMT.lib"
+@@ -266,7 +266,7 @@
+ 				FavorSizeOrSpeed="2"
+ 				OmitFramePointers="true"
+ 				AdditionalIncludeDirectories="..\objs\langs"
+-				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE;WIN32_EXCEPTION_TRACKER;WIN32_ENABLE_DIRECTMUSIC_SUPPORT;WITH_ZLIB;WITH_PNG;WITH_FREETYPE;ENABLE_NETWORK;WITH_PERSONAL_DIR;PERSONAL_DIR=\&quot;OpenTTD\&quot;;WITH_ASSERT"
++				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE;WIN32_EXCEPTION_TRACKER;WIN32_ENABLE_DIRECTMUSIC_SUPPORT;WITH_ZLIB;WITH_PNG;WITH_FREETYPE;WITH_OPENGL;WITH_WIN32GL;ENABLE_NETWORK;WITH_PERSONAL_DIR;PERSONAL_DIR=\&quot;OpenTTD\&quot;;WITH_ASSERT"
+ 				StringPooling="true"
+ 				ExceptionHandling="1"
+ 				RuntimeLibrary="0"
+@@ -303,7 +303,7 @@
+ 			/>
+ 			<Tool
+ 				Name="VCLinkerTool"
+-				AdditionalDependencies="winmm.lib ws2_32.lib libpng.lib zlibstat.lib dxguid.lib libfreetype2.lib"
++				AdditionalDependencies="winmm.lib ws2_32.lib libpng.lib zlibstat.lib dxguid.lib libfreetype2.lib opengl32.lib glu32.lib"
+ 				LinkIncremental="1"
+ 				SuppressStartupBanner="true"
+ 				IgnoreDefaultLibraryNames=""
+@@ -373,7 +373,7 @@
+ 				Name="VCCLCompilerTool"
+ 				Optimization="0"
+ 				AdditionalIncludeDirectories="..\objs\langs"
+-				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;WIN32_ENABLE_DIRECTMUSIC_SUPPORT;WITH_ZLIB;WITH_PNG;WITH_FREETYPE;ENABLE_NETWORK;WITH_PERSONAL_DIR;PERSONAL_DIR=\&quot;OpenTTD\&quot;"
++				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;WIN32_ENABLE_DIRECTMUSIC_SUPPORT;WITH_ZLIB;WITH_PNG;WITH_FREETYPE;WITH_OPENGL;WITH_WIN32GL;ENABLE_NETWORK;WITH_PERSONAL_DIR;PERSONAL_DIR=\&quot;OpenTTD\&quot;"
+ 				BasicRuntimeChecks="3"
+ 				RuntimeLibrary="1"
+ 				UsePrecompiledHeader="0"
+@@ -403,7 +403,7 @@
+ 			/>
+ 			<Tool
+ 				Name="VCLinkerTool"
+-				AdditionalDependencies="winmm.lib ws2_32.lib libpng.lib zlibstat.lib dxguid.lib libfreetype2.lib"
++				AdditionalDependencies="winmm.lib ws2_32.lib libpng.lib zlibstat.lib dxguid.lib libfreetype2.lib opengl32.lib glu32.lib"
+ 				LinkIncremental="0"
+ 				SuppressStartupBanner="true"
+ 				IgnoreDefaultLibraryNames="LIBCMT.lib"
+@@ -1600,6 +1600,14 @@
+ 				>
+ 			</File>
+ 			<File
++				RelativePath=".\..\src\video\win32gl_v.h"
++				>
++			</File>
++			<File
++				RelativePath=".\..\src\video\sdlgl_v.h"
++				>
++			</File>
++			<File
+ 				RelativePath=".\..\src\water.h"
+ 				>
+ 			</File>
+@@ -2219,6 +2227,18 @@
+ 				RelativePath=".\..\src\blitter\null.hpp"
+ 				>
+ 			</File>
++			<File
++				RelativePath=".\..\src\blitter\opengl.cpp"
++				>
++			</File>
++			<File
++				RelativePath=".\..\src\blitter\opengl.hpp"
++				>
++			</File>
++			<File
++				RelativePath=".\..\src\GLee.c"
++				>
++			</File>
+ 		</Filter>
+ 		<Filter
+ 			Name="Drivers"
+@@ -2596,9 +2616,17 @@
+ 				>
+ 			</File>
+ 			<File
++				RelativePath=".\..\src\video\sdlgl_v.cpp"
++				>
++			</File>
++			<File
+ 				RelativePath=".\..\src\video\win32_v.cpp"
+ 				>
+ 			</File>
++			<File
++				RelativePath=".\..\src\video\win32gl_v.cpp"
++				>
++			</File>
+ 		</Filter>
+ 		<Filter
+ 			Name="Music"
+Index: projects/openttd_vs90.vcproj
+===================================================================
+--- projects/openttd_vs90.vcproj	(Revision 14405)
++++ projects/openttd_vs90.vcproj	(Arbeitskopie)
+@@ -54,13 +54,14 @@
+ 			/>
+ 			<Tool
+ 				Name="VCCLCompilerTool"
++				AdditionalOptions="/MP"
+ 				Optimization="3"
+ 				InlineFunctionExpansion="2"
+ 				EnableIntrinsicFunctions="true"
+ 				FavorSizeOrSpeed="2"
+ 				OmitFramePointers="true"
+ 				AdditionalIncludeDirectories="..\objs\langs"
+-				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE;WIN32_EXCEPTION_TRACKER;WIN32_ENABLE_DIRECTMUSIC_SUPPORT;WITH_ZLIB;WITH_PNG;WITH_FREETYPE;ENABLE_NETWORK;WITH_PERSONAL_DIR;PERSONAL_DIR=\&quot;OpenTTD\&quot;;WITH_ASSERT"
++				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE;WIN32_EXCEPTION_TRACKER;WIN32_ENABLE_DIRECTMUSIC_SUPPORT;WITH_ZLIB;WITH_PNG;WITH_FREETYPE;WITH_OPENGL;WITH_WIN32GL;ENABLE_NETWORK;WITH_PERSONAL_DIR;PERSONAL_DIR=\&quot;OpenTTD\&quot;;WITH_ASSERT"
+ 				StringPooling="true"
+ 				ExceptionHandling="1"
+ 				RuntimeLibrary="0"
+@@ -97,7 +98,7 @@
+ 			/>
+ 			<Tool
+ 				Name="VCLinkerTool"
+-				AdditionalDependencies="winmm.lib ws2_32.lib libpng.lib zlibstat.lib dxguid.lib libfreetype2.lib"
++				AdditionalDependencies="winmm.lib ws2_32.lib libpng.lib zlibstat.lib dxguid.lib libfreetype2.lib opengl32.lib glu32.lib"
+ 				LinkIncremental="1"
+ 				SuppressStartupBanner="true"
+ 				IgnoreDefaultLibraryNames=""
+@@ -162,9 +163,10 @@
+ 			/>
+ 			<Tool
+ 				Name="VCCLCompilerTool"
++				AdditionalOptions="/MP"
+ 				Optimization="0"
+ 				AdditionalIncludeDirectories="..\objs\langs"
+-				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;WIN32_ENABLE_DIRECTMUSIC_SUPPORT;WITH_ZLIB;WITH_PNG;WITH_FREETYPE;ENABLE_NETWORK;WITH_PERSONAL_DIR;PERSONAL_DIR=\&quot;OpenTTD\&quot;"
++				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;WIN32_ENABLE_DIRECTMUSIC_SUPPORT;WITH_ZLIB;WITH_PNG;WITH_FREETYPE;WITH_OPENGL;WITH_WIN32GL;ENABLE_NETWORK;WITH_PERSONAL_DIR;PERSONAL_DIR=\&quot;OpenTTD\&quot;"
+ 				BasicRuntimeChecks="3"
+ 				RuntimeLibrary="1"
+ 				UsePrecompiledHeader="0"
+@@ -192,7 +194,7 @@
+ 			/>
+ 			<Tool
+ 				Name="VCLinkerTool"
+-				AdditionalDependencies="winmm.lib ws2_32.lib libpng.lib zlibstat.lib dxguid.lib libfreetype2.lib"
++				AdditionalDependencies="winmm.lib ws2_32.lib libpng.lib zlibstat.lib dxguid.lib libfreetype2.lib opengl32.lib glu32.lib"
+ 				LinkIncremental="0"
+ 				SuppressStartupBanner="true"
+ 				IgnoreDefaultLibraryNames="LIBCMT.lib"
+@@ -258,13 +260,14 @@
+ 			/>
+ 			<Tool
+ 				Name="VCCLCompilerTool"
++				AdditionalOptions="/MP"
+ 				Optimization="3"
+ 				InlineFunctionExpansion="2"
+ 				EnableIntrinsicFunctions="true"
+ 				FavorSizeOrSpeed="2"
+ 				OmitFramePointers="true"
+ 				AdditionalIncludeDirectories="..\objs\langs"
+-				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE;WIN32_EXCEPTION_TRACKER;WIN32_ENABLE_DIRECTMUSIC_SUPPORT;WITH_ZLIB;WITH_PNG;WITH_FREETYPE;ENABLE_NETWORK;WITH_PERSONAL_DIR;PERSONAL_DIR=\&quot;OpenTTD\&quot;;WITH_ASSERT"
++				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE;WIN32_EXCEPTION_TRACKER;WIN32_ENABLE_DIRECTMUSIC_SUPPORT;WITH_ZLIB;WITH_PNG;WITH_FREETYPE;WITH_OPENGL;WITH_WIN32GL;ENABLE_NETWORK;WITH_PERSONAL_DIR;PERSONAL_DIR=\&quot;OpenTTD\&quot;;WITH_ASSERT"
+ 				StringPooling="true"
+ 				ExceptionHandling="1"
+ 				RuntimeLibrary="0"
+@@ -301,7 +304,7 @@
+ 			/>
+ 			<Tool
+ 				Name="VCLinkerTool"
+-				AdditionalDependencies="winmm.lib ws2_32.lib libpng.lib zlibstat.lib dxguid.lib libfreetype2.lib"
++				AdditionalDependencies="winmm.lib ws2_32.lib libpng.lib zlibstat.lib dxguid.lib libfreetype2.lib opengl32.lib glu32.lib"
+ 				LinkIncremental="1"
+ 				SuppressStartupBanner="true"
+ 				IgnoreDefaultLibraryNames=""
+@@ -368,9 +371,10 @@
+ 			/>
+ 			<Tool
+ 				Name="VCCLCompilerTool"
++				AdditionalOptions="/MP"
+ 				Optimization="0"
+ 				AdditionalIncludeDirectories="..\objs\langs"
+-				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;WIN32_ENABLE_DIRECTMUSIC_SUPPORT;WITH_ZLIB;WITH_PNG;WITH_FREETYPE;ENABLE_NETWORK;WITH_PERSONAL_DIR;PERSONAL_DIR=\&quot;OpenTTD\&quot;"
++				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;WIN32_ENABLE_DIRECTMUSIC_SUPPORT;WITH_ZLIB;WITH_PNG;WITH_FREETYPE;WITH_OPENGL;WITH_WIN32GL;ENABLE_NETWORK;WITH_PERSONAL_DIR;PERSONAL_DIR=\&quot;OpenTTD\&quot;"
+ 				BasicRuntimeChecks="3"
+ 				RuntimeLibrary="1"
+ 				UsePrecompiledHeader="0"
+@@ -400,7 +404,7 @@
+ 			/>
+ 			<Tool
+ 				Name="VCLinkerTool"
+-				AdditionalDependencies="winmm.lib ws2_32.lib libpng.lib zlibstat.lib dxguid.lib libfreetype2.lib"
++				AdditionalDependencies="winmm.lib ws2_32.lib libpng.lib zlibstat.lib dxguid.lib libfreetype2.lib opengl32.lib glu32.lib"
+ 				LinkIncremental="0"
+ 				SuppressStartupBanner="true"
+ 				IgnoreDefaultLibraryNames="LIBCMT.lib"
+@@ -1597,6 +1601,14 @@
+ 				>
+ 			</File>
+ 			<File
++				RelativePath=".\..\src\video\win32gl_v.h"
++				>
++			</File>
++			<File
++				RelativePath=".\..\src\video\sdlgl_v.h"
++				>
++			</File>
++			<File
+ 				RelativePath=".\..\src\water.h"
+ 				>
+ 			</File>
+@@ -2216,6 +2228,18 @@
+ 				RelativePath=".\..\src\blitter\null.hpp"
+ 				>
+ 			</File>
++			<File
++				RelativePath=".\..\src\blitter\opengl.cpp"
++				>
++			</File>
++			<File
++				RelativePath=".\..\src\blitter\opengl.hpp"
++				>
++			</File>
++			<File
++				RelativePath=".\..\src\GLee.c"
++				>
++			</File>
+ 		</Filter>
+ 		<Filter
+ 			Name="Drivers"
+@@ -2593,9 +2617,17 @@
+ 				>
+ 			</File>
+ 			<File
++				RelativePath=".\..\src\video\sdlgl_v.cpp"
++				>
++			</File>
++			<File
+ 				RelativePath=".\..\src\video\win32_v.cpp"
+ 				>
+ 			</File>
++			<File
++				RelativePath=".\..\src\video\win32gl_v.cpp"
++				>
++			</File>
+ 		</Filter>
+ 		<Filter
+ 			Name="Music"
+Index: projects/openttd_vs80.vcproj.in
+===================================================================
+--- projects/openttd_vs80.vcproj.in	(Revision 14405)
++++ projects/openttd_vs80.vcproj.in	(Arbeitskopie)
+@@ -59,7 +59,7 @@
+ 				FavorSizeOrSpeed="2"
+ 				OmitFramePointers="true"
+ 				AdditionalIncludeDirectories="..\objs\langs"
+-				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE;WIN32_EXCEPTION_TRACKER;WIN32_ENABLE_DIRECTMUSIC_SUPPORT;WITH_ZLIB;WITH_PNG;WITH_FREETYPE;ENABLE_NETWORK;WITH_PERSONAL_DIR;PERSONAL_DIR=\&quot;OpenTTD\&quot;;WITH_ASSERT"
++				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE;WIN32_EXCEPTION_TRACKER;WIN32_ENABLE_DIRECTMUSIC_SUPPORT;WITH_ZLIB;WITH_PNG;WITH_FREETYPE;WITH_OPENGL;WITH_WIN32GL;ENABLE_NETWORK;WITH_PERSONAL_DIR;PERSONAL_DIR=\&quot;OpenTTD\&quot;;WITH_ASSERT"
+ 				StringPooling="true"
+ 				ExceptionHandling="1"
+ 				RuntimeLibrary="0"
+@@ -96,7 +96,7 @@
+ 			/>
+ 			<Tool
+ 				Name="VCLinkerTool"
+-				AdditionalDependencies="winmm.lib ws2_32.lib libpng.lib zlibstat.lib dxguid.lib libfreetype2.lib"
++				AdditionalDependencies="winmm.lib ws2_32.lib libpng.lib zlibstat.lib dxguid.lib libfreetype2.lib opengl32.lib glu32.lib"
+ 				LinkIncremental="1"
+ 				SuppressStartupBanner="true"
+ 				IgnoreDefaultLibraryNames=""
+@@ -165,7 +165,7 @@
+ 				Name="VCCLCompilerTool"
+ 				Optimization="0"
+ 				AdditionalIncludeDirectories="..\objs\langs"
+-				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;WIN32_ENABLE_DIRECTMUSIC_SUPPORT;WITH_ZLIB;WITH_PNG;WITH_FREETYPE;ENABLE_NETWORK;WITH_PERSONAL_DIR;PERSONAL_DIR=\&quot;OpenTTD\&quot;"
++				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;WIN32_ENABLE_DIRECTMUSIC_SUPPORT;WITH_ZLIB;WITH_PNG;WITH_FREETYPE;WITH_OPENGL;WITH_WIN32GL;ENABLE_NETWORK;WITH_PERSONAL_DIR;PERSONAL_DIR=\&quot;OpenTTD\&quot;"
+ 				BasicRuntimeChecks="3"
+ 				RuntimeLibrary="1"
+ 				UsePrecompiledHeader="0"
+@@ -193,7 +193,7 @@
+ 			/>
+ 			<Tool
+ 				Name="VCLinkerTool"
+-				AdditionalDependencies="winmm.lib ws2_32.lib libpng.lib zlibstat.lib dxguid.lib libfreetype2.lib"
++				AdditionalDependencies="winmm.lib ws2_32.lib libpng.lib zlibstat.lib dxguid.lib libfreetype2.lib opengl32.lib glu32.lib"
+ 				LinkIncremental="0"
+ 				SuppressStartupBanner="true"
+ 				IgnoreDefaultLibraryNames="LIBCMT.lib"
+@@ -266,7 +266,7 @@
+ 				FavorSizeOrSpeed="2"
+ 				OmitFramePointers="true"
+ 				AdditionalIncludeDirectories="..\objs\langs"
+-				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE;WIN32_EXCEPTION_TRACKER;WIN32_ENABLE_DIRECTMUSIC_SUPPORT;WITH_ZLIB;WITH_PNG;WITH_FREETYPE;ENABLE_NETWORK;WITH_PERSONAL_DIR;PERSONAL_DIR=\&quot;OpenTTD\&quot;;WITH_ASSERT"
++				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE;WIN32_EXCEPTION_TRACKER;WIN32_ENABLE_DIRECTMUSIC_SUPPORT;WITH_ZLIB;WITH_PNG;WITH_FREETYPE;WITH_OPENGL;WITH_WIN32GL;ENABLE_NETWORK;WITH_PERSONAL_DIR;PERSONAL_DIR=\&quot;OpenTTD\&quot;;WITH_ASSERT"
+ 				StringPooling="true"
+ 				ExceptionHandling="1"
+ 				RuntimeLibrary="0"
+@@ -303,7 +303,7 @@
+ 			/>
+ 			<Tool
+ 				Name="VCLinkerTool"
+-				AdditionalDependencies="winmm.lib ws2_32.lib libpng.lib zlibstat.lib dxguid.lib libfreetype2.lib"
++				AdditionalDependencies="winmm.lib ws2_32.lib libpng.lib zlibstat.lib dxguid.lib libfreetype2.lib opengl32.lib glu32.lib"
+ 				LinkIncremental="1"
+ 				SuppressStartupBanner="true"
+ 				IgnoreDefaultLibraryNames=""
+@@ -373,7 +373,7 @@
+ 				Name="VCCLCompilerTool"
+ 				Optimization="0"
+ 				AdditionalIncludeDirectories="..\objs\langs"
+-				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;WIN32_ENABLE_DIRECTMUSIC_SUPPORT;WITH_ZLIB;WITH_PNG;WITH_FREETYPE;ENABLE_NETWORK;WITH_PERSONAL_DIR;PERSONAL_DIR=\&quot;OpenTTD\&quot;"
++				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;WIN32_ENABLE_DIRECTMUSIC_SUPPORT;WITH_ZLIB;WITH_PNG;WITH_FREETYPE;WITH_OPENGL;WITH_WIN32GL;ENABLE_NETWORK;WITH_PERSONAL_DIR;PERSONAL_DIR=\&quot;OpenTTD\&quot;"
+ 				BasicRuntimeChecks="3"
+ 				RuntimeLibrary="1"
+ 				UsePrecompiledHeader="0"
+@@ -403,7 +403,7 @@
+ 			/>
+ 			<Tool
+ 				Name="VCLinkerTool"
+-				AdditionalDependencies="winmm.lib ws2_32.lib libpng.lib zlibstat.lib dxguid.lib libfreetype2.lib"
++				AdditionalDependencies="winmm.lib ws2_32.lib libpng.lib zlibstat.lib dxguid.lib libfreetype2.lib opengl32.lib glu32.lib"
+ 				LinkIncremental="0"
+ 				SuppressStartupBanner="true"
+ 				IgnoreDefaultLibraryNames="LIBCMT.lib"
+Index: projects/openttd_vs90.vcproj.in
+===================================================================
+--- projects/openttd_vs90.vcproj.in	(Revision 14405)
++++ projects/openttd_vs90.vcproj.in	(Arbeitskopie)
+@@ -54,13 +54,14 @@
+ 			/>
+ 			<Tool
+ 				Name="VCCLCompilerTool"
++				AdditionalOptions="/MP"
+ 				Optimization="3"
+ 				InlineFunctionExpansion="2"
+ 				EnableIntrinsicFunctions="true"
+ 				FavorSizeOrSpeed="2"
+ 				OmitFramePointers="true"
+ 				AdditionalIncludeDirectories="..\objs\langs"
+-				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE;WIN32_EXCEPTION_TRACKER;WIN32_ENABLE_DIRECTMUSIC_SUPPORT;WITH_ZLIB;WITH_PNG;WITH_FREETYPE;ENABLE_NETWORK;WITH_PERSONAL_DIR;PERSONAL_DIR=\&quot;OpenTTD\&quot;;WITH_ASSERT"
++				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE;WIN32_EXCEPTION_TRACKER;WIN32_ENABLE_DIRECTMUSIC_SUPPORT;WITH_ZLIB;WITH_PNG;WITH_FREETYPE;WITH_OPENGL;WITH_WIN32GL;ENABLE_NETWORK;WITH_PERSONAL_DIR;PERSONAL_DIR=\&quot;OpenTTD\&quot;;WITH_ASSERT"
+ 				StringPooling="true"
+ 				ExceptionHandling="1"
+ 				RuntimeLibrary="0"
+@@ -97,7 +98,7 @@
+ 			/>
+ 			<Tool
+ 				Name="VCLinkerTool"
+-				AdditionalDependencies="winmm.lib ws2_32.lib libpng.lib zlibstat.lib dxguid.lib libfreetype2.lib"
++				AdditionalDependencies="winmm.lib ws2_32.lib libpng.lib zlibstat.lib dxguid.lib libfreetype2.lib opengl32.lib glu32.lib"
+ 				LinkIncremental="1"
+ 				SuppressStartupBanner="true"
+ 				IgnoreDefaultLibraryNames=""
+@@ -162,9 +163,10 @@
+ 			/>
+ 			<Tool
+ 				Name="VCCLCompilerTool"
++				AdditionalOptions="/MP"
+ 				Optimization="0"
+ 				AdditionalIncludeDirectories="..\objs\langs"
+-				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;WIN32_ENABLE_DIRECTMUSIC_SUPPORT;WITH_ZLIB;WITH_PNG;WITH_FREETYPE;ENABLE_NETWORK;WITH_PERSONAL_DIR;PERSONAL_DIR=\&quot;OpenTTD\&quot;"
++				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;WIN32_ENABLE_DIRECTMUSIC_SUPPORT;WITH_ZLIB;WITH_PNG;WITH_FREETYPE;WITH_OPENGL;WITH_WIN32GL;ENABLE_NETWORK;WITH_PERSONAL_DIR;PERSONAL_DIR=\&quot;OpenTTD\&quot;"
+ 				BasicRuntimeChecks="3"
+ 				RuntimeLibrary="1"
+ 				UsePrecompiledHeader="0"
+@@ -192,7 +194,7 @@
+ 			/>
+ 			<Tool
+ 				Name="VCLinkerTool"
+-				AdditionalDependencies="winmm.lib ws2_32.lib libpng.lib zlibstat.lib dxguid.lib libfreetype2.lib"
++				AdditionalDependencies="winmm.lib ws2_32.lib libpng.lib zlibstat.lib dxguid.lib libfreetype2.lib opengl32.lib glu32.lib"
+ 				LinkIncremental="0"
+ 				SuppressStartupBanner="true"
+ 				IgnoreDefaultLibraryNames="LIBCMT.lib"
+@@ -258,13 +260,14 @@
+ 			/>
+ 			<Tool
+ 				Name="VCCLCompilerTool"
++				AdditionalOptions="/MP"
+ 				Optimization="3"
+ 				InlineFunctionExpansion="2"
+ 				EnableIntrinsicFunctions="true"
+ 				FavorSizeOrSpeed="2"
+ 				OmitFramePointers="true"
+ 				AdditionalIncludeDirectories="..\objs\langs"
+-				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE;WIN32_EXCEPTION_TRACKER;WIN32_ENABLE_DIRECTMUSIC_SUPPORT;WITH_ZLIB;WITH_PNG;WITH_FREETYPE;ENABLE_NETWORK;WITH_PERSONAL_DIR;PERSONAL_DIR=\&quot;OpenTTD\&quot;;WITH_ASSERT"
++				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE;WIN32_EXCEPTION_TRACKER;WIN32_ENABLE_DIRECTMUSIC_SUPPORT;WITH_ZLIB;WITH_PNG;WITH_FREETYPE;WITH_OPENGL;WITH_WIN32GL;ENABLE_NETWORK;WITH_PERSONAL_DIR;PERSONAL_DIR=\&quot;OpenTTD\&quot;;WITH_ASSERT"
+ 				StringPooling="true"
+ 				ExceptionHandling="1"
+ 				RuntimeLibrary="0"
+@@ -301,7 +304,7 @@
+ 			/>
+ 			<Tool
+ 				Name="VCLinkerTool"
+-				AdditionalDependencies="winmm.lib ws2_32.lib libpng.lib zlibstat.lib dxguid.lib libfreetype2.lib"
++				AdditionalDependencies="winmm.lib ws2_32.lib libpng.lib zlibstat.lib dxguid.lib libfreetype2.lib opengl32.lib glu32.lib"
+ 				LinkIncremental="1"
+ 				SuppressStartupBanner="true"
+ 				IgnoreDefaultLibraryNames=""
+@@ -368,9 +371,10 @@
+ 			/>
+ 			<Tool
+ 				Name="VCCLCompilerTool"
++				AdditionalOptions="/MP"
+ 				Optimization="0"
+ 				AdditionalIncludeDirectories="..\objs\langs"
+-				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;WIN32_ENABLE_DIRECTMUSIC_SUPPORT;WITH_ZLIB;WITH_PNG;WITH_FREETYPE;ENABLE_NETWORK;WITH_PERSONAL_DIR;PERSONAL_DIR=\&quot;OpenTTD\&quot;"
++				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;WIN32_ENABLE_DIRECTMUSIC_SUPPORT;WITH_ZLIB;WITH_PNG;WITH_FREETYPE;WITH_OPENGL;WITH_WIN32GL;ENABLE_NETWORK;WITH_PERSONAL_DIR;PERSONAL_DIR=\&quot;OpenTTD\&quot;"
+ 				BasicRuntimeChecks="3"
+ 				RuntimeLibrary="1"
+ 				UsePrecompiledHeader="0"
+@@ -400,7 +404,7 @@
+ 			/>
+ 			<Tool
+ 				Name="VCLinkerTool"
+-				AdditionalDependencies="winmm.lib ws2_32.lib libpng.lib zlibstat.lib dxguid.lib libfreetype2.lib"
++				AdditionalDependencies="winmm.lib ws2_32.lib libpng.lib zlibstat.lib dxguid.lib libfreetype2.lib opengl32.lib glu32.lib"
+ 				LinkIncremental="0"
+ 				SuppressStartupBanner="true"
+ 				IgnoreDefaultLibraryNames="LIBCMT.lib"
+Index: config.lib
+===================================================================
+--- config.lib	(Revision 14405)
++++ config.lib	(Arbeitskopie)
+@@ -55,6 +55,8 @@
+ 	with_application_bundle="1"
+ 	with_menu_entry="1"
+ 	with_sdl="1"
++	with_sdlgl="0"
++	with_win32gl="0"
+ 	with_cocoa="1"
+ 	with_zlib="1"
+ 	with_png="1"
+@@ -117,6 +119,8 @@
+ 		with_osx_sysroot
+ 		with_application_bundle
+ 		with_sdl
++		with_sdlgl
++		with_win32gl
+ 		with_cocoa
+ 		with_zlib
+ 		with_png
+@@ -277,6 +281,14 @@
+ 			--without-sdl)                with_sdl="0";;
+ 			--with-sdl=*)                 with_sdl="$optarg";;
+ 
++			--with-sdlgl)                 with_sdlgl="1";;
++			--without-sdlgl)              with_sdlgl="0";;
++			--with-sdlgl=*)               with_sdlgl="$optarg";;
++
++			--with-win32gl)               with_win32gl="1";;
++			--without-win32gl)            with_win32gl="0";;
++			--with-win32gl=*)             with_win32gl="$optarg";;
++
+ 			--with-cocoa)                 with_cocoa="2";;
+ 			--without-cocoa)              with_cocoa="0";;
+ 			--with-cocoa=*)               with_cocoa="$optarg";;
+@@ -1134,6 +1146,24 @@
+ 		fi
+ 	fi
+ 
++	if [ "$with_sdlgl" = "1" ]; then
++		CFLAGS="$CFLAGS -DWITH_SDLGL"
++	fi
++
++	if [ "$with_win32gl" = "1" ]; then
++		CFLAGS="$CFLAGS -DWITH_WIN32GL"
++	fi
++
++	if [ "$with_sdlgl" = "1" ] || [ "$with_win32gl" = "1" ]; then
++		CFLAGS="$CFLAGS -DWITH_OPENGL"
++		if [ "$os" = "MINGW" ] || [ "$os" = "CYGWIN" ] || [ "$os" = "WINCE" ]; then
++			LIBS="$LIBS -lopengl32 -lglu32"
++		else
++			LIBS="$LIBS -lGL -lGLU"
++		fi
++	fi
++
++
+ 	if [ "$with_cocoa" != "0" ]; then
+ 		CFLAGS="$CFLAGS -DWITH_COCOA"
+ 		LIBS="$LIBS -F/System/Library/Frameworks -framework Cocoa -framework Carbon -framework AudioUnit"
+@@ -2540,6 +2570,10 @@
+ 	echo "                                 midi-player"
+ 	echo "  --with-cocoa                   enables COCOA video driver (OSX ONLY)"
+ 	echo "  --with-sdl[=sdl-config]        enables SDL video driver support"
++	echo "  --with-sdlgl                   enables SDL OpenGL video driver"
++	echo "                                 and OpenGL blitter (requires SDL)"
++	echo "  --with-win32gl                 enables Windows OpenGL video driver"
++	echo "                                 and OpenGL blitter (Win32 ONLY)"
+ 	echo "  --with-zlib[=zlib.a]           enables zlib support"
+ 	echo "  --with-png[=libpng-config]     enables libpng support"
+ 	echo "  --with-freetype[=freetype-config]"
+Index: source.list
+===================================================================
+--- source.list	(Revision 14405)
++++ source.list	(Arbeitskopie)
+@@ -334,6 +334,10 @@
+ music/win32_m.h
+ sound/win32_s.h
+ video/win32_v.h
++#if OPENGL
++video/win32gl_v.h
++video/sdlgl_v.h
++#end
+ window_func.h
+ window_gui.h
+ window_type.h
+@@ -502,6 +506,11 @@
+ blitter/factory.hpp
+ blitter/null.cpp
+ blitter/null.hpp
++#if OPENGL
++blitter/opengl.cpp
++blitter/opengl.hpp
++GLee.c
++#end
+ 
+ # Drivers
+ music/music_driver.hpp
+@@ -607,9 +616,15 @@
+ video/null_v.cpp
+ #if SDL
+ 	video/sdl_v.cpp
++	#if OPENGL
++		video/sdlgl_v.cpp
++	#end
+ #end
+ #if WIN32
+ 	video/win32_v.cpp
++	#if OPENGL
++		video/win32gl_v.cpp
++	#end
+ #end
+ #if WINCE
+ 	video/win32_v.cpp

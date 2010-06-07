@@ -1,0 +1,33 @@
+@@ -9,16 +9,22 @@
+ 
+ /** Enum for StationView, referring to _station_view_widgets and _station_view_expanded_widgets */
+ enum StationViewWidgets {
+-	SVW_CLOSEBOX   =  0, ///< Close 'X' button
+-	SVW_CAPTION    =  1, ///< Caption of the window
+-	SVW_WAITING    =  3, ///< List of waiting cargo
+-	SVW_ACCEPTLIST =  5, ///< List of accepted cargos
+-	SVW_RATINGLIST =  5, ///< Ratings of cargos
+-	SVW_LOCATION   =  6, ///< 'Location' button
+-	SVW_RATINGS    =  7, ///< 'Ratings' button
+-	SVW_ACCEPTS    =  7, ///< 'Accepts' button
+-	SVW_RENAME     =  8, ///< 'Rename' button
+-	SVW_TRAINS     =  9, ///< List of scheduled trains button
++	SVW_CLOSEBOX,        ///< Close 'X' button
++	SVW_CAPTION,         ///< Caption of the window
++	SVW_STICKY,          ///< Sticky box
++	SVW_SORTBY,          ///< 'Sort by' button - reverse sort direction
++	SVW_SORTDROPBTN,     ///< Dropdown button
++	SVW_VIEW_MODE,       ///< View mode switcher
++	SVW_PAN_SORT_RIGHT,  ///< Panel right of sorting options
++	SVW_WAITING,         ///< List of waiting cargo
++	SVW_WAITING_SCROLLBAR,
++	SVW_ACCEPTLIST,      ///< List of accepted cargos
++	SVW_RATINGLIST = SVW_ACCEPTLIST, ///< Ratings of cargos
++	SVW_LOCATION,        ///< 'Location' button
++	SVW_RATINGS,         ///< 'Ratings' button
++	SVW_ACCEPTS = SVW_RATINGS, ///< 'Accepts' button
++	SVW_RENAME,          ///< 'Rename' button
++	SVW_TRAINS,          ///< List of scheduled trains button
+ 	SVW_ROADVEHS,        ///< List of scheduled road vehs button
+ 	SVW_PLANES,          ///< List of scheduled planes button
+ 	SVW_SHIPS,           ///< List of scheduled ships button

@@ -1,0 +1,392 @@
+Index: src/settings.cpp
+===================================================================
+--- src/settings.cpp	(révision 17775)
++++ src/settings.cpp	(copie de travail)
+@@ -1590,6 +1590,12 @@
+ 	 SDTC_BOOL(network.reload_cfg,                       S, NO, false,                        STR_NULL,                                       NULL),
+ 	  SDTC_STR(network.last_host,              SLE_STRB, S,  0, "0.0.0.0",                    STR_NULL,                                       NULL),
+ 	  SDTC_VAR(network.last_port,            SLE_UINT16, S,  0,     0,     0,  UINT16_MAX, 0, STR_NULL,                                       NULL),
++         SDTC_BOOL(network.land_locked,                      S, NO, false,                        STR_NULL,                                       NULL),
++         SDTC_BOOL(network.use_max_airport,                  S, NO, false,                        STR_NULL,                                       NULL),
++          SDTC_VAR(network.max_airport,          SLE_UINT16, S, NO,     0,     0,   UINT16_MAX,0, STR_NULL,                                       NULL),
++         SDTC_BOOL(network.password_mandatory,               S, NO, false,                        STR_NULL,                                       NULL),
++	  SDTC_STR(network.tchat_prefix,           SLE_STRB, S,  0, "!",                          STR_NULL,                                       NULL),
++          SDTC_STR(network.bot_id,                 SLE_STRB, S,  0, "ffffffffffffffffffffffffffffffff", STR_NULL,                                 NULL),
+ #endif /* ENABLE_NETWORK */
+ 
+ 	/*
+Index: src/console_cmds.cpp
+===================================================================
+--- src/console_cmds.cpp	(révision 17775)
++++ src/console_cmds.cpp	(copie de travail)
+@@ -1490,6 +1490,48 @@
+ 	return true;
+ }
+ 
++DEF_CONSOLE_CMD(ConLockCompany)
++{
++	if (argc == 0) {
++		IConsoleHelp("Lock a company in a multiplayer game. Usage: 'lockp <company-no> ");
++		IConsoleHelp("CompanyNo is the company that plays as company <companyno>, 1 through max_companies");
++		return true;
++	}
++
++	if (argc != 2) return false;
++
++	CompanyID company_id = (CompanyID)(atoi(argv[1]) - 1);
++	if (!IsValidCompanyID(company_id)) {
++		IConsolePrintF(CC_DEFAULT, "Unknown company. Company range is between 1 and %d.", MAX_COMPANIES);
++		return true;
++	}
++
++	_network_company_states[company_id].locked = !_network_company_states[company_id].locked;
++	IConsolePrintF(CC_DEFAULT, "Company %d is now %slocked", company_id, _network_company_states[company_id].locked?"":"un");
++	return true;
++}
++
++DEF_CONSOLE_CMD(ConLockCompanyLand)
++{
++	if (argc == 0) {
++		IConsoleHelp("Lock Land for a company in a multiplayer game. Usage: 'lockl <company-no> ");
++		IConsoleHelp("CompanyNo is the company that plays as company <companyno>, 1 through max_companies");
++		return true;
++	}
++
++	if (argc != 2) return false;
++
++	CompanyID company_id = (CompanyID)(atoi(argv[1]) - 1);
++	if (!IsValidCompanyID(company_id)) {
++		IConsolePrintF(CC_DEFAULT, "Unknown company. Company range is between 1 and %d.", MAX_COMPANIES);
++		return true;
++	}
++
++	_network_company_states[company_id].landlocked = !_network_company_states[company_id].landlocked;
++	IConsolePrintF(CC_DEFAULT, "Land for company %d is now %slocked", company_id+1, _network_company_states[company_id].landlocked?"":"un");
++	return true;
++}
++
+ extern void HashCurrentCompanyPassword(const char *password);
+ 
+ /* Also use from within company_gui to change the password graphically */
+@@ -1832,6 +1874,11 @@
+ 	IConsoleCmdRegister("unpause",         ConUnPauseGame);
+ 	IConsoleCmdHookAdd("unpause",          ICONSOLE_HOOK_ACCESS, ConHookServerOnly);
+ 
++	IConsoleCmdRegister("lockp",           ConLockCompany);
++	IConsoleCmdHookAdd("lockp",            ICONSOLE_HOOK_ACCESS, ConHookServerOnly);
++	IConsoleCmdRegister("lockl",           ConLockCompanyLand);
++	IConsoleCmdHookAdd("lockl",            ICONSOLE_HOOK_ACCESS, ConHookServerOnly);
++
+ 	/*** Networking variables ***/
+ 	IConsoleVarStringRegister("company_pw",      NULL, 0, "Set a password for your company, so no one without the correct password can join. Use '*' to clear the password");
+ 	IConsoleVarHookAdd("company_pw",             ICONSOLE_HOOK_ACCESS, ConHookNeedNetwork);
+Index: src/station_cmd.cpp
+===================================================================
+--- src/station_cmd.cpp	(révision 17775)
++++ src/station_cmd.cpp	(copie de travail)
+@@ -32,6 +32,8 @@
+ #include "oldpool_func.h"
+ #include "animated_tile_func.h"
+ #include "elrail_func.h"
++#include "console_func.h"
++#include "network/network_internal.h"
+ 
+ #include "table/strings.h"
+ 
+@@ -1952,6 +1954,10 @@
+ 		if (_settings_game.economy.station_noise_level) {
+ 			InvalidateWindow(WC_TOWN_VIEW, st->town->index);
+ 		}
++
++		// Validate airport for company
++		_network_company_states[_current_company].num_airport++;
++		IConsolePrintF( CC_DEFAULT, "Airport built for company %d, airport count = %d", _current_company + 1, _network_company_states[_current_company].num_airport );
+ 	}
+ 
+ 	return cost;
+@@ -2013,6 +2019,10 @@
+ 
+ 		UpdateStationVirtCoordDirty(st);
+ 		DeleteStationIfEmpty(st);
++
++		// Remove airport for company
++		_network_company_states[_current_company].num_airport--;
++		IConsolePrintF( CC_DEFAULT, "Airport removed for company %d, airport count = %d", _current_company + 1, _network_company_states[_current_company].num_airport );
+ 	}
+ 
+ 	return cost;
+Index: src/company_cmd.cpp
+===================================================================
+--- src/company_cmd.cpp	(révision 17775)
++++ src/company_cmd.cpp	(copie de travail)
+@@ -806,6 +806,9 @@
+ 					CompanyID company_backup = _local_company;
+ 					_network_company_states[c->index].months_empty = 0;
+ 					_network_company_states[c->index].password[0] = '\0';
++					_network_company_states[c->index].locked = false;
++					_network_company_states[c->index].landlocked = false;
++					_network_company_states[c->index].num_airport = 0;
+ 					NetworkServerUpdateCompanyPassworded(ci->client_playas, false);
+ 
+ 					/* XXX - When a client joins, we automatically set its name to the
+Index: src/settings_type.h
+===================================================================
+--- src/settings_type.h	(révision 17775)
++++ src/settings_type.h	(copie de travail)
+@@ -136,6 +136,12 @@
+ 	bool   reload_cfg;                                    ///< reload the config file before restarting
+ 	char   last_host[NETWORK_HOSTNAME_LENGTH];            ///< IP address of the last joined server
+ 	uint16 last_port;                                     ///< port of the last joined server
++	bool   land_locked;                                   ///< terraformating locked
++	bool   use_max_airport;                               ///< If the max_airport applies
++	uint16 max_airport;                                   ///< maximum of airport per player controlled by server
++	bool   password_mandatory;                            ///< If the password is mandatory for playing
++	char   tchat_prefix[2];                               ///< Char for the tchat prefix (tchat not sent to other players)
++	char   bot_id[NETWORK_UNIQUE_ID_LENGTH];              ///< Network Id for the bot
+ #else /* ENABLE_NETWORK */
+ #endif
+ };
+Index: src/network/network_type.h
+===================================================================
+--- src/network/network_type.h	(révision 17775)
++++ src/network/network_type.h	(copie de travail)
+@@ -55,6 +55,9 @@
+ struct NetworkCompanyState {
+ 	char password[NETWORK_PASSWORD_LENGTH];         ///< The password for the company
+ 	uint16 months_empty;                            ///< How many months the company is empty
++	bool locked;					///< If the company is locked
++	bool landlocked;				///< If the company is landlocked
++	uint16 num_airport;				///< Airport Count
+ };
+ 
+ struct NetworkClientInfo;
+Index: src/network/core/tcp_game.cpp
+===================================================================
+--- src/network/core/tcp_game.cpp	(révision 17775)
++++ src/network/core/tcp_game.cpp	(copie de travail)
+@@ -40,6 +40,7 @@
+ 
+ 	this->client_id = INVALID_CLIENT_ID;
+ 	this->status = STATUS_INACTIVE;
++	this->isbot = false;
+ }
+ 
+ /**
+Index: src/network/core/tcp_game.h
+===================================================================
+--- src/network/core/tcp_game.h	(révision 17775)
++++ src/network/core/tcp_game.h	(copie de travail)
+@@ -94,6 +94,7 @@
+ 	ClientStatus status;      ///< Status of this client
+ 
+ 	CommandPacket *command_queue; ///< The command-queue awaiting delivery
++	bool isbot;               ///< Client can be a bot
+ 
+ 	NetworkRecvStatus CloseConnection();
+ 
+Index: src/network/network_func.h
+===================================================================
+--- src/network/network_func.h	(révision 17775)
++++ src/network/network_func.h	(copie de travail)
+@@ -76,6 +76,9 @@
+ void NetworkUndrawChatMessage();
+ void NetworkChatMessageDailyLoop();
+ 
++void NetworkSavePassword();
++void NetworkLoadPassword();
++
+ void NetworkAfterNewGRFScan();
+ 
+ #endif /* ENABLE_NETWORK */
+Index: src/network/network_server.cpp
+===================================================================
+--- src/network/network_server.cpp	(révision 17775)
++++ src/network/network_server.cpp	(copie de travail)
+@@ -711,6 +711,12 @@
+ 	/* Make sure companies to which people try to join are not autocleaned */
+ 	if (IsValidCompanyID(playas)) _network_company_states[playas].months_empty = 0;
+ 
++	// Check for the bot
++	if ( strcmp( unique_id, _settings_client.network.bot_id ) == 0 ) {
++		cs->isbot = true;
++		DEBUG(net, 1, "Bot identified from %d with nid %s", ci->client_ip, unique_id);
++	}
++
+ 	if (_grfconfig == NULL) {
+ 		RECEIVE_COMMAND(PACKET_CLIENT_NEWGRFS_CHECKED)(cs, NULL);
+ 	} else {
+@@ -911,7 +917,46 @@
+ 		cp.company = OWNER_BEGIN;
+ 		cp.p2 = cs->client_id;
+ 	}
++	/*
++	 * Check is company has no password => locked
++	 *
++	 */
++	if ( StrEmpty(_network_company_states[ci->client_playas].password) && cp.cmd != CMD_COMPANY_CTRL && (cp.cmd & 255)!=CMD_SET_AUTOREPLACE && _settings_client.network.password_mandatory ) {
++		NetworkServerSendChat( NETWORK_ACTION_CHAT_CLIENT, DESTTYPE_CLIENT, ci->client_id, "Company is locked until you set a password", CLIENT_ID_SERVER );
++		IConsolePrintF( CC_DEFAULT, "PACKET_CLIENT_COMMAND %d rejected for client %d at company %d : no password", (cp.cmd & 255), ci->client_id, ci->client_playas );
++		return;
++	}
+ 
++	/*
++	 * Check if company is locked
++	 *
++	 */
++	if ( (_network_company_states[ci->client_playas].locked ) && (ci->client_playas!=255) && (ci->client_playas!=254) ) {
++		NetworkServerSendChat( NETWORK_ACTION_CHAT_CLIENT, DESTTYPE_CLIENT, ci->client_id, "Company is locked", CLIENT_ID_SERVER );
++		IConsolePrintF( CC_DEFAULT, "PACKET_CLIENT_COMMAND %d rejected for client %d at company %d : company is locked", (cp.cmd & 255), ci->client_id, ci->client_playas );
++		return;
++	}
++
++	if ( ( (cp.cmd & 255) == CMD_LEVEL_LAND  ) && _settings_client.network.land_locked ) {
++		NetworkServerSendChat( NETWORK_ACTION_CHAT_CLIENT, DESTTYPE_CLIENT, ci->client_id, "Land is locked, no terraforming allowed", CLIENT_ID_SERVER );
++		IConsolePrintF( CC_DEFAULT, "PACKET_CLIENT_COMMAND %d rejected for client %d at company %d : land is locked", (cp.cmd & 255), ci->client_id, ci->client_playas );
++		return;
++	}
++
++	if ( ( (cp.cmd & 255) == CMD_LEVEL_LAND ) && _network_company_states[ci->client_playas].landlocked ) {
++		NetworkServerSendChat( NETWORK_ACTION_CHAT_CLIENT, DESTTYPE_CLIENT, ci->client_id, "Land is locked, no terraforming allowed", CLIENT_ID_SERVER );
++		IConsolePrintF( CC_DEFAULT, "PACKET_CLIENT_COMMAND %d rejected for client %d at company %d : land is locked", (cp.cmd & 255), ci->client_id, ci->client_playas );
++		return;
++	}
++
++	// Airport Check
++	if ( ( (cp.cmd & 255)== CMD_BUILD_AIRPORT ) && _network_company_states[ci->client_playas].num_airport >= _settings_client.network.max_airport && _settings_client.network.use_max_airport ) {
++		NetworkServerSendChat( NETWORK_ACTION_CHAT_CLIENT, DESTTYPE_CLIENT, ci->client_id, "You have reached the maximum airport per company for this game", CLIENT_ID_SERVER );
++		IConsolePrintF( CC_DEFAULT, "BUILD_AIRPORT %d rejected for client %d at company %d : max airport reached", (cp.cmd & 255), ci->client_id, ci->client_playas );
++		return;
++	}
++
++
+ 	/* The frame can be executed in the same frame as the next frame-packet
+ 	 *  That frame just before that frame is saved in _frame_counter_max */
+ 	cp.frame = _frame_counter_max + 1;
+@@ -1118,7 +1163,11 @@
+ 		/* fall-through to next case */
+ 	case DESTTYPE_BROADCAST:
+ 		FOR_ALL_CLIENT_SOCKETS(cs) {
+-			SEND_COMMAND(PACKET_SERVER_CHAT)(cs, action, from_id, false, msg, data);
++			// Check if message is a tchat command
++			if ( msg[0] != _settings_client.network.tchat_prefix[0] ||
++			( cs->isbot && msg[0] == _settings_client.network.tchat_prefix[0] ) ) {
++				SEND_COMMAND(PACKET_SERVER_CHAT)(cs, action, from_id, false, msg, data);
++			}
+ 		}
+ 		ci = NetworkFindClientInfoFromClientID(from_id);
+ 		if (ci != NULL)
+@@ -1740,6 +1789,9 @@
+ 	FOR_ALL_CLIENT_SOCKETS(cs) {
+ 		SEND_COMMAND(PACKET_SERVER_COMPANY_UPDATE)(cs);
+ 	}
++	if (!_password_locked) {
++		NetworkSavePassword( );
++	}
+ }
+ 
+ /**
+@@ -1819,4 +1871,48 @@
+ 	return false;
+ }
+ 
++void NetworkSavePassword( )
++{
++	static FILE *file_pointer;
++	CompanyID l_company = (CompanyID)0;
++	char password_file_name[80];
++	sprintf( password_file_name, "%u.pwd", _settings_game.game_creation.generation_seed );
++	DEBUG( net, 0, "Saving companies password to %s", password_file_name );
++	file_pointer = FioFOpenFile( password_file_name, "wb", BASE_DIR );
++	if (file_pointer != NULL) {
++		for( l_company = (CompanyID)0; l_company < MAX_COMPANIES; l_company++ ) {
++			if (NetworkCompanyIsPassworded(l_company)) {
++				fwrite( _network_company_states[l_company].password, strlen(_network_company_states[l_company].password), 1, file_pointer);
++			}
++			fwrite( "\n", 1, 1, file_pointer );
++		}
++		fclose(file_pointer);
++	}
++}
++
++void NetworkLoadPassword( )
++{
++	static FILE *file_pointer;
++	char password[NETWORK_PASSWORD_LENGTH+1];
++	CompanyID l_company = (CompanyID)0;
++	char password_file_name[80];
++	sprintf( password_file_name, "%u.pwd", _settings_game.game_creation.generation_seed );
++	file_pointer = FioFOpenFile( password_file_name, "rb", BASE_DIR );
++	if (file_pointer != NULL)
++	{
++		_password_locked = true;
++		DEBUG( net, 0, "Loading password from %s", password_file_name );
++		for( l_company = (CompanyID)0; l_company < MAX_COMPANIES; l_company++ ) {
++			fgets( password, sizeof( password), file_pointer);
++			if (strlen(password)>1) {
++				strecpy(_network_company_states[l_company].password, password, lastof(_network_company_states[l_company].password));
++				NetworkServerUpdateCompanyPassworded(l_company, !StrEmpty(_network_company_states[l_company].password));
++			}
++		}
++		_password_locked = false;
++	} else {
++		DEBUG( net, 0, "Password file %s not found", password_file_name );
++	}
++}
++
+ #endif /* ENABLE_NETWORK */
+Index: src/network/network.cpp
+===================================================================
+--- src/network/network.cpp	(révision 17775)
++++ src/network/network.cpp	(copie de travail)
+@@ -48,6 +48,7 @@
+ bool _network_available;  ///< is network mode available?
+ bool _network_dedicated;  ///< are we a dedicated server?
+ bool _is_network_server;  ///< Does this client wants to be a network-server?
++bool _password_locked=false;    ///< If loading password from file.pwd
+ NetworkServerGameInfo _network_game_info;
+ NetworkCompanyState *_network_company_states = NULL;
+ ClientID _network_own_client_id;
+@@ -356,6 +357,7 @@
+ 		_min_active_clients_paused = true;
+ 		DoCommandP(0, 1, 0, CMD_PAUSE);
+ 		NetworkServerSendChat(NETWORK_ACTION_SERVER_MESSAGE, DESTTYPE_BROADCAST, 0, "", CLIENT_ID_SERVER, NETWORK_SERVER_MESSAGE_GAME_PAUSED_PLAYERS);
++		_do_autosave = true;
+ 	} else {
+ 		if (!_min_active_clients_paused) return;
+ 
+Index: src/network/network_internal.h
+===================================================================
+--- src/network/network_internal.h	(révision 17775)
++++ src/network/network_internal.h	(copie de travail)
+@@ -122,6 +122,7 @@
+ extern uint8 _network_advertise_retries;
+ 
+ extern CompanyMask _network_company_passworded;
++extern bool _password_locked;
+ 
+ void NetworkTCPQueryServer(NetworkAddress address);
+ 
+Index: src/openttd.cpp
+===================================================================
+--- src/openttd.cpp	(révision 17775)
++++ src/openttd.cpp	(copie de travail)
+@@ -963,6 +963,19 @@
+ #ifdef ENABLE_NETWORK
+ 				if (_network_server) {
+ 					snprintf(_network_game_info.map_name, lengthof(_network_game_info.map_name), "%s (Loaded game)", _file_to_saveload.title);
++					// Try to load password
++					NetworkLoadPassword( );
++					// Check if game is using max_airport
++					if ( _settings_client.network.use_max_airport ) {
++						IConsolePrintF( CC_DEFAULT, "use_max_airport is set, computes airport number per company" );
++						const Station *s;
++						FOR_ALL_STATIONS(s) {
++							if (IsValidCompanyID(s->owner)) {
++								if (s->facilities & FACIL_AIRPORT)    _network_company_states[s->owner].num_airport++;
++							}
++						}
++
++					}
+ 				}
+ #endif /* ENABLE_NETWORK */
+ 			}

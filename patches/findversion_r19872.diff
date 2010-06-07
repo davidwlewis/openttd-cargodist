@@ -1,0 +1,29 @@
+diff --git a/findversion.sh b/findversion.sh
+index c792ec8..562d4bc 100755
+--- a/findversion.sh
++++ b/findversion.sh
+@@ -87,9 +87,6 @@ if [ -d "$ROOT_DIR/.svn" ]; then
+ 	fi
+ elif [ -d "$ROOT_DIR/.git" ]; then
+ 	# We are a git checkout
+-	if [ -n "`git diff-index HEAD \"$SRC_DIR\"`" ]; then
+-		MODIFIED="2"
+-	fi
+ 	HASH=`LC_ALL=C git rev-parse --verify HEAD 2>/dev/null`
+ 	REV="g`echo $HASH | cut -c1-8`"
+ 	BRANCH=`git branch|grep '[*]' | sed 's@\* @@;s@^master$@@'`
+diff --git a/projects/determineversion.vbs b/projects/determineversion.vbs
+index 1c6f485..79d50aa 100755
+--- a/projects/determineversion.vbs
++++ b/projects/determineversion.vbs
+@@ -177,10 +177,6 @@ Function DetermineSVNVersion()
+ 					Do While oExec.Status = 0
+ 					Loop
+ 
+-					If oExec.ExitCode = 1 Then
+-						modified = 2
+-					End If ' oExec.ExitCode = 1
+-
+ 					Set oExec = WshShell.Exec("git symbolic-ref HEAD")
+ 					If Err.Number = 0 Then
+ 						line = oExec.StdOut.ReadLine()

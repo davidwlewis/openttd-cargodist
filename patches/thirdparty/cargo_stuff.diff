@@ -1,0 +1,727 @@
+Index: src/cargopacket.h
+===================================================================
+--- src/cargopacket.h	(revision 17817)
++++ src/cargopacket.h	(working copy)
+@@ -18,7 +18,9 @@
+ #include "station_type.h"
+ #include "cargo_type.h"
+ #include "vehicle_type.h"
++
+ #include <list>
++#include <set>
+ 
+ /** Unique identifier for a single cargo packet. */
+ typedef uint32 CargoPacketID;
+@@ -29,7 +31,7 @@
+ /** The actual pool with cargo packets */
+ extern CargoPacketPool _cargopacket_pool;
+ 
+-template <class Tinst> class CargoList;
++template <class Tinst, class Tcont> class CargoList;
+ extern const struct SaveLoad *GetCargoPacketDesc();
+ 
+ /**
+@@ -47,7 +49,7 @@
+ 	TileIndex loaded_at_xy;     ///< Location where this cargo has been loaded into the vehicle
+ 
+ 	/** The CargoList caches, thus needs to know about it. */
+-	template <class Tinst> friend class CargoList;
++	template <class Tinst, class Tcont> friend class CargoList;
+ 	friend class VehicleCargoList;
+ 	friend class StationCargoList;
+ 	/** We want this to be saved, right? */
+@@ -159,6 +161,7 @@
+ 		return this->loaded_at_xy;
+ 	}
+ 
++	void Merge(CargoPacket *other);
+ 
+ 	static void InvalidateAllFrom(SourceType src_type, SourceID src);
+ 	static void InvalidateAllFrom(StationID sid);
+@@ -181,16 +184,17 @@
+ /**
+  * Simple collection class for a list of cargo packets
+  * @tparam Tinst The actual instantation of this cargo list
++ * @tparam Tcont The actual container used for this cargo list
+  */
+-template <class Tinst>
++template <class Tinst, class Tcont>
+ class CargoList {
+ public:
+ 	/** Container with cargo packets */
+-	typedef std::list<CargoPacket *> List;
++	typedef Tcont List;
+ 	/** The iterator for our container */
+-	typedef List::iterator Iterator;
++	typedef typename List::iterator Iterator;
+ 	/** The const iterator for our container */
+-	typedef List::const_iterator ConstIterator;
++	typedef typename List::const_iterator ConstIterator;
+ 
+ 	/** Kind of actions that could be done with packets on move */
+ 	enum MoveToAction {
+@@ -204,7 +208,7 @@
+ 	uint count;                 ///< Cache for the number of cargo entities
+ 	uint cargo_days_in_transit; ///< Cache for the sum of number of days in transit of each entity; comparable to man-hours
+ 
+-	List packets;               ///< The cargo packets in this list
++	Tcont packets;              ///< The cargo packets in this list
+ 
+ 	/**
+ 	 * Update the cache to reflect adding of this packet.
+@@ -230,7 +234,7 @@
+ 	 * Returns a pointer to the cargo packet list (so you can iterate over it etc).
+ 	 * @return pointer to the packet list
+ 	 */
+-	FORCEINLINE const List *Packets() const
++	FORCEINLINE const Tcont *Packets() const
+ 	{
+ 		return &this->packets;
+ 	}
+@@ -259,7 +263,7 @@
+ 	 */
+ 	FORCEINLINE StationID Source() const
+ 	{
+-		return this->Empty() ? INVALID_STATION : this->packets.front()->source;
++		return this->Empty() ? INVALID_STATION : (*(this->packets.begin()))->source;
+ 	}
+ 
+ 	/**
+@@ -273,15 +277,6 @@
+ 
+ 
+ 	/**
+-	 * Appends the given cargo packet
+-	 * @warning After appending this packet may not exist anymore!
+-	 * @note Do not use the cargo packet anymore after it has been appended to this CargoList!
+-	 * @param cp the cargo packet to add
+-	 * @pre cp != NULL
+-	 */
+-	void Append(CargoPacket *cp);
+-
+-	/**
+ 	 * Truncates the cargo in this list to the given amount. It leaves the
+ 	 * first count cargo entities and removes the rest.
+ 	 * @param max_remaining the maximum amount of entities to be in the list after the command
+@@ -316,13 +311,21 @@
+ 	void InvalidateCache();
+ };
+ 
++class PacketCompare {
++public:
++	bool operator()(const CargoPacket *a, const CargoPacket *b) const;
++};
++
++typedef std::set<CargoPacket *, PacketCompare> CargoPacketSet;
++typedef std::list<CargoPacket *> CargoPacketList;
++
+ /**
+  * CargoList that is used for vehicles.
+  */
+-class VehicleCargoList : public CargoList<VehicleCargoList> {
++class VehicleCargoList : public CargoList<VehicleCargoList, CargoPacketSet> {
+ protected:
+ 	/** The (direct) parent of this class */
+-	typedef CargoList<VehicleCargoList> Parent;
++	typedef CargoList<VehicleCargoList, CargoPacketSet> Parent;
+ 
+ 	Money feeder_share; ///< Cache for the feeder share
+ 
+@@ -342,7 +345,7 @@
+ 
+ public:
+ 	/** The super class ought to know what it's doing */
+-	friend class CargoList<VehicleCargoList>;
++	friend class CargoList<VehicleCargoList, CargoPacketSet>;
+ 	/** The vehicles have a cargo list (and we want that saved). */
+ 	friend const struct SaveLoad *GetVehicleDescription(VehicleType vt);
+ 
+@@ -356,12 +359,23 @@
+ 	}
+ 
+ 	/**
++	 * Inserts the given cargo packet into the set (not necessarily at the end).
++	 * @warning After appending this packet may not exist anymore!
++	 * @note Do not use the cargo packet anymore after it has been appended to this CargoList!
++	 * @param cp the cargo packet to add
++	 * @pre cp != NULL
++	 */
++	void Append(CargoPacket *cp);
++
++	/**
+ 	 * Ages the all cargo in this list
+ 	 */
+ 	void AgeCargo();
+ 
+ 	/** Invalidates the cached data and rebuild it */
+ 	void InvalidateCache();
++	void SortAndCache();
++	static void InvalidateAllFrom(SourceType src_type, SourceID src);
+ 
+ 	/**
+ 	 * Are two the two CargoPackets mergeable in the context of
+@@ -383,14 +397,25 @@
+ /**
+  * CargoList that is used for stations.
+  */
+-class StationCargoList : public CargoList<StationCargoList> {
++class StationCargoList : public CargoList<StationCargoList, CargoPacketList> {
+ public:
+ 	/** The super class ought to know what it's doing */
+-	friend class CargoList<StationCargoList>;
++	friend class CargoList<StationCargoList, CargoPacketList>;
+ 	/** The stations, via GoodsEntry, have a CargoList. */
+ 	friend const struct SaveLoad *GetGoodsDesc();
+ 
+ 	/**
++	 * Appends the given cargo packet to the end of the list.
++	 * @warning After appending this packet may not exist anymore!
++	 * @note Do not use the cargo packet anymore after it has been appended to this CargoList!
++	 * @param cp the cargo packet to add
++	 * @pre cp != NULL
++	 */
++	void Append(CargoPacket *cp);
++
++	static void InvalidateAllFrom(SourceType src_type, SourceID src);
++
++	/**
+ 	 * Are two the two CargoPackets mergeable in the context of
+ 	 * a list of CargoPackets for a Vehicle?
+ 	 * @param cp1 the first CargoPacket
+Index: src/cargopacket.cpp
+===================================================================
+--- src/cargopacket.cpp	(revision 17817)
++++ src/cargopacket.cpp	(working copy)
+@@ -13,6 +13,7 @@
+ #include "core/pool_func.hpp"
+ #include "economy_base.h"
+ #include "station_base.h"
++#include "vehicle_base.h"
+ 
+ /* Initialize the cargopacket-pool */
+ CargoPacketPool _cargopacket_pool("CargoPacket");
+@@ -53,16 +54,27 @@
+ }
+ 
+ /**
++ * Merge another packet into this one and delete the other one.
++ * @param other the other packet
++ */
++void CargoPacket::Merge(CargoPacket *other)
++{
++	assert(this->count + other->count <= CargoPacket::MAX_COUNT);
++
++	this->count += other->count;
++	this->feeder_share += other->feeder_share;
++	delete other;
++}
++
++/**
+  * Invalidates (sets source_id to INVALID_SOURCE) all cargo packets from given source
+  * @param src_type type of source
+  * @param src index of source
+  */
+ /* static */ void CargoPacket::InvalidateAllFrom(SourceType src_type, SourceID src)
+ {
+-	CargoPacket *cp;
+-	FOR_ALL_CARGOPACKETS(cp) {
+-		if (cp->source_type == src_type && cp->source_id == src) cp->source_id = INVALID_SOURCE;
+-	}
++	VehicleCargoList::InvalidateAllFrom(src_type, src);
++	StationCargoList::InvalidateAllFrom(src_type, src);
+ }
+ 
+ /**
+@@ -83,54 +95,31 @@
+  *
+  */
+ 
+-template <class Tinst>
+-CargoList<Tinst>::~CargoList()
++template <class Tinst, class Tcont>
++CargoList<Tinst, Tcont>::~CargoList()
+ {
+ 	for (Iterator it(this->packets.begin()); it != this->packets.end(); ++it) {
+ 		delete *it;
+ 	}
+ }
+ 
+-template <class Tinst>
+-void CargoList<Tinst>::RemoveFromCache(const CargoPacket *cp)
++template <class Tinst, class Tcont>
++void CargoList<Tinst, Tcont>::RemoveFromCache(const CargoPacket *cp)
+ {
+ 	this->count                 -= cp->count;
+ 	this->cargo_days_in_transit -= cp->days_in_transit * cp->count;
+ }
+ 
+-template <class Tinst>
+-void CargoList<Tinst>::AddToCache(const CargoPacket *cp)
++template <class Tinst, class Tcont>
++void CargoList<Tinst, Tcont>::AddToCache(const CargoPacket *cp)
+ {
+ 	this->count                 += cp->count;
+ 	this->cargo_days_in_transit += cp->days_in_transit * cp->count;
+ }
+ 
+-template <class Tinst>
+-void CargoList<Tinst>::Append(CargoPacket *cp)
++template <class Tinst, class Tcont>
++void CargoList<Tinst, Tcont>::Truncate(uint max_remaining)
+ {
+-	assert(cp != NULL);
+-
+-	for (Iterator it(this->packets.begin()); it != this->packets.end(); it++) {
+-		CargoPacket *icp = *it;
+-		if (Tinst::AreMergable(icp, cp) && icp->count + cp->count <= CargoPacket::MAX_COUNT) {
+-			icp->count        += cp->count;
+-			icp->feeder_share += cp->feeder_share;
+-
+-			static_cast<Tinst *>(this)->AddToCache(cp);
+-			delete cp;
+-			return;
+-		}
+-	}
+-
+-	/* The packet could not be merged with another one */
+-	this->packets.push_back(cp);
+-	static_cast<Tinst *>(this)->AddToCache(cp);
+-}
+-
+-
+-template <class Tinst>
+-void CargoList<Tinst>::Truncate(uint max_remaining)
+-{
+ 	for (Iterator it(packets.begin()); it != packets.end(); /* done during loop*/) {
+ 		CargoPacket *cp = *it;
+ 		if (max_remaining == 0) {
+@@ -155,9 +144,9 @@
+ 	}
+ }
+ 
+-template <class Tinst>
++template <class Tinst, class Tcont>
+ template <class Tother_inst>
+-bool CargoList<Tinst>::MoveTo(Tother_inst *dest, uint max_move, MoveToAction mta, CargoPayment *payment, uint data)
++bool CargoList<Tinst, Tcont>::MoveTo(Tother_inst *dest, uint max_move, MoveToAction mta, CargoPayment *payment, uint data)
+ {
+ 	assert(mta == MTA_FINAL_DELIVERY || dest != NULL);
+ 	assert(mta == MTA_UNLOAD || mta == MTA_CARGO_LOAD || payment != NULL);
+@@ -234,8 +223,8 @@
+ 	return it != packets.end();
+ }
+ 
+-template <class Tinst>
+-void CargoList<Tinst>::InvalidateCache()
++template <class Tinst, class Tcont>
++void CargoList<Tinst, Tcont>::InvalidateCache()
+ {
+ 	this->count = 0;
+ 	this->cargo_days_in_transit = 0;
+@@ -245,6 +234,11 @@
+ 	}
+ }
+ 
++/*
++ *
++ * Vehicle cargo list implementation
++ *
++ */
+ 
+ void VehicleCargoList::RemoveFromCache(const CargoPacket *cp)
+ {
+@@ -258,33 +252,177 @@
+ 	this->Parent::AddToCache(cp);
+ }
+ 
++void VehicleCargoList::InvalidateCache()
++{
++	this->feeder_share = 0;
++	this->Parent::InvalidateCache();
++}
++
+ void VehicleCargoList::AgeCargo()
+ {
+-	for (ConstIterator it(this->packets.begin()); it != this->packets.end(); it++) {
++	CargoPacketSet new_packets;
++	CargoPacket *last = NULL;
++	for (Iterator it = this->packets.begin(); it != this->packets.end();) {
+ 		CargoPacket *cp = *it;
+-		/* If we're at the maximum, then we can't increase no more. */
+-		if (cp->days_in_transit == 0xFF) continue;
++		this->packets.erase(it++);
++		if (cp->days_in_transit != 0xFF) {
++			cp->days_in_transit++;
++			this->cargo_days_in_transit += cp->count;
++		} else if (last != NULL && VehicleCargoList::AreMergable(last, cp)) {
++			/* there are no vehicles with > MAX_COUNT capacity,
++			 * so we don't have to check for overflow here */
++			assert(last->count + cp->count <= CargoPacket::MAX_COUNT);
++			last->Merge(cp);
++			continue;
++		}
+ 
+-		cp->days_in_transit++;
+-		this->cargo_days_in_transit += cp->count;
++		/* hinting makes this a constant time operation */
++		new_packets.insert(new_packets.end(), cp);
++		last = cp;
+ 	}
++	/* this is constant time, too */
++	this->packets.swap(new_packets);
+ }
+ 
+-void VehicleCargoList::InvalidateCache()
++void VehicleCargoList::Append(CargoPacket *cp)
+ {
+-	this->feeder_share = 0;
+-	this->Parent::InvalidateCache();
++	this->AddToCache(cp);
++	Iterator it(this->packets.lower_bound(cp));
++	CargoPacket *icp;
++	if (it != this->packets.end() && VehicleCargoList::AreMergable(cp, icp = *it)) {
++		/* there aren't any vehicles able to carry that amount of cargo */
++		assert(cp->count + icp->count <= CargoPacket::MAX_COUNT);
++		icp->Merge(cp);
++	} else {
++		/* The packet could not be merged with another one */
++		this->packets.insert(it, cp);
++	}
+ }
+ 
++/**
++ * Invalidates all cargo packets from the given source in all vehicles.
++ * @see CargoPacket::InvalidateAllFrom(SourceType src_type, SourceID src)
++ * @param src_type type of source
++ * @param src index of source
++ */
++/* static */ void VehicleCargoList::InvalidateAllFrom(SourceType src_type, SourceID src)
++{
++	Vehicle *v;
++	FOR_ALL_VEHICLES(v) {
++		CargoPacketSet &packets = v->cargo.packets;
++		for (Iterator it = packets.begin(); it != packets.end();) {
++			CargoPacket *p = *it;
++			if (p->source_type == src_type && p->source_id == src) {
++				packets.erase(it++);
++				p->source_id = INVALID_SOURCE;
++				packets.insert(p);
++			} else {
++				++it;
++			}
++		}
++	}
++}
++
++/**
++ * Convert the packets from a std::set<void *> (which has been created by the saveload system)
++ * to a std::set<void *, PacketCompare>, then build the cache.
++ * This involves moving all packets to a temporary set, calling the destructor of the std::set<void *> manually,
++ * placement-creating a new set and swapping the temporary set in.
++ * It is assumed that sizeof(std::set<void *>) == sizeof(std::set<CargoPacket *, PacketCompare>), but if this doesn't
++ * hold we probably get problems with loading lists, too.
++ */
++void VehicleCargoList::SortAndCache()
++{
++	typedef std::set<CargoPacket *> UnsortedSet;
++	UnsortedSet &unsorted = (UnsortedSet &)this->packets;
++
++	CargoPacketSet new_packets;
++	for(UnsortedSet::iterator it = unsorted.begin(); it != unsorted.end(); ++it) {
++		CargoPacket *cp = *it;
++		CargoPacketSet::iterator new_it = new_packets.find(cp);
++		if (new_it != new_packets.end()) {
++			(*new_it)->Merge(cp);
++		} else {
++			new_packets.insert(cp);
++		}
++	}
++
++	unsorted.~UnsortedSet(); // destroy whatever may be left
++	CargoPacketSet *my_packets = new (&this->packets) CargoPacketSet; // allocate a new set of the correct type there
++	my_packets->swap(new_packets);
++	assert(*my_packets == this->packets);
++
++	this->InvalidateCache();
++}
++
++/**
++ * compares the given packets by the same principles as SameSource, but creates a strict weak ordering
++ * useful for std::set.
++ * @param a the first cargo packet to compare
++ * @param b the second cargo packet to compare
++ * @return if a < b according to source_xy, source_type, source_id and days_in_transit in this order.
++ */
++bool PacketCompare::operator()(const CargoPacket *a, const CargoPacket *b) const
++{
++	if (a->SourceStationXY()   != b->SourceStationXY())   return a->SourceStationXY()   < b->SourceStationXY();
++	if (a->SourceSubsidyType() != b->SourceSubsidyType()) return a->SourceSubsidyType() < b->SourceSubsidyType();
++	if (a->SourceSubsidyID()   != b->SourceSubsidyID())   return a->SourceSubsidyID()   < b->SourceSubsidyID();
++	if (a->LoadedAtXY()        != b->LoadedAtXY())        return a->LoadedAtXY()        < b->LoadedAtXY();
++
++	/* it's important to check this last to make the merging in AgeCargo work. */
++	return a->DaysInTransit() < b->DaysInTransit();
++}
++
+ /*
++ * Station cargo list implementation
++ */
++
++void StationCargoList::Append(CargoPacket *cp)
++{
++	assert(cp != NULL);
++
++	this->AddToCache(cp);
++	if (!this->packets.empty()) {
++		CargoPacket *icp = this->packets.back();
++		if (StationCargoList::AreMergable(icp, cp) && icp->count + cp->count <= CargoPacket::MAX_COUNT) {
++			icp->Merge(cp);
++			return;
++		}
++	}
++
++	/* The packet could not be merged with another one */
++	this->packets.push_back(cp);
++}
++
++/**
++ * Invalidates all cargo packets from the given source in all stations.
++ * @see CargoPacket::InvalidateAllFrom(SourceType src_type, SourceID src)
++ * @param src_type type of source
++ * @param src index of source
++ */
++/* static */ void StationCargoList::InvalidateAllFrom(SourceType src_type, SourceID src)
++{
++	Station *st;
++	FOR_ALL_STATIONS(st) {
++		for (CargoID c = 0; c != NUM_CARGO; ++c) {
++			CargoPacketList &packets = st->goods[c].cargo.packets;
++			for (Iterator it = packets.begin(); it != packets.end(); ++it) {
++				CargoPacket *cp = *it;
++				if (cp->source_type == src_type && cp->source_id == src) cp->source_id = INVALID_SOURCE;
++			}
++		}
++	}
++}
++
++/*
+  * We have to instantiate everything we want to be usable.
+  */
+-template class CargoList<VehicleCargoList>;
+-template class CargoList<StationCargoList>;
++template class CargoList<VehicleCargoList, CargoPacketSet>;
++template class CargoList<StationCargoList, CargoPacketList>;
+ 
+ /** Autoreplace Vehicle -> Vehicle 'transfer' */
+-template bool CargoList<VehicleCargoList>::MoveTo(VehicleCargoList *, uint max_move, MoveToAction mta, CargoPayment *payment, uint data);
++template bool CargoList<VehicleCargoList, CargoPacketSet>::MoveTo(VehicleCargoList *, uint max_move, MoveToAction mta, CargoPayment *payment, uint data);
+ /** Cargo unloading at a station */
+-template bool CargoList<VehicleCargoList>::MoveTo(StationCargoList *, uint max_move, MoveToAction mta, CargoPayment *payment, uint data);
++template bool CargoList<VehicleCargoList, CargoPacketSet>::MoveTo(StationCargoList *, uint max_move, MoveToAction mta, CargoPayment *payment, uint data);
+ /** Cargo loading at a station */
+-template bool CargoList<StationCargoList>::MoveTo(VehicleCargoList *, uint max_move, MoveToAction mta, CargoPayment *payment, uint data);
++template bool CargoList<StationCargoList, CargoPacketList>::MoveTo(VehicleCargoList *, uint max_move, MoveToAction mta, CargoPayment *payment, uint data);
+Index: src/saveload/saveload.cpp
+===================================================================
+--- src/saveload/saveload.cpp	(revision 17817)
++++ src/saveload/saveload.cpp	(working copy)
+@@ -47,6 +47,11 @@
+ 
+ #include "saveload_internal.h"
+ 
++#include <list>
++#include <set>
++typedef std::list<void *> PtrList;
++typedef std::set<void *> PtrSet;
++
+ extern const uint16 SAVEGAME_VERSION = 127;
+ 
+ SavegameType _savegame_type; ///< type of savegame we are loading
+@@ -748,12 +753,14 @@
+ 
+ 
+ /**
+- * Return the size in bytes of a list
+- * @param list The std::list to find the size of
++ * Return the size in bytes of a container
++ * @tparam Tcontainer the type of the container; tested with std::list<void *> and std::set<void *>
++ * @param list The container to find the size of
+  */
+-static inline size_t SlCalcListLen(const void *list)
++template <class Tcontainer>
++static inline size_t SlCalcContLen(const void *cont)
+ {
+-	std::list<void *> *l = (std::list<void *> *) list;
++	Tcontainer *l = (Tcontainer *) cont;
+ 
+ 	int type_size = CheckSavegameVersion(69) ? 2 : 4;
+ 	/* Each entry is saved as type_size bytes, plus type_size bytes are used for the length
+@@ -763,27 +770,28 @@
+ 
+ 
+ /**
+- * Save/Load a list.
+- * @param list The list being manipulated
+- * @param conv SLRefType type of the list (Vehicle *, Station *, etc)
++ * Save/Load a container.
++ * @tparam Tcontainer the type of the container; tested with std::list<void *> and std::set<void *>
++ * @param container The container being manipulated
++ * @param conv SLRefType type of the container's contents (Vehicle *, Station *, etc)
+  */
+-void SlList(void *list, SLRefType conv)
++template <class Tcontainer>
++void SlCont(void *container, SLRefType conv)
+ {
+ 	/* Automatically calculate the length? */
+ 	if (_sl.need_length != NL_NONE) {
+-		SlSetLength(SlCalcListLen(list));
++		SlSetLength(SlCalcContLen<Tcontainer>(container));
+ 		/* Determine length only? */
+ 		if (_sl.need_length == NL_CALCLENGTH) return;
+ 	}
+ 
+-	typedef std::list<void *> PtrList;
+-	PtrList *l = (PtrList *)list;
++	Tcontainer *l = (Tcontainer *)container;
+ 
+ 	switch (_sl.action) {
+ 		case SLA_SAVE: {
+ 			SlWriteUint32((uint32)l->size());
+ 
+-			PtrList::iterator iter;
++			typename Tcontainer::iterator iter;
+ 			for (iter = l->begin(); iter != l->end(); ++iter) {
+ 				void *ptr = *iter;
+ 				SlWriteUint32((uint32)ReferenceToInt(ptr, conv));
+@@ -796,18 +804,22 @@
+ 			/* Load each reference and push to the end of the list */
+ 			for (size_t i = 0; i < length; i++) {
+ 				size_t data = CheckSavegameVersion(69) ? SlReadUint16() : SlReadUint32();
+-				l->push_back((void *)data);
++				l->insert(l->end(), (void *)data);
+ 			}
+ 			break;
+ 		}
+ 		case SLA_PTRS: {
+-			PtrList temp = *l;
++			Tcontainer temp = *l;
+ 
+ 			l->clear();
+-			PtrList::iterator iter;
++			typename Tcontainer::iterator iter;
+ 			for (iter = temp.begin(); iter != temp.end(); ++iter) {
+ 				void *ptr = IntToReference((size_t)*iter, conv);
+-				l->push_back(ptr);
++
++				/* if l is a list, this line is the same as l->push_back(ptr).
++				 * if it's a set l->end() is a hint which will be correct most times.
++				 */
++				l->insert(l->end(), ptr);
+ 			}
+ 			break;
+ 		}
+@@ -865,6 +877,7 @@
+ 		case SL_ARR:
+ 		case SL_STR:
+ 		case SL_LST:
++		case SL_SET:
+ 			/* CONDITIONAL saveload types depend on the savegame version */
+ 			if (!SlIsObjectValidInSavegame(sld)) break;
+ 
+@@ -873,7 +886,8 @@
+ 				case SL_REF: return SlCalcRefLen();
+ 				case SL_ARR: return SlCalcArrayLen(sld->length, sld->conv);
+ 				case SL_STR: return SlCalcStringLen(GetVariableAddress(object, sld), sld->length, sld->conv);
+-				case SL_LST: return SlCalcListLen(GetVariableAddress(object, sld));
++				case SL_LST: return SlCalcContLen<PtrList>(GetVariableAddress(object, sld));
++				case SL_SET: return SlCalcContLen<PtrSet>(GetVariableAddress(object, sld));
+ 				default: NOT_REACHED();
+ 			}
+ 			break;
+@@ -895,6 +909,7 @@
+ 		case SL_ARR:
+ 		case SL_STR:
+ 		case SL_LST:
++		case SL_SET:
+ 			/* CONDITIONAL saveload types depend on the savegame version */
+ 			if (!SlIsObjectValidInSavegame(sld)) return false;
+ 			if (SlSkipVariableOnLoad(sld)) return false;
+@@ -917,7 +932,8 @@
+ 					break;
+ 				case SL_ARR: SlArray(ptr, sld->length, conv); break;
+ 				case SL_STR: SlString(ptr, sld->length, conv); break;
+-				case SL_LST: SlList(ptr, (SLRefType)conv); break;
++				case SL_LST: SlCont<PtrList>(ptr, (SLRefType)conv); break;
++				case SL_SET: SlCont<PtrSet>(ptr, (SLRefType)conv); break;
+ 				default: NOT_REACHED();
+ 			}
+ 			break;
+Index: src/saveload/cargopacket_sl.cpp
+===================================================================
+--- src/saveload/cargopacket_sl.cpp	(revision 17817)
++++ src/saveload/cargopacket_sl.cpp	(working copy)
+@@ -27,11 +27,13 @@
+ 			* to the current tile of the vehicle to prevent excessive profits
+ 			*/
+ 		FOR_ALL_VEHICLES(v) {
+-			const VehicleCargoList::List *packets = v->cargo.Packets();
+-			for (VehicleCargoList::ConstIterator it(packets->begin()); it != packets->end(); it++) {
++			VehicleCargoList::List *packets = const_cast<VehicleCargoList::List *>(v->cargo.Packets());
++			for (VehicleCargoList::Iterator it(packets->begin()); it != packets->end(); /* Done in the loop */) {
+ 				CargoPacket *cp = *it;
++				packets->erase(it++);
+ 				cp->source_xy = Station::IsValidID(cp->source) ? Station::Get(cp->source)->xy : v->tile;
+ 				cp->loaded_at_xy = cp->source_xy;
++				packets->insert(cp);
+ 			}
+ 		}
+ 
+@@ -68,7 +70,7 @@
+ 		 * 'new CargoPacket' + cargolist.Append so their caches are already
+ 		 * correct and do not need rebuilding. */
+ 		Vehicle *v;
+-		FOR_ALL_VEHICLES(v) v->cargo.InvalidateCache();
++		FOR_ALL_VEHICLES(v) v->cargo.SortAndCache();
+ 
+ 		Station *st;
+ 		FOR_ALL_STATIONS(st) {
+Index: src/saveload/saveload.h
+===================================================================
+--- src/saveload/saveload.h	(revision 17817)
++++ src/saveload/saveload.h	(working copy)
+@@ -186,6 +186,7 @@
+ 	SL_ARR         =  2,
+ 	SL_STR         =  3,
+ 	SL_LST         =  4,
++	SL_SET         =  5,
+ 	/* non-normal save-load types */
+ 	SL_WRITEBYTE   =  8,
+ 	SL_VEH_INCLUDE =  9,
+@@ -220,12 +221,14 @@
+ #define SLE_CONDARR(base, variable, type, length, from, to) SLE_GENERAL(SL_ARR, base, variable, type, length, from, to)
+ #define SLE_CONDSTR(base, variable, type, length, from, to) SLE_GENERAL(SL_STR, base, variable, type, length, from, to)
+ #define SLE_CONDLST(base, variable, type, from, to) SLE_GENERAL(SL_LST, base, variable, type, 0, from, to)
++#define SLE_CONDSET(base, variable, type, from, to) SLE_GENERAL(SL_SET, base, variable, type, 0, from, to)
+ 
+ #define SLE_VAR(base, variable, type) SLE_CONDVAR(base, variable, type, 0, SL_MAX_VERSION)
+ #define SLE_REF(base, variable, type) SLE_CONDREF(base, variable, type, 0, SL_MAX_VERSION)
+ #define SLE_ARR(base, variable, type, length) SLE_CONDARR(base, variable, type, length, 0, SL_MAX_VERSION)
+ #define SLE_STR(base, variable, type, length) SLE_CONDSTR(base, variable, type, length, 0, SL_MAX_VERSION)
+ #define SLE_LST(base, variable, type) SLE_CONDLST(base, variable, type, 0, SL_MAX_VERSION)
++#define SLE_SET(base, variable, type) SLE_CONDSET(base, variable, type, 0, SL_MAX_VERSION)
+ 
+ #define SLE_CONDNULL(length, from, to) SLE_CONDARR(NullStruct, null, SLE_FILE_U8 | SLE_VAR_NULL | SLF_CONFIG_NO, length, from, to)
+ 
+Index: src/saveload/vehicle_sl.cpp
+===================================================================
+--- src/saveload/vehicle_sl.cpp	(revision 17817)
++++ src/saveload/vehicle_sl.cpp	(working copy)
+@@ -445,7 +445,7 @@
+ 		SLEG_CONDVAR(         _cargo_source_xy,      SLE_UINT32,                  44,  67),
+ 		     SLE_VAR(Vehicle, cargo_cap,             SLE_UINT16),
+ 		SLEG_CONDVAR(         _cargo_count,          SLE_UINT16,                   0,  67),
+-		 SLE_CONDLST(Vehicle, cargo.packets,         REF_CARGO_PACKET,            68, SL_MAX_VERSION),
++		 SLE_CONDSET(Vehicle, cargo.packets,         REF_CARGO_PACKET,            68, SL_MAX_VERSION),
+ 
+ 		     SLE_VAR(Vehicle, day_counter,           SLE_UINT8),
+ 		     SLE_VAR(Vehicle, tick_counter,          SLE_UINT8),

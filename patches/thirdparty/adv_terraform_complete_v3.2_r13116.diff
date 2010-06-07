@@ -1,0 +1,846 @@
+Index: src/airport_gui.cpp
+===================================================================
+--- src/airport_gui.cpp	(revision 13116)
++++ src/airport_gui.cpp	(working copy)
+@@ -99,6 +99,15 @@
+ 			}
+ 			break;
+ 
++		case WE_PLACE_DRAW:
++			if (e->we.place.pt.x == -1) break;
++			StartDrawing(e);
++		/* FALL THROUGH */
++		case WE_DRAG_DRAW:
++			if (e->we.place.pt.x == -1) break;
++			GUIPlaceProcDraw(e);
++			break;
++
+ 		case WE_ABORT_PLACE_OBJ:
+ 			w->RaiseButtons();
+ 
+Index: src/command.cpp
+===================================================================
+--- src/command.cpp	(revision 13116)
++++ src/command.cpp	(working copy)
+@@ -199,6 +199,9 @@
+ DEF_COMMAND(CmdChangeTimetable);
+ DEF_COMMAND(CmdSetVehicleOnTime);
+ DEF_COMMAND(CmdAutofillTimetable);
++
++DEF_COMMAND(CmdTerraformTileToHeight);
++DEF_COMMAND(CmdRaiseLowerLand);
+ #undef DEF_COMMAND
+ 
+ /**
+@@ -348,6 +351,8 @@
+ 	{CmdChangeTimetable,                     0}, /* CMD_CHANGE_TIMETABLE */
+ 	{CmdSetVehicleOnTime,                    0}, /* CMD_SET_VEHICLE_ON_TIME */
+ 	{CmdAutofillTimetable,                   0}, /* CMD_AUTOFILL_TIMETABLE */
++	{CmdTerraformTileToHeight,        CMD_AUTO}, /* CMD_TERRAFORM_TILE_TO_HEIGHT */
++	{CmdRaiseLowerLand,               CMD_AUTO}, /* CMD_RAISELOWER_LAND */
+ };
+ 
+ /*!
+@@ -546,6 +551,8 @@
+ 	notest =
+ 		(cmd & 0xFF) == CMD_CLEAR_AREA ||
+ 		(cmd & 0xFF) == CMD_LEVEL_LAND ||
++		(cmd & 0xFF) == CMD_TERRAFORM_TILE_TO_HEIGHT ||
++		(cmd & 0xFF) == CMD_RAISELOWER_LAND ||
+ 		(cmd & 0xFF) == CMD_REMOVE_LONG_ROAD ||
+ 		(cmd & 0xFF) == CMD_CLONE_VEHICLE;
+ 
+Index: src/command_type.h
+===================================================================
+--- src/command_type.h	(revision 13116)
++++ src/command_type.h	(working copy)
+@@ -280,6 +280,9 @@
+ 	CMD_CHANGE_TIMETABLE,             ///< change the timetable for a vehicle
+ 	CMD_SET_VEHICLE_ON_TIME,          ///< set the vehicle on time feature (timetable)
+ 	CMD_AUTOFILL_TIMETABLE,           ///< autofill the timetable
++
++	CMD_TERRAFORM_TILE_TO_HEIGHT,     ///< set a single tile to target height
++	CMD_RAISELOWER_LAND,              ///< raise or lower an area of land
+ };
+ 
+ /**
+Index: src/dock_gui.cpp
+===================================================================
+--- src/dock_gui.cpp	(revision 13116)
++++ src/dock_gui.cpp	(working copy)
+@@ -172,6 +172,15 @@
+ 		}
+ 		break;
+ 
++	case WE_PLACE_DRAW:
++		if (e->we.place.pt.x == -1) break;
++		StartDrawing(e);
++	/* FALL THROUGH */
++	case WE_DRAG_DRAW:
++		if (e->we.place.pt.x == -1) break;
++		GUIPlaceProcDraw(e);
++		break;
++
+ 	case WE_ABORT_PLACE_OBJ:
+ 		w->RaiseButtons();
+ 
+Index: src/lang/english.txt
+===================================================================
+--- src/lang/english.txt	(revision 13116)
++++ src/lang/english.txt	(working copy)
+@@ -1609,6 +1609,7 @@
+ STR_0807_ESTIMATED_INCOME                                       :{WHITE}Estimated Income: {CURRENCY}
+ STR_0808_CAN_T_RAISE_LAND_HERE                                  :{WHITE}Can't raise land here...
+ STR_0809_CAN_T_LOWER_LAND_HERE                                  :{WHITE}Can't lower land here...
++STR_CAN_T_LEVEL_LAND_HERE                                       :{WHITE}Can't level land here...
+ STR_080A_ROCKS                                                  :Rocks
+ STR_080B_ROUGH_LAND                                             :Rough land
+ STR_080C_BARE_LAND                                              :Bare land
+@@ -1623,6 +1624,7 @@
+ STR_1002_EXCAVATION_WOULD_DAMAGE                                :{WHITE}Excavation would damage tunnel
+ STR_1003_ALREADY_AT_SEA_LEVEL                                   :{WHITE}Already at sea-level
+ STR_1004_TOO_HIGH                                               :{WHITE}Too high
++STR_ALREADY_FLAT                                                :{WHITE}Already flat
+ STR_1005_NO_SUITABLE_RAILROAD_TRACK                             :{WHITE}No suitable railway track
+ STR_1007_ALREADY_BUILT                                          :{WHITE}...already built
+ STR_1008_MUST_REMOVE_RAILROAD_TRACK                             :{WHITE}Must remove railway track first
+Index: src/rail_gui.cpp
+===================================================================
+--- src/rail_gui.cpp	(revision 13116)
++++ src/rail_gui.cpp	(working copy)
+@@ -648,6 +648,15 @@
+ 		}
+ 		break;
+ 
++	case WE_PLACE_DRAW:
++		if (e->we.place.pt.x == -1) break;
++		StartDrawing(e);
++	/* FALL THROUGH */
++	case WE_DRAG_DRAW:
++		if (e->we.place.pt.x == -1) break;
++		GUIPlaceProcDraw(e);
++		break;
++
+ 	case WE_ABORT_PLACE_OBJ:
+ 		w->RaiseButtons();
+ 		w->DisableWidget(RTW_REMOVE);
+Index: src/road_gui.cpp
+===================================================================
+--- src/road_gui.cpp	(revision 13116)
++++ src/road_gui.cpp	(working copy)
+@@ -592,6 +592,15 @@
+ 			}
+ 			break;
+ 
++		case WE_PLACE_DRAW:
++			if (e->we.place.pt.x == -1) break;
++			StartDrawing(e);
++		/* FALL THROUGH */
++		case WE_DRAG_DRAW:
++			if (e->we.place.pt.x == -1) break;
++			GUIPlaceProcDraw(e);
++			break;
++
+ 		case WE_PLACE_PRESIZE: {
+ 			TileIndex tile = e->we.place.tile;
+ 
+Index: src/terraform_cmd.cpp
+===================================================================
+--- src/terraform_cmd.cpp	(revision 13116)
++++ src/terraform_cmd.cpp	(working copy)
+@@ -268,6 +268,7 @@
+ 	/* Check if the terraforming is valid wrt. tunnels, bridges and objects on the surface */
+ 	{
+ 		TileIndex *ti = ts.tile_table;
++		const bool curr_gen = _generating_world;
+ 
+ 		for (int count = ts.tile_table_count; count != 0; count--, ti++) {
+ 			TileIndex tile = *ti;
+@@ -301,7 +302,9 @@
+ 				return_cmd_error(STR_1002_EXCAVATION_WOULD_DAMAGE);
+ 			}
+ 			/* Check tiletype-specific things, and add extra-cost */
++			if(_game_mode == GM_EDITOR) _generating_world = true; // used to create green terraformed land
+ 			CommandCost cost = _tile_type_procs[GetTileType(tile)]->terraform_tile_proc(tile, flags | DC_AUTO, z_min * TILE_HEIGHT, tileh);
++			if(_game_mode == GM_EDITOR) _generating_world = curr_gen;
+ 			if (CmdFailed(cost)) {
+ 				_terraform_err_tile = tile;
+ 				return cost;
+@@ -341,22 +344,13 @@
+  * @param tile end tile of area-drag
+  * @param flags for this command type
+  * @param p1 start tile of area drag
+- * @param p2 height difference; eg raise (+1), lower (-1) or level (0)
++ * @param p2 unused
+  * @return  error or cost of terraforming
+  */
+ CommandCost CmdLevelLand(TileIndex tile, uint32 flags, uint32 p1, uint32 p2)
+ {
+ 	if (p1 >= MapSize()) return CMD_ERROR;
+ 
+-	/* remember level height */
+-	uint oldh = TileHeight(p1);
+-
+-	/* compute new height */
+-	uint h = oldh + p2;
+-
+-	/* Check range of destination height */
+-	if (h > MAX_TILE_HEIGHT) return_cmd_error((oldh == 0) ? STR_1003_ALREADY_AT_SEA_LEVEL : STR_1004_TOO_HIGH);
+-
+ 	/* make sure sx,sy are smaller than ex,ey */
+ 	int ex = TileX(tile);
+ 	int ey = TileY(tile);
+@@ -371,26 +365,215 @@
+ 
+ 	Money money = GetAvailableMoneyForCommand();
+ 	CommandCost cost(EXPENSES_CONSTRUCTION);
++	uint h = TileHeight(p1);
++	_additional_cash_required = 0;
++	_terraform_err_tile = INVALID_TILE;
+ 
++	bool change = false;
++	bool succeed = false;
++
+ 	BEGIN_TILE_LOOP(tile2, size_x, size_y, tile) {
+ 		uint curh = TileHeight(tile2);
+ 		while (curh != h) {
++			change = true;
+ 			CommandCost ret = DoCommand(tile2, SLOPE_N, (curh > h) ? 0 : 1, flags & ~DC_EXEC, CMD_TERRAFORM_LAND);
+ 			if (CmdFailed(ret)) break;
+ 
+-			if (flags & DC_EXEC) {
+-				money -= ret.GetCost();
+-				if (money < 0) {
+-					_additional_cash_required = ret.GetCost();
+-					return cost;
+-				}
+-				DoCommand(tile2, SLOPE_N, (curh > h) ? 0 : 1, flags, CMD_TERRAFORM_LAND);
++			succeed = true;
++
++			money -= ret.GetCost();
++			if ((flags & DC_EXEC) && (money < 0)) {
++				_additional_cash_required += ret.GetCost();
++			} else {
++				cost.AddCost(ret);
++				if (flags & DC_EXEC) DoCommand(tile2, SLOPE_N, (curh > h) ? 0 : 1, flags, CMD_TERRAFORM_LAND);
+ 			}
+-
+-			cost.AddCost(ret);
+ 			curh += (curh > h) ? -1 : 1;
+ 		}
+ 	} END_TILE_LOOP(tile2, size_x, size_y, tile)
+ 
+-	return (cost.GetCost() == 0) ? CMD_ERROR : cost;
++	if (!change) return_cmd_error(STR_ALREADY_FLAT);
++	if (succeed) return cost;
++	return CMD_ERROR;
+ }
++
++/** Raise or lower a rectangled area of land. When raising get the lowest tiles,
++ * when lowering the highest tiles and raise/lower them by one regardingly. 
++ * @param tile end tile of area
++ * @param flags for this command type
++ * @param p1 start tile of area
++ * @param p2 direction; eg up (1) or down (0)
++ * @return error or cost of terraforming
++ */
++CommandCost CmdRaiseLowerLand(TileIndex tile, uint32 flags, uint32 p1, uint32 p2)
++{
++	int ex, ey, sx, sy;
++	int sizex, sizey;
++	uint h;
++	CommandCost money;
++	CommandCost ret;
++	CommandCost cost(EXPENSES_CONSTRUCTION);
++	bool succeed = false;
++
++	_terraform_err_tile = 0;
++
++	if (p1 >= MapSize()) return CMD_ERROR;
++
++	/* make sure sx,sy are smaller than ex,ey */
++	ex = TileX(tile);
++	ey = TileY(tile);
++	sx = TileX(p1);
++	sy = TileY(p1);
++	if (ex < sx) Swap(ex, sx);
++	if (ey < sy) Swap(ey, sy);
++	tile = TileXY(sx, sy);
++
++	sizex = ex - sx + 1;
++	sizey = ey - sy + 1;
++
++	money.AddCost(GetAvailableMoneyForCommand());
++	_additional_cash_required = 0;
++
++// ---
++
++	if (p2) {
++		/* Raise land */
++		h = MAX_TILE_HEIGHT;
++		BEGIN_TILE_LOOP(tile2, sizex, sizey, tile) {
++			h = min(h, TileHeight(tile2));
++		} END_TILE_LOOP(tile2, sizex, sizey, tile)
++		if (h == MAX_TILE_HEIGHT) return_cmd_error(STR_1004_TOO_HIGH);
++	} else {
++		/* Lower land */
++		h = 0;
++		BEGIN_TILE_LOOP(tile2, sizex, sizey, tile) {
++			h = max(h, TileHeight(tile2));
++		} END_TILE_LOOP(tile2, sizex, sizey, tile)
++		if (h == 0) return_cmd_error(STR_1003_ALREADY_AT_SEA_LEVEL);
++	}
++
++	BEGIN_TILE_LOOP(tile2, sizex, sizey, tile) {
++		if (TileHeight(tile2) == h) {
++
++			ret = DoCommand(tile2, SLOPE_N, p2, flags & ~DC_EXEC, CMD_TERRAFORM_LAND);
++			if (CmdFailed(ret)) break;
++
++			succeed = true;
++
++			money.AddCost(-ret.GetCost());
++			if ((flags & DC_EXEC) && money.GetCost() < 0) {
++				_additional_cash_required += ret.GetCost();
++			} else {
++				cost.AddCost(ret);
++				if (flags & DC_EXEC) DoCommand(tile2, SLOPE_N, p2, flags, CMD_TERRAFORM_LAND);
++			}
++		}
++	} END_TILE_LOOP(tile2, sizex, sizey, tile)
++
++	if (succeed) return cost;
++	return CMD_ERROR;
++}
++
++/** Sets a single tile to target height (for raise/lower/level draw)
++ * @param tile tile to modify
++ * @param flags for this command type
++ * @param p1 target height
++ * @param p2 which terraform operation was used; eg raise (+1), lower (-1) or level (0)
++ * @return  error or cost of terraforming
++ */
++CommandCost CmdLevelSingleTile(TileIndex tile, uint32 flags, uint32 p1, uint32 p2)
++{
++	uint curh;
++	CommandCost money;
++	CommandCost ret;
++	CommandCost cost(EXPENSES_CONSTRUCTION);
++	bool change = false;
++	bool succeed = false;
++
++	_terraform_err_tile = 0;
++
++	/* remember level height */
++	curh = TileHeight(tile);
++
++	/* Check range of destination height */
++	if (p1 > MAX_TILE_HEIGHT) return_cmd_error((p2 == (uint32)-1) ? STR_1003_ALREADY_AT_SEA_LEVEL : STR_1004_TOO_HIGH);
++
++	money.AddCost(GetAvailableMoneyForCommand());
++	_additional_cash_required = 0;
++
++	while (((p2 == 1) && (curh < p1)) || ((p2 == uint32(-1)) && (curh > p1)) || ((p2 == 0) && (curh != p1))) {
++		change = true;
++		ret = DoCommand(tile, SLOPE_N, (curh > p1) ? 0 : 1, flags & ~DC_EXEC, CMD_TERRAFORM_LAND);
++		if (CmdFailed(ret)) break;
++		succeed = true;
++
++		money.AddCost(-ret.GetCost());
++		if ((flags & DC_EXEC) && money.GetCost() < 0) {
++			_additional_cash_required += ret.GetCost();
++		} else {
++			cost.AddCost(ret);
++			if (flags & DC_EXEC) DoCommand(tile, SLOPE_N, (curh > p1) ? 0 : 1, flags, CMD_TERRAFORM_LAND);
++		}
++		curh += (curh > p1) ? -1 : 1;
++	}
++
++	if (!change) return cost;
++	if (succeed) return cost;
++	return CMD_ERROR;
++}
++
++/** Sets a single tile to target height (for raise/lower/level draw)
++ * @param tile tile to modify
++ * @param flags for this command type
++ * @param p1 target height (without modifier)
++ * @param p2 height modifier; eg raise (+1), lower (-1) or level (0)
++ * @return error or cost of terraforming
++ * @note don't confuse with CommandCost TerraformTileHeight!
++ */
++CommandCost CmdTerraformTileToHeight(TileIndex tile, uint32 flags, uint32 p1, uint32 p2)
++{
++	_terraform_err_tile = 0;
++
++	if (p1 >= MapSize()) return CMD_ERROR;
++
++	/* Check range of destination height */
++	if (p1 == MAX_TILE_HEIGHT && p2 == 1) return_cmd_error(STR_1004_TOO_HIGH);
++	if (p1 == 0 && p2 == (uint32(-1))) return_cmd_error(STR_1003_ALREADY_AT_SEA_LEVEL);
++
++	uint curh = TileHeight(tile); // current height
++	uint h = p1 + p2; // target height
++
++	CommandCost cost(EXPENSES_CONSTRUCTION); // the total cost for the operation
++
++	/* if the tile already has the target height, return cost 0 */
++	if ((p2 == 1 || curh <= h) && (p2 == uint32(-1) || curh >= h)) return cost;
++
++	Money money = GetAvailableMoneyForCommand(); // the available money
++	_additional_cash_required = 0; // additional cash required if we run out of money
++	bool succeed = false; // did at least one sub-command succeed?
++
++	/* the different comparators are needed because we don't want to lower with the raise tool and vice versa */
++	while ((p2 != 1 && curh > h) || (p2 != uint32(-1) && curh < h)) {
++		/* first, calculate the outcome of one terraform step with a dry run */
++		CommandCost ret = DoCommand(tile, SLOPE_N, (curh > h) ? 0 : 1, flags & ~DC_EXEC, CMD_TERRAFORM_LAND);
++		if (CmdFailed(ret)) break; // the step failed
++		succeed = true;
++
++		money -= ret.GetCost();
++		/* if this command is executed and we have run out of money, add it to additional cash required */
++		if ((flags & DC_EXEC) && money < 0) {
++			_additional_cash_required += ret.GetCost();
++		} else {
++			/* if it's not executed OR we have enough money, add the sub-command's costs to total costs*/
++			cost.AddCost(ret);
++			/* we have enough money, so now really execute the step */
++			if (flags & DC_EXEC) DoCommand(tile, SLOPE_N, (curh > h) ? 0 : 1, flags, CMD_TERRAFORM_LAND);
++		}
++		/* the height has been lowered or raised */
++		curh += (curh > h) ? -1 : 1;
++	}
++
++	/* if we (at least partly) succeeded, return the costs, else an error */
++	if (succeed) return cost;
++	return CMD_ERROR;
++}
+Index: src/terraform_gui.cpp
+===================================================================
+--- src/terraform_gui.cpp	(revision 13116)
++++ src/terraform_gui.cpp	(working copy)
+@@ -102,6 +102,9 @@
+ 	if (success) SndPlayTileFx(SND_1F_SPLAT, end);
+ }
+ 
++static uint _draw_height;
++static TileIndex _draw_tile;
++
+ /**
+  * A central place to handle all X_AND_Y dragged GUI functions.
+  * @param e WindowEvent variable holding in its higher bits (excluding the lower
+@@ -120,13 +123,13 @@
+ 			DoCommandP(end_tile, start_tile, 0, CcPlaySound10, CMD_CLEAR_AREA | CMD_MSG(STR_00B5_CAN_T_CLEAR_THIS_AREA));
+ 			break;
+ 		case DDSP_RAISE_AND_LEVEL_AREA:
+-			DoCommandP(end_tile, start_tile, 1, CcTerraform, CMD_LEVEL_LAND | CMD_MSG(STR_0808_CAN_T_RAISE_LAND_HERE));
++			DoCommandP(end_tile, start_tile, 1, CcTerraform, CMD_RAISELOWER_LAND | CMD_MSG(STR_0808_CAN_T_RAISE_LAND_HERE));
+ 			break;
+ 		case DDSP_LOWER_AND_LEVEL_AREA:
+-			DoCommandP(end_tile, start_tile, (uint32)-1, CcTerraform, CMD_LEVEL_LAND | CMD_MSG(STR_0809_CAN_T_LOWER_LAND_HERE));
++			DoCommandP(end_tile, start_tile, 0, CcTerraform, CMD_RAISELOWER_LAND | CMD_MSG(STR_0809_CAN_T_LOWER_LAND_HERE));
+ 			break;
+ 		case DDSP_LEVEL_AREA:
+-			DoCommandP(end_tile, start_tile, 0, CcPlaySound10, CMD_LEVEL_LAND);
++			DoCommandP(end_tile, start_tile, 0, CcTerraform, CMD_LEVEL_LAND | CMD_MSG(STR_CAN_T_LEVEL_LAND_HERE));
+ 			break;
+ 		case DDSP_CREATE_ROCKS:
+ 			GenerateRockyArea(end_tile, start_tile);
+@@ -147,6 +150,60 @@
+ 	return true;
+ }
+ 
++/**
++ * A central place to handle all drag&draw GUI functions.
++ * @param e WindowEvent variable holding in its higher bits the type of action to be performed
++ * @return Returns true if the action was found and handled, and false otherwise.
++ **/
++bool GUIPlaceProcDraw(const WindowEvent *e)
++{
++	TileIndex tile = e->we.place.tile;
++
++	if (tile == _draw_tile) return true;
++
++	switch (e->we.place.select_proc) {
++		case DDSP_DEMOLISH_AREA:
++			DoCommandP(tile, tile, 0, CcPlaySound10, CMD_CLEAR_AREA | CMD_MSG(STR_00B5_CAN_T_CLEAR_THIS_AREA));
++			break;
++		case DDSP_RAISE_AND_LEVEL_AREA:
++			if (TileHeight(tile) <= _draw_height)
++				DoCommandP(tile, _draw_height, 1, CcTerraform, CMD_TERRAFORM_TILE_TO_HEIGHT | CMD_MSG(STR_0808_CAN_T_RAISE_LAND_HERE));
++			break;
++		case DDSP_LOWER_AND_LEVEL_AREA:
++			if (TileHeight(tile) >= _draw_height)
++				DoCommandP(tile, _draw_height, (uint32)-1, CcTerraform, CMD_TERRAFORM_TILE_TO_HEIGHT | CMD_MSG(STR_0809_CAN_T_LOWER_LAND_HERE));
++			break;
++		case DDSP_LEVEL_AREA:
++			if (TileHeight(tile) != _draw_height)
++				DoCommandP(tile, _draw_height, 0, CcTerraform, CMD_TERRAFORM_TILE_TO_HEIGHT | CMD_MSG(STR_CAN_T_LEVEL_LAND_HERE));
++			break;
++		case DDSP_CREATE_ROCKS:
++			GenerateRockyArea(tile, tile);
++			break;
++		case DDSP_CREATE_DESERT:
++			GenerateDesertArea(tile, tile);
++			break;
++		case DDSP_CREATE_RIVER:
++			DoCommandP(tile, tile, 2, CcBuildCanal, CMD_BUILD_CANAL | CMD_MSG(STR_CANT_BUILD_CANALS));
++			break;
++		default:
++			return false;
++	}
++
++	_draw_tile = tile;
++	return true;
++}
++
++/**
++ * Sets the current drawing tile to invalid tile and the drawing height to the starting tile height.
++ * @param e WindowEvent
++ **/
++void StartDrawing(const WindowEvent *e)
++{
++	_draw_tile = INVALID_TILE;
++	_draw_height = TileHeight(e->we.place.tile);
++}
++
+ typedef void OnButtonClick(Window *w);
+ 
+ static const uint16 _terraform_keycodes[] = {
+@@ -168,22 +225,26 @@
+ 
+ void PlaceProc_DemolishArea(TileIndex tile)
+ {
+-	VpStartPlaceSizing(tile, VPM_X_AND_Y, DDSP_DEMOLISH_AREA);
++	if (_ctrl_pressed)  VpStartDrawing(tile, DDSP_DEMOLISH_AREA);
++	else VpStartPlaceSizing(tile, VPM_X_AND_Y, DDSP_DEMOLISH_AREA);
+ }
+ 
+ static void PlaceProc_RaiseLand(TileIndex tile)
+ {
+-	VpStartPlaceSizing(tile, VPM_X_AND_Y, DDSP_RAISE_AND_LEVEL_AREA);
++	if (_ctrl_pressed) VpStartDrawing(tile, DDSP_RAISE_AND_LEVEL_AREA);
++	else VpStartPlaceSizing(tile, VPM_X_AND_Y, DDSP_RAISE_AND_LEVEL_AREA);
+ }
+ 
+ static void PlaceProc_LowerLand(TileIndex tile)
+ {
+-	VpStartPlaceSizing(tile, VPM_X_AND_Y, DDSP_LOWER_AND_LEVEL_AREA);
++	if (_ctrl_pressed) VpStartDrawing(tile, DDSP_LOWER_AND_LEVEL_AREA);
++	else VpStartPlaceSizing(tile, VPM_X_AND_Y, DDSP_LOWER_AND_LEVEL_AREA);
+ }
+ 
+ static void PlaceProc_LevelLand(TileIndex tile)
+ {
+-	VpStartPlaceSizing(tile, VPM_X_AND_Y, DDSP_LEVEL_AREA);
++	if (_ctrl_pressed) VpStartDrawing(tile, DDSP_LEVEL_AREA);
++	else VpStartPlaceSizing(tile, VPM_X_AND_Y, DDSP_LEVEL_AREA);
+ }
+ 
+ static void TerraformClick_Lower(Window *w)
+@@ -280,6 +341,15 @@
+ 	case WE_ABORT_PLACE_OBJ:
+ 		w->RaiseButtons();
+ 		break;
++
++	case WE_PLACE_DRAW:
++		if (e->we.place.pt.x == -1) break;
++		StartDrawing(e);
++	/* FALL THROUGH */
++	case WE_DRAG_DRAW:
++		if (e->we.place.pt.x == -1) break;
++		GUIPlaceProcDraw(e);
++		break;
+ 	}
+ }
+ 
+@@ -336,48 +406,27 @@
+  */
+ static void CommonRaiseLowerBigLand(TileIndex tile, int mode)
+ {
+-	int sizex, sizey;
+-	uint h;
+-
+-	_generating_world = true; // used to create green terraformed land
+-
+ 	if (_terraform_size == 1) {
+-		StringID msg =
+-			mode ? STR_0808_CAN_T_RAISE_LAND_HERE : STR_0809_CAN_T_LOWER_LAND_HERE;
+-
+-		DoCommandP(tile, SLOPE_N, (uint32)mode, CcTerraform, CMD_TERRAFORM_LAND | CMD_MSG(msg));
++		/* call normal terraform procedures that allows dragging or drawing */
++		if (mode) PlaceProc_RaiseLand(tile);
++		else PlaceProc_LowerLand(tile);
+ 	} else {
+-		SndPlayTileFx(SND_1F_SPLAT, tile);
++		int sizex, sizey;
++		TileIndex tile2;
+ 
+ 		assert(_terraform_size != 0);
+-		/* check out for map overflows */
++
++		/* limit the size where the map ends */
+ 		sizex = min(MapSizeX() - TileX(tile) - 1, _terraform_size);
+ 		sizey = min(MapSizeY() - TileY(tile) - 1, _terraform_size);
+ 
++		/* if size left is zero on either x or y, don't do anything */
+ 		if (sizex == 0 || sizey == 0) return;
+ 
+-		if (mode != 0) {
+-			/* Raise land */
+-			h = 15; // XXX - max height
+-			BEGIN_TILE_LOOP(tile2, sizex, sizey, tile) {
+-				h = min(h, TileHeight(tile2));
+-			} END_TILE_LOOP(tile2, sizex, sizey, tile)
+-		} else {
+-			/* Lower land */
+-			h = 0;
+-			BEGIN_TILE_LOOP(tile2, sizex, sizey, tile) {
+-				h = max(h, TileHeight(tile2));
+-			} END_TILE_LOOP(tile2, sizex, sizey, tile)
+-		}
+-
+-		BEGIN_TILE_LOOP(tile2, sizex, sizey, tile) {
+-			if (TileHeight(tile2) == h) {
+-				DoCommandP(tile2, SLOPE_N, (uint32)mode, NULL, CMD_TERRAFORM_LAND);
+-			}
+-		} END_TILE_LOOP(tile2, sizex, sizey, tile)
++		/* do area raise/lower for the area */
++		tile2 = TileXY(TileX(tile) + sizex - 1, TileY(tile) + sizey - 1);
++		DoCommandP(tile2, tile, mode, CcTerraform, CMD_RAISELOWER_LAND | CMD_MSG(mode ? STR_0808_CAN_T_RAISE_LAND_HERE : STR_0809_CAN_T_LOWER_LAND_HERE));
+ 	}
+-
+-	_generating_world = false;
+ }
+ 
+ static void PlaceProc_RaiseBigLand(TileIndex tile)
+@@ -392,7 +441,8 @@
+ 
+ static void PlaceProc_RockyArea(TileIndex tile)
+ {
+-	VpStartPlaceSizing(tile, VPM_X_AND_Y, DDSP_CREATE_ROCKS);
++	if (_ctrl_pressed) VpStartDrawing(tile, DDSP_CREATE_ROCKS);
++	else VpStartPlaceSizing(tile, VPM_X_AND_Y, DDSP_CREATE_ROCKS);
+ }
+ 
+ static void PlaceProc_LightHouse(TileIndex tile)
+@@ -431,7 +481,8 @@
+ 
+ static void PlaceProc_RiverArea(TileIndex tile)
+ {
+-	VpStartPlaceSizing(tile, VPM_X_AND_Y, DDSP_CREATE_RIVER);
++	if (_ctrl_pressed) VpStartDrawing(tile, DDSP_CREATE_RIVER);
++	else VpStartPlaceSizing(tile, VPM_X_AND_Y, DDSP_CREATE_RIVER);
+ }
+ 
+ static const Widget _scen_edit_land_gen_widgets[] = {
+@@ -673,6 +724,15 @@
+ 			w->RaiseButtons();
+ 			w->SetDirty();
+ 			break;
++
++		case WE_PLACE_DRAW:
++			if (e->we.place.pt.x == -1) break;
++			StartDrawing(e);
++		/* FALL THROUGH */
++		case WE_DRAG_DRAW:
++			if (e->we.place.pt.x == -1) break;
++			GUIPlaceProcDraw(e);
++			break;
+ 	}
+ }
+ 
+Index: src/tilehighlight_func.h
+===================================================================
+--- src/tilehighlight_func.h	(revision 13116)
++++ src/tilehighlight_func.h	(working copy)
+@@ -13,6 +13,8 @@
+ typedef void PlaceProc(TileIndex tile);
+ void PlaceProc_DemolishArea(TileIndex tile);
+ bool GUIPlaceProcDragXY(const WindowEvent *e);
++bool GUIPlaceProcDraw(const WindowEvent *e);
++void StartDrawing(const WindowEvent *e);
+ 
+ bool HandlePlacePushButton(Window *w, int widget, CursorID cursor, ViewportHighlightMode mode, PlaceProc *placeproc);
+ void SetObjectToPlaceWnd(CursorID icon, SpriteID pal, ViewportHighlightMode mode, Window *w);
+@@ -21,6 +23,7 @@
+ 
+ void VpSelectTilesWithMethod(int x, int y, ViewportPlaceMethod method);
+ void VpStartPlaceSizing(TileIndex tile, ViewportPlaceMethod method, ViewportDragDropSelectionProcess process);
++void VpStartDrawing(TileIndex tile, ViewportDragDropSelectionProcess process);
+ void VpSetPresizeRange(TileIndex from, TileIndex to);
+ void VpSetPlaceSizingLimit(int limit);
+ 
+Index: src/viewport.cpp
+===================================================================
+--- src/viewport.cpp	(revision 13116)
++++ src/viewport.cpp	(working copy)
+@@ -2228,6 +2228,34 @@
+ 	_special_mouse_mode = WSM_SIZING;
+ }
+ 
++/** start drawing */
++void VpStartDrawing(TileIndex tile, ViewportDragDropSelectionProcess process)
++{
++	_thd.select_proc   = process;
++	_thd.selend.x = _thd.selstart.x = TileX(tile) * TILE_SIZE;
++	_thd.selend.y = _thd.selstart.y = TileY(tile) * TILE_SIZE;
++
++	/* If place mode is Rectangle, placement starts from centre of a tile */
++	if (_thd.place_mode == VHM_RECT) {
++		_thd.selend.x += TILE_SIZE / 2;
++		_thd.selend.y += TILE_SIZE / 2;
++		_thd.selstart.x += TILE_SIZE / 2;
++		_thd.selstart.y += TILE_SIZE / 2;
++	}
++
++	_special_mouse_mode = WSM_DRAWING;
++
++	/* stop drawing mode if the window has been closed */
++	Window *w = FindWindowById(_thd.window_class, _thd.window_number);
++	if (w == NULL) {
++		ResetObjectToPlace();
++		return;
++	}
++
++	w->OnPlaceDraw(GetTileBelowCursor(), TileVirtXY(_thd.selend.x, _thd.selend.y), process);
++
++}
++
+ void VpSetPlaceSizingLimit(int limit)
+ {
+ 	_thd.sizelimit = limit;
+@@ -2660,9 +2688,42 @@
+ 	_thd.selend.y = y;
+ }
+ 
++/** while drawing */
++bool VpHandleDrawingDrag()
++{
++	if (_special_mouse_mode != WSM_DRAWING) return true;
++
++	/* stop drawing mode if the window has been closed */
++	Window *w = FindWindowById(_thd.window_class, _thd.window_number);
++	if (w == NULL) {
++		ResetObjectToPlace();
++		return false;
++	}
++
++	/* while drawing execute the draw procedure of the corresponding window */
++	if (_left_button_down) {
++		_thd.selend = GetTileBelowCursor();
++
++		/* If place mode is not Rectangle, correction needed */
++		if (_thd.place_mode != VHM_RECT) {
++			_thd.selend.x += TILE_SIZE / 2;
++			_thd.selend.y += TILE_SIZE / 2;
++		}
++
++		w->OnDragDraw(GetTileBelowCursor(), TileVirtXY(_thd.selend.x, _thd.selend.y), _thd.select_proc);
++		return false;
++	}
++
++	/* mouse button released.. */
++	_special_mouse_mode = WSM_NONE;
++
++	return false;
++}
++
+ /** while dragging */
+ bool VpHandlePlaceSizingDrag()
+ {
++	if (_special_mouse_mode == WSM_DRAWING) return VpHandleDrawingDrag();
+ 	if (_special_mouse_mode != WSM_SIZING) return true;
+ 
+ 	/* stop drag mode if the window has been closed */
+Index: src/window.cpp
+===================================================================
+--- src/window.cpp	(revision 13116)
++++ src/window.cpp	(working copy)
+@@ -261,7 +261,25 @@
+ 	this->HandleWindowEvent(&e);
+ }
+ 
++void Window::OnPlaceDraw(Point pt, TileIndex tile, byte select_proc)
++{
++	WindowEvent e;
++	e.event = WE_PLACE_DRAW;
++	e.we.place.pt = pt;
++	e.we.place.tile = tile;
++	e.we.place.select_proc = select_proc;
++	this->HandleWindowEvent(&e);
++}
+ 
++void Window::OnDragDraw(Point pt, TileIndex tile, byte select_proc)
++{
++	WindowEvent e;
++	e.event = WE_DRAG_DRAW;
++	e.we.place.pt = pt;
++	e.we.place.tile = tile;
++	e.we.place.select_proc = select_proc;
++	this->HandleWindowEvent(&e);
++}
+ 
+ void CDECL Window::SetWidgetsDisabledState(bool disab_stat, int widgets, ...)
+ {
+@@ -1943,6 +1961,7 @@
+ 
+ extern void UpdateTileSelection();
+ extern bool VpHandlePlaceSizingDrag();
++extern bool VpHandleDrawingDrag();
+ 
+ void MouseLoop(MouseClick click, int mousewheel)
+ {
+@@ -1950,6 +1969,7 @@
+ 	HandlePlacePresize();
+ 	UpdateTileSelection();
+ 	if (!VpHandlePlaceSizingDrag())  return;
++	if (!VpHandleDrawingDrag())      return;
+ 	if (!HandleDragDrop())           return;
+ 	if (!HandleWindowDragging())     return;
+ 	if (!HandleScrollbarScrolling()) return;
+Index: src/window_gui.h
+===================================================================
+--- src/window_gui.h	(revision 13116)
++++ src/window_gui.h	(working copy)
+@@ -134,6 +134,8 @@
+ 	WE_SCROLL,
+ 	WE_INVALIDATE_DATA, ///< Notification that data displayed by the window is obsolete
+ 	WE_CTRL_CHANGED,    ///< CTRL key has changed state
++	WE_PLACE_DRAW,      ///< Start of Drag&Draw
++	WE_DRAG_DRAW,       ///< During Drag&Draw
+ };
+ 
+ /**
+@@ -512,6 +514,22 @@
+ 	 */
+ 	virtual void OnPlacePresize(Point pt, TileIndex tile);
+ 
++	/**
++	 * The user clicked some place on the map in order to activate a drag&draw tool.
++	 * @param pt   the exact point on the map that has been clicked.
++	 * @param tile the tile on the map that has been clicked.
++	 * @param select_proc   what will be created during drawing.
++	 */
++	virtual void OnPlaceDraw(Point pt, TileIndex tile, byte select_proc);
++
++	/**
++	 * The user is drawing on the map with some drag&draw tool.
++	 * @param pt   the exact point on the map that the mouse is over.
++	 * @param tile the tile on the map that the mouse is over.
++	 * @param select_proc   what will be created during drawing.
++	 */
++	virtual void OnDragDraw(Point pt, TileIndex tile, byte select_proc);
++
+ 	/*** End of the event handling ***/
+ };
+ 
+@@ -675,6 +693,7 @@
+ 	WSM_DRAGDROP = 1,
+ 	WSM_SIZING   = 2,
+ 	WSM_PRESIZE  = 3,
++	WSM_DRAWING  = 4,
+ };
+ 
+ Window *GetCallbackWnd();

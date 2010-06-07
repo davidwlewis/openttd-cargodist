@@ -1,0 +1,906 @@
+Index: src/smallmap_gui.cpp
+===================================================================
+--- src/smallmap_gui.cpp	(revision 16579)
++++ src/smallmap_gui.cpp	(working copy)
+@@ -33,6 +33,8 @@
+ 	SM_WIDGET_MAP,
+ 	SM_WIDGET_LEGEND,
+ 	SM_WIDGET_BUTTONSPANEL,
++	SM_WIDGET_ZOOM_IN,
++	SM_WIDGET_ZOOM_OUT,
+ 	SM_WIDGET_CONTOUR,
+ 	SM_WIDGET_VEHICLES,
+ 	SM_WIDGET_INDUSTRIES,
+@@ -49,24 +51,26 @@
+ 
+ static const Widget _smallmap_widgets[] = {
+ {  WWT_CLOSEBOX,   RESIZE_NONE,  COLOUR_BROWN,     0,    10,     0,    13, STR_BLACK_CROSS,          STR_TOOLTIP_CLOSE_WINDOW},                       // SM_WIDGET_CLOSEBOX
+-{   WWT_CAPTION,  RESIZE_RIGHT,  COLOUR_BROWN,    11,   337,     0,    13, STR_SMALLMAP_CAPTION,     STR_TOOLTIP_WINDOW_TITLE_DRAG_THIS},             // SM_WIDGET_CAPTION
+-{ WWT_STICKYBOX,     RESIZE_LR,  COLOUR_BROWN,   338,   349,     0,    13, 0x0,                      STR_STICKY_BUTTON},                              // SM_WIDGET_STICKYBOX
+-{     WWT_PANEL,     RESIZE_RB,  COLOUR_BROWN,     0,   349,    14,   157, 0x0,                      STR_NULL},                                       // SM_WIDGET_MAP_BORDER
+-{     WWT_INSET,     RESIZE_RB,  COLOUR_BROWN,     2,   347,    16,   155, 0x0,                      STR_NULL},                                       // SM_WIDGET_MAP
+-{     WWT_PANEL,    RESIZE_RTB,  COLOUR_BROWN,     0,   261,   158,   201, 0x0,                      STR_NULL},                                       // SM_WIDGET_LEGEND
+-{     WWT_PANEL,   RESIZE_LRTB,  COLOUR_BROWN,   262,   349,   158,   158, 0x0,                      STR_NULL},                                       // SM_WIDGET_BUTTONSPANEL
+-{    WWT_IMGBTN,   RESIZE_LRTB,  COLOUR_BROWN,   284,   305,   158,   179, SPR_IMG_SHOW_COUNTOURS,   STR_SMALLMAP_TOOLTIP_SHOW_LAND_CONTOURS_ON_MAP}, // SM_WIDGET_CONTOUR
+-{    WWT_IMGBTN,   RESIZE_LRTB,  COLOUR_BROWN,   306,   327,   158,   179, SPR_IMG_SHOW_VEHICLES,    STR_SMALLMAP_TOOLTIP_SHOW_VEHICLES_ON_MAP},      // SM_WIDGET_VEHICLES
+-{    WWT_IMGBTN,   RESIZE_LRTB,  COLOUR_BROWN,   328,   349,   158,   179, SPR_IMG_INDUSTRY,         STR_SMALLMAP_TOOLTIP_SHOW_INDUSTRIES_ON_MAP},    // SM_WIDGET_INDUSTRIES
+-{    WWT_IMGBTN,   RESIZE_LRTB,  COLOUR_BROWN,   284,   305,   180,   201, SPR_IMG_SHOW_ROUTES,      STR_SMALLMAP_TOOLTIP_SHOW_TRANSPORT_ROUTES_ON},  // SM_WIDGET_ROUTES
+-{    WWT_IMGBTN,   RESIZE_LRTB,  COLOUR_BROWN,   306,   327,   180,   201, SPR_IMG_PLANTTREES,       STR_SMALLMAP_TOOLTIP_SHOW_VEGETATION_ON_MAP},    // SM_WIDGET_VEGETATION
+-{    WWT_IMGBTN,   RESIZE_LRTB,  COLOUR_BROWN,   328,   349,   180,   201, SPR_IMG_COMPANY_GENERAL,  STR_SMALLMAP_TOOLTIP_SHOW_LAND_OWNERS_ON_MAP},   // SM_WIDGET_OWNERS
+-{    WWT_IMGBTN,   RESIZE_LRTB,  COLOUR_BROWN,   262,   283,   158,   179, SPR_IMG_SMALLMAP,         STR_SMALLMAP_CENTER},                            // SM_WIDGET_CENTERMAP
+-{    WWT_IMGBTN,   RESIZE_LRTB,  COLOUR_BROWN,   262,   283,   180,   201, SPR_IMG_TOWN,             STR_SMALLMAP_TOOLTIP_TOGGLE_TOWN_NAMES_ON_OFF},  // SM_WIDGET_TOGGLETOWNNAME
+-{     WWT_PANEL,    RESIZE_RTB,  COLOUR_BROWN,     0,   337,   202,   213, 0x0,                      STR_NULL},                                       // SM_WIDGET_BOTTOMPANEL
++{   WWT_CAPTION,  RESIZE_RIGHT,  COLOUR_BROWN,    11,   372,     0,    13, STR_SMALLMAP_CAPTION,     STR_TOOLTIP_WINDOW_TITLE_DRAG_THIS},             // SM_WIDGET_CAPTION
++{ WWT_STICKYBOX,     RESIZE_LR,  COLOUR_BROWN,   373,   384,     0,    13, 0x0,                      STR_STICKY_BUTTON},                              // SM_WIDGET_STICKYBOX
++{     WWT_PANEL,     RESIZE_RB,  COLOUR_BROWN,     0,   384,    14,   157, 0x0,                      STR_NULL},                                       // SM_WIDGET_MAP_BORDER
++{     WWT_INSET,     RESIZE_RB,  COLOUR_BROWN,     2,   382,    16,   155, 0x0,                      STR_NULL},                                       // SM_WIDGET_MAP
++{     WWT_PANEL,    RESIZE_RTB,  COLOUR_BROWN,     0,   274,   158,   201, 0x0,                      STR_NULL},                                       // SM_WIDGET_LEGEND
++{     WWT_PANEL,   RESIZE_LRTB,  COLOUR_BROWN,   275,   384,   158,   158, 0x0,                      STR_NULL},                                       // SM_WIDGET_BUTTONSPANEL
++{    WWT_IMGBTN,   RESIZE_LRTB,  COLOUR_BROWN,   275,   296,   158,   179, SPR_IMG_ZOOMIN,           STR_TOOLBAR_TOOLTIP_ZOOM_THE_VIEW_IN},           // SM_WIDGET_ZOOM_IN
++{    WWT_IMGBTN,   RESIZE_LRTB,  COLOUR_BROWN,   275,   296,   180,   201, SPR_IMG_ZOOMOUT,          STR_TOOLBAR_TOOLTIP_ZOOM_THE_VIEW_OUT},          // SM_WIDGET_ZOOM_OUT
++{    WWT_IMGBTN,   RESIZE_LRTB,  COLOUR_BROWN,   319,   340,   158,   179, SPR_IMG_SHOW_COUNTOURS,   STR_SMALLMAP_TOOLTIP_SHOW_LAND_CONTOURS_ON_MAP}, // SM_WIDGET_CONTOUR
++{    WWT_IMGBTN,   RESIZE_LRTB,  COLOUR_BROWN,   341,   362,   158,   179, SPR_IMG_SHOW_VEHICLES,    STR_SMALLMAP_TOOLTIP_SHOW_VEHICLES_ON_MAP},      // SM_WIDGET_VEHICLES
++{    WWT_IMGBTN,   RESIZE_LRTB,  COLOUR_BROWN,   363,   384,   158,   179, SPR_IMG_INDUSTRY,         STR_SMALLMAP_TOOLTIP_SHOW_INDUSTRIES_ON_MAP},    // SM_WIDGET_INDUSTRIES
++{    WWT_IMGBTN,   RESIZE_LRTB,  COLOUR_BROWN,   319,   340,   180,   201, SPR_IMG_SHOW_ROUTES,      STR_SMALLMAP_TOOLTIP_SHOW_TRANSPORT_ROUTES_ON},  // SM_WIDGET_ROUTES
++{    WWT_IMGBTN,   RESIZE_LRTB,  COLOUR_BROWN,   341,   362,   180,   201, SPR_IMG_PLANTTREES,       STR_SMALLMAP_TOOLTIP_SHOW_VEGETATION_ON_MAP},    // SM_WIDGET_VEGETATION
++{    WWT_IMGBTN,   RESIZE_LRTB,  COLOUR_BROWN,   363,   384,   180,   201, SPR_IMG_COMPANY_GENERAL,  STR_SMALLMAP_TOOLTIP_SHOW_LAND_OWNERS_ON_MAP},   // SM_WIDGET_OWNERS
++{    WWT_IMGBTN,   RESIZE_LRTB,  COLOUR_BROWN,   297,   318,   158,   179, SPR_IMG_SMALLMAP,         STR_SMALLMAP_CENTER},                            // SM_WIDGET_CENTERMAP
++{    WWT_IMGBTN,   RESIZE_LRTB,  COLOUR_BROWN,   297,   318,   180,   201, SPR_IMG_TOWN,             STR_SMALLMAP_TOOLTIP_TOGGLE_TOWN_NAMES_ON_OFF},  // SM_WIDGET_TOGGLETOWNNAME
++{     WWT_PANEL,    RESIZE_RTB,  COLOUR_BROWN,     0,   372,   202,   213, 0x0,                      STR_NULL},                                       // SM_WIDGET_BOTTOMPANEL
+ {   WWT_TEXTBTN,     RESIZE_TB,  COLOUR_BROWN,     0,    99,   202,   213, STR_MESSAGES_ENABLE_ALL,  STR_NULL},                                       // SM_WIDGET_ENABLEINDUSTRIES
+ {   WWT_TEXTBTN,     RESIZE_TB,  COLOUR_BROWN,   100,   201,   202,   213, STR_MESSAGES_DISABLE_ALL, STR_NULL},                                       // SM_WIDGET_DISABLEINDUSTRIES
+-{ WWT_RESIZEBOX,   RESIZE_LRTB,  COLOUR_BROWN,   338,   349,   202,   213, 0x0,                      STR_RESIZE_BUTTON},                              // SM_WIDGET_RESIZEBOX
++{ WWT_RESIZEBOX,   RESIZE_LRTB,  COLOUR_BROWN,   373,   384,   202,   213, 0x0,                      STR_RESIZE_BUTTON},                              // SM_WIDGET_RESIZEBOX
+ {  WIDGETS_END},
+ };
+ 
+@@ -82,15 +86,17 @@
+ 	EndContainer(),
+ 	/* Small map display. */
+ 	NWidget(WWT_PANEL, COLOUR_BROWN, SM_WIDGET_MAP_BORDER),
+-		NWidget(WWT_INSET, COLOUR_BROWN, SM_WIDGET_MAP), SetMinimalSize(346, 140), SetResize(1, 1), SetPadding(2, 2, 2, 2), EndContainer(),
++		NWidget(WWT_INSET, COLOUR_BROWN, SM_WIDGET_MAP), SetMinimalSize(381, 140), SetResize(1, 1), SetPadding(2, 2, 2, 2), EndContainer(),
+ 	EndContainer(),
+ 	/* Panel. */
+ 	NWidget(NWID_HORIZONTAL),
+-		NWidget(WWT_PANEL, COLOUR_BROWN, SM_WIDGET_LEGEND), SetMinimalSize(262, 44), SetResize(1, 0), EndContainer(),
++		NWidget(WWT_PANEL, COLOUR_BROWN, SM_WIDGET_LEGEND), SetMinimalSize(275, 44), SetResize(1, 0), EndContainer(),
+ 		NWidget(NWID_LAYERED),
+ 			NWidget(NWID_VERTICAL),
+ 				/* Top button row. */
+ 				NWidget(NWID_HORIZONTAL),
++					NWidget(WWT_IMGBTN, COLOUR_BROWN, SM_WIDGET_ZOOM_IN), SetMinimalSize(22, 22),
++												SetDataTip(SPR_IMG_ZOOMIN, STR_TOOLBAR_TOOLTIP_ZOOM_THE_VIEW_IN),
+ 					NWidget(WWT_IMGBTN, COLOUR_BROWN, SM_WIDGET_CENTERMAP), SetMinimalSize(22, 22),
+ 												SetDataTip(SPR_IMG_SMALLMAP, STR_SMALLMAP_CENTER),
+ 					NWidget(WWT_IMGBTN, COLOUR_BROWN, SM_WIDGET_CONTOUR), SetMinimalSize(22, 22),
+@@ -102,6 +108,8 @@
+ 				EndContainer(),
+ 				/* Bottom button row. */
+ 				NWidget(NWID_HORIZONTAL),
++					NWidget(WWT_IMGBTN, COLOUR_BROWN, SM_WIDGET_ZOOM_OUT), SetMinimalSize(22, 22),
++												SetDataTip(SPR_IMG_ZOOMOUT, STR_TOOLBAR_TOOLTIP_ZOOM_THE_VIEW_OUT),
+ 					NWidget(WWT_IMGBTN, COLOUR_BROWN, SM_WIDGET_TOGGLETOWNNAME), SetMinimalSize(22, 22),
+ 												SetDataTip(SPR_IMG_TOWN, STR_SMALLMAP_TOOLTIP_TOGGLE_TOWN_NAMES_ON_OFF),
+ 					NWidget(WWT_IMGBTN, COLOUR_BROWN, SM_WIDGET_ROUTES), SetMinimalSize(22, 22),
+@@ -113,7 +121,7 @@
+ 				EndContainer(),
+ 			EndContainer(),
+ 			NWidget(NWID_VERTICAL),
+-				NWidget(WWT_PANEL, COLOUR_BROWN, SM_WIDGET_BUTTONSPANEL), SetMinimalSize(88, 1), SetFill(0, 0), EndContainer(),
++				NWidget(WWT_PANEL, COLOUR_BROWN, SM_WIDGET_BUTTONSPANEL), SetMinimalSize(110, 1), SetFill(0, 0), EndContainer(),
+ 				NWidget(NWID_SPACER), SetFill(0, 1),
+ 			EndContainer(),
+ 		EndContainer(),
+@@ -154,14 +162,17 @@
+ };
+ 
+ /** Legend text giving the colours to look for on the minimap */
+-static const LegendAndColour _legend_land_contours[] = {
++static const LegendAndColour _legend_land[] = {
+ 	MK(0x5A, STR_SMALLMAP_LEGENDA_100M),
+ 	MK(0x5C, STR_SMALLMAP_LEGENDA_200M),
+ 	MK(0x5E, STR_SMALLMAP_LEGENDA_300M),
+ 	MK(0x1F, STR_SMALLMAP_LEGENDA_400M),
+ 	MK(0x27, STR_SMALLMAP_LEGENDA_500M),
++	MKEND()
++};
+ 
+-	MS(0xD7, STR_SMALLMAP_LEGENDA_ROADS),
++static const LegendAndColour _legend_contours[] = {
++	MK(0xD7, STR_SMALLMAP_LEGENDA_ROADS),
+ 	MK(0x0A, STR_SMALLMAP_LEGENDA_RAILROADS),
+ 	MK(0x98, STR_SMALLMAP_LEGENDA_STATIONS_AIRPORTS_DOCKS),
+ 	MK(0xB5, STR_SMALLMAP_LEGENDA_BUILDINGS_INDUSTRIES),
+@@ -256,7 +267,7 @@
+ }
+ 
+ static const LegendAndColour * const _legend_table[] = {
+-	_legend_land_contours,
++	_legend_contours,
+ 	_legend_vehicles,
+ 	_legend_from_industries,
+ 	_legend_routes,
+@@ -345,7 +356,7 @@
+ 	{MKCOLOUR(0x00D7D700), MKCOLOUR(0xFF0000FF)},
+ };
+ 
+-typedef uint32 GetSmallMapPixels(TileIndex tile); // typedef callthrough function
++typedef void GetSmallMapPixels(TileIndex tile, uint32 &colour); // typedef callthrough function
+ 
+ 
+ static inline TileType GetEffectiveTileType(TileIndex tile)
+@@ -367,74 +378,74 @@
+ /**
+  * Return the colour a tile would be displayed with in the small map in mode "Contour".
+  * @param tile The tile of which we would like to get the colour.
+- * @return The colour of tile in the small map in mode "Contour"
++ * @colour The colour of tile in the small map in mode "Contour", initially must be set to background colour.
+  */
+-static inline uint32 GetSmallMapContoursPixels(TileIndex tile)
++static inline void GetSmallMapContoursPixels(TileIndex tile, uint32 &colour)
+ {
+ 	TileType t = GetEffectiveTileType(tile);
+ 
+-	return ApplyMask(_map_height_bits[TileHeight(tile)], &_smallmap_contours_andor[t]);
++	colour = ApplyMask(colour, &_smallmap_contours_andor[t]);
+ }
+ 
+ /**
+  * Return the colour a tile would be displayed with in the small map in mode "Vehicles".
+  *
+  * @param tile The tile of which we would like to get the colour.
+- * @return The colour of tile in the small map in mode "Vehicles"
++ * @colour The colour of tile in the small map in mode "Vehicles", initially must be set to background colour.
+  */
+-static inline uint32 GetSmallMapVehiclesPixels(TileIndex tile)
++static inline void GetSmallMapVehiclesPixels(TileIndex tile, uint32 &colour)
+ {
+ 	TileType t = GetEffectiveTileType(tile);
+ 
+-	return ApplyMask(MKCOLOUR(0x54545454), &_smallmap_vehicles_andor[t]);
++	colour = ApplyMask(colour, &_smallmap_vehicles_andor[t]);
+ }
+ 
+ /**
+  * Return the colour a tile would be displayed with in the small map in mode "Industries".
+  *
+  * @param tile The tile of which we would like to get the colour.
+- * @return The colour of tile in the small map in mode "Industries"
++ * @colour The colour of tile in the small map in mode "Industries", initially must be set to background colour.
+  */
+-static inline uint32 GetSmallMapIndustriesPixels(TileIndex tile)
++static inline void GetSmallMapIndustriesPixels(TileIndex tile, uint32 &colour)
+ {
+ 	TileType t = GetEffectiveTileType(tile);
+ 
+ 	if (t == MP_INDUSTRY) {
+ 		/* If industry is allowed to be seen, use its colour on the map */
+ 		if (_legend_from_industries[_industry_to_list_pos[GetIndustryByTile(tile)->type]].show_on_map) {
+-			return GetIndustrySpec(GetIndustryByTile(tile)->type)->map_colour * 0x01010101;
++			colour = GetIndustrySpec(GetIndustryByTile(tile)->type)->map_colour * 0x01010101;
+ 		} else {
+ 			/* otherwise, return the colour of the clear tiles, which will make it disappear */
+-			return ApplyMask(MKCOLOUR(0x54545454), &_smallmap_vehicles_andor[MP_CLEAR]);
++			colour = ApplyMask(colour, &_smallmap_vehicles_andor[MP_CLEAR]);
+ 		}
++	} else {
++		colour = ApplyMask(colour, &_smallmap_vehicles_andor[t]);
+ 	}
+-
+-	return ApplyMask(MKCOLOUR(0x54545454), &_smallmap_vehicles_andor[t]);
+ }
+ 
+ /**
+  * Return the colour a tile would be displayed with in the small map in mode "Routes".
+  *
+  * @param tile The tile of which we would like to get the colour.
+- * @return The colour of tile  in the small map in mode "Routes"
++ * @colour The colour of tile in the small map in mode "Routes", initially must be set to background colour.
+  */
+-static inline uint32 GetSmallMapRoutesPixels(TileIndex tile)
++static inline void GetSmallMapRoutesPixels(TileIndex tile, uint32 &colour)
+ {
+ 	TileType t = GetEffectiveTileType(tile);
+ 
+ 	if (t == MP_STATION) {
+ 		switch (GetStationType(tile)) {
+-			case STATION_RAIL:    return MKCOLOUR(0x56565656);
+-			case STATION_AIRPORT: return MKCOLOUR(0xB8B8B8B8);
+-			case STATION_TRUCK:   return MKCOLOUR(0xC2C2C2C2);
+-			case STATION_BUS:     return MKCOLOUR(0xBFBFBFBF);
+-			case STATION_DOCK:    return MKCOLOUR(0x98989898);
+-			default:              return MKCOLOUR(0xFFFFFFFF);
++			case STATION_RAIL:    colour = MKCOLOUR(0x56565656); break;
++			case STATION_AIRPORT: colour = MKCOLOUR(0xB8B8B8B8); break;
++			case STATION_TRUCK:   colour = MKCOLOUR(0xC2C2C2C2); break;
++			case STATION_BUS:     colour = MKCOLOUR(0xBFBFBFBF); break;
++			case STATION_DOCK:    colour = MKCOLOUR(0x98989898); break;
++			default:              colour = MKCOLOUR(0xFFFFFFFF); break;
+ 		}
++	} else {
++		/* ground colour */
++		colour = ApplyMask(colour, &_smallmap_contours_andor[t]);
+ 	}
+-
+-	/* ground colour */
+-	return ApplyMask(MKCOLOUR(0x54545454), &_smallmap_contours_andor[t]);
+ }
+ 
+ 
+@@ -449,25 +460,35 @@
+ 	MKCOLOUR(0x54545454), ///< unused
+ };
+ 
+-static inline uint32 GetSmallMapVegetationPixels(TileIndex tile)
++/**
++ * Return the colour a tile would be displayed with in the small map in mode "Vegetation".
++ *
++ * @param tile The tile of which we would like to get the colour.
++ * @colour The colour of tile in the small map in mode "Vegetation", initially must be set to background colour.
++ */
++static inline void GetSmallMapVegetationPixels(TileIndex tile, uint32 &colour)
+ {
+ 	TileType t = GetEffectiveTileType(tile);
+ 
+ 	switch (t) {
+ 		case MP_CLEAR:
+-			return (IsClearGround(tile, CLEAR_GRASS) && GetClearDensity(tile) < 3) ? MKCOLOUR(0x37373737) : _vegetation_clear_bits[GetClearGround(tile)];
++			colour = (IsClearGround(tile, CLEAR_GRASS) && GetClearDensity(tile) < 3) ? MKCOLOUR(0x37373737) : _vegetation_clear_bits[GetClearGround(tile)];
++			break;
+ 
+ 		case MP_INDUSTRY:
+-			return GetIndustrySpec(GetIndustryByTile(tile)->type)->check_proc == CHECK_FOREST ? MKCOLOUR(0xD0D0D0D0) : MKCOLOUR(0xB5B5B5B5);
++			colour = GetIndustrySpec(GetIndustryByTile(tile)->type)->check_proc == CHECK_FOREST ? MKCOLOUR(0xD0D0D0D0) : MKCOLOUR(0xB5B5B5B5);
++			break;
+ 
+ 		case MP_TREES:
+ 			if (GetTreeGround(tile) == TREE_GROUND_SNOW_DESERT) {
+-				return (_settings_game.game_creation.landscape == LT_ARCTIC) ? MKCOLOUR(0x98575798) : MKCOLOUR(0xC25757C2);
++				colour = (_settings_game.game_creation.landscape == LT_ARCTIC) ? MKCOLOUR(0x98575798) : MKCOLOUR(0xC25757C2);
++			} else {
++				colour = MKCOLOUR(0x54575754);
+ 			}
+-			return MKCOLOUR(0x54575754);
++			break;
+ 
+ 		default:
+-			return ApplyMask(MKCOLOUR(0x54545454), &_smallmap_vehicles_andor[t]);
++			colour = ApplyMask(MKCOLOUR(0x54545454), &_smallmap_vehicles_andor[t]);
+ 	}
+ }
+ 
+@@ -478,9 +499,9 @@
+  * Return the colour a tile would be displayed with in the small map in mode "Owner".
+  *
+  * @param tile The tile of which we would like to get the colour.
+- * @return The colour of tile in the small map in mode "Owner"
++ * @colour The colour of tile in the small map in mode "Owner", initially must be set to background colour.
+  */
+-static inline uint32 GetSmallMapOwnerPixels(TileIndex tile)
++static inline void GetSmallMapOwnerPixels(TileIndex tile, uint32 &colour)
+ {
+ 	Owner o;
+ 
+@@ -494,7 +515,7 @@
+ 		 */
+ 	}
+ 
+-	return _owner_colours[o];
++	if (o != OWNER_NONE) colour = _owner_colours[o];
+ }
+ 
+ 
+@@ -550,14 +571,17 @@
+ 	};
+ 
+ 	static SmallMapType map_type;
++	static bool show_land_height;
+ 	static bool show_towns;
+ 
+ 	int32 scroll_x;
+ 	int32 scroll_y;
+ 	int32 subscroll;
+ 	uint8 refresh;
++	ZoomLevel zoom;
+ 
+ 	static const int COLUMN_WIDTH = 119;
++	static const int LAND_COLUMN_WIDTH = 35;
+ 	static const int MIN_LEGEND_HEIGHT = 6 * 7;
+ 
+ 	/**
+@@ -568,7 +592,7 @@
+ 	 */
+ 	inline int RemapX(int tile_x)
+ 	{
+-		return tile_x - this->scroll_x / TILE_SIZE;
++		return UnScaleByZoom(tile_x - this->scroll_x / TILE_SIZE, this->zoom);
+ 	}
+ 
+ 	/**
+@@ -579,7 +603,7 @@
+ 	 */
+ 	inline int RemapY(int tile_y)
+ 	{
+-		return tile_y - this->scroll_y / TILE_SIZE;
++		return UnScaleByZoom(tile_y - this->scroll_y / TILE_SIZE, this->zoom);
+ 	}
+ 
+ 	/**
+@@ -604,12 +628,17 @@
+ 		do {
+ 			/* check if the tile (xc,yc) is within the map range */
+ 			uint min_xy = _settings_game.construction.freeform_edges ? 1 : 0;
+-			if (IsInsideMM(xc, min_xy, MapMaxX()) && IsInsideMM(yc, min_xy, MapMaxY())) {
++			uint x = ScaleByZoom(xc, this->zoom);
++			uint y = ScaleByZoom(yc, this->zoom);
++			if (IsInsideMM(x, min_xy, MapMaxX()) && IsInsideMM(y, min_xy, MapMaxY())) {
+ 				/* check if the dst pointer points to a pixel inside the screen buffer */
+ 				if (dst < _screen.dst_ptr) continue;
+ 				if (dst >= dst_ptr_abs_end) continue;
+ 
+-				uint32 val = proc(TileXY(xc, yc)) & mask;
++				TileIndex tile = TileXY(x, y);
++				uint32 val = this->show_land_height ? _map_height_bits[TileHeight(tile)] : MKCOLOUR(0x54545454);
++				proc(tile, val);
++				val &= mask;
+ 				uint8 *val8 = (uint8 *)&val;
+ 
+ 				if (dst <= dst_ptr_end) {
+@@ -630,6 +659,16 @@
+ 	}
+ 
+ public:
++	SmallMapWindow(const WindowDesc *desc, int window_number) : Window(desc, window_number), zoom(ZOOM_LVL_NORMAL)
++	{
++		this->LowerWidget(this->map_type + SM_WIDGET_CONTOUR);
++		this->SetWidgetLoweredState(SM_WIDGET_CONTOUR, this->show_land_height);
++		this->SetWidgetLoweredState(SM_WIDGET_TOGGLETOWNNAME, this->show_towns);
++
++		this->SmallMapCenterOnCurrentPos();
++		this->FindWindowPlacementAndResize(desc);
++	}
++
+ 	/**
+ 	 * Draws the small map.
+ 	 *
+@@ -672,8 +711,8 @@
+ 			}
+ 		}
+ 
+-		int tile_x = this->scroll_x / TILE_SIZE;
+-		int tile_y = this->scroll_y / TILE_SIZE;
++		int tile_x = UnScaleByZoom(this->scroll_x / TILE_SIZE, this->zoom);
++		int tile_y = UnScaleByZoom(this->scroll_y / TILE_SIZE, this->zoom);
+ 
+ 		int dx = dpi->left + this->subscroll;
+ 		tile_x -= dx / 4;
+@@ -736,48 +775,86 @@
+ 			x += 2;
+ 		}
+ 
+-		/* draw vehicles? */
++		/* draw vehicles */
+ 		if (this->map_type == SMT_CONTOUR || this->map_type == SMT_VEHICLES) {
+ 			Vehicle *v;
+ 
+-			FOR_ALL_VEHICLES(v) {
+-				if (v->type != VEH_EFFECT &&
+-						(v->vehstatus & (VS_HIDDEN | VS_UNCLICKABLE)) == 0) {
+-					/* Remap into flat coordinates. */
+-					Point pt = RemapCoords(
+-							this->RemapX(v->x_pos / TILE_SIZE),
+-							this->RemapY(v->y_pos / TILE_SIZE),
+-							0);
+-					x = pt.x;
+-					y = pt.y;
++			/* when not zoomed in we draw all vehicles as 2x1 rectangle */
++			if (this->zoom >= ZOOM_LVL_NORMAL) {
++				FOR_ALL_VEHICLES(v) {
++					if (v->type != VEH_EFFECT &&
++							(v->vehstatus & (VS_HIDDEN | VS_UNCLICKABLE)) == 0) {
++						/* Remap into flat coordinates. */
++						Point pt = RemapCoords(
++								this->RemapX(v->x_pos / TILE_SIZE),
++								this->RemapY(v->y_pos / TILE_SIZE),
++								0);
++						x = pt.x;
++						y = pt.y;
+ 
+-					/* Check if y is out of bounds? */
+-					y -= dpi->top;
+-					if (!IsInsideMM(y, 0, dpi->height)) continue;
++						/* Check if y is out of bounds? */
++						y -= dpi->top;
++						if (!IsInsideMM(y, 0, dpi->height)) continue;
+ 
+-					/* Default is to draw both pixels. */
+-					bool skip = false;
++						/* Default is to draw both pixels. */
++						bool skip = false;
+ 
+-					/* Offset X coordinate */
+-					x -= this->subscroll + 3 + dpi->left;
++						/* Offset X coordinate */
++						x -= this->subscroll + 3 + dpi->left;
+ 
+-					if (x < 0) {
+-						/* if x+1 is 0, that means we're on the very left edge,
+-						 *  and should thus only draw a single pixel */
+-						if (++x != 0) continue;
+-						skip = true;
+-					} else if (x >= dpi->width - 1) {
+-						/* Check if we're at the very right edge, and if so draw only a single pixel */
+-						if (x != dpi->width - 1) continue;
+-						skip = true;
++						if (x < 0) {
++							/* if x+1 is 0, that means we're on the very left edge,
++							 *  and should thus only draw a single pixel */
++							if (++x != 0) continue;
++							skip = true;
++						} else if (x >= dpi->width - 1) {
++							/* Check if we're at the very right edge, and if so draw only a single pixel */
++							if (x != dpi->width - 1) continue;
++							skip = true;
++						}
++
++						/* Calculate pointer to pixel and the colour */
++						byte colour = (this->map_type == SMT_VEHICLES) ? _vehicle_type_colours[v->type] : COLOUR_WHITE;
++
++						/* And draw either one or two pixels depending on clipping */
++						blitter->SetPixel(dpi->dst_ptr, x, y, colour);
++						if (!skip) blitter->SetPixel(dpi->dst_ptr, x + 1, y, colour);
+ 					}
++				}
++			/* when zoomed in we draw each vehicle as rhombus */
++			} else {
++				int scale = 1 << (-this->zoom);
++				FOR_ALL_VEHICLES(v) {
++					if (v->type != VEH_EFFECT &&
++							(v->vehstatus & (VS_HIDDEN | VS_UNCLICKABLE)) == 0) {
++						/* Remap into flat coordinates. */
++						Point pt = RemapCoords(
++								this->RemapX(v->x_pos / TILE_SIZE),
++								this->RemapY(v->y_pos / TILE_SIZE),
++								0);
++						/* Now x and y will hold bottom corner of rhombus to draw */
++						x = pt.x - this->subscroll - 3 - dpi->left;
++						y = pt.y - dpi->top;
+ 
+-					/* Calculate pointer to pixel and the colour */
+-					byte colour = (this->map_type == SMT_VEHICLES) ? _vehicle_type_colours[v->type] : 0xF;
++						/* Check if whole rhombus is inside bounds */
++						if ((x - 2 * scale - 2 < 0) || //left
++									(y - 2 * scale - 2 < 0) || //top
++									(x + 2 * scale + 4 >= dpi->width) || //right
++									(y + 1 >= dpi->height)) { //bottom
++							continue;
++						}
+ 
+-					/* And draw either one or two pixels depending on clipping */
+-					blitter->SetPixel(dpi->dst_ptr, x, y, colour);
+-					if (!skip) blitter->SetPixel(dpi->dst_ptr, x + 1, y, colour);
++						byte colour = (this->map_type == SMT_VEHICLES) ? _vehicle_type_colours[v->type] : COLOUR_WHITE;
++
++						/* Draw rhombus */
++						for (int dy = 0; dy < scale; dy++) {
++							for (int dx = 0; dx < scale; dx++) {
++								pt = RemapCoords(-dx, -dy, 0);
++								blitter->SetPixel(dpi->dst_ptr, x + pt.x, y + pt.y, colour);
++								blitter->SetPixel(dpi->dst_ptr, x + pt.x + 1, y + pt.y, colour);
++							}
++						}
++					}
+ 				}
+ 			}
+ 		}
+@@ -806,16 +883,52 @@
+ 			}
+ 		}
+ 
++		/* Emphasize all industries if current view is zoomed out "Industreis" */
++		if ((this->map_type == SMT_INDUSTRY) && (this->zoom > ZOOM_LVL_NORMAL)) {
++			const Industry *i;
++			FOR_ALL_INDUSTRIES(i) {
++				if (_legend_from_industries[_industry_to_list_pos[i->type]].show_on_map) {
++					/* TODO:
++					 * The magic offset (+1, -2) below is caused by roundings made when
++					 * transforming between map and small map coordinates. Also the effect
++					 * of these roundings may be seen as "shaking" vehicles, town names and
++					 * emphasis of industries. These elements are drawn by transformig their
++					 * coordinates (map coordinates) into small map coordinates to figure out
++					 * where to draw them. The rest of small map is drawn by taking each pixel
++					 * in small map coordinates and check which tile of map is it, transformation
++					 * runs in opposit direction. To elimiate this problem, deeper analysis of
++					 * coordinates behaviour is needed, so for now I leave it as TODO item.
++					 * Problem exists only when zoomed out.
++					 */
++					Point pt = RemapCoords(
++							this->RemapX(TileX(i->xy)) + 1,
++							this->RemapY(TileY(i->xy)) - 2,
++							0);
++
++					y = pt.y - dpi->top;
++					if (!IsInsideMM(y, 0, dpi->height)) continue;
++
++					x = pt.x - this->subscroll + 3 - dpi->left;
++					if (!IsInsideMM(x, 0, dpi->width - 2)) continue;
++
++					byte colour = GetIndustrySpec(i->type)->map_colour;
++					blitter->SetPixel(dpi->dst_ptr, x, y, colour);
++					blitter->SetPixel(dpi->dst_ptr, x + 1, y, colour);
++					blitter->SetPixel(dpi->dst_ptr, x + 2, y, colour);
++				}
++			}
++		}
++
+ 		/* Find main viewport. */
+ 		ViewPort *vp = FindWindowById(WC_MAIN_WINDOW, 0)->viewport;
+ 
+ 		/* Draw map indicators */
+ 		Point pt = RemapCoords(this->scroll_x, this->scroll_y, 0);
+ 
+-		x = vp->virtual_left - pt.x;
+-		y = vp->virtual_top - pt.y;
+-		int x2 = (x + vp->virtual_width) / TILE_SIZE;
+-		int y2 = (y + vp->virtual_height) / TILE_SIZE;
++		x = UnScaleByZoom(vp->virtual_left - pt.x, this->zoom);
++		y = UnScaleByZoom(vp->virtual_top - pt.y, this->zoom);
++		int x2 = (x + UnScaleByZoom(vp->virtual_width, this->zoom)) / TILE_SIZE;
++		int y2 = (y + UnScaleByZoom(vp->virtual_height, this->zoom)) / TILE_SIZE;
+ 		x /= TILE_SIZE;
+ 		y /= TILE_SIZE;
+ 
+@@ -834,18 +947,108 @@
+ 	{
+ 		ViewPort *vp = FindWindowById(WC_MAIN_WINDOW, 0)->viewport;
+ 
+-		int x = ((vp->virtual_width  - (this->widget[SM_WIDGET_MAP].right  - this->widget[SM_WIDGET_MAP].left) * TILE_SIZE) / 2 + vp->virtual_left) / 4;
+-		int y = ((vp->virtual_height - (this->widget[SM_WIDGET_MAP].bottom - this->widget[SM_WIDGET_MAP].top ) * TILE_SIZE) / 2 + vp->virtual_top ) / 2 - TILE_SIZE * 2;
+-		this->scroll_x = (y - x) & ~0xF;
+-		this->scroll_y = (x + y) & ~0xF;
++		int vwidth = UnScaleByZoom(vp->virtual_width, this->zoom);
++		int vheight = UnScaleByZoom(vp->virtual_height, this->zoom);
++		int vleft = UnScaleByZoom(vp->virtual_left, this->zoom);
++		int vtop = UnScaleByZoom(vp->virtual_top, this->zoom);
++		int x = ((vwidth  - (this->widget[SM_WIDGET_MAP].right  - this->widget[SM_WIDGET_MAP].left) * TILE_SIZE) / 2 + vleft) / 4;
++		int y = ((vheight - (this->widget[SM_WIDGET_MAP].bottom - this->widget[SM_WIDGET_MAP].top ) * TILE_SIZE) / 2 + vtop ) / 2 - TILE_SIZE * 2;
++		this->scroll_x = ScaleByZoom((y - x) & ~0xF, this->zoom);
++		this->scroll_y = ScaleByZoom((x + y) & ~0xF, this->zoom);
+ 		this->SetDirty();
+ 	}
+ 
++	void DoScroll(int dx, int dy)
++	{
++		dx = ScaleByZoom(dx, this->zoom);
++		dy = ScaleByZoom(dy, this->zoom);
++		int x = this->scroll_x;
++		int y = this->scroll_y;
++
++		int sub = this->subscroll + dx;
++
++		x -= (sub >> 2) << 4;
++		y += (sub >> 2) << 4;
++		sub &= 3;
++
++		x += (dy >> 1) << 4;
++		y += (dy >> 1) << 4;
++
++		if (dy & 1) {
++			x += TILE_SIZE;
++			sub += 2;
++			if (sub > 3) {
++				sub -= 4;
++				x -= TILE_SIZE;
++				y += TILE_SIZE;
++			}
++		}
++
++		int hx = ScaleByZoom(this->widget[SM_WIDGET_MAP].right  - this->widget[SM_WIDGET_MAP].left, this->zoom) / 2;
++		int hy = ScaleByZoom(this->widget[SM_WIDGET_MAP].bottom - this->widget[SM_WIDGET_MAP].top, this->zoom) / 2;
++		int hvx = hx * -4 + hy * 8;
++		int hvy = hx *  4 + hy * 8;
++		if (x < -hvx) {
++			x = -hvx;
++			sub = 0;
++		}
++		if (x > (int)MapMaxX() * TILE_SIZE - hvx) {
++			x = MapMaxX() * TILE_SIZE - hvx;
++			sub = 0;
++		}
++		if (y < -hvy) {
++			y = -hvy;
++			sub = 0;
++		}
++		if (y > (int)MapMaxY() * TILE_SIZE - hvy) {
++			y = MapMaxY() * TILE_SIZE - hvy;
++			sub = 0;
++		}
++
++		this->scroll_x = x;
++		this->scroll_y = y;
++		this->subscroll = sub;
++	}
++
++	/**
++	 * Zoom in the map by one level.
++	 * @param cx horizontal coordinate of center point, relative to SM_WIDGET_MAP widget
++	 * @param cy vertical coordinate of center point, relative to SM_WIDGET_MAP widget
++	 */
++	void ZoomIn(int cx, int cy)
++	{
++		if (this->zoom > -ZOOM_LVL_MAX) {
++			this->zoom--;
++			this->DoScroll(cx, cy);
++			this->SetWidgetDisabledState(SM_WIDGET_ZOOM_IN, this->zoom == -ZOOM_LVL_MAX);
++			this->EnableWidget(SM_WIDGET_ZOOM_OUT);
++			this->SetDirty();
++		}
++	}
++
++	/**
++	 * Zoom out the map by one level.
++	 * @param cx horizontal coordinate of center point, relative to SM_WIDGET_MAP widget
++	 * @param cy vertical coordinate of center point, relative to SM_WIDGET_MAP widget
++	 */
++	void ZoomOut(int cx, int cy)
++	{
++		if (this->zoom < ZOOM_LVL_MAX) {
++			this->zoom++;
++			this->DoScroll(cx / -2, cy / -2);
++			this->EnableWidget(SM_WIDGET_ZOOM_IN);
++			this->SetWidgetDisabledState(SM_WIDGET_ZOOM_OUT, this->zoom == ZOOM_LVL_MAX);
++			this->SetDirty();
++		}
++	}
++
+ 	void ResizeLegend()
+ 	{
+ 		Widget *legend = &this->widget[SM_WIDGET_LEGEND];
+ 		int rows = (legend->bottom - legend->top) - 1;
+-		int columns = (legend->right - legend->left) / COLUMN_WIDTH;
++		int columns = legend->right - legend->left;
++		if (this->show_land_height) columns -= LAND_COLUMN_WIDTH;
++		columns /= COLUMN_WIDTH;
+ 		int new_rows = (this->map_type == SMT_INDUSTRY) ? ((_smallmap_industry_count + columns - 1) / columns) * 6 : MIN_LEGEND_HEIGHT;
+ 
+ 		new_rows = max(new_rows, MIN_LEGEND_HEIGHT);
+@@ -870,42 +1073,21 @@
+ 		}
+ 	}
+ 
+-	SmallMapWindow(const WindowDesc *desc, int window_number) : Window(desc, window_number)
++	void DrawLegend(int x, const LegendAndColour *tbl)
+ 	{
+-		this->LowerWidget(this->map_type + SM_WIDGET_CONTOUR);
+-		this->SetWidgetLoweredState(SM_WIDGET_TOGGLETOWNNAME, this->show_towns);
+-
+-		this->SmallMapCenterOnCurrentPos();
+-		this->FindWindowPlacementAndResize(desc);
+-	}
+-
+-	virtual void OnPaint()
+-	{
+-		DrawPixelInfo new_dpi;
+-
+-		/* Hide Enable all/Disable all buttons if is not industry type small map*/
+-		this->SetWidgetHiddenState(SM_WIDGET_ENABLEINDUSTRIES, this->map_type != SMT_INDUSTRY);
+-		this->SetWidgetHiddenState(SM_WIDGET_DISABLEINDUSTRIES, this->map_type != SMT_INDUSTRY);
+-
+-		/* draw the window */
+-		SetDParam(0, STR_SMALLMAP_TYPE_CONTOURS + this->map_type);
+-		this->DrawWidgets();
+-
+ 		const Widget *legend = &this->widget[SM_WIDGET_LEGEND];
++		int y = legend->top + 1;
++		bool industry_legend = (tbl == _legend_from_industries);
+ 
+-		int y_org = legend->top + 1;
+-		int x = 4;
+-		int y = y_org;
+-
+-		for (const LegendAndColour *tbl = _legend_table[this->map_type]; !tbl->end; ++tbl) {
++		for (; !tbl->end; ++tbl) {
+ 			if (tbl->col_break || y >= legend->bottom) {
+ 				/* Column break needed, continue at top, COLUMN_WIDTH pixels
+ 				 * (one "row") to the right. */
+ 				x += COLUMN_WIDTH;
+-				y = y_org;
++				y = legend->top + 1;
+ 			}
+ 
+-			if (this->map_type == SMT_INDUSTRY) {
++			if (industry_legend) {
+ 				/* Industry name must be formated, since it's not in tiny font in the specs.
+ 				 * So, draw with a parameter and use the STR_SMALLMAP_INDUSTRY string, which is tiny font.*/
+ 				SetDParam(0, tbl->legend);
+@@ -928,7 +1110,28 @@
+ 
+ 			y += 6;
+ 		}
++	}
+ 
++	virtual void OnPaint()
++	{
++		DrawPixelInfo new_dpi;
++
++		/* Hide Enable all/Disable all buttons if is not industry type small map*/
++		this->SetWidgetHiddenState(SM_WIDGET_ENABLEINDUSTRIES, this->map_type != SMT_INDUSTRY);
++		this->SetWidgetHiddenState(SM_WIDGET_DISABLEINDUSTRIES, this->map_type != SMT_INDUSTRY);
++
++		/* draw the window */
++		SetDParam(0, STR_SMALLMAP_TYPE_CONTOURS + this->map_type);
++		this->DrawWidgets();
++
++		/* draw legend */
++		this->DrawLegend(4, _legend_table[this->map_type]);
++
++		/* draw land height legend */
++		if (this->show_land_height && (this->map_type != SMT_VEGETATION)) {
++			this->DrawLegend(this->widget[SM_WIDGET_LEGEND].right - LAND_COLUMN_WIDTH, _legend_land);
++		}
++
+ 		const Widget *wi = &this->widget[SM_WIDGET_MAP];
+ 		if (!FillDrawPixelInfo(&new_dpi, wi->left + 1, wi->top + 1, wi->right - wi->left - 1, wi->bottom - wi->top - 1)) return;
+ 
+@@ -952,21 +1155,46 @@
+ 				Point pt = RemapCoords(this->scroll_x, this->scroll_y, 0);
+ 				Window *w = FindWindowById(WC_MAIN_WINDOW, 0);
+ 				w->viewport->follow_vehicle = INVALID_VEHICLE;
+-				w->viewport->dest_scrollpos_x = pt.x + ((_cursor.pos.x - this->left + 2) << 4) - (w->viewport->virtual_width >> 1);
+-				w->viewport->dest_scrollpos_y = pt.y + ((_cursor.pos.y - this->top - 16) << 4) - (w->viewport->virtual_height >> 1);
++				w->viewport->dest_scrollpos_x = pt.x + ScaleByZoom(((_cursor.pos.x - this->left + 2) << 4), this->zoom) - (w->viewport->virtual_width >> 1);
++				w->viewport->dest_scrollpos_y = pt.y + ScaleByZoom(((_cursor.pos.y - this->top - 16) << 4), this->zoom) - (w->viewport->virtual_height >> 1);
+ 
+ 				this->SetDirty();
+ 			} break;
+ 
+-			case SM_WIDGET_CONTOUR:    // Show land contours
++			case SM_WIDGET_ZOOM_IN:
++				this->ZoomIn((this->widget[SM_WIDGET_MAP].right - this->widget[SM_WIDGET_MAP].left) / 2,
++									(this->widget[SM_WIDGET_MAP].bottom - this->widget[SM_WIDGET_MAP].top) / 2);
++				SndPlayFx(SND_15_BEEP);
++				break;
++
++			case SM_WIDGET_ZOOM_OUT:
++				this->ZoomOut((this->widget[SM_WIDGET_MAP].right - this->widget[SM_WIDGET_MAP].left) / 2,
++									(this->widget[SM_WIDGET_MAP].bottom - this->widget[SM_WIDGET_MAP].top) / 2);
++				SndPlayFx(SND_15_BEEP);
++				break;
++
++			case SM_WIDGET_CONTOUR:    // Show/hide land height
++				this->show_land_height = !this->show_land_height;
++				this->ToggleWidgetLoweredState(SM_WIDGET_CONTOUR);
++				this->ResizeLegend();
++
++				this->SetDirty();
++				SndPlayFx(SND_15_BEEP);
++				break;
++
+ 			case SM_WIDGET_VEHICLES:   // Show vehicles
+ 			case SM_WIDGET_INDUSTRIES: // Show industries
+ 			case SM_WIDGET_ROUTES:     // Show transport routes
+ 			case SM_WIDGET_VEGETATION: // Show vegetation
+ 			case SM_WIDGET_OWNERS:     // Show land owners
+-				this->RaiseWidget(this->map_type + SM_WIDGET_CONTOUR);
+-				this->map_type = (SmallMapType)(widget - SM_WIDGET_CONTOUR);
+-				this->LowerWidget(this->map_type + SM_WIDGET_CONTOUR);
++				if (this->map_type + SM_WIDGET_CONTOUR == widget) { //Show countours (unclick)
++					this->map_type = SMT_CONTOUR;
++					this->RaiseWidget(widget);
++				} else {
++					if (this->map_type != SMT_CONTOUR) this->RaiseWidget(this->map_type + SM_WIDGET_CONTOUR);
++					this->map_type = (SmallMapType)(widget - SM_WIDGET_CONTOUR);
++					this->LowerWidget(widget);
++				}
+ 
+ 				this->ResizeLegend();
+ 
+@@ -1043,6 +1271,27 @@
+ 		}
+ 	}
+ 
++	virtual void OnMouseWheel(int wheel)
++	{
++		/* Cursor position relative to window */
++		int cx = _cursor.pos.x - this->left;
++		int cy = _cursor.pos.y - this->top;
++
++		/* Is cursor over the map ? */
++		if (IsInsideMM(cx, this->widget[SM_WIDGET_MAP].left, this->widget[SM_WIDGET_MAP].right + 1) &&
++							IsInsideMM(cy, this->widget[SM_WIDGET_MAP].top, this->widget[SM_WIDGET_MAP].bottom + 1)) {
++			/* Cursor position relative to map */
++			cx -= this->widget[SM_WIDGET_MAP].left;
++			cy -= this->widget[SM_WIDGET_MAP].top;
++
++			if (wheel < 0) {
++				this->ZoomIn(cx, cy);
++			} else {
++				this->ZoomOut(cx, cy);
++			}
++		}
++	};
++
+ 	virtual void OnTick()
+ 	{
+ 		/* update the window every now and then */
+@@ -1052,54 +1301,7 @@
+ 	virtual void OnScroll(Point delta)
+ 	{
+ 		_cursor.fix_at = true;
+-
+-		int x = this->scroll_x;
+-		int y = this->scroll_y;
+-
+-		int sub = this->subscroll + delta.x;
+-
+-		x -= (sub >> 2) << 4;
+-		y += (sub >> 2) << 4;
+-		sub &= 3;
+-
+-		x += (delta.y >> 1) << 4;
+-		y += (delta.y >> 1) << 4;
+-
+-		if (delta.y & 1) {
+-			x += TILE_SIZE;
+-			sub += 2;
+-			if (sub > 3) {
+-				sub -= 4;
+-				x -= TILE_SIZE;
+-				y += TILE_SIZE;
+-			}
+-		}
+-
+-		int hx = (this->widget[SM_WIDGET_MAP].right  - this->widget[SM_WIDGET_MAP].left) / 2;
+-		int hy = (this->widget[SM_WIDGET_MAP].bottom - this->widget[SM_WIDGET_MAP].top ) / 2;
+-		int hvx = hx * -4 + hy * 8;
+-		int hvy = hx *  4 + hy * 8;
+-		if (x < -hvx) {
+-			x = -hvx;
+-			sub = 0;
+-		}
+-		if (x > (int)MapMaxX() * TILE_SIZE - hvx) {
+-			x = MapMaxX() * TILE_SIZE - hvx;
+-			sub = 0;
+-		}
+-		if (y < -hvy) {
+-			y = -hvy;
+-			sub = 0;
+-		}
+-		if (y > (int)MapMaxY() * TILE_SIZE - hvy) {
+-			y = MapMaxY() * TILE_SIZE - hvy;
+-			sub = 0;
+-		}
+-
+-		this->scroll_x = x;
+-		this->scroll_y = y;
+-		this->subscroll = sub;
+-
++		this->DoScroll(delta.x, delta.y);
+ 		this->SetDirty();
+ 	}
+ 
+@@ -1110,10 +1312,11 @@
+ };
+ 
+ SmallMapWindow::SmallMapType SmallMapWindow::map_type = SMT_CONTOUR;
++bool SmallMapWindow::show_land_height = true;
+ bool SmallMapWindow::show_towns = true;
+ 
+ static const WindowDesc _smallmap_desc(
+-	WDP_AUTO, WDP_AUTO, 350, 214, 446, 314,
++	WDP_AUTO, WDP_AUTO, 385, 214, 446, 314,
+ 	WC_SMALLMAP, WC_NONE,
+ 	WDF_STD_TOOLTIPS | WDF_STD_BTN | WDF_DEF_WIDGET | WDF_STICKY_BUTTON | WDF_RESIZABLE,
+ 	_smallmap_widgets, _nested_smallmap_widgets, lengthof(_nested_smallmap_widgets)
+@@ -1261,8 +1464,8 @@
+ 		const ViewPort *vp = IsPtInWindowViewport(this, _cursor.pos.x, _cursor.pos.y);
+ 		if (vp == NULL) return;
+ 
+-		this->viewport->scrollpos_x += ScaleByZoom(delta.x, vp->zoom);
+-		this->viewport->scrollpos_y += ScaleByZoom(delta.y, vp->zoom);
++		this->viewport->scrollpos_x += UnScaleByZoom(delta.x, vp->zoom);
++		this->viewport->scrollpos_y += UnScaleByZoom(delta.y, vp->zoom);
+ 		this->viewport->dest_scrollpos_x = this->viewport->scrollpos_x;
+ 		this->viewport->dest_scrollpos_y = this->viewport->scrollpos_y;
+ 	}

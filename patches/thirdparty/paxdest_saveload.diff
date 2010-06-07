@@ -1,0 +1,924 @@
+Index: src/settings.cpp
+===================================================================
+--- src/settings.cpp	(Revision 11673)
++++ src/settings.cpp	(Arbeitskopie)
+@@ -1219,6 +1219,16 @@
+ 	return lookup_oneofmany("normal|hilly|desert|candy", value, -1);
+ }
+ 
++static int32 UseDestinations(int32 yes)
++{
++	if (yes) {
++//		Destinations::SetPassengersDestinations();
++	} else {
++//		Destinations::UnsetPassengersDestinations();
++	}
++	return yes;
++}
++
+ /* End - Callback Functions */
+ 
+ #ifndef EXTERNAL_PLAYER
+@@ -1458,6 +1468,29 @@
+ 	SDT_CONDVAR(Patches, larger_towns,      SLE_UINT8, 54, SL_MAX_VERSION, 0, D0, 4, 0, 255, 1, STR_CONFIG_PATCHES_LARGER_TOWNS,         NULL),
+ 	SDT_CONDVAR(Patches, initial_city_size, SLE_UINT8, 56, SL_MAX_VERSION, 0, 0,  2, 1,  10, 1, STR_CONFIG_PATCHES_CITY_SIZE_MULTIPLIER, NULL),
+ 	SDT_CONDBOOL(Patches, mod_road_rebuild,            77, SL_MAX_VERSION, 0, 0, false,         STR_CONFIG_MODIFIED_ROAD_REBUILD,        NULL),
++        SDT_CONDBOOL(Patches, use_destinations,	PAXDEST_MERGE, SL_MAX_VERSION, 0, 0, false,         STR_CONFIG_PATCHES_DESTINATIONS, UseDestinations),
++        SDT_CONDVAR (Patches, additional_route_rate,		SLE_UINT8,	PAXDEST_MERGE, SL_MAX_VERSION, 
++		     0, 0,  120, 100, 250, 1,	STR_CONFIG_PATCHES_ADDITIONAL_ROUTE_RATE,		NULL),
++       	SDT_CONDVAR (Patches, aircraft_cost_modifier,		SLE_UINT8, 	PAXDEST_MERGE, SL_MAX_VERSION, 
++		     0, 0,  10, 0, 100, 1,	STR_CONFIG_PATCHES_AIRCRAFT_COST_MODIFIER,		NULL),
++        SDT_CONDVAR (Patches, transferring_cost_modifier,	SLE_UINT8, 	PAXDEST_MERGE, SL_MAX_VERSION, 
++		     0, 0,  10, 0, 100, 1,	STR_CONFIG_PATCHES_TRANSFERRING_COST_MODIFIER,		NULL),
++	SDT_CONDVAR (Patches, reduce_passenger,			SLE_UINT8,	PAXDEST_MERGE, SL_MAX_VERSION, 
++		     0, 0,  0, 0, 8, 1,		STR_CONFIG_PATCHES_REDUCE_PASSENGER,			NULL),
++       	SDT_CONDBOOL(Patches, generate_unreachable_passenger, 			PAXDEST_MERGE, SL_MAX_VERSION, 
++		     0, 0,  false,		STR_CONFIG_PATCHES_GENERATE_UNREACHABLE_PASSENGER, 	NULL),
++	SDT_CONDVAR (Patches, reduce_unreachable_passenger,	SLE_UINT8, 	PAXDEST_MERGE, SL_MAX_VERSION, 
++		     0, 0,  1, 0, 8, 1,		STR_CONFIG_PATCHES_REDUCE_UNREACHABLE_PASSENGER,	NULL),
++	SDT_CONDBOOL(Patches, use_temporary_info,      				PAXDEST_MERGE, SL_MAX_VERSION, 
++		     0, 0,  false,		STR_CONFIG_PATCHES_USE_TEMPORARY_INFO,			NULL),
++	SDT_CONDBOOL(Patches, update_route_on_jit,     				PAXDEST_MERGE, SL_MAX_VERSION, 
++		     0, 0,  false,		STR_CONFIG_PATCHES_UPDATE_ROUTE_ON_JIT,			NULL),
++	SDT_CONDBOOL(Patches, faster_gradual_loading,  				PAXDEST_MERGE, SL_MAX_VERSION, 
++		     0, 0,  false,		STR_CONFIG_PATCHES_FASTER_GRADUAL_LOADING,   UseDestinations),
++	SDT_CONDBOOL(Patches, pay_partly_fare, 					PAXDEST_MERGE, SL_MAX_VERSION, 
++		     0, 0,  false,		STR_CONFIG_PATCHES_PAY_PARTLY_FARE,			NULL),
++	SDT_CONDVAR (Patches, passenger_walking,		SLE_UINT8,	PAXDEST_MERGE, SL_MAX_VERSION, 
++		     0, 0,  0,  0,  4, 1,	STR_CONFIG_PATCHES_PASSENGER_WALKING,			NULL),
+ 
+ 	/***************************************************************************/
+ 	/* AI section of the GUI-configure patches window */
+Index: src/lang/english.txt
+===================================================================
+--- src/lang/english.txt	(Revision 11673)
++++ src/lang/english.txt	(Arbeitskopie)
+@@ -1213,6 +1213,21 @@
+ STR_CONFIG_PATCHES_YAPF_ROAD                                    :{LTBLUE}Use YAPF for roadvehs: {ORANGE}{STRING1}
+ STR_CONFIG_PATCHES_YAPF_RAIL                                    :{LTBLUE}Use YAPF for trains: {ORANGE}{STRING1}
+ 
++STR_CONFIG_PATCHES_DESTINATIONS					:{LTBLUE}Activate passenger destinations
++STR_CONFIG_PATCHES_ADDITIONAL_ROUTE_RATE	                :{LTBLUE}The maximum cost for additional route: {ORANGE}{STRING1}% of cost of the best route
++STR_CONFIG_PATCHES_REDUCE_PASSENGER                             :{LTBLUE}Reduce passenger number by {ORANGE}{STRING1}
++STR_CONFIG_PATCHES_GENERATE_UNREACHABLE_PASSENGER               :{LTBLUE}Allow generating passenger for unreachable station
++STR_CONFIG_PATCHES_REDUCE_UNREACHABLE_PASSENGER                 :{LTBLUE}Reduce unreachable passenger number by {ORANGE}{STRING1}
++STR_CONFIG_PATCHES_USE_TEMPORARY_INFO				:{LTBLUE}Use order based adjacent information temporarily
++STR_CONFIG_PATCHES_UPDATE_ROUTE_ON_JIT		                :{LTBLUE}Update routing information when adjacent information is updated
++STR_CONFIG_PATCHES_FASTER_GRADUAL_LOADING	                :{LTBLUE}Faster gradual loading
++STR_CONFIG_PATCHES_AIRCRAFT_COST_MODIFIER	                :{LTBLUE}Routing cost modifier for aircrafts: {ORANGE}{STRING1}0%
++STR_CONFIG_PATCHES_TRANSFERRING_COST_MODIFIER	                :{LTBLUE}Routing cost modifier for transferring: {ORANGE}{STRING1}0%
++STR_CONFIG_PATCHES_PAY_PARTLY_FARE				:{LTBLUE}Allow passenger paying partial fare
++STR_CONFIG_PATCHES_PASSENGER_WALKING		                :{LTBLUE}Allow passenger walking in {ORANGE}{STRING1} tiles {LTBLUE}(EXPERIMENTAL)
++STR_CONFIG_PATCHES_UPDATE_ROUTE_SIZE		                :{LTBLUE}Update routing informations of {ORANGE}{STRING1} station {LTBLUE}everyday
++STR_SHOW_PASSENGER_NETWORK					:{BLACK}Pax-network
++
+ STR_TEMPERATE_LANDSCAPE                                         :Temperate landscape
+ STR_SUB_ARCTIC_LANDSCAPE                                        :Sub-arctic landscape
+ STR_SUB_TROPICAL_LANDSCAPE                                      :Sub-tropical landscape
+@@ -1843,7 +1858,14 @@
+ STR_3031_CAN_T_RENAME_STATION                                   :{WHITE}Can't rename station...
+ STR_3032_RATINGS                                                :{BLACK}Ratings
+ STR_3033_ACCEPTS                                                :{BLACK}Accepts
++STR_SHOW_NEXT_STATIONS						:{BLACK}Next Stn.
++STR_SHOW_ROUTING_INFO						:{BLACK}Routing
++STR_SHOW_PASSENGERS_INFO					:{BLACK}Passengers
+ STR_3034_LOCAL_RATING_OF_TRANSPORT                              :{BLACK}Local rating of transport service:
++STR_NEXT_STATIONS						:{BLACK}Next stations:
++STR_DESTINATION_INFO						:{BLACK}Destinations:
++STR_ROUTING_INFO						:{BLACK}Routes:
++STR_PASSENGERS_INFO						:{BLACK}Passengers:
+ 
+ ############ range for rating starts
+ STR_3035_APPALLING                                              :Appalling
+@@ -2668,6 +2690,7 @@
+ STR_UNKNOWN_DESTINATION                                         :unknown destination
+ STR_8812_EMPTY                                                  :{LTBLUE}Empty
+ STR_8813_FROM                                                   :{LTBLUE}{CARGO} from {STATION}
++STR_PASSENGERS_TO                                               :{LTBLUE}{CARGO} to {STATION}
+ STR_FROM_MULT                                                   :{LTBLUE}{CARGO} from {STATION} (x{NUM})
+ STR_8814_TRAIN_IS_WAITING_IN_DEPOT                              :{WHITE}Train {COMMA} is waiting in depot
+ STR_8815_NEW_VEHICLES                                           :{BLACK}New Vehicles
+Index: src/saveload.cpp
+===================================================================
+--- src/saveload.cpp	(Revision 11673)
++++ src/saveload.cpp	(Arbeitskopie)
+@@ -30,7 +30,7 @@
+ #include "window_func.h"
+ #include <list>
+ 
+-extern const uint16 SAVEGAME_VERSION = 83;
++extern const uint16 SAVEGAME_VERSION = 86;
+ uint16 _sl_version;       ///< the major savegame version identifier
+ byte   _sl_minor_version; ///< the minor savegame version, DO NOT USE!
+ 
+@@ -1257,6 +1257,8 @@
+ extern const ChunkHandler _newgrf_chunk_handlers[];
+ extern const ChunkHandler _group_chunk_handlers[];
+ extern const ChunkHandler _cargopacket_chunk_handlers[];
++extern const ChunkHandler _station_paxdest_chunk_handlers[];
++extern const ChunkHandler _cargopacket_paxdest_chunk_handlers[];
+ 
+ static const ChunkHandler * const _chunk_handlers[] = {
+ 	_misc_chunk_handlers,
+@@ -1276,6 +1278,8 @@
+ 	_newgrf_chunk_handlers,
+ 	_group_chunk_handlers,
+ 	_cargopacket_chunk_handlers,
++	_station_paxdest_chunk_handlers,
++	_cargopacket_paxdest_chunk_handlers,
+ 	NULL,
+ };
+ 
+Index: src/station.cpp
+===================================================================
+--- src/station.cpp	(Revision 11673)
++++ src/station.cpp	(Arbeitskopie)
+@@ -35,6 +35,7 @@
+ #include "cargotype.h"
+ #include "roadveh.h"
+ #include "station_gui.h"
++#include "strings.h"
+ 
+ Station::Station(TileIndex tile)
+ {
+@@ -510,3 +511,223 @@
+ 
+ 	return NULL;
+ }
++
++
++
++void PassengerTrainStatistics::Add(uint16 driving_time, Money fare, uint16 vacancy, uint8 days, uint8 month_offset) {
++	this->arrival[month_offset]++;
++	this->driving_time[month_offset]	+= driving_time;
++	this->fare[month_offset]		+= fare;
++	this->vacancy[month_offset]		+= vacancy;
++	this->days[month_offset]		+= days;
++
++	sum_arrival++;
++	sum_driving_time	+= driving_time;
++	sum_fare		+= fare;
++	sum_vacancy		+= vacancy;
++	sum_days		+= days;	
++}
++
++PassengerTrainStatistics::PassengerTrainStatistics(StationID src, StationID dst, OrderID o, PassengerRoutingType type)
++	: src_id(src), dest_id(dst), order_id(o), type(type), sum_arrival(0), sum_driving_time(0), sum_fare(0), sum_vacancy(0), sum_days(0)
++{
++	ClearArrays();
++}
++
++PassengerTrainStatistics::PassengerTrainStatistics(uint16 dtime, Money f, uint16 v, uint8 d, uint8 month, StationID src, StationID dst , OrderID o, PassengerRoutingType type) : src_id(src), dest_id(dst), order_id(o), type(type), sum_arrival(0), sum_driving_time(0), sum_fare(0), sum_vacancy(0), sum_days(0)
++{
++	ClearArrays();
++	Add(dtime, f, v, d, month);
++}
++
++void PassengerTrainStatistics::ClearArrays() {
++	for (int i = 0; i < PASSENGER_TRAIN_STATISTICS_LENGTH; i++) {
++		arrival[i]	= 0;
++		driving_time[i]	= 0;
++		fare[i]		= 0;
++		vacancy[i]	= 0;
++		days[i]		= 0;
++	}
++}
++
++void PassengerTrainStatistics::Clear()
++{
++	ClearArrays();	
++	sum_arrival		= 0;
++	sum_driving_time	= 0;
++	sum_fare		= 0;
++	sum_vacancy		= 0;
++	sum_days		= 0;
++}
++
++set<StationID> PassengerTrainStatisticsList::_update_queue;
++
++int PassengerTrainStatisticsList::CalculateVacancy(Vehicle const * v) {
++	int count = 0, max = 0;
++	for (const Vehicle *i = v; i != NULL; i = i->Next()) {
++		if (i->cargo_type == CT_PASSENGERS) {
++			max   += i->cargo_cap;
++			count += i->cargo.Count();
++		}
++	}
++	return max - count;
++}
++
++
++
++void PassengerTrainStatisticsList::AddTempInfo(StationID src_id, StationID dest_id, const Vehicle * const v, OrderID order_id) {
++	int vacancy = CalculateVacancy(v);
++	if (vacancy <= 0) return;
++	OverWrite(src_id, dest_id, order_id, 9999, 9999, vacancy); // FIXME , 0, PRT_TEMPINFO);
++}
++
++void PassengerTrainStatisticsList::AddInfo(StationID src_id, StationID dest_id, const Vehicle* v, Money fare){
++	int vacancy = CalculateVacancy(v);
++	if (vacancy <= 0) return;
++	const OrderID oid = v->last_station_order_id;
++	assert (oid != INVALID_ORDER);
++	if ( ! VehicleHas(v, GetOrder(oid))) return;
++	OverWrite(src_id, dest_id, oid, v->last_station_visited_time, fare, vacancy);
++}
++
++void PassengerTrainStatisticsList::Add(StationID src, StationID dest, OrderID order, uint16 driving_time, Money fare, uint16 vacancy, uint8 month_offset, PassengerRoutingType type) {
++	if (order != INVALID_ORDER)
++		OverWrite(src, dest, order, driving_time, fare, vacancy, month_offset, type);
++	else {
++		iterator it = find(order);
++		if (it != end())
++			it->second.Add(driving_time, fare, vacancy, type);
++		else {
++			insert(StatsPair(order, PassengerTrainStatistics(driving_time, fare, vacancy, 30, month_offset, src, dest, order, type)));
++			_update_queue.insert(dest);
++		}
++	}
++}
++
++void PassengerTrainStatisticsList::OverWrite(StationID src, StationID dest, OrderID order, uint16 driving_time, Money fare, uint16 vacancy, uint8 month_offset, PassengerRoutingType type) {
++	iterator it = find(order);
++	if (it != end()) {
++		if (dest == it->second.dest_id)
++			it->second.Add(driving_time, fare, vacancy, type);
++		else {
++			it->second.dest_id = dest;
++			it->second.Clear();
++			it->second.Add(driving_time, fare, vacancy, 30);
++		}
++	} else {
++		insert(StatsPair(order, PassengerTrainStatistics(driving_time, fare, vacancy, 30, month_offset, src, dest, order, type)));
++		_update_queue.insert(dest);
++	}
++}
++
++void PassengerTrainStatisticsList::AddWalkInfo(StationID src_id, StationID dest_id) {
++	Add(src_id, dest_id, INVALID_ORDER, 999, 999, 999, PASSENGER_TRAIN_STATISTICS_LENGTH - 1, PRT_WALKING);
++}
++
++void PassengerTrainStatisticsList::StatsLoop()
++{
++	for (iterator it = begin(), e = end(); it != e; ++it) {
++		PassengerTrainStatistics & stats = it->second;
++		stats.sum_arrival		-= stats.arrival[PASSENGER_TRAIN_STATISTICS_LENGTH - 1];
++		stats.sum_driving_time	-= stats.driving_time[PASSENGER_TRAIN_STATISTICS_LENGTH - 1];
++		stats.sum_fare		-= stats.fare[PASSENGER_TRAIN_STATISTICS_LENGTH - 1];
++		stats.sum_vacancy		-= stats.vacancy[PASSENGER_TRAIN_STATISTICS_LENGTH - 1];
++		stats.sum_days		-= stats.days[PASSENGER_TRAIN_STATISTICS_LENGTH - 1];
++		
++		for (int i = PASSENGER_TRAIN_STATISTICS_LENGTH - 1; i > 0; i--) {
++			stats.arrival[i]		= stats.arrival[i - 1];
++			stats.driving_time[i]	= stats.driving_time[i - 1];
++			stats.fare[i]		= stats.fare[i - 1];
++			stats.vacancy[i]		= stats.vacancy[i - 1];
++			stats.days[i]		= stats.days[i - 1];
++		}
++		if (IsValidStationID(stats.dest_id) && stats.sum_arrival > 0) {
++			stats.arrival[0]		= 0;
++			stats.driving_time[0]	= 0;
++			stats.fare[0]		= 0;
++			stats.vacancy[0]		= 0;
++			stats.days[0]		= 30; //FIXME
++			stats.sum_days		+= stats.days[0];
++		} else {
++			erase(it++);
++		}
++	}
++}
++
++bool PassengerTrainStatisticsList::IsExists(const Vehicle* v) const
++{
++	for (const Order *i = v->orders; i != NULL; i = i->next) {
++		if (find(i->index) != end()) return true;
++	}
++	return false;
++}
++
++
++void PassengerTrainStatisticsList::Add(PassengerTrainStatistics& p)
++{
++	p.sum_arrival = p.sum_driving_time = p.sum_fare = p.sum_vacancy = p.sum_days = 0;
++	for (int i = 0; i < PASSENGER_TRAIN_STATISTICS_LENGTH; i++) {
++		p.sum_arrival      += p.arrival[i];
++		p.sum_driving_time += p.driving_time[i];
++		p.sum_fare         += p.fare[i];
++		p.sum_vacancy      += p.vacancy[i];
++		p.sum_days         += p.days[i];
++	}
++	insert(StatsPair(p.order_id, p));
++}
++
++// some of the following methods could be simplified by extensive use of templates
++// however this would reduce readability and the net gain would be minimal
++
++StationID RoutingInformationGroup::GetNextStationInWalk(StationID src_id, StationID dest_id) const {
++	const_iterator it = find(dest_id);
++	if (it == end()) 
++		return INVALID_STATION;
++	else
++		return it->second.GetNextStationInWalk(src_id);
++}
++
++bool RoutingInformationGroup::IsExistsInKeep (StationID src_id, StationID dest_id, OrderID order_id) const {
++	const_iterator it = find(dest_id);
++	if (it == end()) 
++		return INVALID_STATION;
++	else
++		return it->second.IsExistsInKeep(src_id, order_id);
++}
++
++bool RoutingInformationGroup::IsExistsInBoard(StationID src_id, StationID dest_id, OrderID order_id) const {
++	const_iterator it = find(dest_id);
++	if (it == end()) 
++		return INVALID_STATION;
++	else
++		return it->second.IsExistsInBoard(src_id, order_id);
++}
++
++StationID RoutingInformationList::GetNextStationInWalk(StationID src_id) const 
++{
++	WalkMap::const_iterator it = walk_info.find(src_id);
++	if (it == walk_info.end())
++		return INVALID_STATION;
++	else
++		return it->second.subdest_id;
++}
++
++bool RoutingInformationList::IsExistsInKeep(StationID src_id, OrderID order_id) const
++{
++	for (KeepMap::const_iterator i = keep_info.lower_bound(src_id); i != keep_info.upper_bound(src_id); ++i)
++		if(i->second.order_id == order_id) return true;
++	return false;
++}
++
++bool RoutingInformationList::IsExistsInBoard(StationID src_id, OrderID order_id) const
++{
++	for (BoardMap::const_iterator i = board_info.lower_bound(src_id); i != board_info.upper_bound(src_id); ++i)
++		if(i->second.order_id == order_id) return true;
++	return false;
++}
++
++
++
++
++
++
+Index: src/station_cmd.cpp
+===================================================================
+--- src/station_cmd.cpp	(Revision 11673)
++++ src/station_cmd.cpp	(Arbeitskopie)
+@@ -2568,6 +2568,10 @@
+ 	FOR_ALL_STATIONS(st) StationHandleSmallTick(st);
+ }
+ 
++
++static uint _max_distance;
++
++
+ void StationMonthlyLoop()
+ {
+ }
+@@ -3083,10 +3087,10 @@
+ 	SLE_CONDVAR(Station, num_specs,                  SLE_UINT8,                  27, SL_MAX_VERSION),
+ 
+ 	SLE_CONDLST(Station, loading_vehicles,           REF_VEHICLE,                57, SL_MAX_VERSION),
+-
+-	/* reserve extra space in savegame here. (currently 32 bytes) */
+-	SLE_CONDNULL(32, 2, SL_MAX_VERSION),
+-
++     	SLE_CONDVAR(Station, passenger_waiting_modulo,   SLE_UINT16,                 PAXDEST_MERGE, SL_MAX_VERSION),
++    	/* reserve extra space in savegame here. (currently 32 bytes) */
++    	SLE_CONDNULL(2, 0, PAXDEST_MERGE - 1),
++	SLE_CONDNULL(30, 2, SL_MAX_VERSION),
+ 	SLE_END()
+ };
+ 
+@@ -3123,7 +3127,7 @@
+ 		 SLE_CONDLST(GoodsEntry, cargo.packets,       REF_CARGO_PACKET,           68, SL_MAX_VERSION),
+ 
+ 		SLE_END()
+-};
++	};
+ 
+ 
+ 	SlObject(st, _station_desc);
+@@ -3220,3 +3224,87 @@
+ 	{ 'STNS', Save_STNS,      Load_STNS,      CH_ARRAY },
+ 	{ 'ROAD', Save_ROADSTOP,  Load_ROADSTOP,  CH_ARRAY | CH_LAST},
+ };
++
++uint32 _pax_count;
++static const SaveLoad _station_paxdest_desc1[] = {
++	SLEG_CONDVAR(                          _pax_count, SLE_UINT32,   75, SL_MAX_VERSION),
++	SLE_END()
++};
++
++static const SaveLoad _station_paxdest_desc2[] = {
++	     SLE_VAR(PassengerTrainStatistics, order_id,   SLE_UINT16),
++	     SLE_VAR(PassengerTrainStatistics, dest_id,    SLE_UINT16),
++	SLE_END()
++};
++
++uint16 _pax_arrival;
++uint16 _pax_driving_time;
++uint64 _pax_fare;
++uint16 _pax_vacancy;
++uint16 _pax_days;
++static const SaveLoad _station_paxdest_desc3[] = {
++	SLEG_CONDVAR(_pax_arrival,      SLE_UINT16,   PAXDEST_MERGE, SL_MAX_VERSION),
++	SLEG_CONDVAR(_pax_driving_time, SLE_UINT16,   PAXDEST_MERGE, SL_MAX_VERSION),
++	SLEG_CONDVAR(_pax_fare,         SLE_UINT64,   PAXDEST_MERGE, SL_MAX_VERSION),
++	SLEG_CONDVAR(_pax_vacancy,      SLE_UINT16,   PAXDEST_MERGE, SL_MAX_VERSION),
++	SLEG_CONDVAR(_pax_days,         SLE_UINT8,    PAXDEST_MERGE, SL_MAX_VERSION),
++	SLE_END()
++};
++
++
++//TODO: check for savegame version?
++static void SaveLoad_STNX(Station *st)
++{
++	SlObject(NULL, _station_paxdest_desc1);
++	PassengerTrainStatisticsList::const_iterator it = st->passenger_stat.begin(), end = st->passenger_stat.end();
++	for (uint32 i = 0; i < _pax_count; i++, ++it) {
++		PassengerTrainStatistics p;
++		if (it != end) p = it->second; // save only
++		SlObject(&p, _station_paxdest_desc2);
++		for (int j = 0; j < PASSENGER_TRAIN_STATISTICS_LENGTH; ++j) {
++			_pax_arrival      = p.arrival[j];
++			_pax_driving_time = p.driving_time[j];
++			_pax_fare         = p.fare[j];
++			_pax_vacancy      = p.vacancy[j];
++			_pax_days         = p.days[j];
++			SlObject(NULL, _station_paxdest_desc3);
++			p.arrival[j]      = _pax_arrival;
++			p.driving_time[j] = _pax_driving_time;
++			p.fare[j]         = _pax_fare;
++			p.vacancy[j]      = _pax_vacancy;
++			p.days[j]         = _pax_days;
++		}
++		if (i >= st->passenger_stat.size()) { // load only
++			p.src_id = st->index;
++			st->passenger_stat.Add(p);
++		}
++	}
++}
++
++static void Save_STNX()
++{
++	Station *st;
++	FOR_ALL_STATIONS(st) {
++		SlSetArrayIndex(st->index);
++		_pax_count = st->passenger_stat.size();
++		SlAutolength((AutolengthProc*)SaveLoad_STNX, st);
++	}
++}
++
++//TODO: save and load routes and backward links
++// in the savegame instead of recalculating them on load
++// =>	reduces dependencies and load time at the cost of
++//	a small increase in savegame size
++static void Load_STNX()
++{
++	int index;
++	while ((index = SlIterateArray()) != -1) {
++		SaveLoad_STNX(GetStation(index));
++	}
++	_max_distance = 0;
++}
++
++extern const ChunkHandler _station_paxdest_chunk_handlers[] = {
++	{ 'STNX', Save_STNX, Load_STNX, CH_ARRAY | CH_LAST},
++};
++
+Index: src/vehicle.h
+===================================================================
+--- src/vehicle.h	(Revision 11673)
++++ src/vehicle.h	(Arbeitskopie)
+@@ -270,6 +270,8 @@
+ 
+ 	byte vehstatus;          // Status
+ 	StationID last_station_visited;
++	uint32 last_station_visited_time;        // cache current_order_time
++	OrderID last_station_order_id;           // the OrderID at the last station
+ 
+ 	CargoID cargo_type;      // type of cargo this vehicle is carrying
+ 	uint16 cargo_cap;        // total capacity
+@@ -704,6 +706,14 @@
+ #define FOR_ALL_VEHICLES_FROM(v, start) for (v = GetVehicle(start); v != NULL; v = (v->index + 1U < GetVehiclePoolSize()) ? GetVehicle(v->index + 1) : NULL) if (v->IsValid())
+ #define FOR_ALL_VEHICLES(v) FOR_ALL_VEHICLES_FROM(v, 0)
+ 
++static inline bool VehicleHas(const Vehicle * const v, const Order * const o)
++{
++	for (const Order *i = v->orders; i != NULL; i = i->next) {
++		if (i == o) return true;
++	}
++	return false;
++}
++
+ /**
+  * Check if an index is a vehicle-index (so between 0 and max-vehicles)
+  * @param index of the vehicle to query
+Index: src/station.h
+===================================================================
+--- src/station.h	(Revision 11673)
++++ src/station.h	(Arbeitskopie)
+@@ -12,8 +12,11 @@
+ #include "road_type.h"
+ #include "newgrf_station.h"
+ #include "cargopacket.h"
++#include "date.h"
++#include "order.h"
+ #include <list>
+ #include <set>
++#include <map>
+ 
+ struct Station;
+ struct RoadStop;
+@@ -89,6 +92,159 @@
+ 	uint8  localidx;   ///< Station ID within GRF of station
+ };
+ 
++enum PassengerRoutingType {
++	PRT_NORMAL = 0,
++	PRT_TEMPINFO,
++	PRT_WALKING
++};
++
++//WalkStatistics: src_id, dest_id, arrival, days
++//TempStatistics: + order_id, vacancy
++//NormalStatistics: + driving_time, fare 
++//TODO: can we pull these apart somehow? Copying ~100 bytes everytime that
++// thing is accessed isn't the best solution.
++#define PASSENGER_TRAIN_STATISTICS_LENGTH 6
++struct PassengerTrainStatistics {
++public:
++	StationID src_id;  ///< source for vehicle
++	StationID dest_id; ///< destination for vehicle
++	OrderID order_id;
++	PassengerRoutingType type;
++	
++	uint32	sum_arrival;		///< cache
++	uint32	sum_driving_time;	///< cache
++	uint32	sum_fare;		///< cache
++	uint32	sum_vacancy;		///< cache
++	uint16	sum_days;		///< cache
++	
++	uint16	arrival     [PASSENGER_TRAIN_STATISTICS_LENGTH];	///< the number of the trains arrival in a month
++	uint16	driving_time[PASSENGER_TRAIN_STATISTICS_LENGTH];	///< the total of the time between the station and the previous station
++	uint16	fare        [PASSENGER_TRAIN_STATISTICS_LENGTH];	///< the total of the fare of the trains
++	uint16	vacancy     [PASSENGER_TRAIN_STATISTICS_LENGTH];	///< the total of the number of underoccupied seats
++	uint8	days        [PASSENGER_TRAIN_STATISTICS_LENGTH];	///< the number of days of the month
++	
++	PassengerTrainStatistics(StationID src = INVALID_STATION, StationID dst = INVALID_STATION, OrderID o = INVALID_ORDER, PassengerRoutingType type = PRT_NORMAL);
++	PassengerTrainStatistics(uint16 dtime, Money f, uint16 v, uint8 d = 0, uint8 month = 0, StationID src = INVALID_STATION, StationID dst = INVALID_STATION, OrderID o = INVALID_ORDER, PassengerRoutingType type = PRT_NORMAL);
++	void Clear();
++	void Add(uint16 dtime, Money f, uint16 v, uint8 d = 0, uint8 month = 0);
++	void Add(uint16 dtime, Money f, uint16 v, PassengerRoutingType t, uint8 d = 0, uint8 month = 0) 
++		{type = t; Add(dtime, f, v, d, month); }
++private:
++	void ClearArrays();
++};
++
++using std::multimap;
++using std::pair;
++using std::map;
++using std::set;
++
++//TODO: is an OrderID-sorted map the correct thing here?
++//Is Exists and the Add methods seem to suggest that.
++class PassengerTrainStatisticsList : public multimap<OrderID, PassengerTrainStatistics> {
++public:
++	static set<StationID> _update_queue;
++	typedef pair<OrderID, PassengerTrainStatistics> StatsPair;
++	void AddInfo(StationID src_id, StationID dest_id, const Vehicle* v, Money fare);
++	void AddTempInfo(StationID src_id, StationID dest_id, const Vehicle * const v, OrderID order_id);
++	void AddWalkInfo(StationID src_id, StationID dest_id);
++	void Add(PassengerTrainStatistics & p);
++	void StatsLoop();
++	bool IsExists(const Vehicle* v) const;	
++private:
++	void OverWrite(StationID src, StationID dest, OrderID order, uint16 driving_time, Money fare, uint16 vacancy, uint8 month_offset = 0, PassengerRoutingType type = PRT_NORMAL);
++	void Add(StationID src, StationID dest, OrderID order, uint16 driving_time, Money fare, uint16 vacancy, uint8 month_offset, PassengerRoutingType type);
++	int CalculateVacancy(const Vehicle * v);
++};
++
++// there are actually three fairly different 
++// routing informations: walk, board, keep
++// solved by subclasses
++struct PassengerWalk {
++public:
++	const StationID	subdest_id;     ///< next transfer (or walk) stn
++	PassengerWalk (StationID subdest) :
++		subdest_id(subdest) {}
++};
++
++
++struct PassengerKeep {
++public:
++	const OrderID	order_id;	///< order of train
++	PassengerKeep (OrderID order) :
++		order_id(order) {}
++};
++
++
++struct PassengerBoard : public PassengerWalk, public PassengerKeep {
++public:
++	const uint	driving_time;
++	PassengerBoard(OrderID order, StationID subdest, uint driving) : 
++		PassengerWalk(subdest),
++		PassengerKeep(order),
++		driving_time(driving) {}
++};
++
++
++
++struct RoutingInformationList {
++public:
++	typedef multimap<StationID, PassengerWalk> WalkMap; //TODO: is this actually a multimap or only a map?
++	typedef multimap<StationID, PassengerKeep> KeepMap;
++	typedef multimap<StationID, PassengerBoard> BoardMap;
++	typedef pair<StationID, PassengerWalk> WalkPair;
++	typedef pair<StationID, PassengerKeep> KeepPair;
++	typedef pair<StationID, PassengerBoard> BoardPair;
++	
++//	RoutingInformationList(StationID dest_id) : dest_id(dest_id) {}
++
++	void AddWalkInfo (StationID src_id, StationID subdest_id) 
++		{walk_info.insert(WalkPair(src_id, PassengerWalk(subdest_id)));}
++	void AddKeepInfo (StationID src_id, OrderID order_id)
++		{keep_info.insert(KeepPair(src_id, PassengerKeep(order_id)));}
++	void AddBoardInfo(StationID src_id, OrderID order_id, StationID subdest_id, uint driving_time)
++		{board_info.insert(BoardPair(src_id, PassengerBoard(order_id, subdest_id, driving_time)));}
++
++	StationID GetNextStationInWalk(StationID src_id) const;
++	bool IsExistsInKeep (StationID src_id, OrderID order_id) const;
++	bool IsExistsInBoard(StationID src_id, OrderID order_id) const;
++
++//TODO: can we make those things private? 
++//	Should we further sort the KeepInfo and BoardInfo or are the ranges of equal keys reasonably small?
++	WalkMap walk_info;	
++	KeepMap keep_info;	
++	BoardMap board_info;
++};
++
++//TODO: is that map a public or rather a private inheritance?
++class RoutingInformationGroup : public map<StationID, RoutingInformationList> {
++public:
++	typedef pair<StationID, RoutingInformationList> RoutePair;
++	void AddWalkInfo (StationID src_id, StationID dest_id, StationID subdest_id)
++		{operator[](dest_id).AddWalkInfo(src_id, subdest_id);}
++	void AddKeepInfo (StationID src_id, StationID dest_id, OrderID order_id)
++		{operator[](dest_id).AddKeepInfo(src_id, order_id);}
++	void AddBoardInfo(StationID src_id, StationID dest_id, OrderID order_id, StationID subdest_id, uint driving_time)
++		{operator[](dest_id).AddBoardInfo(src_id, order_id, subdest_id, driving_time);}
++
++	StationID GetNextStationInWalk(StationID src_id, StationID dest_id) const;
++	bool IsExistsInKeep (StationID src_id, StationID dest_id, OrderID order_id) const;
++	bool IsExistsInBoard(StationID src_id, StationID dest_id, OrderID order_id) const;
++};
++
++struct RoutingNode {
++	Station			* const station;
++	uint			cost;
++	const RoutingNode	* const prev;
++	Order			* const order;
++	const Vehicle		* const vehicle;
++	bool			transfer;
++	const PassengerTrainStatistics * const pts;
++	RoutingNode(Station * const s, uint c = 0, const RoutingNode * const p = NULL, Order * const o = NULL, const Vehicle * const v = NULL, bool t = false, const PassengerTrainStatistics * const pt = NULL) : 
++			station(s), cost(c), prev(p), order(o), vehicle(v), transfer(t), pts(pt) {}
++};
++
++typedef uint CostFunction(const PassengerTrainStatistics& p, bool transfer);
++
+ /** StationRect - used to track station spread out rectangle - cheaper than scanning whole map */
+ struct StationRect : public Rect {
+ 	enum StationRectMode
+@@ -167,6 +323,13 @@
+ 
+ 	StationRect rect; ///< Station spread out rectangle (not saved) maintained by StationRect_xxx() functions
+ 
++	uint passenger_acceptance;  // cache
++	PassengerTrainStatisticsList passenger_stat;  // cache
++	RoutingInformationGroup  routing_info;        // cache
++
++	std::list<const PassengerTrainStatistics*> prev_stations;           // cache
++	uint16 passenger_waiting_modulo; // to reduce the number of passengers traveling
++
+ 	static const int cDebugCtorLevel = 5;
+ 
+ 	Station(TileIndex tile = 0);
+Index: src/core/math_func.hpp
+===================================================================
+--- src/core/math_func.hpp	(Revision 11673)
++++ src/core/math_func.hpp	(Arbeitskopie)
+@@ -17,6 +17,7 @@
+ #undef abs
+ #endif
+ 
++
+ /**
+  * Returns the maximum of two values.
+  *
+@@ -26,7 +27,7 @@
+  * @param a The first value
+  * @param b The second value
+  * @return The greater value or a if equals
+- */
++ */ 
+ template<typename T> static inline T max(const T a, const T b)
+ {
+ 	return (a >= b) ? a : b;
+Index: src/cargopacket.h
+===================================================================
+--- src/cargopacket.h	(Revision 11673)
++++ src/cargopacket.h	(Arbeitskopie)
+@@ -21,6 +21,7 @@
+ 	StationID source;       ///< The station where the cargo came from first
+ 	TileIndex source_xy;    ///< The origin of the cargo (first station in feeder chain)
+ 	TileIndex loaded_at_xy; ///< Location where this cargo has been loaded into the vehicle
++	StationID destination;  ///< The station of the passenger's final destination
+ 
+ 	uint16 count;           ///< The amount of cargo in this packet
+ 	byte days_in_transit;   ///< Amount of days this packet has been in transit
+@@ -31,13 +32,20 @@
+ 	 * Creates a new cargo packet
+ 	 * @param source the source of the packet
+ 	 * @param count  the number of cargo entities to put in this packet
++	 * @param destination	the destination for this packet
+ 	 * @pre count != 0 || source == INVALID_STATION
+ 	 */
+-	CargoPacket(StationID source = INVALID_STATION, uint16 count = 0);
++	CargoPacket(StationID source = INVALID_STATION, uint16 count = 0, StationID dest = INVALID_STATION);
+ 
+ 	/** Destroy the packet */
+ 	virtual ~CargoPacket();
+ 
++	/**
++	 * Checks whether the cargo packet has the same destination
++	 * @param cp the cargo packet to compare to
++	 * @return true if destination is the same
++	 */
++	bool SameDestination(CargoPacket *cp);
+ 
+ 	/**
+ 	 * Is this a valid cargo packet ?
+@@ -159,6 +167,8 @@
+ 	 */
+ 	void Append(CargoPacket *cp);
+ 
++	void MovePacketTo(CargoPacket *cp, CargoList &dest);
++
+ 	/**
+ 	 * Truncates the cargo in this list to the given amount. It leaves the
+ 	 * first count cargo entities and removes the rest.
+@@ -188,4 +198,25 @@
+ 	void InvalidateCache();
+ };
+ 
++struct CargoDisplayPacket
++{
++	StationID destination;
++	uint16 count;
++	CargoDisplayPacket(StationID s, uint16 c) : destination(s), count(c) {}
++};
++
++class CargoDisplayList
++{
++public:
++	typedef std::list<CargoDisplayPacket> List;
++
++	const List& Packets() const;
++	void Append(const CargoPacket &cp);
++	void Append(const CargoList &srcList);
++	uint Size() const;
++	void Sort();
++private:
++	List packets;
++};
++
+ #endif /* CARGOPACKET_H */
+Index: src/variables.h
+===================================================================
+--- src/variables.h	(Revision 11673)
++++ src/variables.h	(Arbeitskopie)
+@@ -249,6 +249,21 @@
+ 	bool give_money;         ///< allow giving other players money
+ 
+ 	bool enable_signal_gui;  ///< Show the signal GUI when the signal button is pressed
++
++	bool use_destinations;   ///< destination for cargo packets
++	uint8 additional_route_rate;
++	uint8 aircraft_cost_modifier;
++	uint8 transferring_cost_modifier;
++	uint8 reduce_passenger;         // reduce amount of passengers Sensible value half the number of transfers
++	bool generate_unreachable_passenger;
++	uint8 reduce_unreachable_passenger;
++	bool use_temporary_info;
++	bool update_route_on_jit;
++	bool faster_gradual_loading;
++	bool pay_partly_fare;
++	uint8 passenger_walking;
++	uint8 update_route_size;
++	uint8 passenger_train_statistics_length;
+ };
+ 
+ VARDEF Patches _patches;
+@@ -354,4 +369,7 @@
+ /* Forking stuff */
+ VARDEF bool _dedicated_forks;
+ 
++/* pax dest */
++extern bool _need_to_update_routinginfo;
++
+ #endif /* VARIABLES_H */
+Index: src/cargopacket.cpp
+===================================================================
+--- src/cargopacket.cpp	(Revision 11673)
++++ src/cargopacket.cpp	(Arbeitskopie)
+@@ -18,13 +18,14 @@
+ 	_CargoPacket_pool.AddBlockToPool();
+ }
+ 
+-CargoPacket::CargoPacket(StationID source, uint16 count)
++CargoPacket::CargoPacket(StationID source, uint16 count, StationID dest)
+ {
+ 	if (source != INVALID_STATION) assert(count != 0);
+ 
+ 	this->source          = source;
+ 	this->source_xy       = (source != INVALID_STATION) ? GetStation(source)->xy : 0;
+ 	this->loaded_at_xy    = this->source_xy;
++	this->destination     = dest;
+ 
+ 	this->count           = count;
+ 	this->days_in_transit = 0;
+@@ -42,6 +43,12 @@
+ 	return this->source_xy == cp->source_xy && this->days_in_transit == cp->days_in_transit && this->paid_for == cp->paid_for;
+ }
+ 
++bool CargoPacket::SameDestination(CargoPacket *cp)
++{
++	return this->destination == cp->destination;
++}
++
++
+ static const SaveLoad _cargopacket_desc[] = {
+ 	SLE_VAR(CargoPacket, source,          SLE_UINT16),
+ 	SLE_VAR(CargoPacket, source_xy,       SLE_UINT32),
+@@ -272,3 +279,30 @@
+ 	days_in_transit = dit / count;
+ 	source = (*packets.begin())->source;
+ }
++
++static const SaveLoad _cargopacket_paxdest_desc[] = {
++	SLE_VAR(CargoPacket, destination,     SLE_UINT16),
++	SLE_END()
++};
++
++static void Save_PAXD()
++{
++	CargoPacket *cp;
++
++	FOR_ALL_CARGOPACKETS(cp) {
++		SlSetArrayIndex(cp->index);
++		SlObject(cp, _cargopacket_paxdest_desc);
++	}
++}
++
++static void Load_PAXD()
++{
++	int index;
++	while ((index = SlIterateArray()) != -1) {
++		SlObject(GetCargoPacket(index), _cargopacket_paxdest_desc);
++	}
++}
++
++extern const ChunkHandler _cargopacket_paxdest_chunk_handlers[] = {
++	{ 'PAXD', Save_PAXD, Load_PAXD, CH_ARRAY | CH_LAST},
++};
+Index: src/saveload.h
+===================================================================
+--- src/saveload.h	(Revision 11673)
++++ src/saveload.h	(Arbeitskopie)
+@@ -11,6 +11,11 @@
+ #undef SIZE_MAX
+ #endif
+ 
++
++// this will be changed to a constant value once the merge is done
++extern const uint16 SAVEGAME_VERSION;
++#define PAXDEST_MERGE SAVEGAME_VERSION
++
+ #define SIZE_MAX ((size_t)-1)
+ 
+ enum SaveOrLoadResult {
+@@ -265,7 +270,6 @@
+  * active savegame version */
+ static inline bool SlIsObjectCurrentlyValid(uint16 version_from, uint16 version_to)
+ {
+-	extern const uint16 SAVEGAME_VERSION;
+ 	if (SAVEGAME_VERSION < version_from || SAVEGAME_VERSION > version_to) return false;
+ 
+ 	return true;
