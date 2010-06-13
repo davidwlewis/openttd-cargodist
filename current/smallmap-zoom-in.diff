@@ -1,13 +1,17 @@
 diff --git a/src/smallmap_gui.cpp b/src/smallmap_gui.cpp
-index 30ccc9c..d4bbeb4 100644
+index 30ccc9c..6e36a30 100644
 --- a/src/smallmap_gui.cpp
 +++ b/src/smallmap_gui.cpp
-@@ -523,6 +523,23 @@ class SmallMapWindow : public Window {
+@@ -523,6 +523,27 @@ class SmallMapWindow : public Window {
  		SMT_OWNER,
  	};
  
 +	/**
-+	 * save the Vehicle's old position here, so that we don't get glitches when redrawing
++	 * Save the Vehicle's old position here, so that we don't get glitches when
++	 * redrawing.
++	 * The glitches happen when a vehicle occupies a larger area (zoom-in) and
++	 * a partial redraw happens which only covers part of the vehicle. If the
++	 * vehicle has moved in the meantime, it looks ugly afterwards.
 +	 */
 +	struct VehicleAndPosition {
 +		VehicleAndPosition(const Vehicle *v) : vehicle(v->index)
@@ -21,20 +25,20 @@ index 30ccc9c..d4bbeb4 100644
 +	};
 +
 +	typedef std::list<VehicleAndPosition> VehicleList;
-+	VehicleList vehicles_on_map;
++	VehicleList vehicles_on_map; ///< cached vehicle positions to avoid glitches
 +	
  	/** Available kinds of zoomlevel changes. */
  	enum ZoomLevelChange {
  		ZLC_INITIALIZE, ///< Initialize zoom level.
-@@ -545,6 +562,7 @@ class SmallMapWindow : public Window {
+@@ -545,6 +566,7 @@ class SmallMapWindow : public Window {
  	int zoom;        ///< Zoom level. Bigger number means more zoom-out (further away).
  
  	static const uint8 FORCE_REFRESH_PERIOD = 0x1F; ///< map is redrawn after that many ticks
-+	static const uint8 REFRESH_NEXT_TICK = 1;
++	static const uint8 REFRESH_NEXT_TICK = 1;       ///< if refresh has this value the map is redrawn in the next tick
  	uint8 refresh; ///< refresh counter, zeroed every FORCE_REFRESH_PERIOD ticks
  
  	/**
-@@ -555,16 +573,21 @@ class SmallMapWindow : public Window {
+@@ -555,43 +577,61 @@ class SmallMapWindow : public Window {
  	 */
  	FORCEINLINE Point RemapTile(int tile_x, int tile_y) const
  	{
@@ -63,8 +67,16 @@ index 30ccc9c..d4bbeb4 100644
  	}
  
  	/**
-@@ -577,21 +600,34 @@ class SmallMapWindow : public Window {
- 	 * @return Tile being displayed at the given position relative to #scroll_x and #scroll_y.
+-	 * Determine the tile relative to the base tile of the smallmap, and the pixel position at
+-	 * that tile for a point in the smallmap.
++	 * Determine the world coordinates relative to the base tile of the smallmap, and the pixel position at
++	 * that location for a point in the smallmap.
+ 	 * @param px       Horizontal coordinate of the pixel.
+ 	 * @param py       Vertical coordinate of the pixel.
+ 	 * @param sub[out] Pixel position at the tile (0..3).
+ 	 * @param add_sub  Add current #subscroll to the position.
+-	 * @return Tile being displayed at the given position relative to #scroll_x and #scroll_y.
++	 * @return world coordinates being displayed at the given position relative to #scroll_x and #scroll_y.
  	 * @note The #subscroll offset is already accounted for.
  	 */
 -	FORCEINLINE Point PixelToTile(int px, int py, int *sub, bool add_sub = true) const
@@ -102,7 +114,7 @@ index 30ccc9c..d4bbeb4 100644
  				px -= 2;
  			}
  		}
-@@ -614,19 +650,21 @@ class SmallMapWindow : public Window {
+@@ -614,19 +654,21 @@ class SmallMapWindow : public Window {
  		assert(x >= 0 && y >= 0);
  
  		int new_sub;
@@ -129,7 +141,7 @@ index 30ccc9c..d4bbeb4 100644
  		}
  		return scroll;
  	}
-@@ -638,16 +676,17 @@ class SmallMapWindow : public Window {
+@@ -638,16 +680,17 @@ class SmallMapWindow : public Window {
  	 */
  	void SetZoomLevel(ZoomLevelChange change, const Point *zoom_pt)
  	{
@@ -150,7 +162,7 @@ index 30ccc9c..d4bbeb4 100644
  				break;
  
  			case ZLC_ZOOM_IN:
-@@ -657,7 +696,7 @@ class SmallMapWindow : public Window {
+@@ -657,7 +700,7 @@ class SmallMapWindow : public Window {
  				}
  				assert(cur_index <= MAX_ZOOM_INDEX);
  
@@ -159,7 +171,7 @@ index 30ccc9c..d4bbeb4 100644
  				new_index = Clamp(cur_index + ((change == ZLC_ZOOM_IN) ? -1 : 1), MIN_ZOOM_INDEX, MAX_ZOOM_INDEX);
  				break;
  
-@@ -667,9 +706,9 @@ class SmallMapWindow : public Window {
+@@ -667,9 +710,9 @@ class SmallMapWindow : public Window {
  		if (new_index != cur_index) {
  			this->zoom = zoomlevels[new_index];
  			if (cur_index >= 0) {
@@ -172,7 +184,18 @@ index 30ccc9c..d4bbeb4 100644
  			}
  			this->SetWidgetDisabledState(SM_WIDGET_ZOOM_IN,  this->zoom == zoomlevels[MIN_ZOOM_INDEX]);
  			this->SetWidgetDisabledState(SM_WIDGET_ZOOM_OUT, this->zoom == zoomlevels[MAX_ZOOM_INDEX]);
-@@ -739,9 +778,12 @@ class SmallMapWindow : public Window {
+@@ -724,8 +767,8 @@ class SmallMapWindow : public Window {
+ 	 * Draws one column of tiles of the small map in a certain mode onto the screen buffer, skipping the shifted rows in between.
+ 	 *
+ 	 * @param dst Pointer to a part of the screen buffer to write to.
+-	 * @param xc The X coordinate of the first tile in the column.
+-	 * @param yc The Y coordinate of the first tile in the column
++	 * @param xc The world X coordinate of the rightmost place in the column.
++	 * @param yc The world Y coordinate of the topmost place in the column.
+ 	 * @param pitch Number of pixels to advance in the screen buffer each time a pixel is written.
+ 	 * @param reps Number of lines to draw
+ 	 * @param start_pos Position of first pixel to draw.
+@@ -739,9 +782,12 @@ class SmallMapWindow : public Window {
  		void *dst_ptr_abs_end = blitter->MoveTo(_screen.dst_ptr, 0, _screen.height);
  		uint min_xy = _settings_game.construction.freeform_edges ? 1 : 0;
  
@@ -186,7 +209,7 @@ index 30ccc9c..d4bbeb4 100644
  
  			/* Check if the dst pointer points to a pixel inside the screen buffer */
  			if (dst < _screen.dst_ptr) continue;
-@@ -749,12 +791,12 @@ class SmallMapWindow : public Window {
+@@ -749,12 +795,12 @@ class SmallMapWindow : public Window {
  
  			/* Construct tilearea covered by (xc, yc, xc + this->zoom, yc + this->zoom) such that it is within min_xy limits. */
  			TileArea ta;
@@ -203,7 +226,7 @@ index 30ccc9c..d4bbeb4 100644
  			}
  			ta.ClampToMap(); // Clamp to map boundaries (may contain MP_VOID tiles!).
  
-@@ -766,7 +808,7 @@ class SmallMapWindow : public Window {
+@@ -766,7 +812,7 @@ class SmallMapWindow : public Window {
  				idx++;
  			}
  		/* Switch to next tile in the column */
@@ -212,7 +235,7 @@ index 30ccc9c..d4bbeb4 100644
  	}
  
  	/**
-@@ -776,36 +818,35 @@ class SmallMapWindow : public Window {
+@@ -776,36 +822,35 @@ class SmallMapWindow : public Window {
  	 */
  	void DrawVehicles(const DrawPixelInfo *dpi, Blitter *blitter) const
  	{
@@ -270,7 +293,7 @@ index 30ccc9c..d4bbeb4 100644
  		}
  	}
  
-@@ -921,13 +962,14 @@ class SmallMapWindow : public Window {
+@@ -921,13 +966,14 @@ class SmallMapWindow : public Window {
  
  		/* Which tile is displayed at (dpi->left, dpi->top)? */
  		int dx;
@@ -288,7 +311,7 @@ index 30ccc9c..d4bbeb4 100644
  
  		for (;;) {
  			/* Distance from left edge */
-@@ -937,16 +979,16 @@ class SmallMapWindow : public Window {
+@@ -937,16 +983,16 @@ class SmallMapWindow : public Window {
  				int end_pos = min(dpi->width, x + 4);
  				int reps = (dpi->height - y + 1) / 2; // Number of lines.
  				if (reps > 0) {
@@ -308,10 +331,13 @@ index 30ccc9c..d4bbeb4 100644
  				y--;
  				ptr = blitter->MoveTo(ptr, 0, -1);
  			}
-@@ -966,6 +1008,28 @@ class SmallMapWindow : public Window {
+@@ -966,6 +1012,31 @@ class SmallMapWindow : public Window {
  		_cur_dpi = old_dpi;
  	}
  
++	/**
++	 * recalculate which vehicles are visible and their positions.
++	 */
 +	void RecalcVehiclePositions() {
 +		this->vehicles_on_map.clear();
 +		const Vehicle *v;
@@ -337,7 +363,7 @@ index 30ccc9c..d4bbeb4 100644
  public:
  	SmallMapWindow(const WindowDesc *desc, int window_number) : Window(), refresh(FORCE_REFRESH_PERIOD)
  	{
-@@ -1143,9 +1207,10 @@ public:
+@@ -1143,9 +1214,10 @@ public:
  				const NWidgetBase *wid = this->GetWidget<NWidgetBase>(SM_WIDGET_MAP);
  				Window *w = FindWindowById(WC_MAIN_WINDOW, 0);
  				int sub;
@@ -351,7 +377,7 @@ index 30ccc9c..d4bbeb4 100644
  
  				w->viewport->follow_vehicle = INVALID_VEHICLE;
  				w->viewport->dest_scrollpos_x = pt.x - (w->viewport->virtual_width  >> 1);
-@@ -1282,6 +1347,8 @@ public:
+@@ -1282,6 +1354,8 @@ public:
  		/* Update the window every now and then */
  		if (--this->refresh != 0) return;
  
@@ -360,7 +386,7 @@ index 30ccc9c..d4bbeb4 100644
  		this->refresh = FORCE_REFRESH_PERIOD;
  		this->SetDirty();
  	}
-@@ -1297,8 +1364,13 @@ public:
+@@ -1297,8 +1371,13 @@ public:
  	{
  		const NWidgetBase *wi = this->GetWidget<NWidgetBase>(SM_WIDGET_MAP);
  		Point hv = InverseRemapCoords(wi->current_x * TILE_SIZE / 2, wi->current_y * TILE_SIZE / 2);
@@ -376,7 +402,7 @@ index 30ccc9c..d4bbeb4 100644
  
  		if (sx < -hv.x) {
  			sx = -hv.x;
-@@ -1328,8 +1400,8 @@ public:
+@@ -1328,8 +1407,8 @@ public:
  
  		/* While tile is at (delta.x, delta.y)? */
  		int sub;
@@ -387,7 +413,7 @@ index 30ccc9c..d4bbeb4 100644
  
  		this->SetDirty();
  	}
-@@ -1341,7 +1413,7 @@ public:
+@@ -1341,7 +1420,7 @@ public:
  
  		int sub;
  		const NWidgetBase *wid = this->GetWidget<NWidgetBase>(SM_WIDGET_MAP);
