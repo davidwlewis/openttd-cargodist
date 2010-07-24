@@ -599,7 +599,7 @@ index 45069ff..5f452b5 100644
  
  #endif /* TILEHIGHLIGHT_TYPE_H */
 diff --git a/src/viewport.cpp b/src/viewport.cpp
-index 1d7b94c..ec9824a 100644
+index 1d7b94c..eb91838 100644
 --- a/src/viewport.cpp
 +++ b/src/viewport.cpp
 @@ -44,6 +44,7 @@
@@ -644,7 +644,7 @@ index 1d7b94c..ec9824a 100644
 +
 +				// don't mark tiles outside the map
 +				if (TileX(ti->tile) == MapMaxX() || TileY(ti->tile) == MapMaxY()) return;
-+				SpriteID image = SPR_SELECT_TILE + _tileh_to_sprite[ti->tileh];
++				SpriteID image = SPR_SELECT_TILE + SlopeToSpriteOffset(ti->tileh);
 +				DrawSelectionSprite(image, _thd.make_square_red ? PALETTE_SEL_TILE_RED : PAL_NONE, ti, 7, FOUNDATION_PART_NORMAL);
 +			} else { // highlighting a dot (level land)
 +				/* Figure out the Z coordinate for the single dot. */
