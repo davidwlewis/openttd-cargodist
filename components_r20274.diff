@@ -1,34 +1,22 @@
 diff --git a/projects/openttd_vs80.vcproj b/projects/openttd_vs80.vcproj
-index b6697d7..a810eda 100644
+index b6697d7..425a41b 100644
 --- a/projects/openttd_vs80.vcproj
 +++ b/projects/openttd_vs80.vcproj
-@@ -596,6 +596,18 @@
+@@ -596,6 +596,10 @@
  				>
  			</File>
  			<File
-+				RelativePath=".\..\src\linkgraph\demands.cpp"
-+				>
-+			</File>
-+			<File
 +				RelativePath=".\..\src\linkgraph\linkgraph.cpp"
-+				>
-+			</File>
-+			<File
-+				RelativePath=".\..\src\linkgraph\mcf.cpp"
 +				>
 +			</File>
 +			<File
  				RelativePath=".\..\src\map.cpp"
  				>
  			</File>
-@@ -1100,6 +1112,22 @@
+@@ -1100,6 +1104,14 @@
  				>
  			</File>
  			<File
-+				RelativePath=".\..\src\linkgraph\demands.h"
-+				>
-+			</File>
-+			<File
 +				RelativePath=".\..\src\linkgraph\linkgraph.h"
 +				>
 +			</File>
@@ -37,14 +25,10 @@ index b6697d7..a810eda 100644
 +				>
 +			</File>
 +			<File
-+				RelativePath=".\..\src\linkgraph\mcf.h"
-+				>
-+			</File>
-+			<File
  				RelativePath=".\..\src\livery.h"
  				>
  			</File>
-@@ -1116,6 +1144,14 @@
+@@ -1116,6 +1128,14 @@
  				>
  			</File>
  			<File
@@ -59,7 +43,7 @@ index b6697d7..a810eda 100644
  				RelativePath=".\..\src\network\network.h"
  				>
  			</File>
-@@ -2160,6 +2196,10 @@
+@@ -2160,6 +2180,10 @@
  				>
  			</File>
  			<File
@@ -71,36 +55,24 @@ index b6697d7..a810eda 100644
  				>
  			</File>
 diff --git a/projects/openttd_vs90.vcproj b/projects/openttd_vs90.vcproj
-index a0c31ce..e601c4e 100644
+index a0c31ce..de87b27 100644
 --- a/projects/openttd_vs90.vcproj
 +++ b/projects/openttd_vs90.vcproj
-@@ -593,6 +593,18 @@
+@@ -593,6 +593,10 @@
  				>
  			</File>
  			<File
-+				RelativePath=".\..\src\linkgraph\demands.cpp"
-+				>
-+			</File>
-+			<File
 +				RelativePath=".\..\src\linkgraph\linkgraph.cpp"
-+				>
-+			</File>
-+			<File
-+				RelativePath=".\..\src\linkgraph\mcf.cpp"
 +				>
 +			</File>
 +			<File
  				RelativePath=".\..\src\map.cpp"
  				>
  			</File>
-@@ -1097,6 +1109,22 @@
+@@ -1097,6 +1101,14 @@
  				>
  			</File>
  			<File
-+				RelativePath=".\..\src\linkgraph\demands.h"
-+				>
-+			</File>
-+			<File
 +				RelativePath=".\..\src\linkgraph\linkgraph.h"
 +				>
 +			</File>
@@ -109,14 +81,10 @@ index a0c31ce..e601c4e 100644
 +				>
 +			</File>
 +			<File
-+				RelativePath=".\..\src\linkgraph\mcf.h"
-+				>
-+			</File>
-+			<File
  				RelativePath=".\..\src\livery.h"
  				>
  			</File>
-@@ -1113,6 +1141,14 @@
+@@ -1113,6 +1125,14 @@
  				>
  			</File>
  			<File
@@ -131,7 +99,7 @@ index a0c31ce..e601c4e 100644
  				RelativePath=".\..\src\network\network.h"
  				>
  			</File>
-@@ -2157,6 +2193,10 @@
+@@ -2157,6 +2177,10 @@
  				>
  			</File>
  			<File
@@ -143,27 +111,23 @@ index a0c31ce..e601c4e 100644
  				>
  			</File>
 diff --git a/source.list b/source.list
-index 30b6a8a..1c63cd9 100644
+index 30b6a8a..28dcfec 100644
 --- a/source.list
 +++ b/source.list
-@@ -34,6 +34,9 @@ highscore.cpp
+@@ -34,6 +34,7 @@ highscore.cpp
  hotkeys.cpp
  ini.cpp
  landscape.cpp
-+linkgraph/demands.cpp
 +linkgraph/linkgraph.cpp
-+linkgraph/mcf.cpp
  map.cpp
  misc.cpp
  mixer.cpp
-@@ -184,10 +187,16 @@ industrytype.h
+@@ -184,10 +185,14 @@ industrytype.h
  ini_type.h
  landscape.h
  landscape_type.h
-+linkgraph/demands.h
 +linkgraph/linkgraph.h
 +linkgraph/linkgraph_type.h
-+linkgraph/mcf.h
  livery.h
  map_func.h
  map_type.h
@@ -173,7 +137,7 @@ index 30b6a8a..1c63cd9 100644
  network/network.h
  network/network_base.h
  network/network_client.h
-@@ -469,6 +478,7 @@ saveload/gamelog_sl.cpp
+@@ -469,6 +474,7 @@ saveload/gamelog_sl.cpp
  saveload/group_sl.cpp
  saveload/industry_sl.cpp
  saveload/labelmaps_sl.cpp
@@ -261,10 +225,10 @@ index 77cfbe5..8dcbde1 100644
 +	OnTick_LinkGraph();
  }
 diff --git a/src/lang/english.txt b/src/lang/english.txt
-index 4a8c00a..9cfbfcb 100644
+index 4a8c00a..512fea6 100644
 --- a/src/lang/english.txt
 +++ b/src/lang/english.txt
-@@ -1307,11 +1307,38 @@ STR_CONFIG_SETTING_LARGER_TOWNS_DISABLED                        :{LTBLUE}Proport
+@@ -1307,11 +1307,34 @@ STR_CONFIG_SETTING_LARGER_TOWNS_DISABLED                        :{LTBLUE}Proport
  STR_CONFIG_SETTING_CITY_SIZE_MULTIPLIER                         :{LTBLUE}Initial city size multiplier: {ORANGE}{STRING1}
  STR_CONFIG_SETTING_MODIFIED_ROAD_REBUILD                        :{LTBLUE}Remove absurd road-elements during the road construction: {ORANGE}{STRING1}
  
@@ -289,10 +253,6 @@ index 4a8c00a..9cfbfcb 100644
 +STR_CONFIG_SETTING_DISTRIBUTION_DEFAULT_SYMMETRIC               :symmetric
 +STR_CONFIG_SETTING_DISTRIBUTION_DEFAULT_ASYMMETRIC              :asymmetric
 +STR_CONFIG_SETTING_DISTRIBUTION_DEFAULT_MANUAL                  :manual
-+STR_CONFIG_SETTING_LINKGRAPH_ACCURACY                           :{LTBLUE}Accuracy when calculating things on the link graph: {ORANGE}{STRING1}
-+STR_CONFIG_SETTING_DEMAND_DISTANCE                              :{LTBLUE}Effect of distance on demands: {ORANGE}{STRING1}%
-+STR_CONFIG_SETTING_DEMAND_SIZE                                  :{LTBLUE}Effect of remote station's popularity on symmetric demands: {ORANGE}{STRING1}%
-+STR_CONFIG_SETTING_SHORT_PATH_SATURATION                        :{LTBLUE}Saturation of short paths before using capacious paths: {ORANGE}{STRING1}%
 +
  STR_CONFIG_SETTING_GUI                                          :{ORANGE}Interface
  STR_CONFIG_SETTING_CONSTRUCTION                                 :{ORANGE}Construction
@@ -303,358 +263,12 @@ index 4a8c00a..9cfbfcb 100644
  STR_CONFIG_SETTING_AI                                           :{ORANGE}Competitors
  STR_CONFIG_SETTING_DISPLAY_OPTIONS                              :{ORANGE}Display options
  STR_CONFIG_SETTING_INTERACTION                                  :{ORANGE}Interaction
-diff --git a/src/linkgraph/demands.cpp b/src/linkgraph/demands.cpp
-new file mode 100644
-index 0000000..ee5abd6
---- /dev/null
-+++ b/src/linkgraph/demands.cpp
-@@ -0,0 +1,183 @@
-+/** @file demands.h Definition of demand calculating link graph handler. */
-+
-+#include "demands.h"
-+#include "../station_base.h"
-+#include "../settings_type.h"
-+#include "../newgrf_cargo.h"
-+#include "../cargotype.h"
-+#include "../core/math_func.hpp"
-+#include <list>
-+
-+typedef std::list<NodeID> NodeList;
-+
-+/**
-+ * Set the demands between two nodes using the given base demand. In symmetric mode
-+ * this sets demands in both directions.
-+ * @param graph The link graph
-+ * @param from_id The supplying node
-+ * @þaram to_id The receiving node
-+ * @param demand_forw Demand calculated for the "forward" direction
-+ */
-+void SymmetricScaler::SetDemands(LinkGraphComponent * graph, NodeID from_id, NodeID to_id, uint demand_forw)
-+{
-+	if (graph->GetNode(from_id).demand > 0) {
-+		uint demand_back = demand_forw * this->mod_size / 100;
-+		uint undelivered = graph->GetNode(to_id).undelivered_supply;
-+		if (demand_back > undelivered) {
-+			demand_back = undelivered;
-+			demand_forw = max(1U, demand_back * 100 / this->mod_size);
-+		}
-+		this->Scaler::SetDemands(graph, to_id, from_id, demand_back);
-+	}
-+
-+	this->Scaler::SetDemands(graph, from_id, to_id, demand_forw);
-+}
-+
-+/**
-+ * Set the demands between two nodes using the given base demand. In asymmetric mode
-+ * this only sets demand in the "forward" direction.
-+ * @param graph The link graph
-+ * @param from_id The supplying node
-+ * @þaram to_id The receiving node
-+ * @param demand_forw Demand calculated for the "forward" direction
-+ */
-+FORCEINLINE void Scaler::SetDemands(LinkGraphComponent * graph, NodeID from_id, NodeID to_id, uint demand_forw)
-+{
-+	Edge &forward = graph->GetEdge(from_id, to_id);
-+	forward.demand += demand_forw;
-+	forward.unsatisfied_demand += demand_forw;
-+	graph->GetNode(from_id).undelivered_supply -= demand_forw;
-+}
-+
-+/**
-+ * Do the actual demand calculation, called from constructor.
-+ * @param graph the component to calculate the demands for
-+ */
-+template<class Tscaler>
-+void DemandCalculator::CalcDemand(LinkGraphComponent *graph, Tscaler scaler)
-+{
-+	NodeList supplies;
-+	NodeList demands;
-+	uint num_supplies = 0;
-+	uint num_demands = 0;
-+
-+	for(NodeID node = 0; node < graph->GetSize(); node++) {
-+		Node &n = graph->GetNode(node);
-+		scaler.AddNode(n);
-+		if (n.supply > 0) {
-+			supplies.push_back(node);
-+			num_supplies++;
-+		}
-+		if (n.demand > 0) {
-+			demands.push_back(node);
-+			num_demands++;
-+		}
-+	}
-+
-+	if (num_supplies == 0 || num_demands == 0) return;
-+
-+	/* mean acceptance attributed to each node. If the distribution is
-+	 * symmetric this is relative to remote supply, otherwise it is
-+	 * relative to remote demand.
-+	 */
-+	scaler.SetDemandPerNode(num_demands);
-+	uint chance = 0;
-+
-+	while(!supplies.empty() && !demands.empty()) {
-+		NodeID node1 = supplies.front();
-+		supplies.pop_front();
-+
-+		Node &from = graph->GetNode(node1);
-+
-+		for(uint i = 0; i < num_demands; ++i) {
-+			assert(!demands.empty());
-+			NodeID node2 = demands.front();
-+			demands.pop_front();
-+			if (node1 == node2) {
-+				if (demands.empty() && supplies.empty()) {
-+					/* only one node with supply and demand left */
-+					return;
-+				} else {
-+					demands.push_back(node2);
-+					continue;
-+				}
-+			}
-+			Node &to = graph->GetNode(node2);
-+
-+			int32 supply = scaler.EffectiveSupply(from, to);
-+			assert(supply > 0);
-+
-+			/* scale the distance by mod_dist around max_distance */
-+			int32 distance = this->max_distance - (this->max_distance -
-+					(int32)graph->GetEdge(node1, node2).distance) * this->mod_dist / 100;
-+
-+			/* scale the accuracy by distance around accuracy / 2 */
-+			int32 divisor = this->accuracy * (this->mod_dist - 50) / 100 +
-+					this->accuracy * distance / this->max_distance + 1;
-+
-+			assert(divisor > 0);
-+
-+			uint demand_forw = 0;
-+			if (divisor <= supply) {
-+				/* at first only distribute demand if
-+				 * effective supply / accuracy divisor >= 1
-+				 * Others are too small or too far away to be considered.
-+				 */
-+				demand_forw = supply / divisor;
-+			} else if (++chance > this->accuracy * num_demands * num_supplies) {
-+				/* After some trying, if there is still supply left, distribute
-+				 * demand also to other nodes.
-+				 */
-+				demand_forw = 1;
-+			}
-+
-+			demand_forw = min(demand_forw, from.undelivered_supply);
-+
-+			scaler.SetDemands(graph, node1, node2, demand_forw);
-+
-+			if (scaler.DemandLeft(to)) {
-+				demands.push_back(node2);
-+			} else {
-+				num_demands--;
-+			}
-+
-+			if (from.undelivered_supply == 0) break;
-+
-+		}
-+		if (from.undelivered_supply != 0) {
-+			supplies.push_back(node1);
-+		} else {
-+			num_supplies--;
-+		}
-+	}
-+}
-+
-+/**
-+ * Create the DemandCalculator and immediately do the calculation.
-+ * @param graph the component to calculate the demands for
-+ */
-+DemandCalculator::DemandCalculator(LinkGraphComponent *graph) :
-+	max_distance(MapSizeX() + MapSizeY() + 1)
-+{
-+	CargoID cargo = graph->GetCargo();
-+	const LinkGraphSettings &settings = graph->GetSettings();
-+
-+	this->accuracy = settings.accuracy;
-+	this->mod_dist = settings.demand_distance;
-+	if (this->mod_dist > 100) {
-+		/* increase effect of mod_dist > 100 */
-+		int over100 = this->mod_dist - 100;
-+		this->mod_dist = 100 + over100 * over100;
-+	}
-+
-+	switch (settings.GetDistributionType(cargo)) {
-+	case DT_SYMMETRIC:
-+		this->CalcDemand<SymmetricScaler>(graph, SymmetricScaler(settings.demand_size));
-+		break;
-+	case DT_ASYMMETRIC:
-+		this->CalcDemand<AsymmetricScaler>(graph, AsymmetricScaler());
-+		break;
-+	default:
-+		NOT_REACHED();
-+	}
-+}
-diff --git a/src/linkgraph/demands.h b/src/linkgraph/demands.h
-new file mode 100644
-index 0000000..8b6f8bb
---- /dev/null
-+++ b/src/linkgraph/demands.h
-@@ -0,0 +1,151 @@
-+/** @file demands.h Declaration of demand calculating link graph handler. */
-+
-+#ifndef DEMANDS_H_
-+#define DEMANDS_H_
-+
-+#include "linkgraph.h"
-+#include "../stdafx.h"
-+#include "../cargo_type.h"
-+#include "../map_func.h"
-+
-+/**
-+ * scale various things according to symmetric/asymmetric distribution
-+ */
-+class Scaler {
-+public:
-+	Scaler() : demand_per_node(0) {}
-+
-+	void SetDemands(LinkGraphComponent * graph, NodeID from, NodeID to, uint demand_forw);
-+protected:
-+	uint demand_per_node; ///< mean demand associated with each node
-+};
-+
-+/**
-+ * Scaler for symmetric distribution
-+ */
-+class SymmetricScaler : public Scaler {
-+public:
-+	FORCEINLINE SymmetricScaler(uint mod_size) :
-+		mod_size(mod_size), supply_sum(0) {}
-+
-+	/**
-+	 * count a node's supply into the sum of supplies
-+	 * @param node the node
-+	 */
-+	FORCEINLINE void AddNode(const Node &node)
-+		{this->supply_sum += node.supply;}
-+
-+	/**
-+	 * calculate the mean demand per node using the sum of supplies
-+	 * @param num_demands the number of accepting nodes
-+	 */
-+	FORCEINLINE void SetDemandPerNode(uint num_demands)
-+		{this->demand_per_node = max(this->supply_sum / num_demands, 1U);}
-+
-+	/**
-+	 * get the effective supply of one node towards another one. In symmetric
-+	 * distribution the supply of the other node is weighed in.
-+	 * @param from The supplying node
-+	 * @param to The receiving node
-+	 * @return the effective supply
-+	 */
-+	FORCEINLINE uint EffectiveSupply(const Node &from, const Node &to)
-+		{return max(from.supply * max(1U, to.supply) * this->mod_size / 100 / this->demand_per_node, 1U);}
-+
-+	/**
-+	 * Check if there is any acceptance left for this node. In symmetric distribution
-+	 * nodes only accept anything if they also supply something. So if
-+	 * undelivered_supply == 0 at the node there isn't any demand left either
-+	 * @param to The node to be checked
-+	 */
-+	FORCEINLINE bool DemandLeft(Node &to)
-+		{return (to.supply == 0 || to.undelivered_supply > 0) && to.demand > 0;}
-+
-+	void SetDemands(LinkGraphComponent * graph, NodeID from, NodeID to, uint demand_forw);
-+
-+private:
-+	uint mod_size;
-+	uint supply_sum;
-+};
-+
-+/**
-+ * A scaler for asymmetric distribution.
-+ */
-+class AsymmetricScaler : public Scaler {
-+public:
-+	AsymmetricScaler() : demand_sum(0) {}
-+
-+	/**
-+	 * count a node's demand into the sum of demands
-+	 * @param node The node to be counted
-+	 */
-+	FORCEINLINE void AddNode(const Node &node)
-+		{this->demand_sum += node.demand;}
-+
-+	/**
-+	 * calculate the mean demand per node using the sum of demands
-+	 * @param num_demands the number of accepting nodes
-+	 */
-+	FORCEINLINE void SetDemandPerNode(uint num_demands)
-+		{this->demand_per_node = max(this->demand_sum / num_demands, (uint)1);}
-+
-+	/**
-+	 * get the effective supply of one node towards another one. In asymmetric
-+	 * distribution the demand of the other node is weighed in.
-+	 * @param from The supplying node
-+	 * @param to The receiving node
-+	 */
-+	FORCEINLINE uint EffectiveSupply(const Node &from, const Node &to)
-+		{return max(from.supply * to.demand / this->demand_per_node, (uint)1);}
-+
-+	/**
-+	 * Check if there is any acceptance left for this node. In asymmetric distribution
-+	 * nodes always accept as long as their demand > 0.
-+	 * @param to The node to be checked
-+	 */
-+	FORCEINLINE bool DemandLeft(Node &to)
-+		{return to.demand > 0;}
-+
-+private:
-+	uint demand_sum;
-+
-+};
-+
-+/**
-+ * Calculate the demands. This class has a state, but is recreated for each
-+ * call to of DemandHandler::Run.
-+ */
-+
-+class DemandCalculator {
-+public:
-+	DemandCalculator(LinkGraphComponent *graph);
-+
-+private:
-+	int32 max_distance; ///< maximum distance possible on the map
-+	int32 mod_dist;     ///< distance modifier, determines how much demands decrease with distance
-+	int32 accuracy;     ///< accuracy of the calculation
-+
-+	template<class Tscaler>
-+	void CalcDemand(LinkGraphComponent *graph, Tscaler scaler);
-+};
-+
-+/**
-+ * Stateless, thread safe demand hander. Doesn't do anything but call DemandCalculator.
-+ */
-+class DemandHandler : public ComponentHandler {
-+public:
-+
-+	/**
-+	 * Call the demand calculator on the given component-
-+	 * @param graph the component to calculate the demands for.
-+	 */
-+	virtual void Run(LinkGraphComponent *graph)
-+		{DemandCalculator c(graph);}
-+
-+	/**
-+	 * Virtual destructor has to be defined because of virtual Run().
-+	 */
-+	virtual ~DemandHandler() {}
-+};
-+
-+#endif /* DEMANDS_H_ */
 diff --git a/src/linkgraph/linkgraph.cpp b/src/linkgraph/linkgraph.cpp
 new file mode 100644
-index 0000000..24f1f08
+index 0000000..6800843
 --- /dev/null
 +++ b/src/linkgraph/linkgraph.cpp
-@@ -0,0 +1,431 @@
+@@ -0,0 +1,359 @@
 +/* $Id$ */
 +
 +/*
@@ -667,8 +281,6 @@ index 0000000..24f1f08
 +/** @file linkgraph.cpp Definition of link graph classes used for cargo distribution. */
 +
 +#include "linkgraph.h"
-+#include "demands.h"
-+#include "mcf.h"
 +#include "../map_func.h"
 +#include "../core/bitmath_func.hpp"
 +#include "../debug.h"
@@ -686,23 +298,16 @@ index 0000000..24f1f08
 +LinkGraphJob::HandlerList LinkGraphJob::_handlers;
 +
 +/**
-+ * Create a node or clear it.
++ * Create a node.
 + * @param st ID of the associated station
 + * @param sup supply of cargo at the station last month
 + * @param dem acceptance for cargo at the station
 + */
-+void Node::Init(StationID st, uint sup, uint dem)
++FORCEINLINE void Node::Init(StationID st, uint sup, uint dem)
 +{
 +	this->supply = sup;
-+	this->undelivered_supply = sup;
 +	this->demand = dem;
 +	this->station = st;
-+
-+	for (PathSet::iterator i = this->paths.begin(); i != this->paths.end(); ++i) {
-+		delete (*i);
-+	}
-+	this->paths.clear();
-+	this->flows.clear();
 +}
 +
 +/**
@@ -714,10 +319,6 @@ index 0000000..24f1f08
 +{
 +	this->distance = distance;
 +	this->capacity = capacity;
-+	this->demand = 0;
-+	this->unsatisfied_demand = 0;
-+	this->flow = 0;
-+	this->next_edge = INVALID_NODE;
 +}
 +
 +
@@ -870,16 +471,13 @@ index 0000000..24f1f08
 +			HasBit(good.acceptance_pickup, GoodsEntry::ACCEPTANCE));
 +
 +	std::vector<Edge> &new_edges = this->edges[this->num_nodes];
-+
-+	/* reset the first edge starting at the new node */
-+	new_edges[this->num_nodes].next_edge = INVALID_NODE;
-+
 +	for(NodeID i = 0; i < this->num_nodes; ++i) {
 +		uint distance = DistanceManhattan(st->xy, Station::Get(this->nodes[i].station)->xy);
 +		if (do_resize) this->edges[i].push_back(Edge());
 +		new_edges[i].Init(distance);
 +		this->edges[i][this->num_nodes].Init(distance);
 +	}
++
 +	return this->num_nodes++;
 +}
 +
@@ -892,11 +490,7 @@ index 0000000..24f1f08
 +FORCEINLINE void LinkGraphComponent::AddEdge(NodeID from, NodeID to, uint capacity)
 +{
 +	assert(from != to);
-+	Edge &edge = this->edges[from][to];
-+	Edge &first = this->edges[from][from];
-+	edge.capacity = capacity;
-+	edge.next_edge = first.next_edge;
-+	first.next_edge = to;
++	this->edges[from][to].capacity = capacity;
 +}
 +
 +/**
@@ -979,55 +573,6 @@ index 0000000..24f1f08
 +	_handlers.clear();
 +}
 +
-+void Path::Fork(Path * base, int cap, uint dist) {
-+	capacity = min(base->capacity, cap);
-+	distance = base->distance + dist;
-+	assert(distance > 0);
-+	if (parent != base) {
-+		if (parent != NULL) {
-+			parent->num_children--;
-+		}
-+		parent = base;
-+		parent->num_children++;
-+	}
-+	origin = base->origin;
-+}
-+
-+uint Path::AddFlow(uint f, LinkGraphComponent * graph, bool only_positive) {
-+	if (parent != NULL) {
-+		Edge & edge = graph->GetEdge(parent->node, node);
-+		if (only_positive) {
-+			uint usable_cap = edge.capacity * graph->GetSettings().short_path_saturation / 100;
-+			if(usable_cap > edge.flow) {
-+				f = min(f, usable_cap - edge.flow);
-+			} else {
-+				return 0;
-+			}
-+		}
-+		f = parent->AddFlow(f, graph, only_positive);
-+		if (f > 0) {
-+			graph->GetNode(parent->node).paths.insert(this);
-+		}
-+		edge.flow += f;
-+	}
-+	flow += f;
-+	return f;
-+}
-+
-+void Path::UnFork() {
-+	if (parent != NULL) {
-+		parent->num_children--;
-+		parent = NULL;
-+	}
-+}
-+
-+Path::Path(NodeID n, bool source)  :
-+	distance(source ? 0 : UINT_MAX),
-+	capacity(source ? INT_MAX : INT_MIN),
-+	flow(0), node(n), origin(source ? n : INVALID_NODE),
-+	num_children(0), parent(NULL)
-+{}
-+
 +/**
 + * Join the calling thread with this job's thread if threading is enabled.
 + */
@@ -1075,23 +620,20 @@ index 0000000..24f1f08
 +}
 +
 +/**
-+ * Initialize all link graphs. Used when loading a game.
++ * Inititialize all link graphs. Used when loading a game.
 + */
 +void InitializeLinkGraphs()
 +{
 +	for (CargoID c = 0; c < NUM_CARGO; ++c) _link_graphs[c].Init(c);
 +
 +	LinkGraphJob::ClearHandlers();
-+	LinkGraphJob::AddHandler(new DemandHandler);
-+	LinkGraphJob::AddHandler(new MCFHandler<MCF1stPass>);
-+	LinkGraphJob::AddHandler(new MCFHandler<MCF2ndPass>);
 +}
 diff --git a/src/linkgraph/linkgraph.h b/src/linkgraph/linkgraph.h
 new file mode 100644
-index 0000000..ada9592
+index 0000000..ea60f32
 --- /dev/null
 +++ b/src/linkgraph/linkgraph.h
-@@ -0,0 +1,303 @@
+@@ -0,0 +1,246 @@
 +/* $Id$ */
 +
 +/*
@@ -1115,15 +657,8 @@ index 0000000..ada9592
 +#include "linkgraph_type.h"
 +#include <list>
 +#include <vector>
-+#include <set>
 +
 +struct SaveLoad;
-+class Path;
-+
-+typedef std::set<Path *> PathSet;
-+typedef std::map<NodeID, Path *> PathViaMap;
-+typedef std::map<StationID, int> FlowViaMap;
-+typedef std::map<StationID, FlowViaMap> FlowMap;
 +
 +/**
 + * Node of the link graph. contains all relevant information from the associated
@@ -1132,38 +667,20 @@ index 0000000..ada9592
 + */
 +class Node {
 +public:
-+
-+	uint supply;             ///< supply at the station
-+	uint undelivered_supply; ///< amount of supply that hasn't been distributed yet
-+	uint demand;             ///< acceptance at the station
-+	StationID station;       ///< the station's ID
-+	PathSet paths;           ///< paths through this node
-+	FlowMap flows;           ///< planned flows to other nodes
-+
-+	/**
-+	 * Clear a node on destruction to delete paths that might remain.
-+	 */
-+	~Node() {this->Init();}
-+
++	uint supply;       ///< supply at the station
++	uint demand;       ///< acceptance at the station
++	StationID station; ///< the station's ID
 +
 +	void Init(StationID st = INVALID_STATION, uint sup = 0, uint dem = 0);
 +};
 +
 +/**
-+ * An edge in the link graph. Corresponds to a link between two stations or at
-+ * least the distance between them. Edges from one node to itself contain the
-+ * ID of the opposite Node of the first active edge (i.e. not just distance) in
-+ * the column as next_edge.
++ * An edge in the link graph. Corresponds to a link between two stations.
 + */
 +class Edge {
 +public:
-+
-+	uint distance;           ///< length of the link
-+	uint capacity;           ///< capacity of the link
-+	uint demand;             ///< transport demand between the nodes
-+	uint unsatisfied_demand; ///< demand over this edge that hasn't been satisfied yet
-+	uint flow;               ///< planned flow over this edge
-+	NodeID next_edge;        ///< destination of next valid edge starting at the same source node
++	uint distance; ///< length of the link
++	uint capacity; ///< capacity of the link
 +
 +	void Init(uint distance = 0, uint capacity = 0);
 +};
@@ -1248,14 +765,7 @@ index 0000000..ada9592
 +	}
 +
 +	/**
-+	 * Get the first valid edge starting at the specified node.
-+	 * @param from ID of the source node
-+	 * @return ID of the destination node
-+	 */
-+	FORCEINLINE NodeID GetFirstEdge(NodeID from) {return edges[from][from].next_edge;}
-+
-+	/**
-+	 * Set the number of nodes to 0 to mark this component as done.
++	 * Mark this component as empty.
 +	 */
 +	FORCEINLINE void Clear()
 +	{
@@ -1366,31 +876,6 @@ index 0000000..ada9592
 +	void CreateComponent(Station *first);
 +};
 +
-+class Path {
-+public:
-+	Path(NodeID n, bool source = false);
-+	NodeID GetNode() const {return node;}
-+	NodeID GetOrigin() const {return origin;}
-+	Path * GetParent() {return parent;}
-+	int GetCapacity() const {return capacity;}
-+	uint GetDistance() const {return distance;}
-+	void Fork(Path * base, int cap, uint dist);
-+	void ReduceFlow(uint f) {flow -= f;}
-+	void AddFlow(uint f) {flow += f;}
-+	uint AddFlow(uint f, LinkGraphComponent * graph, bool only_positive);
-+	uint GetFlow() const {return flow;}
-+	uint GetNumChildren() const {return num_children;}
-+	void UnFork();
-+protected:
-+	uint distance;
-+	int capacity;      ///< this capacity is edge.capacity - edge.flow for the current run of dijkstra
-+	uint flow;         ///< this is the flow the current run of the mcf solver assigns
-+	NodeID node;
-+	NodeID origin;
-+	uint num_children;
-+	Path * parent;
-+};
-+
 +void InitializeLinkGraphs();
 +extern LinkGraph _link_graphs[NUM_CARGO];
 +
@@ -1437,605 +922,6 @@ index 0000000..cd73b1c
 +typedef TinyEnumT<DistributionType> DistributionTypeByte; // typedefing-enumification of DistributionType
 +
 +#endif /* LINKGRAPH_TYPE_H_ */
-diff --git a/src/linkgraph/mcf.cpp b/src/linkgraph/mcf.cpp
-new file mode 100644
-index 0000000..249d269
---- /dev/null
-+++ b/src/linkgraph/mcf.cpp
-@@ -0,0 +1,454 @@
-+/** @file mcf.cpp Definition of Multi-Commodity-Flow solver */
-+
-+#include "mcf.h"
-+#include "../core/math_func.hpp"
-+
-+/**
-+ * Determines if an extension to the given Path with the given parameters is
-+ * better than this path.
-+ * @param base the other path
-+ * @param cap the capacity of the new edge to be added to base
-+ * @param dist the distance of the new edge
-+ * @return true if base + the new edge would be better than the path associated
-+ * with this annotation.
-+ */
-+bool DistanceAnnotation::IsBetter(const DistanceAnnotation *base, int cap,
-+		uint dist) const
-+{
-+	/* If any of the paths is disconnected, the other one is better. If both
-+	 * are disconnected, this path is better.
-+	 */
-+	if (base->distance == UINT_MAX) {
-+		return false;
-+	} else if (this->distance == UINT_MAX) {
-+		return true;
-+	}
-+
-+	if (cap > 0 && base->capacity > 0) {
-+		if (this->capacity > 0) {
-+			/* If both paths have capacity left, compare their distances. */
-+			return base->distance + dist < this->distance;
-+		} else {
-+			/* If the other path has capacity left and this one hasn't, the
-+			 * other one's better.
-+			 */
-+			return true;
-+		}
-+	} else {
-+		if (this->capacity > 0) {
-+			/* If the other path doesn't have capacity left, but this one has,
-+			 * this one is better.
-+			 */
-+			return false;
-+		} else {
-+			/* If both paths are out of capacity, do the regular distance
-+			 * comparison.
-+			 */
-+			return base->distance + dist < this->distance;
-+		}
-+	}
-+}
-+
-+/**
-+ * Determines if an extension to the given Path with the given parameters is
-+ * better than this path.
-+ * @param base the other path
-+ * @param cap the capacity of the new edge to be added to base
-+ * @param dist the distance of the new edge
-+ * @return true if base + the new edge would be better than the path associated
-+ * with this annotation.
-+ */
-+bool CapacityAnnotation::IsBetter(const CapacityAnnotation *base, int cap,
-+		uint dist) const
-+{
-+	int min_cap = min(base->capacity, cap);
-+	if (min_cap == this->capacity) {
-+		/* If the capacities are the same and the other path isn't disconnected
-+		 * choose the shorter path.
-+		 */
-+		if (base->distance != UINT_MAX) {
-+			return (base->distance + dist < this->distance);
-+		} else {
-+			return false;
-+		}
-+	} else {
-+		return min_cap > this->capacity;
-+	}
-+}
-+
-+/**
-+ * A slightly modified Dijkstra algorithm. Grades the paths not necessarily by
-+ * distance, but by the value Tannotation computes. It can also be configured
-+ * to only use paths already created before and not create new ones. If this is
-+ * not done it uses the short_path_saturation setting to artificially decrease
-+ * capacities. If a path has already been created is determined by checking the
-+ * flows associated with its nodes.
-+ * @tparam Tannotation the annotation to be used
-+ * @param source_node the node where the algorithm starts.
-+ * @param paths a container for the paths to be calculated
-+ * @param create_new_paths if false, only use paths already seen before,
-+ *                         otherwise artificially limit the capacity
-+ */
-+template<class Tannotation>
-+void MultiCommodityFlow::Dijkstra(NodeID source_node, PathVector &paths,
-+		bool create_new_paths)
-+{
-+	typedef std::set<Tannotation *, typename Tannotation::comp> AnnoSet;
-+	uint size = this->graph->GetSize();
-+	StationID source_station = this->graph->GetNode(source_node).station;
-+	AnnoSet annos;
-+	paths.resize(size, NULL);
-+	for (NodeID node = 0; node < size; ++node) {
-+		Tannotation *anno = new Tannotation(node, node == source_node);
-+		annos.insert(anno);
-+		paths[node] = anno;
-+	}
-+	while(!annos.empty()) {
-+		typename AnnoSet::iterator i = annos.begin();
-+		Tannotation *source = *i;
-+		annos.erase(i);
-+		NodeID from = source->GetNode();
-+		NodeID to = this->graph->GetFirstEdge(from);
-+		while (to != INVALID_NODE) {
-+			Edge &edge = this->graph->GetEdge(from, to);
-+			assert(edge.distance < UINT_MAX);
-+			if (create_new_paths ||
-+					this->graph->GetNode(from).flows[source_station]
-+					[this->graph->GetNode(to).station] > 0)
-+			{
-+				int capacity = edge.capacity;
-+				if (create_new_paths) {
-+					capacity *=
-+							this->graph->GetSettings().short_path_saturation;
-+					capacity /= 100;
-+					if (capacity == 0) {
-+						capacity = 1;
-+					}
-+					assert(capacity > 0);
-+				}
-+				capacity -= edge.flow;
-+				/* punish in-between stops a little */
-+				uint distance = edge.distance + 1;
-+				Tannotation *dest = static_cast<Tannotation *>(paths[to]);
-+				if (dest->IsBetter(source, capacity, distance)) {
-+					annos.erase(dest);
-+					dest->Fork(source, capacity, distance);
-+					annos.insert(dest);
-+				}
-+			}
-+			to = edge.next_edge;
-+		}
-+	}
-+}
-+
-+/**
-+ * Clean up paths that lead nowhere and the root path.
-+ * @param source_id ID of the root node
-+ * @param paths the paths to be cleaned up
-+ */
-+void MultiCommodityFlow::CleanupPaths(NodeID source_id, PathVector &paths) {
-+	Path *source = paths[source_id];
-+	paths[source_id] = NULL;
-+	for(PathVector::iterator i = paths.begin(); i != paths.end(); ++i) {
-+		Path *path = *i;
-+		if (path != NULL) {
-+			if (path->GetParent() == source) {
-+				path->UnFork();
-+			}
-+			while (path != source && path != NULL && path->GetFlow() == 0) {
-+				Path *parent = path->GetParent();
-+				path->UnFork();
-+				if (path->GetNumChildren() == 0) {
-+					paths[path->GetNode()] = NULL;
-+					delete path;
-+				}
-+				path = parent;
-+			}
-+		}
-+	}
-+	delete source;
-+	paths.clear();
-+}
-+
-+/**
-+ * Push flow along a path and update the unsatisfied_demand of the associated
-+ * edge.
-+ * @param edge the edge whose ends the path connects
-+ * @param path the end of the path the flow should be pushed on
-+ * @param accuracy the accuracy of the calculation
-+ * @param positive_cap if true only push flow up to the paths capacity,
-+ *                     otherwise the path can be "overloaded".
-+ */
-+uint MultiCommodityFlow::PushFlow(Edge &edge, Path *path, uint accuracy,
-+		bool positive_cap)
-+{
-+	assert(edge.unsatisfied_demand > 0);
-+	uint flow = Clamp(edge.demand / accuracy, 1, edge.unsatisfied_demand);
-+	flow = path->AddFlow(flow, this->graph, positive_cap);
-+	edge.unsatisfied_demand -= flow;
-+	return flow;
-+}
-+
-+/**
-+ * Find the flow along a cycle including cycle_begin in path.
-+ * @param path the set of paths that form the cycle
-+ * @param cycle_begin the path to start at
-+ * @return the flow along the cycle
-+ */
-+uint MCF1stPass::FindCycleFlow(const PathVector &path, const Path *cycle_begin)
-+{
-+	uint flow = UINT_MAX;
-+	const Path *cycle_end = cycle_begin;
-+	do {
-+		flow = min(flow, cycle_begin->GetFlow());
-+		cycle_begin = path[cycle_begin->GetNode()];
-+	} while(cycle_begin != cycle_end);
-+	return flow;
-+}
-+
-+/**
-+ * Eliminate a cycle of the given flow in the given set of paths.
-+ * @param path the set of paths containing the cycle
-+ * @param cycle_begin a part the cycle to start at
-+ * @param flow the flow along the cycle
-+ */
-+void MCF1stPass::EliminateCycle(PathVector &path, Path *cycle_begin, uint flow)
-+{
-+	Path *cycle_end = cycle_begin;
-+	do {
-+		NodeID prev = cycle_begin->GetNode();
-+		cycle_begin->ReduceFlow(flow);
-+		cycle_begin = path[cycle_begin->GetNode()];
-+		Edge &edge = this->graph->GetEdge(prev, cycle_begin->GetNode());
-+		edge.flow -= flow;
-+	} while(cycle_begin != cycle_end);
-+}
-+
-+/**
-+ * Eliminate cycles for origin_id in the graph. Start searching at next_id and
-+ * work recursively. Also "summarize" paths: Add up the flows along parallel
-+ * paths in one.
-+ * @param path the paths checked in parent calls to this method
-+ * @param origin_id the origin of the paths to be checked
-+ * @param next_id the next node to be checked
-+ * @return if any cycles have been found and eliminated
-+ */
-+bool MCF1stPass::EliminateCycles(PathVector &path, NodeID origin_id,
-+		NodeID next_id)
-+{
-+	static Path *invalid_path = new Path(INVALID_NODE, true);
-+	Path *at_next_pos = path[next_id];
-+	if (at_next_pos == invalid_path) {
-+		/* this node has already been searched */
-+		return false;
-+	} else if (at_next_pos == NULL) {
-+		/* summarize paths; add up the paths with the same source and next hop
-+		 * in one path each
-+		 */
-+		PathSet &paths = this->graph->GetNode(next_id).paths;
-+		PathViaMap next_hops;
-+		for(PathSet::iterator i = paths.begin(); i != paths.end(); ++i) {
-+			Path *new_child = *i;
-+			if (new_child->GetOrigin() == origin_id) {
-+				PathViaMap::iterator via_it =
-+						next_hops.find(new_child->GetNode());
-+				if (via_it == next_hops.end()) {
-+					next_hops[new_child->GetNode()] = new_child;
-+				} else {
-+					Path *child = via_it->second;
-+					uint new_flow = new_child->GetFlow();
-+					child->AddFlow(new_flow);
-+					new_child->ReduceFlow(new_flow);
-+				}
-+			}
-+		}
-+		bool found = false;
-+		/* search the next hops for nodes we have already visited */
-+		for (PathViaMap::iterator via_it = next_hops.begin();
-+				via_it != next_hops.end(); ++via_it)
-+		{
-+			Path *child = via_it->second;
-+			if (child->GetFlow() > 0) {
-+				/* push one child into the path vector and search this child's
-+				 * children
-+				 */
-+				path[next_id] = child;
-+				found = this->EliminateCycles(path, origin_id,
-+						child->GetNode()) || found;
-+			}
-+		}
-+		/* All paths departing from this node have been searched. Mark as
-+		 * resolved if no cycles found. If cycles were found further cycles
-+		 * could be found in this branch, thus it has to be searched again next
-+		 * time we spot it.
-+		 */
-+		if (found) {
-+			path[next_id] = NULL;
-+		} else {
-+			path[next_id] = invalid_path;
-+		}
-+		return found;
-+	} else {
-+		/* this node has already been visited => we have a cycle
-+		 * backtrack to find the exact flow
-+		 */
-+		uint flow = this->FindCycleFlow(path, at_next_pos);
-+		if (flow > 0) {
-+			this->EliminateCycle(path, at_next_pos, flow);
-+			return true;
-+		} else {
-+			return false;
-+		}
-+	}
-+}
-+
-+/**
-+ * Eliminate all cycles in the graph. Check paths starting at each node for
-+ * potential cycles.
-+ * @return if any cycles have been found and eliminated.
-+ */
-+bool MCF1stPass::EliminateCycles()
-+{
-+	bool cycles_found = false;
-+	uint size = this->graph->GetSize();
-+	PathVector path(size, NULL);
-+	for (NodeID node = 0; node < size; ++node) {
-+		/* starting at each node in the graph find all cycles involving this
-+		 * node
-+		 */
-+		std::fill(path.begin(), path.end(), (Path *)NULL);
-+		cycles_found = this->EliminateCycles(path, node, node) || cycles_found;
-+	}
-+	return cycles_found;
-+}
-+
-+/**
-+ * Run the first pass of the MCF calculation.
-+ * @param graph the component to calculate.
-+ */
-+MCF1stPass::MCF1stPass(LinkGraphComponent *graph) : MultiCommodityFlow(graph)
-+{
-+	PathVector paths;
-+	uint size = this->graph->GetSize();
-+	uint accuracy = this->graph->GetSettings().accuracy;
-+	bool more_loops = true;
-+
-+	while (more_loops) {
-+		more_loops = false;
-+
-+		for (NodeID source = 0; source < size; ++source) {
-+			/* first saturate the shortest paths */
-+			this->Dijkstra<DistanceAnnotation>(source, paths, true);
-+
-+			for (NodeID dest = 0; dest < size; ++dest) {
-+				Edge &edge = this->graph->GetEdge(source, dest);
-+				if (edge.unsatisfied_demand > 0) {
-+					Path *path = paths[dest];
-+					assert(path != NULL);
-+					/* generally only allow paths that don't exceed the
-+					 * available capacity. But if no demand has been assigned
-+					 * yet, make an exception and allow any valid path *once*.
-+					 */
-+					if (path->GetCapacity() > 0 && this->PushFlow(edge, path,
-+							accuracy, true) > 0)
-+					{
-+						more_loops = (edge.unsatisfied_demand > 0); {
-+							/* if a path has been found there is a chance we can
-+							 * find more
-+							 */
-+							more_loops = true;
-+						}
-+					} else if (edge.unsatisfied_demand == edge.demand &&
-+							path->GetCapacity() > INT_MIN)
-+					{
-+						this->PushFlow(edge, path, accuracy, false);
-+					}
-+				}
-+			}
-+			CleanupPaths(source, paths);
-+		}
-+		if (!more_loops) {
-+			more_loops = EliminateCycles();
-+		}
-+	}
-+}
-+
-+/**
-+ * Run the second pass of the MCF calculation.
-+ * @param graph the component to calculate.
-+ */
-+MCF2ndPass::MCF2ndPass(LinkGraphComponent *graph) : MultiCommodityFlow(graph)
-+{
-+	PathVector paths;
-+	uint size = this->graph->GetSize();
-+	uint accuracy = this->graph->GetSettings().accuracy;
-+	bool demand_left = true;
-+	while (demand_left) {
-+		demand_left = false;
-+		for (NodeID source = 0; source < size; ++source) {
-+			/* Then assign all remaining demands */
-+			this->Dijkstra<CapacityAnnotation>(source, paths, false);
-+			for (NodeID dest = 0; dest < size; ++dest) {
-+				Edge &edge = this->graph->GetEdge(source, dest);
-+				Path *path = paths[dest];
-+				if (edge.unsatisfied_demand > 0 &&
-+						path->GetCapacity() > INT_MIN)
-+				{
-+					this->PushFlow(edge, path, accuracy, false);
-+					if (edge.unsatisfied_demand > 0) {
-+						demand_left = true;
-+					}
-+				}
-+			}
-+			CleanupPaths(source, paths);
-+		}
-+	}
-+}
-+
-+/**
-+ * Relation that creates a weak order without duplicates.
-+ * Avoid accidentally deleting different paths of the same capacity/distance in
-+ * a set. When the annotation is the same node IDs are compared, so there are
-+ * no equal ranges.
-+ * @tparam T the type to be compared on
-+ * @param x_anno the first value
-+ * @param y_anno the second value
-+ * @param x the node id associated with the first value
-+ * @param y the node id associated with the second value
-+ */
-+template <typename T>
-+bool greater(T x_anno, T y_anno, NodeID x, NodeID y) {
-+	if (x_anno > y_anno) {
-+		return true;
-+	} else if (x_anno < y_anno) {
-+		return false;
-+	} else {
-+		return x > y;
-+	}
-+}
-+
-+/**
-+ * Compare two capacity annotations.
-+ * @param x the first capacity annotation
-+ * @param y the second capacity annotation
-+ * @return if x is better than y
-+ */
-+bool CapacityAnnotation::comp::operator()(const CapacityAnnotation *x,
-+		const CapacityAnnotation *y) const
-+{
-+	return x != y && greater<int>(x->GetAnnotation(), y->GetAnnotation(),
-+			x->GetNode(), y->GetNode());
-+}
-+
-+/**
-+ * Compare two distance annotations.
-+ * @param x the first distance annotation
-+ * @param y the second distance annotation
-+ * @return if x is better than y
-+ */
-+bool DistanceAnnotation::comp::operator()(const DistanceAnnotation *x,
-+		const DistanceAnnotation *y) const
-+{
-+	return x != y && !greater<uint>(x->GetAnnotation(), y->GetAnnotation(),
-+			x->GetNode(), y->GetNode());
-+}
-diff --git a/src/linkgraph/mcf.h b/src/linkgraph/mcf.h
-new file mode 100644
-index 0000000..b86b7bb
---- /dev/null
-+++ b/src/linkgraph/mcf.h
-@@ -0,0 +1,133 @@
-+/** @file mcf.h Declaration of Multi-Commodity-Flow solver */
-+
-+#ifndef MCF_H_
-+#define MCF_H_
-+
-+#include "linkgraph.h"
-+#include <vector>
-+
-+/**
-+ * Distance-based annotation for use in the Dijkstra algorithm. This is close
-+ * to the original meaning of "annotation" in this context. Paths are rated
-+ * according to the sum of distances of their edges.
-+ */
-+class DistanceAnnotation : public Path {
-+public:
-+
-+	DistanceAnnotation(NodeID n, bool source = false) : Path(n, source) {}
-+
-+	bool IsBetter(const DistanceAnnotation *base, int cap, uint dist) const;
-+
-+	/**
-+	 * return the actual value of the annotation, in this case the distance
-+	 * @return the distance
-+	 */
-+	uint GetAnnotation() const {return this->distance;}
-+
-+	struct comp {
-+		bool operator()(const DistanceAnnotation *x,
-+				const DistanceAnnotation *y) const;
-+	};
-+};
-+
-+/**
-+ * Capacity-based annotation for use in the Dijkstra algorithm. This annotation
-+ * rates paths according to the maximum capacity of their edges. The Dijkstra
-+ * algorithm still gives meaningful results like this as the capacity of a path
-+ * can only decrease or stay the same if you add more edges.
-+ */
-+class CapacityAnnotation : public Path {
-+public:
-+
-+	CapacityAnnotation(NodeID n, bool source = false) : Path(n, source) {}
-+
-+	bool IsBetter(const CapacityAnnotation *base, int cap, uint dist) const;
-+
-+	/**
-+	 * return the actual value of the annotation, in this case the capacity
-+	 * @return the capacity
-+	 */
-+	int GetAnnotation() const {return this->capacity;}
-+
-+	struct comp {
-+		bool operator()(const CapacityAnnotation *x,
-+				const CapacityAnnotation *y) const;
-+	};
-+};
-+
-+
-+typedef std::vector<Path *> PathVector;
-+
-+/**
-+ * Multi-commodity flow calculating base class.
-+ */
-+class MultiCommodityFlow {
-+protected:
-+	MultiCommodityFlow(LinkGraphComponent *graph) : graph(graph) {}
-+
-+	template<class ANNOTATION>
-+		void Dijkstra(NodeID from, PathVector &paths, bool create_new_paths);
-+
-+	uint PushFlow(Edge &edge, Path *path, uint accuracy, bool positive_cap);
-+
-+	void CleanupPaths(NodeID source, PathVector &paths);
-+
-+	LinkGraphComponent *graph; ///< the component we're working with
-+};
-+
-+/**
-+ * First pass of the MCF calculation. Saturates shortest paths first, creates
-+ * new paths if needed, eliminates cycles. This calculation is of exponential
-+ * complexity in the number of nodes but the constant factors are sufficiently
-+ * small to make it usable for most real-life link graph components. You can
-+ * deal with performance problems that might occur here in multiple ways:
-+ * - The overall accuracy is used here to determine how much flow is assigned
-+ *   in each loop. The lower the accuracy, the more flow is assigned, the less
-+ *   loops it takes to assign all flow.
-+ * - The short_path_saturation setting determines when this pass stops. The
-+ *   lower you set it, the less flow will be assigned in this pass, the less
-+ *   time it will take.
-+ * - You can increase the recalculation interval to allow for longer running
-+ *   times without creating lags.
-+ */
-+class MCF1stPass : public MultiCommodityFlow {
-+private:
-+	bool EliminateCycles();
-+	bool EliminateCycles(PathVector &path, NodeID origin_id, NodeID next_id);
-+	void EliminateCycle(PathVector &path, Path *cycle_begin, uint flow);
-+	uint FindCycleFlow(const PathVector &path, const Path *cycle_begin);
-+public:
-+	MCF1stPass(LinkGraphComponent *graph);
-+};
-+
-+/**
-+ * Second pass of the MCF calculation. Saturates paths with most capacity left
-+ * first and doesn't create any paths along edges that haven't been visited in
-+ * the first pass. This is why it doesn't have to do any cycle detection and
-+ * elimination. As cycle detection is the most intense problem in the first
-+ * pass this pass is cheaper. The accuracy is used here, too.
-+ */
-+class MCF2ndPass : public MultiCommodityFlow {
-+public:
-+	MCF2ndPass(LinkGraphComponent *graph);
-+};
-+
-+/**
-+ * Link graph handler for MCF. Creates MultiCommodityFlow instance according to
-+ * the template parameter.
-+ */
-+template<class Tpass>
-+class MCFHandler : public ComponentHandler {
-+public:
-+
-+	/**
-+	 * run the calculation.
-+	 * @param graph the component to be calculated.
-+	 */
-+	virtual void Run(LinkGraphComponent *graph)
-+		{Tpass pass(graph);}
-+
-+	virtual ~MCFHandler() {}
-+};
-+
-+#endif /* MCF_H_ */
 diff --git a/src/misc.cpp b/src/misc.cpp
 index 34d46fb..f4594bb 100644
 --- a/src/misc.cpp
@@ -2450,10 +1336,10 @@ index 8d49abd..6c5f953 100644
  
 diff --git a/src/saveload/linkgraph_sl.cpp b/src/saveload/linkgraph_sl.cpp
 new file mode 100644
-index 0000000..57e2454
+index 0000000..2c0f055
 --- /dev/null
 +++ b/src/saveload/linkgraph_sl.cpp
-@@ -0,0 +1,153 @@
+@@ -0,0 +1,147 @@
 +/* $Id$ */
 +
 +/*
@@ -2466,7 +1352,6 @@ index 0000000..57e2454
 +/** @file linkgraph_sl.cpp Code handling saving and loading of link graphs */
 +
 +#include "../linkgraph/linkgraph.h"
-+#include "../linkgraph/demands.h"
 +#include "../settings_internal.h"
 +#include "saveload.h"
 +#include <vector>
@@ -2539,7 +1424,6 @@ index 0000000..57e2454
 +static const SaveLoad _edge_desc[] = {
 +	 SLE_CONDVAR(Edge, distance,  SLE_UINT32, SL_COMPONENTS, SL_MAX_VERSION),
 +	 SLE_CONDVAR(Edge, capacity,  SLE_UINT32, SL_COMPONENTS, SL_MAX_VERSION),
-+	 SLE_CONDVAR(Edge, next_edge, SLE_UINT32,        SL_MCF, SL_MAX_VERSION),
 +	 SLE_END()
 +};
 +
@@ -2581,10 +1465,6 @@ index 0000000..57e2454
 +		SlObject(&graph, GetLinkGraphDesc());
 +		graph.SetSize();
 +		SaveLoad_LinkGraphComponent(graph);
-+		for (uint i = 0; i < graph.GetSize(); ++i) {
-+			Node &node = graph.GetNode(i);
-+			node.undelivered_supply = node.supply;
-+		}
 +	}
 +}
 +
@@ -2608,7 +1488,7 @@ index 0000000..57e2454
 +	{ 'LGRP', Save_LGRP, Load_LGRP, NULL, NULL, CH_LAST},
 +};
 diff --git a/src/saveload/saveload.cpp b/src/saveload/saveload.cpp
-index 61474be..c383136 100644
+index 61474be..eedd84e 100644
 --- a/src/saveload/saveload.cpp
 +++ b/src/saveload/saveload.cpp
 @@ -207,7 +207,7 @@
@@ -2616,7 +1496,7 @@ index 61474be..c383136 100644
   *  143   20048
   */
 -extern const uint16 SAVEGAME_VERSION = 143; ///< current savegame version of OpenTTD
-+extern const uint16 SAVEGAME_VERSION = SL_MCF; ///< current savegame version of OpenTTD
++extern const uint16 SAVEGAME_VERSION = SL_CAPACITIES; ///< current savegame version of OpenTTD
  
  SavegameType _savegame_type; ///< type of savegame we are loading
  
@@ -2637,7 +1517,7 @@ index 61474be..c383136 100644
  	NULL,
  };
 diff --git a/src/saveload/saveload.h b/src/saveload/saveload.h
-index 32a9429..9023386 100644
+index 32a9429..30ac31a 100644
 --- a/src/saveload/saveload.h
 +++ b/src/saveload/saveload.h
 @@ -83,8 +83,6 @@ enum SLRefType {
@@ -2649,7 +1529,7 @@ index 32a9429..9023386 100644
  enum ChunkType {
  	CH_RIFF         =  0,
  	CH_ARRAY        =  1,
-@@ -344,4 +342,17 @@ bool SaveloadCrashWithMissingNewGRFs();
+@@ -344,4 +342,15 @@ bool SaveloadCrashWithMissingNewGRFs();
  extern char _savegame_format[8];
  extern bool _do_autosave;
  
@@ -2661,8 +1541,6 @@ index 32a9429..9023386 100644
 +	SL_TRUNK = 143,
 +	SL_CAPACITIES = SL_TRUNK + 20,
 +	SL_COMPONENTS,
-+	SL_DEMANDS = SL_COMPONENTS + 20,
-+	SL_MCF,
 +	SL_MAX_VERSION = 255
 +};
 +
@@ -2773,10 +1651,10 @@ index b696ed7..5f638af 100644
  	if (index >= lengthof(_settings)) return NULL;
  	return &_settings[index];
 diff --git a/src/settings_gui.cpp b/src/settings_gui.cpp
-index 3ec3351..4b62b30 100644
+index 3ec3351..f43691d 100644
 --- a/src/settings_gui.cpp
 +++ b/src/settings_gui.cpp
-@@ -1386,6 +1386,21 @@ static SettingEntry _settings_economy[] = {
+@@ -1386,6 +1386,17 @@ static SettingEntry _settings_economy[] = {
  /** Economy sub-page */
  static SettingsPage _settings_economy_page = {_settings_economy, lengthof(_settings_economy)};
  
@@ -2787,10 +1665,6 @@ index 3ec3351..4b62b30 100644
 +	SettingEntry("linkgraph.distribution_express"),
 +	SettingEntry("linkgraph.distribution_armoured"),
 +	SettingEntry("linkgraph.distribution_default"),
-+	SettingEntry("linkgraph.accuracy"),
-+	SettingEntry("linkgraph.demand_distance"),
-+	SettingEntry("linkgraph.demand_size"),
-+	SettingEntry("linkgraph.short_path_saturation"),
 +};
 +/** Linkgraph sub-page */
 +static SettingsPage _settings_linkgraph_page = {_settings_linkgraph, lengthof(_settings_linkgraph)};
@@ -2798,7 +1672,7 @@ index 3ec3351..4b62b30 100644
  static SettingEntry _settings_ai_npc[] = {
  	SettingEntry("ai.ai_in_multiplayer"),
  	SettingEntry("ai.ai_disable_veh_train"),
-@@ -1478,6 +1493,7 @@ static SettingEntry _settings_main[] = {
+@@ -1478,6 +1489,7 @@ static SettingEntry _settings_main[] = {
  	SettingEntry(&_settings_vehicles_page,     STR_CONFIG_SETTING_VEHICLES),
  	SettingEntry(&_settings_stations_page,     STR_CONFIG_SETTING_STATIONS),
  	SettingEntry(&_settings_economy_page,      STR_CONFIG_SETTING_ECONOMY),
@@ -2807,7 +1681,7 @@ index 3ec3351..4b62b30 100644
  };
  
 diff --git a/src/settings_type.h b/src/settings_type.h
-index 8e3b61d..1250a02 100644
+index 8e3b61d..75c9c6c 100644
 --- a/src/settings_type.h
 +++ b/src/settings_type.h
 @@ -17,6 +17,8 @@
@@ -2819,7 +1693,7 @@ index 8e3b61d..1250a02 100644
  
  /** Settings related to the difficulty of the game */
  struct DifficultySettings {
-@@ -355,6 +357,33 @@ struct EconomySettings {
+@@ -355,6 +357,29 @@ struct EconomySettings {
  	bool   allow_town_level_crossings;       ///< towns are allowed to build level crossings
  };
  
@@ -2830,10 +1704,6 @@ index 8e3b61d..1250a02 100644
 +	DistributionTypeByte distribution_express;  ///< distribution type for express cargo class
 +	DistributionTypeByte distribution_armoured; ///< distribution type for armoured cargo class
 +	DistributionTypeByte distribution_default;  ///< distribution type for all other goods
-+	uint8 accuracy;                             ///< accuracy when calculating things on the link graph. low accuracy => low running time
-+	uint8 demand_size;                          ///< influence of supply ("station size") on the demand function
-+	uint8 demand_distance;                      ///< influence of distance between stations on the demand function
-+	uint8 short_path_saturation;                ///< percentage up to which short paths are saturated before saturating most capacious paths
 +
 +	FORCEINLINE DistributionType GetDistributionType(CargoID cargo) const {
 +		if (IsCargoInClass(cargo, CC_PASSENGERS)) {
@@ -2853,7 +1723,7 @@ index 8e3b61d..1250a02 100644
  /** Settings related to stations. */
  struct StationSettings {
  	bool   modified_catchment;               ///< different-size catchment areas
-@@ -395,6 +424,7 @@ struct GameSettings {
+@@ -395,6 +420,7 @@ struct GameSettings {
  	OrderSettings        order;              ///< settings related to orders
  	VehicleSettings      vehicle;            ///< options for vehicles
  	EconomySettings      economy;            ///< settings to change the economy
@@ -3319,10 +2189,10 @@ index 2a2d831..1ec2f5f 100644
 +
  #endif /* STATION_FUNC_H */
 diff --git a/src/table/settings.h b/src/table/settings.h
-index 255c705..55c537d 100644
+index 255c705..0a26cce 100644
 --- a/src/table/settings.h
 +++ b/src/table/settings.h
-@@ -463,6 +463,17 @@ const SettingDesc _settings[] = {
+@@ -463,6 +463,13 @@ const SettingDesc _settings[] = {
  	 SDT_CONDVAR(GameSettings, economy.town_noise_population[1],    SLE_UINT16, 96, SL_MAX_VERSION, 0, 0,  2000,   400,   65535, 0, STR_NULL,                                  NULL),
  	 SDT_CONDVAR(GameSettings, economy.town_noise_population[2],    SLE_UINT16, 96, SL_MAX_VERSION, 0, 0,  4000,   800,   65535, 0, STR_NULL,                                  NULL),
  
@@ -3332,10 +2202,6 @@ index 255c705..55c537d 100644
 +	 SDT_CONDVAR(GameSettings, linkgraph.distribution_express,SLE_UINT8,SL_COMPONENTS,SL_MAX_VERSION,0,MS,DT_ASYMMETRIC,DT_BEGIN,DT_NUM-1,1,STR_CONFIG_SETTING_DISTRIBUTION_EXPRESS,NULL),
 +	 SDT_CONDVAR(GameSettings, linkgraph.distribution_armoured,SLE_UINT8,SL_COMPONENTS,SL_MAX_VERSION,0,MS,DT_SYMMETRIC,DT_BEGIN,DT_NUM-1,1,STR_CONFIG_SETTING_DISTRIBUTION_ARMOURED,NULL),
 +	 SDT_CONDVAR(GameSettings, linkgraph.distribution_default,SLE_UINT8,SL_COMPONENTS,SL_MAX_VERSION,0,MS,DT_ASYMMETRIC,DT_BEGIN,DT_NUM-1,1,STR_CONFIG_SETTING_DISTRIBUTION_DEFAULT,NULL),
-+	 SDT_CONDVAR(GameSettings, linkgraph.accuracy,                   SLE_UINT8,SL_DEMANDS, SL_MAX_VERSION, 0, 0,16,  2,      64, 1, STR_CONFIG_SETTING_LINKGRAPH_ACCURACY,     NULL),
-+	 SDT_CONDVAR(GameSettings, linkgraph.demand_distance,            SLE_UINT8,SL_DEMANDS, SL_MAX_VERSION, 0, 0,100, 0,     255, 5, STR_CONFIG_SETTING_DEMAND_DISTANCE,        NULL),
-+	 SDT_CONDVAR(GameSettings, linkgraph.demand_size,                SLE_UINT8,SL_DEMANDS, SL_MAX_VERSION, 0, 0,100, 0,     100, 5, STR_CONFIG_SETTING_DEMAND_SIZE,            NULL),
-+	 SDT_CONDVAR(GameSettings, linkgraph.short_path_saturation,      SLE_UINT8,    SL_MCF, SL_MAX_VERSION, 0, 0,80,  0,     250, 5, STR_CONFIG_SETTING_SHORT_PATH_SATURATION,  NULL),
 +
  	 SDT_CONDVAR(GameSettings, pf.wait_for_pbs_path,                 SLE_UINT8,100, SL_MAX_VERSION, 0, 0,    30,     2,     255, 0, STR_NULL,                                  NULL),
  	SDT_CONDBOOL(GameSettings, pf.reserve_paths,                               100, SL_MAX_VERSION, 0, 0, false,                    STR_NULL,                                  NULL),
