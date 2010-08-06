@@ -1637,7 +1637,7 @@ index 0000000..58e8e97
 +
 +#endif /* MULTIMAP_HPP_ */
 diff --git a/src/economy.cpp b/src/economy.cpp
-index ed9212c..15fde0d 100644
+index ed9212c..7e0c21c 100644
 --- a/src/economy.cpp
 +++ b/src/economy.cpp
 @@ -1037,21 +1037,25 @@ CargoPayment::~CargoPayment()
@@ -1700,7 +1700,7 @@ index ed9212c..15fde0d 100644
  		for (Vehicle *v = front_v; v != NULL; v = v->Next()) {
  			if (v->cargo_cap > 0 && !v->cargo.Empty()) {
  				SetBit(v->vehicle_flags, VF_CARGO_UNLOADING);
-@@ -1122,40 +1129,65 @@ void PrepareUnload(Vehicle *front_v)
+@@ -1122,40 +1129,66 @@ void PrepareUnload(Vehicle *front_v)
  }
  
  /**
@@ -1753,7 +1753,8 @@ index ed9212c..15fde0d 100644
 +	StationID next_station = INVALID_STATION;
 +	OrderList * orders = v->orders.list;
 +	if (orders != NULL) {
-+		next_station = orders->GetNextStoppingStation(v->cur_order_index, v->type == VEH_TRAIN || v->type == VEH_ROAD);
++		next_station = orders->GetNextStoppingStation(v->cur_order_index, last_visited,
++			v->type == VEH_TRAIN || v->type == VEH_ROAD);
 +	}
  
  	/* We have not waited enough time till the next round of loading/unloading */
@@ -1784,7 +1785,7 @@ index ed9212c..15fde0d 100644
  	}
  
  	int unloading_time = 0;
-@@ -1189,56 +1221,30 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
+@@ -1189,56 +1222,30 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
  
  		GoodsEntry *ge = &st->goods[v->cargo_type];
  
@@ -1858,7 +1859,7 @@ index ed9212c..15fde0d 100644
  			}
  
  			continue;
-@@ -1264,28 +1270,19 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
+@@ -1264,28 +1271,19 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
  
  		/* If there's goods waiting at the station, and the vehicle
  		 * has capacity for it, load it on the vehicle. */
@@ -1896,7 +1897,7 @@ index ed9212c..15fde0d 100644
  			/* TODO: Regarding this, when we do gradual loading, we
  			 * should first unload all vehicles and then start
  			 * loading them. Since this will cause
-@@ -1293,23 +1290,28 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
+@@ -1293,23 +1291,28 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
  			 * the whole vehicle chain is really totally empty, the
  			 * completely_emptied assignment can then be safely
  			 * removed; that's how TTDPatch behaves too. --pasky */
@@ -1936,7 +1937,7 @@ index ed9212c..15fde0d 100644
  			SetBit(cargo_full, v->cargo_type);
  		} else {
  			SetBit(cargo_not_full, v->cargo_type);
-@@ -1319,18 +1321,6 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
+@@ -1319,18 +1322,6 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
  	/* Only set completely_emptied, if we just unloaded all remaining cargo */
  	completely_emptied &= anything_unloaded;
  
@@ -1955,7 +1956,7 @@ index ed9212c..15fde0d 100644
  	v = u;
  
  	if (!anything_unloaded) delete payment;
-@@ -1349,7 +1339,7 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
+@@ -1349,7 +1340,7 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
  			if (v->current_order.GetLoadType() == OLF_FULL_LOAD_ANY) {
  				/* if the aircraft carries passengers and is NOT full, then
  				 * continue loading, no matter how much mail is in */
@@ -1964,7 +1965,7 @@ index ed9212c..15fde0d 100644
  						(cargo_not_full && (cargo_full & ~cargo_not_full) == 0)) { // There are still non-full cargoes
  					finished_loading = false;
  				}
-@@ -1403,6 +1393,7 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
+@@ -1403,6 +1394,7 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
  		st->MarkTilesDirty(true);
  		SetWindowDirty(WC_STATION_VIEW, last_visited);
  	}
@@ -1972,7 +1973,7 @@ index ed9212c..15fde0d 100644
  }
  
  /**
-@@ -1415,14 +1406,30 @@ void LoadUnloadStation(Station *st)
+@@ -1415,14 +1407,30 @@ void LoadUnloadStation(Station *st)
  	/* No vehicle is here... */
  	if (st->loading_vehicles.empty()) return;
  
@@ -4346,7 +4347,7 @@ index cf61ab9..86d2d0d 100644
  		ShowErrorMessage(_switch_mode_errorstr, INVALID_STRING_ID, WL_CRITICAL);
  	}
 diff --git a/src/order_base.h b/src/order_base.h
-index fccc802..c969e00 100644
+index fccc802..ed0dc89 100644
 --- a/src/order_base.h
 +++ b/src/order_base.h
 @@ -262,6 +262,8 @@ struct OrderList : OrderListPool::PoolItem<&_orderlist_pool> {
@@ -4362,16 +4363,16 @@ index fccc802..c969e00 100644
  	 */
  	inline Order *GetLastOrder() const { return this->GetOrderAt(this->num_orders - 1); }
  
-+	StationID GetNextStoppingStation(VehicleOrderID curr, bool check_nonstop) const;
++	StationID GetNextStoppingStation(VehicleOrderID curr_order, StationID curr_station, bool check_nonstop) const;
 +
  	/**
  	 * Get number of orders in the order list.
  	 * @return number of orders in the chain.
 diff --git a/src/order_cmd.cpp b/src/order_cmd.cpp
-index d91f5d3..fc16fa6 100644
+index d91f5d3..889c633 100644
 --- a/src/order_cmd.cpp
 +++ b/src/order_cmd.cpp
-@@ -258,6 +258,75 @@ Order *OrderList::GetOrderAt(int index) const
+@@ -258,6 +258,86 @@ Order *OrderList::GetOrderAt(int index) const
  	return order;
  }
  
@@ -4431,23 +4432,34 @@ index d91f5d3..fc16fa6 100644
 +
 +/**
 + * Get the next station the vehicle will stop at, if that is deterministic.
-+ * @param curr_id the ID of the current order
++ * @param curr_order the ID of the current order
++ * @param curr_station the station the vehicle is just visiting or INVALID_STATION
 + * @param check_nonstop if true regard orders without non-stop flag as nondeterministic
 + * @return The ID of the next station the vehicle will stop at or INVALID_STATION
 + */
-+StationID OrderList::GetNextStoppingStation(VehicleOrderID curr_id, bool check_nonstop) const {
-+	const Order *curr = this->GetOrderAt(curr_id);
++StationID OrderList::GetNextStoppingStation(VehicleOrderID curr_order, StationID curr_station, bool check_nonstop) const {
++	const Order *curr = this->GetOrderAt(curr_order);
 +	if (curr == NULL) {
 +		curr = this->GetFirstOrder();
 +		if (curr == NULL) return INVALID_STATION;
 +	}
-+	return this->GetNextStoppingStation(this->GetNext(curr), 1, check_nonstop);
++
++	/* If we're not at a station or the current order doesn't yield the station
++	 * we're at, we have to check the current order; otherwise we have to check
++	 * the next one.
++	 */
++	if (curr_station == INVALID_STATION || curr->GetType() != OT_GOTO_STATION ||
++			curr_station != curr->GetDestination()) {
++		return this->GetNextStoppingStation(curr, 0, check_nonstop);
++	} else {
++		return this->GetNextStoppingStation(this->GetNext(curr), 1, check_nonstop);
++	}
 +}
 +
  void OrderList::InsertOrderAt(Order *new_order, int index)
  {
  	if (this->first == NULL) {
-@@ -694,6 +763,8 @@ CommandCost CmdInsertOrder(TileIndex tile, DoCommandFlag flags, uint32 p1, uint3
+@@ -694,6 +774,8 @@ CommandCost CmdInsertOrder(TileIndex tile, DoCommandFlag flags, uint32 p1, uint3
  			}
  			/* Update any possible open window of the vehicle */
  			InvalidateVehicleOrder(u, INVALID_VEH_ORDER_ID | (sel_ord << 8));
@@ -4456,7 +4468,7 @@ index d91f5d3..fc16fa6 100644
  		}
  
  		/* As we insert an order, the order to skip to will be 'wrong'. */
-@@ -729,6 +800,9 @@ static CommandCost DecloneOrder(Vehicle *dst, DoCommandFlag flags)
+@@ -729,6 +811,9 @@ static CommandCost DecloneOrder(Vehicle *dst, DoCommandFlag flags)
  	if (flags & DC_EXEC) {
  		DeleteVehicleOrders(dst);
  		InvalidateVehicleOrder(dst, -1);
@@ -4466,7 +4478,7 @@ index d91f5d3..fc16fa6 100644
  		InvalidateWindowClassesData(GetWindowClassForVehicleType(dst->type), 0);
  	}
  	return CommandCost();
-@@ -780,6 +854,8 @@ CommandCost CmdDeleteOrder(TileIndex tile, DoCommandFlag flags, uint32 p1, uint3
+@@ -780,6 +865,8 @@ CommandCost CmdDeleteOrder(TileIndex tile, DoCommandFlag flags, uint32 p1, uint3
  
  			/* Update any possible open window of the vehicle */
  			InvalidateVehicleOrder(u, sel_ord | (INVALID_VEH_ORDER_ID << 8));
@@ -4475,7 +4487,7 @@ index d91f5d3..fc16fa6 100644
  		}
  
  		/* As we delete an order, the order to skip to will be 'wrong'. */
-@@ -825,10 +901,10 @@ CommandCost CmdSkipToOrder(TileIndex tile, DoCommandFlag flags, uint32 p1, uint3
+@@ -825,10 +912,10 @@ CommandCost CmdSkipToOrder(TileIndex tile, DoCommandFlag flags, uint32 p1, uint3
  	if (ret.Failed()) return ret;
  
  	if (flags & DC_EXEC) {
@@ -4488,7 +4500,7 @@ index d91f5d3..fc16fa6 100644
  		InvalidateVehicleOrder(v, -2);
  	}
  
-@@ -893,6 +969,8 @@ CommandCost CmdMoveOrder(TileIndex tile, DoCommandFlag flags, uint32 p1, uint32
+@@ -893,6 +980,8 @@ CommandCost CmdMoveOrder(TileIndex tile, DoCommandFlag flags, uint32 p1, uint32
  			assert(v->orders.list == u->orders.list);
  			/* Update any possible open window of the vehicle */
  			InvalidateVehicleOrder(u, moving_order | (target_order << 8));
@@ -4497,7 +4509,7 @@ index d91f5d3..fc16fa6 100644
  		}
  
  		/* As we move an order, the order to skip to will be 'wrong'. */
-@@ -1149,6 +1227,8 @@ CommandCost CmdModifyOrder(TileIndex tile, DoCommandFlag flags, uint32 p1, uint3
+@@ -1149,6 +1238,8 @@ CommandCost CmdModifyOrder(TileIndex tile, DoCommandFlag flags, uint32 p1, uint3
  				u->current_order.SetLoadType(order->GetLoadType());
  			}
  			InvalidateVehicleOrder(u, -2);
@@ -4506,7 +4518,7 @@ index d91f5d3..fc16fa6 100644
  		}
  	}
  
-@@ -1281,6 +1361,8 @@ CommandCost CmdCloneOrder(TileIndex tile, DoCommandFlag flags, uint32 p1, uint32
+@@ -1281,6 +1372,8 @@ CommandCost CmdCloneOrder(TileIndex tile, DoCommandFlag flags, uint32 p1, uint32
  		default: return CMD_ERROR;
  	}
  
@@ -4515,7 +4527,7 @@ index d91f5d3..fc16fa6 100644
  	return CommandCost();
  }
  
-@@ -1588,6 +1670,8 @@ void RemoveOrderFromAllVehicles(OrderType type, DestinationID destination)
+@@ -1588,6 +1681,8 @@ void RemoveOrderFromAllVehicles(OrderType type, DestinationID destination)
  					/* In GUI, simulate by removing the order and adding it back */
  					InvalidateVehicleOrder(w, id | (INVALID_VEH_ORDER_ID << 8));
  					InvalidateVehicleOrder(w, (INVALID_VEH_ORDER_ID << 8) | id);
@@ -4524,7 +4536,7 @@ index d91f5d3..fc16fa6 100644
  				}
  			}
  		}
-@@ -1630,6 +1714,8 @@ void DeleteVehicleOrders(Vehicle *v, bool keep_orderlist)
+@@ -1630,6 +1725,8 @@ void DeleteVehicleOrders(Vehicle *v, bool keep_orderlist)
  		v->orders.list->FreeChain(keep_orderlist);
  		if (!keep_orderlist) v->orders.list = NULL;
  	}
@@ -4533,7 +4545,7 @@ index d91f5d3..fc16fa6 100644
  }
  
  uint16 GetServiceIntervalClamped(uint interval, CompanyID company_id)
-@@ -1833,7 +1919,7 @@ bool ProcessOrders(Vehicle *v)
+@@ -1833,7 +1930,7 @@ bool ProcessOrders(Vehicle *v)
  	if (((v->current_order.IsType(OT_GOTO_STATION) && (v->current_order.GetNonStopType() & ONSF_NO_STOP_AT_DESTINATION_STATION)) || v->current_order.IsType(OT_GOTO_WAYPOINT)) &&
  			IsTileType(v->tile, MP_STATION) &&
  			v->current_order.GetDestination() == GetStationIndex(v->tile)) {
@@ -7202,7 +7214,7 @@ index 2d345a5..2e59e45 100644
  
  #define FOR_ALL_STATIONS(var) FOR_ALL_BASE_STATIONS_OF_TYPE(Station, var)
 diff --git a/src/station_cmd.cpp b/src/station_cmd.cpp
-index 8e71365..bfb2582 100644
+index 8e71365..cfe37d0 100644
 --- a/src/station_cmd.cpp
 +++ b/src/station_cmd.cpp
 @@ -47,6 +47,7 @@
@@ -7436,7 +7448,7 @@ index 8e71365..bfb2582 100644
 +		OrderList *orders = front->orders.list;
 +		if (orders != NULL) {
 +			StationID next_station_id = orders->GetNextStoppingStation(front->cur_order_index,
-+					front->type == VEH_ROAD || front->type == VEH_TRAIN);
++					st->index, front->type == VEH_ROAD || front->type == VEH_TRAIN);
 +			if (next_station_id != INVALID_STATION && next_station_id != st->index) {
 +				IncreaseStats(st, front, next_station_id, true);
 +			}
@@ -8792,7 +8804,7 @@ index 8d75bfc..7fac169 100644
  	StationAnimationTrigger(st, v->tile, STAT_ANIM_TRAIN_ARRIVES);
  }
 diff --git a/src/vehicle.cpp b/src/vehicle.cpp
-index 0be9bb2..cc8233b 100644
+index 0be9bb2..dd37801 100644
 --- a/src/vehicle.cpp
 +++ b/src/vehicle.cpp
 @@ -614,10 +614,11 @@ void Vehicle::PreDestructor()
@@ -8829,7 +8841,7 @@ index 0be9bb2..cc8233b 100644
  		current_order.MakeLoading(true);
  		UpdateVehicleTimetable(this, true);
  
-@@ -1613,9 +1617,25 @@ void Vehicle::BeginLoading()
+@@ -1613,9 +1617,26 @@ void Vehicle::BeginLoading()
  		current_order.MakeLoading(false);
  	}
  
@@ -8840,7 +8852,8 @@ index 0be9bb2..cc8233b 100644
 +	StationID next_station_id = INVALID_STATION;
 +	OrderList *orders = this->orders.list;
 +	if (orders != NULL) {
-+		next_station_id = orders->GetNextStoppingStation(this->cur_order_index, this->type == VEH_ROAD || this->type == VEH_TRAIN);
++		next_station_id = orders->GetNextStoppingStation(this->cur_order_index,
++				curr_station_id, this->type == VEH_ROAD || this->type == VEH_TRAIN);
 +	}
 +
 +	if (this->last_station_visited != INVALID_STATION && this->last_station_visited != curr_station_id) {
@@ -8857,7 +8870,7 @@ index 0be9bb2..cc8233b 100644
  
  	SetWindowDirty(GetWindowClassForVehicleType(this->type), this->owner);
  	SetWindowWidgetDirty(WC_VEHICLE_VIEW, this->index, VVW_WIDGET_START_STOP_VEH);
-@@ -1627,19 +1647,48 @@ void Vehicle::BeginLoading()
+@@ -1627,19 +1648,49 @@ void Vehicle::BeginLoading()
  	this->MarkDirty();
  }
  
@@ -8894,7 +8907,8 @@ index 0be9bb2..cc8233b 100644
  
 +	OrderList *orders = this->orders.list;
 +	if (orders != NULL) {
-+		StationID next_station_id = orders->GetNextStoppingStation(this->cur_order_index, this->type == VEH_ROAD || this->type == VEH_TRAIN);
++		StationID next_station_id = orders->GetNextStoppingStation(this->cur_order_index,
++				this->last_station_visited, this->type == VEH_ROAD || this->type == VEH_TRAIN);
 +		this->CancelReservation(next_station_id, st);
 +		if (next_station_id != INVALID_STATION && next_station_id != this->last_station_visited) {
 +			DecreaseFrozen(st, this, next_station_id);
