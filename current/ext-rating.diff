@@ -1989,7 +1989,7 @@ index 0000000..58e8e97
 +
 +#endif /* MULTIMAP_HPP_ */
 diff --git a/src/economy.cpp b/src/economy.cpp
-index 628970b..908c71b 100644
+index 628970b..3f5e3c7 100644
 --- a/src/economy.cpp
 +++ b/src/economy.cpp
 @@ -1029,21 +1029,25 @@ CargoPayment::~CargoPayment()
@@ -2022,7 +2022,7 @@ index 628970b..908c71b 100644
  	}
  
  	cur_company.Restore();
-@@ -1085,15 +1089,17 @@ Money CargoPayment::PayTransfer(const CargoPacket *cp, uint count)
+@@ -1085,23 +1089,40 @@ Money CargoPayment::PayTransfer(const CargoPacket *cp, uint count)
  
  	profit = profit * _settings_game.economy.feeder_payment_share / 100;
  
@@ -2042,19 +2042,32 @@ index 628970b..908c71b 100644
  {
  	/* At this moment loading cannot be finished */
  	ClrBit(front_v->vehicle_flags, VF_LOADING_FINISHED);
-@@ -1101,7 +1107,10 @@ void PrepareUnload(Vehicle *front_v)
- 	/* Start unloading in at the first possible moment */
+ 
+-	/* Start unloading in at the first possible moment */
++	/* Start unloading at the first possible moment */
  	front_v->load_unload_ticks = 1;
  
 -	if ((front_v->current_order.GetUnloadType() & OUFB_NO_UNLOAD) == 0) {
 +	if ((front_v->current_order.GetUnloadType() & OUFB_NO_UNLOAD) != 0) {
-+		/* vehicle will keep all its cargo and LoadUnloadVehicle will never call MoveToStation */
-+		UpdateFlowsPassThrough(curr_station, front_v, next_station_id);
++		/* vehicle will keep all its cargo and LoadUnloadVehicle will never call MoveToStation,
++		 * so we have to update the flow stats here.
++		 */
++		if (next_station_id == INVALID_STATION) {
++			return;
++		} else {
++			for (Vehicle *v = front_v; v != NULL; v = v->Next()) {
++				const CargoPacketList *packets = v->cargo.Packets();
++				for(VehicleCargoList::ConstIterator i(packets->begin()); i != packets->end(); ++i) {
++					curr_station->goods[v->cargo_type].UpdateFlowStats(
++							(*i)->SourceStation(), (*i)->Count(), next_station_id);
++				}
++			}
++		}
 +	} else {
  		for (Vehicle *v = front_v; v != NULL; v = v->Next()) {
  			if (v->cargo_cap > 0 && !v->cargo.Empty()) {
  				SetBit(v->vehicle_flags, VF_CARGO_UNLOADING);
-@@ -1114,40 +1123,85 @@ void PrepareUnload(Vehicle *front_v)
+@@ -1114,40 +1135,85 @@ void PrepareUnload(Vehicle *front_v)
  }
  
  /**
@@ -2158,7 +2171,7 @@ index 628970b..908c71b 100644
  	}
  
  	int unloading_time = 0;
-@@ -1182,56 +1236,30 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
+@@ -1182,56 +1248,30 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
  
  		GoodsEntry *ge = &st->goods[v->cargo_type];
  
@@ -2232,7 +2245,7 @@ index 628970b..908c71b 100644
  			}
  
  			continue;
-@@ -1257,33 +1285,21 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
+@@ -1257,33 +1297,21 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
  
  		/* If there's goods waiting at the station, and the vehicle
  		 * has capacity for it, load it on the vehicle. */
@@ -2278,7 +2291,7 @@ index 628970b..908c71b 100644
  			/* TODO: Regarding this, when we do gradual loading, we
  			 * should first unload all vehicles and then start
  			 * loading them. Since this will cause
-@@ -1291,23 +1307,28 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
+@@ -1291,23 +1319,28 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
  			 * the whole vehicle chain is really totally empty, the
  			 * completely_emptied assignment can then be safely
  			 * removed; that's how TTDPatch behaves too. --pasky */
@@ -2318,7 +2331,7 @@ index 628970b..908c71b 100644
  			SetBit(cargo_full, v->cargo_type);
  		} else {
  			SetBit(cargo_not_full, v->cargo_type);
-@@ -1317,18 +1338,6 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
+@@ -1317,18 +1350,6 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
  	/* Only set completely_emptied, if we just unloaded all remaining cargo */
  	completely_emptied &= anything_unloaded;
  
@@ -2337,7 +2350,7 @@ index 628970b..908c71b 100644
  	v = u;
  
  	if (!anything_unloaded) delete payment;
-@@ -1350,7 +1359,7 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
+@@ -1350,7 +1371,7 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
  			if (v->current_order.GetLoadType() == OLF_FULL_LOAD_ANY) {
  				/* if the aircraft carries passengers and is NOT full, then
  				 * continue loading, no matter how much mail is in */
@@ -2346,7 +2359,7 @@ index 628970b..908c71b 100644
  						(cargo_not_full && (cargo_full & ~cargo_not_full) == 0)) { // There are still non-full cargoes
  					finished_loading = false;
  				}
-@@ -1404,6 +1413,7 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
+@@ -1404,6 +1425,7 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
  		st->MarkTilesDirty(true);
  		SetWindowDirty(WC_STATION_VIEW, last_visited);
  	}
@@ -2354,7 +2367,7 @@ index 628970b..908c71b 100644
  }
  
  /**
-@@ -1416,14 +1426,30 @@ void LoadUnloadStation(Station *st)
+@@ -1416,14 +1438,30 @@ void LoadUnloadStation(Station *st)
  	/* No vehicle is here... */
  	if (st->loading_vehicles.empty()) return;
  
@@ -2923,10 +2936,10 @@ index 0000000..a621612
 +#endif /* FLOWMAPPER_H_ */
 diff --git a/src/linkgraph/linkgraph.cpp b/src/linkgraph/linkgraph.cpp
 new file mode 100644
-index 0000000..834356a
+index 0000000..953f85c
 --- /dev/null
 +++ b/src/linkgraph/linkgraph.cpp
-@@ -0,0 +1,521 @@
+@@ -0,0 +1,548 @@
 +/* $Id$ */
 +
 +/*
@@ -3221,12 +3234,17 @@ index 0000000..834356a
 +
 +
 +/**
-+ * exports all entries in the FlowViaMap pointed to by source_flows it and erases it afterwards
++ * Exports all entries in the FlowViaMap pointed to by "source_flows_it", erases the source
++ * flows and increments the iterator afterwards.
++ * @param it iterator pointing to the flows to be exported into the main game state
++ * @param dest the flow stats to which the flows shall be exported
++ * @param cargo the cargo we're exporting flows for (used to check if the link stats for the new
++ *        flows still exist)
 + */
-+void Node::ExportNewFlows(FlowMap::iterator &source_flows_it, FlowStatSet &via_set, CargoID cargo)
++void Node::ExportNewFlows(FlowMap::iterator &it, FlowStatSet &dest, CargoID cargo)
 +{
-+	StationID source = source_flows_it->first;
-+	FlowViaMap &source_flows = source_flows_it->second;
++	StationID source = it->first;
++	FlowViaMap &source_flows = it->second;
 +	if (!Station::IsValidID(source)) {
 +		source_flows.clear();
 +	} else {
@@ -3242,10 +3260,10 @@ index 0000000..834356a
 +				if (next != this->station) {
 +					const LinkStatMap &ls = curr_station->goods[cargo].link_stats;
 +					if (ls.find(next) != ls.end()) {
-+						via_set.insert(FlowStat(distance, next, planned, 0));
++						dest.insert(FlowStat(distance, next, planned, 0));
 +					}
 +				} else {
-+					via_set.insert(FlowStat(distance, next, planned, 0));
++					dest.insert(FlowStat(distance, next, planned, 0));
 +				}
 +			}
 +			source_flows.erase(update++);
@@ -3253,45 +3271,49 @@ index 0000000..834356a
 +	}
 +	assert(source_flows.empty());
 +
-+	this->flows.erase(source_flows_it++);
++	this->flows.erase(it++);
 +}
 +
-+void Node::ExportFlows(FlowStatMap &station_flows, CargoID cargo) {
++/**
++ * Export all flows of this node to the main game state.
++ * @param cargo the cargo we're exporting flows for.
++ */
++void Node::ExportFlows(CargoID cargo) {
++	FlowStatMap &station_flows = Station::Get(this->station)->goods[cargo].flows;
 +	FlowStatSet new_flows;
 +	/* loop over all existing flows in the station and update them */
-+	for(FlowStatMap::iterator flowmap_it = station_flows.begin(); flowmap_it != station_flows.end();) {
-+		FlowMap::iterator source_flows_it = this->flows.find(flowmap_it->first);
-+		if (source_flows_it == this->flows.end()) {
++	for(FlowStatMap::iterator station_outer_it(station_flows.begin()); station_outer_it != station_flows.end();) {
++		FlowMap::iterator node_outer_it(this->flows.find(station_outer_it->first));
++		if (node_outer_it == this->flows.end()) {
 +			/* there are no flows for this source node anymore */
-+			station_flows.erase(flowmap_it++);
++			station_flows.erase(station_outer_it++);
 +		} else {
-+			FlowViaMap &source_flows = source_flows_it->second;
-+			FlowStatSet &via_set = flowmap_it->second;
++			FlowViaMap &source = node_outer_it->second;
++			FlowStatSet &dest = station_outer_it->second;
 +			/* loop over the station's flow stats for this source node and update them */
-+			for (FlowStatSet::iterator flowset_it = via_set.begin(); flowset_it != via_set.end();) {
-+				FlowViaMap::iterator update = source_flows.find(flowset_it->Via());
-+				if (update != source_flows.end()) {
-+					assert(update->second >= 0);
-+					if (update->second > 0) {
-+						new_flows.insert(FlowStat(*flowset_it, update->second));
++			for (FlowStatSet::iterator station_inner_it(dest.begin()); station_inner_it != dest.end();) {
++				FlowViaMap::iterator node_inner_it(source.find(station_inner_it->Via()));
++				if (node_inner_it != source.end()) {
++					assert(node_inner_it->second >= 0);
++					if (node_inner_it->second > 0) {
++						new_flows.insert(FlowStat(*station_inner_it, node_inner_it->second));
 +					}
-+					source_flows.erase(update);
++					source.erase(node_inner_it);
 +				}
-+				via_set.erase(flowset_it++);
++				dest.erase(station_inner_it++);
 +			}
 +			/* swap takes constant time, so we swap instead of adding all entries */
-+			via_set.swap(new_flows);
++			dest.swap(new_flows);
 +			assert(new_flows.empty());
 +			/* insert remaining flows for this source node */
-+			ExportNewFlows(source_flows_it, via_set, cargo);
-+			/* source_flows is dangling here */
-+			++flowmap_it;
++			ExportNewFlows(node_outer_it, dest, cargo);
++			/* careful: source_flows is dangling here */
++			++station_outer_it;
 +		}
 +	}
 +	/* loop over remaining flows (for other sources) in the node's map and insert them into the station */
-+	for (FlowMap::iterator source_flows_it = this->flows.begin(); source_flows_it != this->flows.end();) {
-+		FlowStatSet &via_set = station_flows[source_flows_it->first];
-+		ExportNewFlows(source_flows_it, via_set, cargo);
++	for (FlowMap::iterator it(this->flows.begin()); it != this->flows.end();) {
++		ExportNewFlows(it, station_flows[it->first], cargo);
 +	}
 +	assert(this->flows.empty());
 +}
@@ -3306,7 +3328,7 @@ index 0000000..834356a
 +	for(NodeID node_id = 0; node_id < this->GetSize(); ++node_id) {
 +		Node &node = this->GetNode(node_id);
 +		if (Station::IsValidID(node.station)) {
-+			node.ExportFlows(Station::Get(node.station)->goods[cargo].flows, cargo);
++			node.ExportFlows(this->cargo);
 +		}
 +	}
 +
@@ -3336,51 +3358,69 @@ index 0000000..834356a
 +	_handlers.clear();
 +}
 +
-+void Path::Fork(Path *base, int cap, uint dist)
-+{
-+	capacity = min(base->capacity, cap);
-+	distance = base->distance + dist;
-+	assert(distance > 0);
-+	if (parent != base) {
-+		if (parent != NULL) {
-+			parent->num_children--;
-+		}
-+		parent = base;
-+		parent->num_children++;
++/**
++ * add this path as a new child to the given base path, thus making this path
++ * a "fork" of the base path.
++ * @param base the path to fork from
++ * @param cap maximum capacity of the new path
++ * @param dist distance of the new leg
++ */
++void Path::Fork(Path *base, int cap, uint dist) {
++	this->capacity = min(base->capacity, cap);
++	this->distance = base->distance + dist;
++	assert(this->distance > 0);
++	if (this->parent != base) {
++		this->UnFork();
++		this->parent = base;
++		this->parent->num_children++;
 +	}
-+	origin = base->origin;
++	this->origin = base->origin;
 +}
 +
-+uint Path::AddFlow(uint f, LinkGraphComponent *graph, bool only_positive)
-+{
-+	if (parent != NULL) {
-+		Edge &edge = graph->GetEdge(parent->node, node);
++/**
++ * Push some flow along a path and register the path in the nodes it passes if
++ * successful.
++ * @param new_flow amount of flow to push
++ * @param graph the link graph component this node belongs to
++ * @param only_positive if true, don't push more flow than there is capacity
++ * @return the amount of flow actually pushed
++ */
++uint Path::AddFlow(uint new_flow, LinkGraphComponent *graph, bool only_positive) {
++	if (this->parent != NULL) {
++		Edge &edge = graph->GetEdge(this->parent->node, this->node);
 +		if (only_positive) {
 +			uint usable_cap = edge.capacity * graph->GetSettings().short_path_saturation / 100;
 +			if(usable_cap > edge.flow) {
-+				f = min(f, usable_cap - edge.flow);
++				new_flow = min(new_flow, usable_cap - edge.flow);
 +			} else {
 +				return 0;
 +			}
 +		}
-+		f = parent->AddFlow(f, graph, only_positive);
-+		if (f > 0) {
-+			graph->GetNode(parent->node).paths.insert(this);
++		new_flow = this->parent->AddFlow(new_flow, graph, only_positive);
++		if (new_flow > 0) {
++			graph->GetNode(this->parent->node).paths.insert(this);
 +		}
-+		edge.flow += f;
++		edge.flow += new_flow;
 +	}
-+	flow += f;
-+	return f;
++	this->flow += new_flow;
++	return new_flow;
 +}
 +
-+void Path::UnFork()
-+{
-+	if (parent != NULL) {
-+		parent->num_children--;
-+		parent = NULL;
++/**
++ * detach this path from its parent.
++ */
++FORCEINLINE void Path::UnFork() {
++	if (this->parent != NULL) {
++		this->parent->num_children--;
++		this->parent = NULL;
 +	}
 +}
 +
++/**
++ * create a leg of a path in the link graph.
++ * @param n id of the link graph node this path passes
++ * @param source if true, this is the first leg of the path
++ */
 +Path::Path(NodeID n, bool source)  :
 +	distance(source ? 0 : UINT_MAX),
 +	capacity(source ? INT_MAX : INT_MIN),
@@ -3450,10 +3490,10 @@ index 0000000..834356a
 +}
 diff --git a/src/linkgraph/linkgraph.h b/src/linkgraph/linkgraph.h
 new file mode 100644
-index 0000000..7e495bf
+index 0000000..fe74abf
 --- /dev/null
 +++ b/src/linkgraph/linkgraph.h
-@@ -0,0 +1,307 @@
+@@ -0,0 +1,327 @@
 +/* $Id$ */
 +
 +/*
@@ -3494,9 +3534,6 @@ index 0000000..7e495bf
 + */
 +class Node {
 +public:
-+
-+	void ExportFlows(FlowStatMap &station_flows, CargoID cargo);
-+
 +	uint supply;             ///< supply at the station
 +	uint undelivered_supply; ///< amount of supply that hasn't been distributed yet
 +	uint demand;             ///< acceptance at the station
@@ -3510,9 +3547,10 @@ index 0000000..7e495bf
 +	~Node() {this->Init();}
 +
 +	void Init(StationID st = INVALID_STATION, uint sup = 0, uint dem = 0);
++	void ExportFlows(CargoID cargo);
 +
 +private:
-+	void ExportNewFlows(FlowMap::iterator &source_flows_it, FlowStatSet &via_set, CargoID cargo);
++	void ExportNewFlows(FlowMap::iterator &it, FlowStatSet &via_set, CargoID cargo);
 +};
 +
 +/**
@@ -3523,7 +3561,6 @@ index 0000000..7e495bf
 + */
 +class Edge {
 +public:
-+
 +	uint distance;           ///< length of the link
 +	uint capacity;           ///< capacity of the link
 +	uint demand;             ///< transport demand between the nodes
@@ -3732,29 +3769,52 @@ index 0000000..7e495bf
 +	void CreateComponent(Station *first);
 +};
 +
++/**
++ * A leg of a path in the link graph. Paths can form trees by being "forked".
++ */
 +class Path {
 +public:
 +	Path(NodeID n, bool source = false);
-+	NodeID GetNode() const {return node;}
-+	NodeID GetOrigin() const {return origin;}
-+	Path * GetParent() {return parent;}
-+	int GetCapacity() const {return capacity;}
-+	uint GetDistance() const {return distance;}
-+	void Fork(Path * base, int cap, uint dist);
-+	void ReduceFlow(uint f) {flow -= f;}
-+	void AddFlow(uint f) {flow += f;}
-+	uint AddFlow(uint f, LinkGraphComponent * graph, bool only_positive);
-+	uint GetFlow() const {return flow;}
-+	uint GetNumChildren() const {return num_children;}
++
++	/** get the node this leg passes. */
++	FORCEINLINE NodeID GetNode() const {return this->node;}
++
++	/** get the overall origin of the path. */
++	FORCEINLINE NodeID GetOrigin() const {return this->origin;}
++
++	/** get the parent leg of this one. */
++	FORCEINLINE Path *GetParent() {return this->parent;}
++
++	/** get the overall capacity of the path. */
++	FORCEINLINE int GetCapacity() const {return this->capacity;}
++
++	/** get the overall distance of the path. */
++	FORCEINLINE uint GetDistance() const {return this->distance;}
++
++	/** reduce the flow on this leg only by the specified amount. */
++	FORCEINLINE void ReduceFlow(uint f) {this->flow -= f;}
++
++	/** increase the flow on this leg only by the specified amount. */
++	FORCEINLINE void AddFlow(uint f) {this->flow += f;}
++
++	/** get the flow on this leg. */
++	FORCEINLINE uint GetFlow() const {return this->flow;}
++
++	/** get the number of "forked off" child legs of this one */
++	FORCEINLINE uint GetNumChildren() const {return this->num_children;}
++
++	uint AddFlow(uint f, LinkGraphComponent *graph, bool only_positive);
++	void Fork(Path *base, int cap, uint dist);
 +	void UnFork();
++
 +protected:
-+	uint distance;
++	uint distance;     ///< sum(distance of all legs up to this one)
 +	int capacity;      ///< this capacity is edge.capacity - edge.flow for the current run of dijkstra
 +	uint flow;         ///< this is the flow the current run of the mcf solver assigns
-+	NodeID node;
-+	NodeID origin;
-+	uint num_children;
-+	Path * parent;
++	NodeID node;       ///< the link graph node this leg passes
++	NodeID origin;     ///< the link graph node this path originates from
++	uint num_children; ///< the number of child legs that have been forked from this path
++	Path *parent;      ///< the parent leg of this one
 +};
 +
 +void InitializeLinkGraphs();
@@ -3805,10 +3865,10 @@ index 0000000..cd73b1c
 +#endif /* LINKGRAPH_TYPE_H_ */
 diff --git a/src/linkgraph/mcf.cpp b/src/linkgraph/mcf.cpp
 new file mode 100644
-index 0000000..249d269
+index 0000000..d810f61
 --- /dev/null
 +++ b/src/linkgraph/mcf.cpp
-@@ -0,0 +1,454 @@
+@@ -0,0 +1,452 @@
 +/** @file mcf.cpp Definition of Multi-Commodity-Flow solver */
 +
 +#include "mcf.h"
@@ -3963,9 +4023,7 @@ index 0000000..249d269
 +	for(PathVector::iterator i = paths.begin(); i != paths.end(); ++i) {
 +		Path *path = *i;
 +		if (path != NULL) {
-+			if (path->GetParent() == source) {
-+				path->UnFork();
-+			}
++			if (path->GetParent() == source) path->UnFork();
 +			while (path != source && path != NULL && path->GetFlow() == 0) {
 +				Path *parent = path->GetParent();
 +				path->UnFork();
@@ -5154,7 +5212,7 @@ index b400861..4bf5646 100644
  
  void UpdateOldAircraft();
 diff --git a/src/saveload/station_sl.cpp b/src/saveload/station_sl.cpp
-index 72d7c7e..41bf5aa 100644
+index 72d7c7e..29dc7bb 100644
 --- a/src/saveload/station_sl.cpp
 +++ b/src/saveload/station_sl.cpp
 @@ -205,9 +205,11 @@ static const SaveLoad _old_station_desc[] = {
@@ -5170,12 +5228,17 @@ index 72d7c7e..41bf5aa 100644
  static Money  _cargo_feeder_share;
  
  static const SaveLoad _station_speclist_desc[] = {
-@@ -217,6 +219,44 @@ static const SaveLoad _station_speclist_desc[] = {
+@@ -217,6 +219,47 @@ static const SaveLoad _station_speclist_desc[] = {
  	SLE_END()
  };
  
 +static StationID _station_id;
 +
++/**
++ * Wrapper function to get the LinkStat's internal structure while
++ * some of the variables are private.
++ * @return the saveload description for LinkStat.
++ */
 +const SaveLoad *GetLinkStatDesc() {
 +	static const SaveLoad linkstat_desc[] = {
 +		SLEG_CONDVAR(             _station_id,         SLE_UINT16,      SL_CAPACITIES, SL_MAX_VERSION),
@@ -5189,6 +5252,11 @@ index 72d7c7e..41bf5aa 100644
 +	return linkstat_desc;
 +}
 +
++/**
++ * Wrapper function to get the FlowStats's internal structure while
++ * some of the variables are private.
++ * @return the saveload description for FlowStat.
++ */
 +const SaveLoad *GetFlowStatDesc() {
 +	static const SaveLoad _flowstat_desc[] = {
 +		SLEG_CONDVAR(             _station_id,         SLE_UINT16,         SL_FLOWMAP, SL_MAX_VERSION),
@@ -5202,20 +5270,13 @@ index 72d7c7e..41bf5aa 100644
 +	return _flowstat_desc;
 +}
 +
-+void CountFlows(const FlowStatMap &flows) {
-+	_num_flows = 0;
-+	for(FlowStatMap::const_iterator i = flows.begin(); i != flows.end(); ++i) {
-+		_num_flows += (uint32)i->second.size();
-+	}
-+}
-+
 +std::list<CargoPacket *> _packets;
 +uint32 _num_dests;
 +
  /**
   * Wrapper function to get the GoodsEntry's internal structure while
   * some of the variables itself are private.
-@@ -238,14 +278,49 @@ const SaveLoad *GetGoodsDesc()
+@@ -238,14 +281,49 @@ const SaveLoad *GetGoodsDesc()
  		     SLE_VAR(GoodsEntry, last_age,            SLE_UINT8),
  		SLEG_CONDVAR(            _cargo_feeder_share, SLE_FILE_U32 | SLE_VAR_I64, 14, 64),
  		SLEG_CONDVAR(            _cargo_feeder_share, SLE_INT64,                  65, 67),
@@ -5267,7 +5328,7 @@ index 72d7c7e..41bf5aa 100644
  
  static void Load_STNS()
  {
-@@ -261,6 +336,7 @@ static void Load_STNS()
+@@ -261,6 +339,7 @@ static void Load_STNS()
  		for (CargoID i = 0; i < num_cargo; i++) {
  			GoodsEntry *ge = &st->goods[i];
  			SlObject(ge, GetGoodsDesc());
@@ -5275,7 +5336,7 @@ index 72d7c7e..41bf5aa 100644
  			if (CheckSavegameVersion(68)) {
  				SB(ge->acceptance_pickup, GoodsEntry::ACCEPTANCE, 1, HasBit(_waiting_acceptance, 15));
  				if (GB(_waiting_acceptance, 0, 12) != 0) {
-@@ -268,8 +344,8 @@ static void Load_STNS()
+@@ -268,8 +347,8 @@ static void Load_STNS()
  					StationID source = (CheckSavegameVersion(7) && _cargo_source == 0xFF) ? INVALID_STATION : _cargo_source;
  
  					/* Don't construct the packet with station here, because that'll fail with old savegames */
@@ -5286,7 +5347,7 @@ index 72d7c7e..41bf5aa 100644
  				}
  			}
  		}
-@@ -294,7 +370,9 @@ static void Ptrs_STNS()
+@@ -294,7 +373,9 @@ static void Ptrs_STNS()
  		if (!CheckSavegameVersion(68)) {
  			for (CargoID i = 0; i < NUM_CARGO; i++) {
  				GoodsEntry *ge = &st->goods[i];
@@ -5296,71 +5357,71 @@ index 72d7c7e..41bf5aa 100644
  			}
  		}
  		SlObject(st, _old_station_desc);
-@@ -382,7 +460,29 @@ static void RealSave_STNN(BaseStation *bst)
+@@ -381,8 +462,29 @@ static void RealSave_STNN(BaseStation *bst)
+ 
  	if (!waypoint) {
  		Station *st = Station::From(bst);
- 		for (CargoID i = 0; i < NUM_CARGO; i++) {
+-		for (CargoID i = 0; i < NUM_CARGO; i++) {
 -			SlObject(&st->goods[i], GetGoodsDesc());
-+			GoodsEntry *ge = &st->goods[i];
-+			_num_dests = (uint32)ge->cargo.Packets()->MapSize();
-+			const LinkStatMap &stats = ge->link_stats;
-+			_num_links = (uint16)stats.size();
-+			const FlowStatMap &flows = ge->flows;
-+			CountFlows(flows);
-+			SlObject(ge, GetGoodsDesc());
-+			for (LinkStatMap::const_iterator i = stats.begin(); i != stats.end(); ++i) {
-+				_station_id = i->first;
-+				LinkStat ls(i->second);
++		for (CargoID c = 0; c < NUM_CARGO; c++) {
++			_num_dests = (uint32)st->goods[c].cargo.Packets()->MapSize();
++			_num_links = (uint16)st->goods[c].link_stats.size();
++			_num_flows = 0;
++			for(FlowStatMap::const_iterator it(st->goods[c].flows.begin()); it != st->goods[c].flows.end(); ++it) {
++				_num_flows += (uint32)it->second.size();
++			}
++			SlObject(&st->goods[c], GetGoodsDesc());
++			for (LinkStatMap::const_iterator it(st->goods[c].link_stats.begin()); it != st->goods[c].link_stats.end(); ++it) {
++				_station_id = it->first;
++				LinkStat ls(it->second); // make a copy to avoid constness problems
 +				SlObject(&ls, GetLinkStatDesc());
 +			}
-+			for (FlowStatMap::const_iterator i = flows.begin(); i != flows.end(); ++i) {
-+				_station_id = i->first;
-+				const FlowStatSet &flow_set = i->second;
-+				for (FlowStatSet::const_iterator j = flow_set.begin(); j != flow_set.end(); ++j) {
-+					FlowStat fs(*j);
++			for (FlowStatMap::const_iterator outer_it(st->goods[c].flows.begin()); outer_it != st->goods[c].flows.end(); ++outer_it) {
++				_station_id = outer_it->first;
++				for (FlowStatSet::const_iterator inner_it(outer_it->second.begin()); inner_it != outer_it->second.end(); ++inner_it) {
++					FlowStat fs(*inner_it); // make a copy to avoid constness problems
 +					SlObject(&fs, GetFlowStatDesc());
 +				}
 +			}
-+			for (StationCargoPacketMap::ConstMapIterator it = ge->cargo.Packets()->begin(); it != ge->cargo.Packets()->end(); ++it) {
++			for (StationCargoPacketMap::ConstMapIterator it(st->goods[c].cargo.Packets()->begin()); it != st->goods[c].cargo.Packets()->end(); ++it) {
 +				SlObject(const_cast<StationCargoPacketMap::value_type *>(&(*it)), _cargo_list_desc);
 +			}
  		}
  	}
  
-@@ -414,7 +514,31 @@ static void Load_STNN()
+@@ -413,8 +515,29 @@ static void Load_STNN()
+ 
  		if (!waypoint) {
  			Station *st = Station::From(bst);
- 			for (CargoID i = 0; i < NUM_CARGO; i++) {
+-			for (CargoID i = 0; i < NUM_CARGO; i++) {
 -				SlObject(&st->goods[i], GetGoodsDesc());
-+				GoodsEntry *ge = &st->goods[i];
-+				LinkStatMap &stats = ge->link_stats;
-+				FlowStatMap &flows = ge->flows;
-+				SlObject(ge, GetGoodsDesc());
++			for (CargoID c = 0; c < NUM_CARGO; c++) {
++				SlObject(&st->goods[c], GetGoodsDesc());
 +				LinkStat ls;
 +				for (uint16 i = 0; i < _num_links; ++i) {
 +					SlObject(&ls, GetLinkStatDesc());
 +					assert(!ls.IsNull());
-+					stats[_station_id] = ls;
++					st->goods[c].link_stats[_station_id] = ls;
 +				}
 +				FlowStat fs;
 +				for (uint32 i = 0; i < _num_flows; ++i) {
 +					SlObject(&fs, GetFlowStatDesc());
-+					flows[_station_id].insert(fs);
++					st->goods[c].flows[_station_id].insert(fs);
 +				}
 +				if (CheckSavegameVersion(SL_CARGOMAP -1)) {
-+					SwapPackets(ge);
++					SwapPackets(&st->goods[c]);
 +				} else {
 +					StationCargoPair pair;
 +					for(uint i = 0; i < _num_dests; ++i) {
 +						SlObject(&pair, _cargo_list_desc);
-+						const_cast<StationCargoPacketMap &>(*ge->cargo.Packets())[pair.first].swap(pair.second);
++						const_cast<StationCargoPacketMap &>(*(st->goods[c].cargo.Packets()))[pair.first].swap(pair.second);
 +						assert(pair.second.empty());
 +					}
 +				}
  			}
  		}
  
-@@ -437,7 +561,16 @@ static void Ptrs_STNN()
+@@ -437,7 +560,16 @@ static void Ptrs_STNN()
  	FOR_ALL_STATIONS(st) {
  		for (CargoID i = 0; i < NUM_CARGO; i++) {
  			GoodsEntry *ge = &st->goods[i];
@@ -5839,7 +5900,7 @@ index ca0e598..e400091 100644
  
  #define FOR_ALL_STATIONS(var) FOR_ALL_BASE_STATIONS_OF_TYPE(Station, var)
 diff --git a/src/station_cmd.cpp b/src/station_cmd.cpp
-index 74b4f48..bd54af0 100644
+index 74b4f48..864e9fb 100644
 --- a/src/station_cmd.cpp
 +++ b/src/station_cmd.cpp
 @@ -45,6 +45,7 @@
@@ -5850,11 +5911,8 @@ index 74b4f48..bd54af0 100644
  #include "table/airporttile_ids.h"
  #include "newgrf_airporttiles.h"
  #include "order_backup.h"
-@@ -3028,8 +3029,12 @@ static void UpdateStationRating(Station *st)
- 
- 			bool skip = false;
+@@ -3030,6 +3031,9 @@ static void UpdateStationRating(Station *st)
  			int rating = 0;
-+
  			uint waiting = ge->cargo.Count();
  
 +			/* average amount of cargo per destination */
@@ -5863,7 +5921,7 @@ index 74b4f48..bd54af0 100644
  			if (HasBit(cs->callback_mask, CBM_CARGO_STATION_RATING_CALC)) {
  				/* Perform custom station rating. If it succeeds the speed, days in transit and
  				 * waiting cargo ratings must not be executed. */
-@@ -3038,7 +3043,7 @@ static void UpdateStationRating(Station *st)
+@@ -3038,7 +3042,7 @@ static void UpdateStationRating(Station *st)
  				uint last_speed = ge->last_speed;
  				if (last_speed == 0) last_speed = 0xFF;
  
@@ -5872,7 +5930,7 @@ index 74b4f48..bd54af0 100644
  				/* Convert to the 'old' vehicle types */
  				uint32 var10 = (st->last_vehicle_type == VEH_INVALID) ? 0x0 : (st->last_vehicle_type + 0x10);
  				uint16 callback = GetCargoCallback(CBID_CARGO_STATION_RATING_CALC, var10, var18, cs);
-@@ -3063,11 +3068,11 @@ static void UpdateStationRating(Station *st)
+@@ -3063,11 +3067,11 @@ static void UpdateStationRating(Station *st)
  				(rating += 45, days > 3) ||
  				(rating += 35, true);
  
@@ -5889,7 +5947,7 @@ index 74b4f48..bd54af0 100644
  				(rating += 10, true);
  			}
  
-@@ -3085,11 +3090,11 @@ static void UpdateStationRating(Station *st)
+@@ -3085,11 +3089,11 @@ static void UpdateStationRating(Station *st)
  				/* only modify rating in steps of -2, -1, 0, 1 or 2 */
  				ge->rating = rating = or_ + Clamp(Clamp(rating, 0, 255) - or_, -2, 2);
  
@@ -5904,7 +5962,7 @@ index 74b4f48..bd54af0 100644
  					waiting -= dec + 1;
  					waiting_changed = true;
  				}
-@@ -3111,7 +3116,7 @@ static void UpdateStationRating(Station *st)
+@@ -3111,7 +3115,7 @@ static void UpdateStationRating(Station *st)
  				static const uint WAITING_CARGO_CUT_FACTOR = 1 <<  6;
  				static const uint MAX_WAITING_CARGO        = 1 << 15;
  
@@ -5913,7 +5971,7 @@ index 74b4f48..bd54af0 100644
  					uint difference = waiting - WAITING_CARGO_THRESHOLD;
  					waiting -= (difference / WAITING_CARGO_CUT_FACTOR);
  
-@@ -3119,7 +3124,28 @@ static void UpdateStationRating(Station *st)
+@@ -3119,7 +3123,28 @@ static void UpdateStationRating(Station *st)
  					waiting_changed = true;
  				}
  
@@ -5943,7 +6001,7 @@ index 74b4f48..bd54af0 100644
  			}
  		}
  	}
-@@ -3132,6 +3158,213 @@ static void UpdateStationRating(Station *st)
+@@ -3132,6 +3157,191 @@ static void UpdateStationRating(Station *st)
  	}
  }
  
@@ -6022,28 +6080,6 @@ index 74b4f48..bd54af0 100644
 +				flow_set.swap(new_flows);
 +				new_flows.clear();
 +				++i;
-+			}
-+		}
-+	}
-+}
-+
-+/**
-+ * update the flow stats for the consist starting with the given vehicle and
-+ * travelling to the given next station without unloading here.
-+ * @param st the station for which the flows should be updated
-+ * @param from the first vehicle in the consist
-+ * @param next_station_id the ID of the station the consist is travelling next
-+ */
-+void UpdateFlowsPassThrough(Station *st, Vehicle *front, StationID next_station_id) {
-+	if (next_station_id == INVALID_STATION) {
-+		return;
-+	} else {
-+		for (Vehicle *v = front; v != NULL; v = v->Next()) {
-+			GoodsEntry *ge = &st->goods[v->cargo_type];
-+			const CargoPacketList *packets = v->cargo.Packets();
-+			for(VehicleCargoList::ConstIterator i = packets->begin(); i != packets->end(); ++i) {
-+				CargoPacket *p = *i;
-+				ge->UpdateFlowStats(p->SourceStation(), p->Count(), next_station_id);
 +			}
 +		}
 +	}
@@ -6157,7 +6193,7 @@ index 74b4f48..bd54af0 100644
  /* called for every station each tick */
  static void StationHandleSmallTick(BaseStation *st)
  {
-@@ -3148,6 +3381,8 @@ void OnTick_Station()
+@@ -3148,6 +3358,8 @@ void OnTick_Station()
  {
  	if (_game_mode == GM_EDITOR) return;
  
@@ -6166,7 +6202,7 @@ index 74b4f48..bd54af0 100644
  	BaseStation *st;
  	FOR_ALL_BASE_STATIONS(st) {
  		StationHandleSmallTick(st);
-@@ -3166,7 +3401,13 @@ void OnTick_Station()
+@@ -3166,7 +3378,13 @@ void OnTick_Station()
  
  void StationMonthlyLoop()
  {
@@ -6181,7 +6217,7 @@ index 74b4f48..bd54af0 100644
  }
  
  
-@@ -3190,8 +3431,18 @@ void ModifyStationRatingAround(TileIndex tile, Owner owner, int amount, uint rad
+@@ -3190,8 +3408,18 @@ void ModifyStationRatingAround(TileIndex tile, Owner owner, int amount, uint rad
  
  static void UpdateStationWaiting(Station *st, CargoID type, uint amount, SourceType source_type, SourceID source_id)
  {
@@ -6202,7 +6238,7 @@ index 74b4f48..bd54af0 100644
  
  	TriggerStationAnimation(st, st->xy, SAT_NEW_CARGO, type);
  	AirportAnimationTrigger(st, AAT_STATION_NEW_CARGO, type);
-@@ -3553,6 +3804,90 @@ static CommandCost TerraformTile_Station(TileIndex tile, DoCommandFlag flags, ui
+@@ -3553,6 +3781,90 @@ static CommandCost TerraformTile_Station(TileIndex tile, DoCommandFlag flags, ui
  	return DoCommand(tile, 0, 0, flags, CMD_LANDSCAPE_CLEAR);
  }
  
@@ -6294,7 +6330,7 @@ index 74b4f48..bd54af0 100644
  extern const TileTypeProcs _tile_type_station_procs = {
  	DrawTile_Station,           // draw_tile_proc
 diff --git a/src/station_func.h b/src/station_func.h
-index 0fe5b2f..f70f8c5 100644
+index 0fe5b2f..4aab0c4 100644
 --- a/src/station_func.h
 +++ b/src/station_func.h
 @@ -18,6 +18,7 @@
@@ -6305,7 +6341,7 @@ index 0fe5b2f..f70f8c5 100644
  
  void ModifyStationRatingAround(TileIndex tile, Owner owner, int amount, uint radius);
  
-@@ -46,4 +47,16 @@ bool IsStationTileElectrifiable(TileIndex tile);
+@@ -46,4 +47,14 @@ bool IsStationTileElectrifiable(TileIndex tile);
  
  void UpdateAirportsNoise();
  
@@ -6316,8 +6352,6 @@ index 0fe5b2f..f70f8c5 100644
 +void RecalcFrozenIfLoading(const Vehicle * v);
 +
 +void IncreaseStats(Station *st, const Vehicle *v, StationID next_station_id, bool freeze);
-+
-+void UpdateFlowsPassThrough(Station * st, Vehicle *v, StationID next_station_id);
 +
 +void DeleteStaleFlows(StationID at, CargoID c_id, StationID to);
 +

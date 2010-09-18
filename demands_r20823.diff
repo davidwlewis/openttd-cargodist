@@ -724,7 +724,7 @@ index 0000000..8b6f8bb
 +#endif /* DEMANDS_H_ */
 diff --git a/src/linkgraph/linkgraph.cpp b/src/linkgraph/linkgraph.cpp
 new file mode 100644
-index 0000000..3709723
+index 0000000..d5b7c7e
 --- /dev/null
 +++ b/src/linkgraph/linkgraph.cpp
 @@ -0,0 +1,363 @@
@@ -1082,7 +1082,7 @@ index 0000000..3709723
 +}
 +
 +/**
-+ * Inititialize all link graphs. Used when loading a game.
++ * Initialize all link graphs. Used when loading a game.
 + */
 +void InitializeLinkGraphs()
 +{
@@ -2077,7 +2077,7 @@ index b400861..4bf5646 100644
  
  void UpdateOldAircraft();
 diff --git a/src/saveload/station_sl.cpp b/src/saveload/station_sl.cpp
-index 72d7c7e..35e2b63 100644
+index 72d7c7e..a826fa3 100644
 --- a/src/saveload/station_sl.cpp
 +++ b/src/saveload/station_sl.cpp
 @@ -205,6 +205,7 @@ static const SaveLoad _old_station_desc[] = {
@@ -2088,12 +2088,17 @@ index 72d7c7e..35e2b63 100644
  static uint16 _cargo_source;
  static uint32 _cargo_source_xy;
  static uint16 _cargo_days;
-@@ -217,6 +218,21 @@ static const SaveLoad _station_speclist_desc[] = {
+@@ -217,6 +218,26 @@ static const SaveLoad _station_speclist_desc[] = {
  	SLE_END()
  };
  
 +static StationID _station_id;
 +
++/**
++ * Wrapper function to get the LinkStat's internal structure while
++ * some of the variables are private.
++ * @return the saveload description for LinkStat.
++ */
 +const SaveLoad *GetLinkStatDesc() {
 +	static const SaveLoad linkstat_desc[] = {
 +		SLEG_CONDVAR(             _station_id,         SLE_UINT16,      SL_CAPACITIES, SL_MAX_VERSION),
@@ -2110,7 +2115,7 @@ index 72d7c7e..35e2b63 100644
  /**
   * Wrapper function to get the GoodsEntry's internal structure while
   * some of the variables itself are private.
-@@ -239,7 +255,10 @@ const SaveLoad *GetGoodsDesc()
+@@ -239,7 +260,10 @@ const SaveLoad *GetGoodsDesc()
  		SLEG_CONDVAR(            _cargo_feeder_share, SLE_FILE_U32 | SLE_VAR_I64, 14, 64),
  		SLEG_CONDVAR(            _cargo_feeder_share, SLE_INT64,                  65, 67),
  		 SLE_CONDLST(GoodsEntry, cargo.packets,       REF_CARGO_PACKET,           68, SL_MAX_VERSION),
@@ -2122,36 +2127,36 @@ index 72d7c7e..35e2b63 100644
  		SLE_END()
  	};
  
-@@ -382,7 +401,15 @@ static void RealSave_STNN(BaseStation *bst)
+@@ -381,8 +405,14 @@ static void RealSave_STNN(BaseStation *bst)
+ 
  	if (!waypoint) {
  		Station *st = Station::From(bst);
- 		for (CargoID i = 0; i < NUM_CARGO; i++) {
+-		for (CargoID i = 0; i < NUM_CARGO; i++) {
 -			SlObject(&st->goods[i], GetGoodsDesc());
-+			GoodsEntry *ge = &st->goods[i];
-+			const LinkStatMap &stats = ge->link_stats;
-+			_num_links = (uint16)stats.size();
-+			SlObject(ge, GetGoodsDesc());
-+			for (LinkStatMap::const_iterator i = stats.begin(); i != stats.end(); ++i) {
-+				_station_id = i->first;
-+				LinkStat ls(i->second);
++		for (CargoID c = 0; c < NUM_CARGO; c++) {
++			_num_links = (uint16)st->goods[c].link_stats.size();
++			SlObject(&st->goods[c], GetGoodsDesc());
++			for (LinkStatMap::const_iterator it(st->goods[c].link_stats.begin()); it != st->goods[c].link_stats.end(); ++it) {
++				_station_id = it->first;
++				LinkStat ls(it->second); // make a copy to avoid constness problems
 +				SlObject(&ls, GetLinkStatDesc());
 +			}
  		}
  	}
  
-@@ -414,7 +441,15 @@ static void Load_STNN()
+@@ -413,8 +443,14 @@ static void Load_STNN()
+ 
  		if (!waypoint) {
  			Station *st = Station::From(bst);
- 			for (CargoID i = 0; i < NUM_CARGO; i++) {
+-			for (CargoID i = 0; i < NUM_CARGO; i++) {
 -				SlObject(&st->goods[i], GetGoodsDesc());
-+				GoodsEntry *ge = &st->goods[i];
-+				LinkStatMap &stats = ge->link_stats;
-+				SlObject(ge, GetGoodsDesc());
++			for (CargoID c = 0; c < NUM_CARGO; c++) {
++				SlObject(&st->goods[c], GetGoodsDesc());
 +				LinkStat ls;
 +				for (uint16 i = 0; i < _num_links; ++i) {
 +					SlObject(&ls, GetLinkStatDesc());
 +					assert(!ls.IsNull());
-+					stats[_station_id] = ls;
++					st->goods[c].link_stats[_station_id] = ls;
 +				}
  			}
  		}

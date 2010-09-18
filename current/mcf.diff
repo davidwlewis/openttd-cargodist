@@ -752,10 +752,10 @@ index 0000000..8b6f8bb
 +#endif /* DEMANDS_H_ */
 diff --git a/src/linkgraph/linkgraph.cpp b/src/linkgraph/linkgraph.cpp
 new file mode 100644
-index 0000000..24f1f08
+index 0000000..236553e
 --- /dev/null
 +++ b/src/linkgraph/linkgraph.cpp
-@@ -0,0 +1,431 @@
+@@ -0,0 +1,452 @@
 +/* $Id$ */
 +
 +/*
@@ -1080,48 +1080,69 @@ index 0000000..24f1f08
 +	_handlers.clear();
 +}
 +
-+void Path::Fork(Path * base, int cap, uint dist) {
-+	capacity = min(base->capacity, cap);
-+	distance = base->distance + dist;
-+	assert(distance > 0);
-+	if (parent != base) {
-+		if (parent != NULL) {
-+			parent->num_children--;
-+		}
-+		parent = base;
-+		parent->num_children++;
++/**
++ * add this path as a new child to the given base path, thus making this path
++ * a "fork" of the base path.
++ * @param base the path to fork from
++ * @param cap maximum capacity of the new path
++ * @param dist distance of the new leg
++ */
++void Path::Fork(Path *base, int cap, uint dist) {
++	this->capacity = min(base->capacity, cap);
++	this->distance = base->distance + dist;
++	assert(this->distance > 0);
++	if (this->parent != base) {
++		this->UnFork();
++		this->parent = base;
++		this->parent->num_children++;
 +	}
-+	origin = base->origin;
++	this->origin = base->origin;
 +}
 +
-+uint Path::AddFlow(uint f, LinkGraphComponent * graph, bool only_positive) {
-+	if (parent != NULL) {
-+		Edge & edge = graph->GetEdge(parent->node, node);
++/**
++ * Push some flow along a path and register the path in the nodes it passes if
++ * successful.
++ * @param new_flow amount of flow to push
++ * @param graph the link graph component this node belongs to
++ * @param only_positive if true, don't push more flow than there is capacity
++ * @return the amount of flow actually pushed
++ */
++uint Path::AddFlow(uint new_flow, LinkGraphComponent *graph, bool only_positive) {
++	if (this->parent != NULL) {
++		Edge &edge = graph->GetEdge(this->parent->node, this->node);
 +		if (only_positive) {
 +			uint usable_cap = edge.capacity * graph->GetSettings().short_path_saturation / 100;
 +			if(usable_cap > edge.flow) {
-+				f = min(f, usable_cap - edge.flow);
++				new_flow = min(new_flow, usable_cap - edge.flow);
 +			} else {
 +				return 0;
 +			}
 +		}
-+		f = parent->AddFlow(f, graph, only_positive);
-+		if (f > 0) {
-+			graph->GetNode(parent->node).paths.insert(this);
++		new_flow = this->parent->AddFlow(new_flow, graph, only_positive);
++		if (new_flow > 0) {
++			graph->GetNode(this->parent->node).paths.insert(this);
 +		}
-+		edge.flow += f;
++		edge.flow += new_flow;
 +	}
-+	flow += f;
-+	return f;
++	this->flow += new_flow;
++	return new_flow;
 +}
 +
-+void Path::UnFork() {
-+	if (parent != NULL) {
-+		parent->num_children--;
-+		parent = NULL;
++/**
++ * detach this path from its parent.
++ */
++FORCEINLINE void Path::UnFork() {
++	if (this->parent != NULL) {
++		this->parent->num_children--;
++		this->parent = NULL;
 +	}
 +}
 +
++/**
++ * create a leg of a path in the link graph.
++ * @param n id of the link graph node this path passes
++ * @param source if true, this is the first leg of the path
++ */
 +Path::Path(NodeID n, bool source)  :
 +	distance(source ? 0 : UINT_MAX),
 +	capacity(source ? INT_MAX : INT_MIN),
@@ -1189,10 +1210,10 @@ index 0000000..24f1f08
 +}
 diff --git a/src/linkgraph/linkgraph.h b/src/linkgraph/linkgraph.h
 new file mode 100644
-index 0000000..ada9592
+index 0000000..e1873e6
 --- /dev/null
 +++ b/src/linkgraph/linkgraph.h
-@@ -0,0 +1,303 @@
+@@ -0,0 +1,324 @@
 +/* $Id$ */
 +
 +/*
@@ -1233,7 +1254,6 @@ index 0000000..ada9592
 + */
 +class Node {
 +public:
-+
 +	uint supply;             ///< supply at the station
 +	uint undelivered_supply; ///< amount of supply that hasn't been distributed yet
 +	uint demand;             ///< acceptance at the station
@@ -1258,7 +1278,6 @@ index 0000000..ada9592
 + */
 +class Edge {
 +public:
-+
 +	uint distance;           ///< length of the link
 +	uint capacity;           ///< capacity of the link
 +	uint demand;             ///< transport demand between the nodes
@@ -1467,29 +1486,52 @@ index 0000000..ada9592
 +	void CreateComponent(Station *first);
 +};
 +
++/**
++ * A leg of a path in the link graph. Paths can form trees by being "forked".
++ */
 +class Path {
 +public:
 +	Path(NodeID n, bool source = false);
-+	NodeID GetNode() const {return node;}
-+	NodeID GetOrigin() const {return origin;}
-+	Path * GetParent() {return parent;}
-+	int GetCapacity() const {return capacity;}
-+	uint GetDistance() const {return distance;}
-+	void Fork(Path * base, int cap, uint dist);
-+	void ReduceFlow(uint f) {flow -= f;}
-+	void AddFlow(uint f) {flow += f;}
-+	uint AddFlow(uint f, LinkGraphComponent * graph, bool only_positive);
-+	uint GetFlow() const {return flow;}
-+	uint GetNumChildren() const {return num_children;}
++
++	/** get the node this leg passes. */
++	FORCEINLINE NodeID GetNode() const {return this->node;}
++
++	/** get the overall origin of the path. */
++	FORCEINLINE NodeID GetOrigin() const {return this->origin;}
++
++	/** get the parent leg of this one. */
++	FORCEINLINE Path *GetParent() {return this->parent;}
++
++	/** get the overall capacity of the path. */
++	FORCEINLINE int GetCapacity() const {return this->capacity;}
++
++	/** get the overall distance of the path. */
++	FORCEINLINE uint GetDistance() const {return this->distance;}
++
++	/** reduce the flow on this leg only by the specified amount. */
++	FORCEINLINE void ReduceFlow(uint f) {this->flow -= f;}
++
++	/** increase the flow on this leg only by the specified amount. */
++	FORCEINLINE void AddFlow(uint f) {this->flow += f;}
++
++	/** get the flow on this leg. */
++	FORCEINLINE uint GetFlow() const {return this->flow;}
++
++	/** get the number of "forked off" child legs of this one */
++	FORCEINLINE uint GetNumChildren() const {return this->num_children;}
++
++	uint AddFlow(uint f, LinkGraphComponent *graph, bool only_positive);
++	void Fork(Path *base, int cap, uint dist);
 +	void UnFork();
++
 +protected:
-+	uint distance;
++	uint distance;     ///< sum(distance of all legs up to this one)
 +	int capacity;      ///< this capacity is edge.capacity - edge.flow for the current run of dijkstra
 +	uint flow;         ///< this is the flow the current run of the mcf solver assigns
-+	NodeID node;
-+	NodeID origin;
-+	uint num_children;
-+	Path * parent;
++	NodeID node;       ///< the link graph node this leg passes
++	NodeID origin;     ///< the link graph node this path originates from
++	uint num_children; ///< the number of child legs that have been forked from this path
++	Path *parent;      ///< the parent leg of this one
 +};
 +
 +void InitializeLinkGraphs();
@@ -1540,10 +1582,10 @@ index 0000000..cd73b1c
 +#endif /* LINKGRAPH_TYPE_H_ */
 diff --git a/src/linkgraph/mcf.cpp b/src/linkgraph/mcf.cpp
 new file mode 100644
-index 0000000..249d269
+index 0000000..d810f61
 --- /dev/null
 +++ b/src/linkgraph/mcf.cpp
-@@ -0,0 +1,454 @@
+@@ -0,0 +1,452 @@
 +/** @file mcf.cpp Definition of Multi-Commodity-Flow solver */
 +
 +#include "mcf.h"
@@ -1698,9 +1740,7 @@ index 0000000..249d269
 +	for(PathVector::iterator i = paths.begin(); i != paths.end(); ++i) {
 +		Path *path = *i;
 +		if (path != NULL) {
-+			if (path->GetParent() == source) {
-+				path->UnFork();
-+			}
++			if (path->GetParent() == source) path->UnFork();
 +			while (path != source && path != NULL && path->GetFlow() == 0) {
 +				Path *parent = path->GetParent();
 +				path->UnFork();
@@ -2829,7 +2869,7 @@ index b400861..4bf5646 100644
  
  void UpdateOldAircraft();
 diff --git a/src/saveload/station_sl.cpp b/src/saveload/station_sl.cpp
-index 72d7c7e..35e2b63 100644
+index 72d7c7e..a826fa3 100644
 --- a/src/saveload/station_sl.cpp
 +++ b/src/saveload/station_sl.cpp
 @@ -205,6 +205,7 @@ static const SaveLoad _old_station_desc[] = {
@@ -2840,12 +2880,17 @@ index 72d7c7e..35e2b63 100644
  static uint16 _cargo_source;
  static uint32 _cargo_source_xy;
  static uint16 _cargo_days;
-@@ -217,6 +218,21 @@ static const SaveLoad _station_speclist_desc[] = {
+@@ -217,6 +218,26 @@ static const SaveLoad _station_speclist_desc[] = {
  	SLE_END()
  };
  
 +static StationID _station_id;
 +
++/**
++ * Wrapper function to get the LinkStat's internal structure while
++ * some of the variables are private.
++ * @return the saveload description for LinkStat.
++ */
 +const SaveLoad *GetLinkStatDesc() {
 +	static const SaveLoad linkstat_desc[] = {
 +		SLEG_CONDVAR(             _station_id,         SLE_UINT16,      SL_CAPACITIES, SL_MAX_VERSION),
@@ -2862,7 +2907,7 @@ index 72d7c7e..35e2b63 100644
  /**
   * Wrapper function to get the GoodsEntry's internal structure while
   * some of the variables itself are private.
-@@ -239,7 +255,10 @@ const SaveLoad *GetGoodsDesc()
+@@ -239,7 +260,10 @@ const SaveLoad *GetGoodsDesc()
  		SLEG_CONDVAR(            _cargo_feeder_share, SLE_FILE_U32 | SLE_VAR_I64, 14, 64),
  		SLEG_CONDVAR(            _cargo_feeder_share, SLE_INT64,                  65, 67),
  		 SLE_CONDLST(GoodsEntry, cargo.packets,       REF_CARGO_PACKET,           68, SL_MAX_VERSION),
@@ -2874,36 +2919,36 @@ index 72d7c7e..35e2b63 100644
  		SLE_END()
  	};
  
-@@ -382,7 +401,15 @@ static void RealSave_STNN(BaseStation *bst)
+@@ -381,8 +405,14 @@ static void RealSave_STNN(BaseStation *bst)
+ 
  	if (!waypoint) {
  		Station *st = Station::From(bst);
- 		for (CargoID i = 0; i < NUM_CARGO; i++) {
+-		for (CargoID i = 0; i < NUM_CARGO; i++) {
 -			SlObject(&st->goods[i], GetGoodsDesc());
-+			GoodsEntry *ge = &st->goods[i];
-+			const LinkStatMap &stats = ge->link_stats;
-+			_num_links = (uint16)stats.size();
-+			SlObject(ge, GetGoodsDesc());
-+			for (LinkStatMap::const_iterator i = stats.begin(); i != stats.end(); ++i) {
-+				_station_id = i->first;
-+				LinkStat ls(i->second);
++		for (CargoID c = 0; c < NUM_CARGO; c++) {
++			_num_links = (uint16)st->goods[c].link_stats.size();
++			SlObject(&st->goods[c], GetGoodsDesc());
++			for (LinkStatMap::const_iterator it(st->goods[c].link_stats.begin()); it != st->goods[c].link_stats.end(); ++it) {
++				_station_id = it->first;
++				LinkStat ls(it->second); // make a copy to avoid constness problems
 +				SlObject(&ls, GetLinkStatDesc());
 +			}
  		}
  	}
  
-@@ -414,7 +441,15 @@ static void Load_STNN()
+@@ -413,8 +443,14 @@ static void Load_STNN()
+ 
  		if (!waypoint) {
  			Station *st = Station::From(bst);
- 			for (CargoID i = 0; i < NUM_CARGO; i++) {
+-			for (CargoID i = 0; i < NUM_CARGO; i++) {
 -				SlObject(&st->goods[i], GetGoodsDesc());
-+				GoodsEntry *ge = &st->goods[i];
-+				LinkStatMap &stats = ge->link_stats;
-+				SlObject(ge, GetGoodsDesc());
++			for (CargoID c = 0; c < NUM_CARGO; c++) {
++				SlObject(&st->goods[c], GetGoodsDesc());
 +				LinkStat ls;
 +				for (uint16 i = 0; i < _num_links; ++i) {
 +					SlObject(&ls, GetLinkStatDesc());
 +					assert(!ls.IsNull());
-+					stats[_station_id] = ls;
++					st->goods[c].link_stats[_station_id] = ls;
 +				}
  			}
  		}
