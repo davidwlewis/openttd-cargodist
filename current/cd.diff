@@ -3053,10 +3053,10 @@ index 0000000..a621612
 +#endif /* FLOWMAPPER_H_ */
 diff --git a/src/linkgraph/linkgraph.cpp b/src/linkgraph/linkgraph.cpp
 new file mode 100644
-index 0000000..37d4aa2
+index 0000000..5a23aaf
 --- /dev/null
 +++ b/src/linkgraph/linkgraph.cpp
-@@ -0,0 +1,546 @@
+@@ -0,0 +1,547 @@
 +/* $Id$ */
 +
 +/*
@@ -3546,7 +3546,8 @@ index 0000000..37d4aa2
 +/**
 + * Join the calling thread with this job's thread if threading is enabled.
 + */
-+FORCEINLINE void LinkGraphJob::Join() {
++FORCEINLINE void LinkGraphJob::Join()
++{
 +	if (this->thread != NULL) {
 +		this->thread->Join();
 +		delete this->thread;

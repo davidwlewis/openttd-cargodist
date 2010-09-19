@@ -752,10 +752,10 @@ index 0000000..8b6f8bb
 +#endif /* DEMANDS_H_ */
 diff --git a/src/linkgraph/linkgraph.cpp b/src/linkgraph/linkgraph.cpp
 new file mode 100644
-index 0000000..2f57d45
+index 0000000..5f68846
 --- /dev/null
 +++ b/src/linkgraph/linkgraph.cpp
-@@ -0,0 +1,444 @@
+@@ -0,0 +1,445 @@
 +/* $Id$ */
 +
 +/*
@@ -1145,7 +1145,8 @@ index 0000000..2f57d45
 +/**
 + * Join the calling thread with this job's thread if threading is enabled.
 + */
-+FORCEINLINE void LinkGraphJob::Join() {
++FORCEINLINE void LinkGraphJob::Join()
++{
 +	if (this->thread != NULL) {
 +		this->thread->Join();
 +		delete this->thread;
