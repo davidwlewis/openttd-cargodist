@@ -391,7 +391,7 @@ index 17860e8..eaba75d 100644
  	}
  
 diff --git a/src/cargopacket.cpp b/src/cargopacket.cpp
-index 418eb8e..6f06534 100644
+index 418eb8e..5dcc75b 100644
 --- a/src/cargopacket.cpp
 +++ b/src/cargopacket.cpp
 @@ -10,7 +10,9 @@
@@ -792,7 +792,7 @@ index 418eb8e..6f06534 100644
 +		delete *it;
 +	}
 +}
-+
+ 
 +/**
 + * Deliver a specific packet or part of it to a station and handle payment. The
 + * given iterator is incremented in the process.
@@ -998,7 +998,7 @@ index 418eb8e..6f06534 100644
 +			/* there is no plan: use normal unloading */
 +			action = this->WillUnloadOld(flags, cargo_source);
 +		}
- 
++
 +		switch(action) {
 +			case UL_DELIVER:
 +				unloaded = source->DeliverPacket(c, remaining_unload, payment);
@@ -1083,7 +1083,7 @@ index 418eb8e..6f06534 100644
  void VehicleCargoList::AgeCargo()
  {
  	for (ConstIterator it(this->packets.begin()); it != this->packets.end(); it++) {
-@@ -276,21 +689,178 @@ void VehicleCargoList::AgeCargo()
+@@ -276,21 +689,189 @@ void VehicleCargoList::AgeCargo()
  	}
  }
  
@@ -1202,30 +1202,41 @@ index 418eb8e..6f06534 100644
 +
 +/**
 + * Truncate where each destination loses roughly the same percentage of its cargo.
-+ * This is done by randomizing the selection of packets to be removed.
-+ * @param max_remaining maximum amount of cargo to keep in the list.
++ * This is done by randomizing the selection of packets to be removed. Also count
++ * the cargo by origin station.
++ * @param max_remaining maximum amount of cargo to keep in the station.
++ * @param cargo_per_source container for counting the cargo by origin list
 + */
-+void StationCargoList::RandomTruncate(uint max_remaining) {
++void StationCargoList::CountAndTruncate(uint max_remaining, StationCargoAmountMap &cargo_per_source) {
 +	uint prev_count = this->count;
++	uint loop = 0;
 +	while (this->count > max_remaining) {
 +		for(Iterator it(this->packets.begin()); it != this->packets.end();) {
++			CargoPacket *packet = *it;
++			if (loop == 0) cargo_per_source[packet->source] += packet->count;
++
 +			if (RandomRange(prev_count) < max_remaining) {
 +				++it;
 +				continue;
 +			}
-+			CargoPacket *packet = *it;
++
 +			uint diff = this->count - max_remaining;
 +			if (packet->count > diff) {
 +				packet->count -= diff;
 +				this->count = max_remaining;
 +				this->cargo_days_in_transit -= packet->days_in_transit * diff;
-+				return;
++				if (loop > 0) {
++					return;
++				} else {
++					++it;
++				}
 +			} else {
 +				this->packets.erase(it++);
 +				this->RemoveFromCache(packet);
 +				delete packet;
 +			}
 +		}
++		loop++;
 +	}
 +}
 +
@@ -1272,7 +1283,7 @@ index 418eb8e..6f06534 100644
 +template class CargoList<VehicleCargoList, CargoPacketList>;
 +template class CargoList<StationCargoList, StationCargoPacketMap>;
 diff --git a/src/cargopacket.h b/src/cargopacket.h
-index 77f656b..c3bf515 100644
+index 77f656b..b392af3 100644
 --- a/src/cargopacket.h
 +++ b/src/cargopacket.h
 @@ -15,8 +15,11 @@
@@ -1621,11 +1632,12 @@ index 77f656b..c3bf515 100644
  	/**
  	 * Are two the two CargoPackets mergeable in the context of
  	 * a list of CargoPackets for a Vehicle?
-@@ -385,16 +374,20 @@ public:
+@@ -385,16 +374,21 @@ public:
  	}
  };
  
 +typedef MultiMap<StationID, CargoPacket *> StationCargoPacketMap;
++typedef std::map<StationID, uint> StationCargoAmountMap;
 +
  /**
   * CargoList that is used for stations.
@@ -1644,7 +1656,7 @@ index 77f656b..c3bf515 100644
  	/**
  	 * Are two the two CargoPackets mergeable in the context of
  	 * a list of CargoPackets for a Vehicle?
-@@ -409,6 +402,40 @@ public:
+@@ -409,6 +403,40 @@ public:
  				cp1->source_type     == cp2->source_type &&
  				cp1->source_id       == cp2->source_id;
  	}
@@ -1657,7 +1669,7 @@ index 77f656b..c3bf515 100644
 +
 +	void RerouteStalePackets(StationID to);
 +
-+	void RandomTruncate(uint max_remaining);
++	void CountAndTruncate(uint max_remaining, StationCargoAmountMap &cargo_per_source);
 +
 +	/**
 +	 * Returns source of the first cargo packet in this list
@@ -5132,7 +5144,7 @@ index 59e18bf..258811a 100644
  
  	return true;
 diff --git a/src/saveload/saveload.cpp b/src/saveload/saveload.cpp
-index 101cc41..842d034 100644
+index 101cc41..55ffb8c 100644
 --- a/src/saveload/saveload.cpp
 +++ b/src/saveload/saveload.cpp
 @@ -213,7 +213,7 @@
@@ -5140,7 +5152,7 @@ index 101cc41..842d034 100644
   *  149   20832
   */
 -extern const uint16 SAVEGAME_VERSION = 149; ///< current savegame version of OpenTTD
-+extern const uint16 SAVEGAME_VERSION = SL_CARGOMAP; ///< current savegame version of OpenTTD
++extern const uint16 SAVEGAME_VERSION = SL_EXT_RATING; ///< current savegame version of OpenTTD
  
  SavegameType _savegame_type; ///< type of savegame we are loading
  
@@ -5161,7 +5173,7 @@ index 101cc41..842d034 100644
  	_object_chunk_handlers,
  	NULL,
 diff --git a/src/saveload/saveload.h b/src/saveload/saveload.h
-index cf7ff82..995dac5 100644
+index cf7ff82..4215e0b 100644
 --- a/src/saveload/saveload.h
 +++ b/src/saveload/saveload.h
 @@ -83,8 +83,6 @@ enum SLRefType {
@@ -5173,7 +5185,7 @@ index cf7ff82..995dac5 100644
  enum ChunkType {
  	CH_RIFF         =  0,
  	CH_ARRAY        =  1,
-@@ -353,4 +351,20 @@ bool SaveloadCrashWithMissingNewGRFs();
+@@ -353,4 +351,21 @@ bool SaveloadCrashWithMissingNewGRFs();
  extern char _savegame_format[8];
  extern bool _do_autosave;
  
@@ -5190,6 +5202,7 @@ index cf7ff82..995dac5 100644
 +	SL_MCF,
 +	SL_FLOWMAP,
 +	SL_CARGOMAP,
++	SL_EXT_RATING,
 +	SL_MAX_VERSION = 255
 +};
 +
@@ -5207,7 +5220,7 @@ index b400861..4bf5646 100644
  
  void UpdateOldAircraft();
 diff --git a/src/saveload/station_sl.cpp b/src/saveload/station_sl.cpp
-index 72d7c7e..58a0bfa 100644
+index 72d7c7e..29dc7bb 100644
 --- a/src/saveload/station_sl.cpp
 +++ b/src/saveload/station_sl.cpp
 @@ -205,9 +205,11 @@ static const SaveLoad _old_station_desc[] = {
@@ -5271,7 +5284,7 @@ index 72d7c7e..58a0bfa 100644
  /**
   * Wrapper function to get the GoodsEntry's internal structure while
   * some of the variables itself are private.
-@@ -238,14 +281,48 @@ const SaveLoad *GetGoodsDesc()
+@@ -238,14 +281,49 @@ const SaveLoad *GetGoodsDesc()
  		     SLE_VAR(GoodsEntry, last_age,            SLE_UINT8),
  		SLEG_CONDVAR(            _cargo_feeder_share, SLE_FILE_U32 | SLE_VAR_I64, 14, 64),
  		SLEG_CONDVAR(            _cargo_feeder_share, SLE_INT64,                  65, 67),
@@ -5284,6 +5297,7 @@ index 72d7c7e..58a0bfa 100644
 +		SLEG_CONDVAR(            _num_links,          SLE_UINT16,      SL_CAPACITIES, SL_MAX_VERSION),
 +		SLEG_CONDVAR(            _num_flows,          SLE_UINT32,         SL_FLOWMAP, SL_MAX_VERSION),
 +		 SLE_CONDVAR(GoodsEntry, last_component,      SLE_UINT16,      SL_COMPONENTS, SL_MAX_VERSION),
++		 SLE_CONDVAR(GoodsEntry, max_waiting_cargo,   SLE_UINT32,      SL_EXT_RATING, SL_MAX_VERSION),
  		SLE_END()
  	};
  
@@ -5322,7 +5336,7 @@ index 72d7c7e..58a0bfa 100644
  
  static void Load_STNS()
  {
-@@ -261,6 +338,7 @@ static void Load_STNS()
+@@ -261,6 +339,7 @@ static void Load_STNS()
  		for (CargoID i = 0; i < num_cargo; i++) {
  			GoodsEntry *ge = &st->goods[i];
  			SlObject(ge, GetGoodsDesc());
@@ -5330,7 +5344,7 @@ index 72d7c7e..58a0bfa 100644
  			if (CheckSavegameVersion(68)) {
  				SB(ge->acceptance_pickup, GoodsEntry::ACCEPTANCE, 1, HasBit(_waiting_acceptance, 15));
  				if (GB(_waiting_acceptance, 0, 12) != 0) {
-@@ -268,8 +346,8 @@ static void Load_STNS()
+@@ -268,8 +347,8 @@ static void Load_STNS()
  					StationID source = (CheckSavegameVersion(7) && _cargo_source == 0xFF) ? INVALID_STATION : _cargo_source;
  
  					/* Don't construct the packet with station here, because that'll fail with old savegames */
@@ -5341,7 +5355,7 @@ index 72d7c7e..58a0bfa 100644
  				}
  			}
  		}
-@@ -294,7 +372,9 @@ static void Ptrs_STNS()
+@@ -294,7 +373,9 @@ static void Ptrs_STNS()
  		if (!CheckSavegameVersion(68)) {
  			for (CargoID i = 0; i < NUM_CARGO; i++) {
  				GoodsEntry *ge = &st->goods[i];
@@ -5351,7 +5365,7 @@ index 72d7c7e..58a0bfa 100644
  			}
  		}
  		SlObject(st, _old_station_desc);
-@@ -381,8 +461,29 @@ static void RealSave_STNN(BaseStation *bst)
+@@ -381,8 +462,29 @@ static void RealSave_STNN(BaseStation *bst)
  
  	if (!waypoint) {
  		Station *st = Station::From(bst);
@@ -5383,7 +5397,7 @@ index 72d7c7e..58a0bfa 100644
  		}
  	}
  
-@@ -413,8 +514,29 @@ static void Load_STNN()
+@@ -413,8 +515,29 @@ static void Load_STNN()
  
  		if (!waypoint) {
  			Station *st = Station::From(bst);
@@ -5415,7 +5429,7 @@ index 72d7c7e..58a0bfa 100644
  			}
  		}
  
-@@ -437,7 +559,16 @@ static void Ptrs_STNN()
+@@ -437,7 +560,16 @@ static void Ptrs_STNN()
  	FOR_ALL_STATIONS(st) {
  		for (CargoID i = 0; i < NUM_CARGO; i++) {
  			GoodsEntry *ge = &st->goods[i];
@@ -5608,7 +5622,7 @@ index 956dde1..721bff2 100644
  	FOR_ALL_VEHICLES(v) {
  		/* Forget about this station if this station is removed */
 diff --git a/src/station_base.h b/src/station_base.h
-index ca0e598..c56e5f7 100644
+index ca0e598..e400091 100644
 --- a/src/station_base.h
 +++ b/src/station_base.h
 @@ -16,13 +16,236 @@
@@ -5848,7 +5862,7 @@ index ca0e598..c56e5f7 100644
  struct GoodsEntry {
  	enum AcceptancePickup {
  		ACCEPTANCE,
-@@ -34,7 +257,10 @@ struct GoodsEntry {
+@@ -34,7 +257,11 @@ struct GoodsEntry {
  		days_since_pickup(255),
  		rating(INITIAL_STATION_RATING),
  		last_speed(0),
@@ -5856,11 +5870,12 @@ index ca0e598..c56e5f7 100644
 +		last_age(255),
 +		supply(0),
 +		supply_new(0),
-+		last_component(INVALID_LINKGRAPH_COMPONENT)
++		last_component(INVALID_LINKGRAPH_COMPONENT),
++		max_waiting_cargo(0)
  	{}
  
  	byte acceptance_pickup;
-@@ -42,7 +268,19 @@ struct GoodsEntry {
+@@ -42,7 +269,21 @@ struct GoodsEntry {
  	byte rating;
  	byte last_speed;
  	byte last_age;
@@ -5871,6 +5886,8 @@ index ca0e598..c56e5f7 100644
 +	FlowStatMap flows;                   ///< The planned flows through this station
 +	LinkStatMap link_stats;              ///< capacities and usage statistics for outgoing links
 +	LinkGraphComponentID last_component; ///< the component this station was last part of in this cargo's link graph
++	uint max_waiting_cargo;              ///< max cargo from this station waiting at any station
++	
 +	FlowStat GetSumFlowVia(StationID via) const;
 +
 +	void UpdateFlowStats(StationID source, uint count, StationID next);
@@ -5881,7 +5898,7 @@ index ca0e598..c56e5f7 100644
  };
  
  /** All airport-related information. Only valid if tile != INVALID_TILE. */
-@@ -228,6 +466,8 @@ public:
+@@ -228,6 +469,8 @@ public:
  	/* virtual */ uint32 GetNewGRFVariable(const ResolverObject *object, byte variable, byte parameter, bool *available) const;
  
  	/* virtual */ void GetTileArea(TileArea *ta, StationType type) const;
@@ -5891,7 +5908,7 @@ index ca0e598..c56e5f7 100644
  
  #define FOR_ALL_STATIONS(var) FOR_ALL_BASE_STATIONS_OF_TYPE(Station, var)
 diff --git a/src/station_cmd.cpp b/src/station_cmd.cpp
-index 74b4f48..2c6dbfc 100644
+index 74b4f48..864e9fb 100644
 --- a/src/station_cmd.cpp
 +++ b/src/station_cmd.cpp
 @@ -45,6 +45,7 @@
@@ -5902,16 +5919,97 @@ index 74b4f48..2c6dbfc 100644
  #include "table/airporttile_ids.h"
  #include "newgrf_airporttiles.h"
  #include "order_backup.h"
-@@ -3119,7 +3120,7 @@ static void UpdateStationRating(Station *st)
+@@ -3030,6 +3031,9 @@ static void UpdateStationRating(Station *st)
+ 			int rating = 0;
+ 			uint waiting = ge->cargo.Count();
+ 
++			/* average amount of cargo per destination */
++			uint waiting_avg = waiting / max(1U, (uint)ge->cargo.Packets()->MapSize());
++
+ 			if (HasBit(cs->callback_mask, CBM_CARGO_STATION_RATING_CALC)) {
+ 				/* Perform custom station rating. If it succeeds the speed, days in transit and
+ 				 * waiting cargo ratings must not be executed. */
+@@ -3038,7 +3042,7 @@ static void UpdateStationRating(Station *st)
+ 				uint last_speed = ge->last_speed;
+ 				if (last_speed == 0) last_speed = 0xFF;
+ 
+-				uint32 var18 = min(ge->days_since_pickup, 0xFF) | (min(waiting, 0xFFFF) << 8) | (min(last_speed, 0xFF) << 24);
++				uint32 var18 = min(ge->days_since_pickup, 0xFF) | (min(ge->max_waiting_cargo, 0xFFFF) << 8) | (min(last_speed, 0xFF) << 24);
+ 				/* Convert to the 'old' vehicle types */
+ 				uint32 var10 = (st->last_vehicle_type == VEH_INVALID) ? 0x0 : (st->last_vehicle_type + 0x10);
+ 				uint16 callback = GetCargoCallback(CBID_CARGO_STATION_RATING_CALC, var10, var18, cs);
+@@ -3063,11 +3067,11 @@ static void UpdateStationRating(Station *st)
+ 				(rating += 45, days > 3) ||
+ 				(rating += 35, true);
+ 
+-				(rating -= 90, waiting > 1500) ||
+-				(rating += 55, waiting > 1000) ||
+-				(rating += 35, waiting > 600) ||
+-				(rating += 10, waiting > 300) ||
+-				(rating += 20, waiting > 100) ||
++				(rating -= 90, ge->max_waiting_cargo > 1500) ||
++				(rating += 55, ge->max_waiting_cargo > 1000) ||
++				(rating += 35, ge->max_waiting_cargo > 600) ||
++				(rating += 10, ge->max_waiting_cargo > 300) ||
++				(rating += 20, ge->max_waiting_cargo > 100) ||
+ 				(rating += 10, true);
+ 			}
+ 
+@@ -3085,11 +3089,11 @@ static void UpdateStationRating(Station *st)
+ 				/* only modify rating in steps of -2, -1, 0, 1 or 2 */
+ 				ge->rating = rating = or_ + Clamp(Clamp(rating, 0, 255) - or_, -2, 2);
+ 
+-				/* if rating is <= 64 and more than 200 items waiting,
++				/* if rating is <= 64 and more than 200 items waiting on average per destination,
+ 				 * remove some random amount of goods from the station */
+-				if (rating <= 64 && waiting >= 200) {
++				if (rating <= 64 && waiting_avg >= 200) {
+ 					int dec = Random() & 0x1F;
+-					if (waiting < 400) dec &= 7;
++					if (waiting_avg < 400) dec &= 7;
+ 					waiting -= dec + 1;
+ 					waiting_changed = true;
+ 				}
+@@ -3111,7 +3115,7 @@ static void UpdateStationRating(Station *st)
+ 				static const uint WAITING_CARGO_CUT_FACTOR = 1 <<  6;
+ 				static const uint MAX_WAITING_CARGO        = 1 << 15;
+ 
+-				if (waiting > WAITING_CARGO_THRESHOLD) {
++				if (waiting_avg > WAITING_CARGO_THRESHOLD || waiting > MAX_WAITING_CARGO) {
+ 					uint difference = waiting - WAITING_CARGO_THRESHOLD;
+ 					waiting -= (difference / WAITING_CARGO_CUT_FACTOR);
+ 
+@@ -3119,7 +3123,28 @@ static void UpdateStationRating(Station *st)
  					waiting_changed = true;
  				}
  
 -				if (waiting_changed) ge->cargo.Truncate(waiting);
-+				if (waiting_changed) ge->cargo.RandomTruncate(waiting);
++				if (waiting_changed) {
++					/* feed back the exact own waiting cargo at this station for the
++					 * next rating calculation.
++					 */
++					ge->max_waiting_cargo = 0;
++
++					/* If truncating also punish the source stations' ratings to
++					 * decrease the flow of incoming cargo. */
++
++					StationCargoAmountMap waiting_per_source;
++					ge->cargo.CountAndTruncate(waiting, waiting_per_source);
++					for (StationCargoAmountMap::iterator i(waiting_per_source.begin()); i != waiting_per_source.end(); ++i) {
++						Station *source_station = Station::GetIfValid(i->first);
++						if (source_station == NULL) continue;
++
++						GoodsEntry &source_ge = source_station->goods[cs->Index()];
++						source_ge.max_waiting_cargo = max(source_ge.max_waiting_cargo, i->second);
++					}
++				} else {
++					/* if the average number per next hop is low, be more forgiving. */
++					ge->max_waiting_cargo = waiting_avg;
++				}
  			}
  		}
  	}
-@@ -3132,6 +3133,191 @@ static void UpdateStationRating(Station *st)
+@@ -3132,6 +3157,191 @@ static void UpdateStationRating(Station *st)
  	}
  }
  
@@ -6103,7 +6201,7 @@ index 74b4f48..2c6dbfc 100644
  /* called for every station each tick */
  static void StationHandleSmallTick(BaseStation *st)
  {
-@@ -3148,6 +3334,8 @@ void OnTick_Station()
+@@ -3148,6 +3358,8 @@ void OnTick_Station()
  {
  	if (_game_mode == GM_EDITOR) return;
  
@@ -6112,7 +6210,7 @@ index 74b4f48..2c6dbfc 100644
  	BaseStation *st;
  	FOR_ALL_BASE_STATIONS(st) {
  		StationHandleSmallTick(st);
-@@ -3166,7 +3354,13 @@ void OnTick_Station()
+@@ -3166,7 +3378,13 @@ void OnTick_Station()
  
  void StationMonthlyLoop()
  {
@@ -6127,7 +6225,7 @@ index 74b4f48..2c6dbfc 100644
  }
  
  
-@@ -3190,8 +3384,18 @@ void ModifyStationRatingAround(TileIndex tile, Owner owner, int amount, uint rad
+@@ -3190,8 +3408,18 @@ void ModifyStationRatingAround(TileIndex tile, Owner owner, int amount, uint rad
  
  static void UpdateStationWaiting(Station *st, CargoID type, uint amount, SourceType source_type, SourceID source_id)
  {
@@ -6148,7 +6246,7 @@ index 74b4f48..2c6dbfc 100644
  
  	TriggerStationAnimation(st, st->xy, SAT_NEW_CARGO, type);
  	AirportAnimationTrigger(st, AAT_STATION_NEW_CARGO, type);
-@@ -3553,6 +3757,90 @@ static CommandCost TerraformTile_Station(TileIndex tile, DoCommandFlag flags, ui
+@@ -3553,6 +3781,90 @@ static CommandCost TerraformTile_Station(TileIndex tile, DoCommandFlag flags, ui
  	return DoCommand(tile, 0, 0, flags, CMD_LANDSCAPE_CLEAR);
  }
  
