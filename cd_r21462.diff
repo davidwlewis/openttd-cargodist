@@ -4724,7 +4724,7 @@ index 1e6df5f..f522f92 100644
  	_industry_pool.CleanPool();
  	_station_pool.CleanPool();
 diff --git a/src/order_base.h b/src/order_base.h
-index fccc802..67f0f5a 100644
+index fccc802..24c47a0 100644
 --- a/src/order_base.h
 +++ b/src/order_base.h
 @@ -262,6 +262,16 @@ struct OrderList : OrderListPool::PoolItem<&_orderlist_pool> {
@@ -4748,16 +4748,16 @@ index fccc802..67f0f5a 100644
  	 */
  	inline Order *GetLastOrder() const { return this->GetOrderAt(this->num_orders - 1); }
  
-+	StationID GetNextStoppingStation(VehicleOrderID curr_order, StationID curr_station, bool ignore_more_stops = true) const;
++	StationID GetNextStoppingStation(VehicleOrderID curr_order, StationID curr_station) const;
 +
  	/**
  	 * Get number of orders in the order list.
  	 * @return number of orders in the chain.
 diff --git a/src/order_cmd.cpp b/src/order_cmd.cpp
-index d02522c..b5c8e63 100644
+index d02522c..1798e2b 100644
 --- a/src/order_cmd.cpp
 +++ b/src/order_cmd.cpp
-@@ -251,6 +251,61 @@ Order *OrderList::GetOrderAt(int index) const
+@@ -251,6 +251,60 @@ Order *OrderList::GetOrderAt(int index) const
  	return order;
  }
  
@@ -4793,10 +4793,9 @@ index d02522c..b5c8e63 100644
 + * Get the next station the vehicle will stop at, if that is deterministic.
 + * @param curr_order the ID of the current order
 + * @param curr_station the station the vehicle is just visiting or INVALID_STATION
-+ * @param ignore_more_stops if set and the next stop is the same as curr_station return the one after it
 + * @return The ID of the next station the vehicle will stop at or INVALID_STATION
 + */
-+StationID OrderList::GetNextStoppingStation(VehicleOrderID curr_order, StationID curr_station, bool ignore_more_stops) const
++StationID OrderList::GetNextStoppingStation(VehicleOrderID curr_order, StationID curr_station) const
 +{
 +	const Order *curr = this->GetOrderAt(curr_order);
 +	if (curr == NULL) {
@@ -4810,16 +4809,16 @@ index d02522c..b5c8e63 100644
 +	 */
 +	if (curr_station == INVALID_STATION || curr->GetType() != OT_GOTO_STATION ||
 +			curr_station != curr->GetDestination()) {
-+		return this->GetNextStoppingStation(curr, ignore_more_stops ? curr_station : INVALID_STATION, 0);
++		return this->GetNextStoppingStation(curr, curr_station, 0);
 +	} else {
-+		return this->GetNextStoppingStation(this->GetNext(curr), ignore_more_stops ? curr_station : INVALID_STATION, 1);
++		return this->GetNextStoppingStation(this->GetNext(curr), curr_station, 1);
 +	}
 +}
 +
  void OrderList::InsertOrderAt(Order *new_order, int index)
  {
  	if (this->first == NULL) {
-@@ -687,6 +742,8 @@ CommandCost CmdInsertOrder(TileIndex tile, DoCommandFlag flags, uint32 p1, uint3
+@@ -687,6 +741,8 @@ CommandCost CmdInsertOrder(TileIndex tile, DoCommandFlag flags, uint32 p1, uint3
  			}
  			/* Update any possible open window of the vehicle */
  			InvalidateVehicleOrder(u, INVALID_VEH_ORDER_ID | (sel_ord << 8));
@@ -4828,7 +4827,7 @@ index d02522c..b5c8e63 100644
  		}
  
  		/* As we insert an order, the order to skip to will be 'wrong'. */
-@@ -722,6 +779,9 @@ static CommandCost DecloneOrder(Vehicle *dst, DoCommandFlag flags)
+@@ -722,6 +778,9 @@ static CommandCost DecloneOrder(Vehicle *dst, DoCommandFlag flags)
  	if (flags & DC_EXEC) {
  		DeleteVehicleOrders(dst);
  		InvalidateVehicleOrder(dst, -1);
@@ -4838,7 +4837,7 @@ index d02522c..b5c8e63 100644
  		InvalidateWindowClassesData(GetWindowClassForVehicleType(dst->type), 0);
  	}
  	return CommandCost();
-@@ -776,6 +836,8 @@ CommandCost CmdDeleteOrder(TileIndex tile, DoCommandFlag flags, uint32 p1, uint3
+@@ -776,6 +835,8 @@ CommandCost CmdDeleteOrder(TileIndex tile, DoCommandFlag flags, uint32 p1, uint3
  
  			/* Update any possible open window of the vehicle */
  			InvalidateVehicleOrder(u, sel_ord | (INVALID_VEH_ORDER_ID << 8));
@@ -4847,7 +4846,7 @@ index d02522c..b5c8e63 100644
  		}
  
  		/* As we delete an order, the order to skip to will be 'wrong'. */
-@@ -821,10 +883,10 @@ CommandCost CmdSkipToOrder(TileIndex tile, DoCommandFlag flags, uint32 p1, uint3
+@@ -821,10 +882,10 @@ CommandCost CmdSkipToOrder(TileIndex tile, DoCommandFlag flags, uint32 p1, uint3
  	if (ret.Failed()) return ret;
  
  	if (flags & DC_EXEC) {
@@ -4860,7 +4859,7 @@ index d02522c..b5c8e63 100644
  		InvalidateVehicleOrder(v, -2);
  	}
  
-@@ -889,6 +951,8 @@ CommandCost CmdMoveOrder(TileIndex tile, DoCommandFlag flags, uint32 p1, uint32
+@@ -889,6 +950,8 @@ CommandCost CmdMoveOrder(TileIndex tile, DoCommandFlag flags, uint32 p1, uint32
  			assert(v->orders.list == u->orders.list);
  			/* Update any possible open window of the vehicle */
  			InvalidateVehicleOrder(u, moving_order | (target_order << 8));
@@ -4869,7 +4868,7 @@ index d02522c..b5c8e63 100644
  		}
  
  		/* As we move an order, the order to skip to will be 'wrong'. */
-@@ -1145,6 +1209,8 @@ CommandCost CmdModifyOrder(TileIndex tile, DoCommandFlag flags, uint32 p1, uint3
+@@ -1145,6 +1208,8 @@ CommandCost CmdModifyOrder(TileIndex tile, DoCommandFlag flags, uint32 p1, uint3
  				u->current_order.SetLoadType(order->GetLoadType());
  			}
  			InvalidateVehicleOrder(u, -2);
@@ -4878,7 +4877,7 @@ index d02522c..b5c8e63 100644
  		}
  	}
  
-@@ -1277,6 +1343,8 @@ CommandCost CmdCloneOrder(TileIndex tile, DoCommandFlag flags, uint32 p1, uint32
+@@ -1277,6 +1342,8 @@ CommandCost CmdCloneOrder(TileIndex tile, DoCommandFlag flags, uint32 p1, uint32
  		default: return CMD_ERROR;
  	}
  
@@ -4887,7 +4886,7 @@ index d02522c..b5c8e63 100644
  	return CommandCost();
  }
  
-@@ -1438,6 +1506,8 @@ void RemoveOrderFromAllVehicles(OrderType type, DestinationID destination)
+@@ -1438,6 +1505,8 @@ void RemoveOrderFromAllVehicles(OrderType type, DestinationID destination)
  					/* In GUI, simulate by removing the order and adding it back */
  					InvalidateVehicleOrder(w, id | (INVALID_VEH_ORDER_ID << 8));
  					InvalidateVehicleOrder(w, (INVALID_VEH_ORDER_ID << 8) | id);
@@ -4896,7 +4895,7 @@ index d02522c..b5c8e63 100644
  				}
  			}
  		}
-@@ -1480,6 +1550,8 @@ void DeleteVehicleOrders(Vehicle *v, bool keep_orderlist)
+@@ -1480,6 +1549,8 @@ void DeleteVehicleOrders(Vehicle *v, bool keep_orderlist)
  		v->orders.list->FreeChain(keep_orderlist);
  		if (!keep_orderlist) v->orders.list = NULL;
  	}
@@ -9160,7 +9159,7 @@ index 7fd8747..dcc6d5c 100644
  	TriggerStationAnimation(st, v->tile, SAT_TRAIN_ARRIVES);
  }
 diff --git a/src/vehicle.cpp b/src/vehicle.cpp
-index ff6039c..892928c 100644
+index ff6039c..3fdecdd 100644
 --- a/src/vehicle.cpp
 +++ b/src/vehicle.cpp
 @@ -629,10 +629,11 @@ void Vehicle::PreDestructor()
@@ -9227,7 +9226,7 @@ index ff6039c..892928c 100644
  
  	SetWindowDirty(GetWindowClassForVehicleType(this->type), this->owner);
  	SetWindowWidgetDirty(WC_VEHICLE_VIEW, this->index, VVW_WIDGET_START_STOP_VEH);
-@@ -1740,19 +1762,70 @@ void Vehicle::BeginLoading()
+@@ -1740,19 +1762,71 @@ void Vehicle::BeginLoading()
  	this->MarkDirty();
  }
  
@@ -9235,7 +9234,8 @@ index ff6039c..892928c 100644
 + * return all reserved cargo packets to the station
 + * @param st the station where the reserved packets should go.
 + */
-+void Vehicle::CancelReservation(StationID next, Station *st) {
++void Vehicle::CancelReservation(StationID next, Station *st)
++{
 +	for(Vehicle *v = this; v != NULL; v = v->next) {
 +		VehicleCargoList &cargo = v->cargo;
 +		if (cargo.ReservedCount() > 0) {
