@@ -1,0 +1,466 @@
+diff --git a/src/ai/api/ai_order.cpp b/src/ai/api/ai_order.cpp
+index 02d6a70..3a5cb30 100644
+--- a/src/ai/api/ai_order.cpp
++++ b/src/ai/api/ai_order.cpp
+@@ -430,7 +430,7 @@ static const Order *ResolveOrder(VehicleID vehicle_id, AIOrder::OrderPosition or
+ 	EnforcePrecondition(false, IsValidVehicleOrder(vehicle_id, jump_to));
+ 
+ 	Order order;
+-	order.MakeConditional(jump_to);
++	order.MakeConditional(::Vehicle::Get(vehicle_id)->orders.list->TranslateIndex(jump_to, IT_SKIP));
+ 
+ 	return AIObject::DoCommand(0, vehicle_id | (order_position << 20), order.Pack(), CMD_INSERT_ORDER);
+ }
+diff --git a/src/order_base.h b/src/order_base.h
+index fccc802..a63f64a 100644
+--- a/src/order_base.h
++++ b/src/order_base.h
+@@ -124,6 +124,12 @@ public:
+ 	void MakeConditional(VehicleOrderID order);
+ 
+ 	/**
++	 * Makes this order an automatic order.
++	 * @param destination the station to go to.
++	 */
++	void MakeAutomatic(StationID destination);
++
++	/**
+ 	 * Gets the destination of this order.
+ 	 * @pre IsType(OT_GOTO_WAYPOINT) || IsType(OT_GOTO_DEPOT) || IsType(OT_GOTO_STATION).
+ 	 * @return the destination of the order.
+@@ -270,6 +276,12 @@ private:
+ 
+ 	Ticks timetable_duration;       ///< NOSAVE: Total duration of the order list
+ 
++	/**
++	 * Update the counters and delete the order. Doesn't update order->next or this->first
++	 * @param order the order to be deleted.
++	 */
++	void DeleteOrder(Order *order);
++
+ public:
+ 	/** Default constructor producing an invalid order list. */
+ 	OrderList(VehicleOrderID num_orders = INVALID_VEH_ORDER_ID)
+@@ -302,9 +314,10 @@ public:
+ 	/**
+ 	 * Get a certain order of the order chain.
+ 	 * @param index zero-based index of the order within the chain.
++	 * @param no_auto if set the next non-automatic order after the order at index is returned
+ 	 * @return the order at position index.
+ 	 */
+-	Order *GetOrderAt(int index) const;
++	Order *GetOrderAt(int index, bool no_auto = false) const;
+ 
+ 	/**
+ 	 * Get the last order of the order chain.
+@@ -332,6 +345,12 @@ public:
+ 	void DeleteOrderAt(int index);
+ 
+ 	/**
++	 * Delete all automatic orders between start_index and the next non-automatic one
++	 * @param start_index the first index to look at
++	 */
++	void DeleteAutoOrders(int start_index);
++
++	/**
+ 	 * Move an order to another position within the order list.
+ 	 * @param from is the zero-based position of the order to move.
+ 	 * @param to is the zero-based position where the order is moved to.
+@@ -416,6 +435,14 @@ public:
+ 	void FreeChain(bool keep_orderlist = false);
+ 
+ 	/**
++	 * Translate an order index into the other type of index
++	 * @param index index of an order, either flat or "skip", ie without counting automatic order
++	 * @param target the type of index we want to translate to
++	 * @return index of an order in "target" format
++	 */
++	VehicleOrderID TranslateIndex(VehicleOrderID index, IndexType target) const;
++
++	/**
+ 	 * Checks for internal consistency of order list. Triggers assertion if something is wrong.
+ 	 */
+ 	void DebugCheckSanity() const;
+diff --git a/src/order_cmd.cpp b/src/order_cmd.cpp
+index 13bdf2d..15c99da 100644
+--- a/src/order_cmd.cpp
++++ b/src/order_cmd.cpp
+@@ -99,6 +99,12 @@ void Order::MakeConditional(VehicleOrderID order)
+ 	this->dest = 0;
+ }
+ 
++void Order::MakeAutomatic(StationID destination)
++{
++	this->type = OT_AUTOMATIC;
++	this->dest = destination;
++}
++
+ void Order::SetRefit(CargoID cargo, byte subtype)
+ {
+ 	this->refit_cargo = cargo;
+@@ -239,7 +245,7 @@ void OrderList::FreeChain(bool keep_orderlist)
+ 	}
+ }
+ 
+-Order *OrderList::GetOrderAt(int index) const
++Order *OrderList::GetOrderAt(int index, bool no_auto) const
+ {
+ 	if (index < 0) return NULL;
+ 
+@@ -248,9 +254,29 @@ Order *OrderList::GetOrderAt(int index) const
+ 	while (order != NULL && index-- > 0) {
+ 		order = order->next;
+ 	}
++	if (no_auto) {
++		while(order != NULL && order->IsType(OT_AUTOMATIC)) {
++			order = order->next;
++		}
++	}
++
+ 	return order;
+ }
+ 
++VehicleOrderID OrderList::TranslateIndex(VehicleOrderID index, IndexType target) const
++{
++	OrderID result = 0;
++	const Order *skip_to_order = this->first;
++	bool is_auto = false;
++	index = index + 1; // count from 1, to avoid overflow
++	while(skip_to_order != NULL && (index > 0 || (is_auto = skip_to_order->IsType(OT_AUTOMATIC)))) {
++		if (target == IT_SKIP || !is_auto) --index;
++		if (target == IT_FLAT || !is_auto) ++result;
++		skip_to_order = skip_to_order->next;
++	}
++	return skip_to_order == NULL ? INVALID_VEH_ORDER_ID : result;
++}
++
+ void OrderList::InsertOrderAt(Order *new_order, int index)
+ {
+ 	if (this->first == NULL) {
+@@ -289,9 +315,36 @@ void OrderList::DeleteOrderAt(int index)
+ 		to_remove = prev->next;
+ 		prev->next = to_remove->next;
+ 	}
++	this->DeleteOrder(to_remove);
++}
++
++void OrderList::DeleteOrder(Order *order)
++{
++	this->timetable_duration -= (order->wait_time + order->travel_time);
+ 	--this->num_orders;
+-	this->timetable_duration -= (to_remove->wait_time + to_remove->travel_time);
+-	delete to_remove;
++	delete order;
++}
++
++void OrderList::DeleteAutoOrders(int start_index)
++{
++	if (start_index >= this->num_orders) return;
++
++	Order *to_remove;
++
++	if (start_index == 0) {
++		while(this->first != NULL && this->first->IsType(OT_AUTOMATIC)) {
++			to_remove = this->first;
++			this->first = to_remove->next;
++			this->DeleteOrder(to_remove);
++		}
++	} else {
++		Order *prev = GetOrderAt(start_index - 1);
++		while(prev->next != NULL && prev->next->IsType(OT_AUTOMATIC)) {
++			to_remove = prev->next;
++			prev->next = to_remove->next;
++			this->DeleteOrder(to_remove);
++		}
++	}
+ }
+ 
+ void OrderList::MoveOrder(int from, int to)
+@@ -432,7 +485,7 @@ static uint GetOrderDistance(const Order *prev, const Order *cur, const Vehicle
+ 
+ 		conditional_depth++;
+ 
+-		int dist1 = GetOrderDistance(prev, v->GetOrder(cur->GetConditionSkipToOrder()), v, conditional_depth);
++		int dist1 = GetOrderDistance(prev, v->GetOrder(v->orders.list->TranslateIndex(cur->GetConditionSkipToOrder(), IT_FLAT)), v, conditional_depth);
+ 		int dist2 = GetOrderDistance(prev, cur->next == NULL ? v->orders.list->GetFirstOrder() : cur->next, v, conditional_depth);
+ 		return max(dist1, dist2);
+ 	}
+@@ -595,7 +648,7 @@ CommandCost CmdInsertOrder(TileIndex tile, DoCommandFlag flags, uint32 p1, uint3
+ 		}
+ 
+ 		case OT_CONDITIONAL: {
+-			VehicleOrderID skip_to = new_order.GetConditionSkipToOrder();
++			VehicleOrderID skip_to = v->orders.list->TranslateIndex(new_order.GetConditionSkipToOrder(), IT_FLAT);
+ 			if (skip_to != 0 && skip_to >= v->GetNumOrders()) return CMD_ERROR; // Always allow jumping to the first (even when there is no order).
+ 			if (new_order.GetConditionVariable() > OCV_END) return CMD_ERROR;
+ 
+@@ -689,20 +742,23 @@ CommandCost CmdInsertOrder(TileIndex tile, DoCommandFlag flags, uint32 p1, uint3
+ 			InvalidateVehicleOrder(u, INVALID_VEH_ORDER_ID | (sel_ord << 8));
+ 		}
+ 
+-		/* As we insert an order, the order to skip to will be 'wrong'. */
+-		VehicleOrderID cur_order_id = 0;
+-		Order *order;
+-		FOR_VEHICLE_ORDERS(v, order) {
+-			if (order->IsType(OT_CONDITIONAL)) {
+-				VehicleOrderID order_id = order->GetConditionSkipToOrder();
+-				if (order_id >= sel_ord) {
+-					order->SetConditionSkipToOrder(order_id + 1);
+-				}
+-				if (order_id == cur_order_id) {
+-					order->SetConditionSkipToOrder((order_id + 1) % v->GetNumOrders());
++		if (!new_order.IsType(OT_AUTOMATIC)) {
++			/* As we insert an order, the order to skip to will be 'wrong'. */
++			VehicleOrderID cur_order_id = 0;
++			Order *order;
++			VehicleOrderID num_real_orders = v->orders.list->TranslateIndex(v->GetNumOrders() - 1, IT_SKIP) + 1;
++			FOR_VEHICLE_ORDERS(v, order) {
++				if (order->IsType(OT_CONDITIONAL)) {
++					VehicleOrderID order_id = order->GetConditionSkipToOrder();
++					if (order_id >= sel_ord) {
++						order->SetConditionSkipToOrder(order_id + 1);
++					}
++					if (order_id == cur_order_id) {
++						order->SetConditionSkipToOrder((order_id + 1) % num_real_orders);
++					}
+ 				}
++				cur_order_id++;
+ 			}
+-			cur_order_id++;
+ 		}
+ 
+ 		/* Make sure to rebuild the whole list */
+@@ -782,12 +838,12 @@ CommandCost CmdDeleteOrder(TileIndex tile, DoCommandFlag flags, uint32 p1, uint3
+ 		VehicleOrderID cur_order_id = 0;
+ 		FOR_VEHICLE_ORDERS(v, order) {
+ 			if (order->IsType(OT_CONDITIONAL)) {
+-				VehicleOrderID order_id = order->GetConditionSkipToOrder();
++				VehicleOrderID order_id = v->orders.list->TranslateIndex(order->GetConditionSkipToOrder(), IT_FLAT);
+ 				if (order_id >= sel_ord) {
+-					order->SetConditionSkipToOrder(max(order_id - 1, 0));
++					order->SetConditionSkipToOrder(v->orders.list->TranslateIndex(max(order_id - 1, 0), IT_SKIP));
+ 				}
+ 				if (order_id == cur_order_id) {
+-					order->SetConditionSkipToOrder((order_id + 1) % v->GetNumOrders());
++					order->SetConditionSkipToOrder(v->orders.list->TranslateIndex((order_id + 1) % v->GetNumOrders(), IT_SKIP));
+ 				}
+ 			}
+ 			cur_order_id++;
+@@ -895,7 +951,7 @@ CommandCost CmdMoveOrder(TileIndex tile, DoCommandFlag flags, uint32 p1, uint32
+ 		Order *order;
+ 		FOR_VEHICLE_ORDERS(v, order) {
+ 			if (order->IsType(OT_CONDITIONAL)) {
+-				VehicleOrderID order_id = order->GetConditionSkipToOrder();
++				VehicleOrderID order_id = v->orders.list->TranslateIndex(order->GetConditionSkipToOrder(), IT_FLAT);
+ 				if (order_id == moving_order) {
+ 					order_id = target_order;
+ 				} else if (order_id > moving_order && order_id <= target_order) {
+@@ -903,7 +959,7 @@ CommandCost CmdMoveOrder(TileIndex tile, DoCommandFlag flags, uint32 p1, uint32
+ 				} else if (order_id < moving_order && order_id >= target_order) {
+ 					order_id++;
+ 				}
+-				order->SetConditionSkipToOrder(order_id);
++				order->SetConditionSkipToOrder(v->orders.list->TranslateIndex(order_id, IT_SKIP));
+ 			}
+ 		}
+ 
+@@ -1553,7 +1609,11 @@ VehicleOrderID ProcessConditionalOrder(const Order *order, const Vehicle *v)
+ 		default: NOT_REACHED();
+ 	}
+ 
+-	return skip_order ? order->GetConditionSkipToOrder() : (VehicleOrderID)INVALID_VEH_ORDER_ID;
++	if (skip_order) {
++		return v->orders.list->TranslateIndex(order->GetConditionSkipToOrder(), IT_FLAT);
++	} else {
++		return (VehicleOrderID)INVALID_VEH_ORDER_ID;
++	}
+ }
+ 
+ /**
+@@ -1637,7 +1697,7 @@ bool UpdateOrderDest(Vehicle *v, const Order *order, int conditional_depth)
+ 	assert(v->cur_order_index < v->GetNumOrders());
+ 
+ 	/* Get the current order */
+-	order = v->GetOrder(v->cur_order_index);
++	order = v->GetOrder(v->cur_order_index, true);
+ 	v->current_order = *order;
+ 	return UpdateOrderDest(v, order, conditional_depth + 1);
+ }
+@@ -1692,7 +1752,7 @@ bool ProcessOrders(Vehicle *v)
+ 	/* Get the current order */
+ 	if (v->cur_order_index >= v->GetNumOrders()) v->cur_order_index = 0;
+ 
+-	const Order *order = v->GetOrder(v->cur_order_index);
++	const Order *order = v->GetOrder(v->cur_order_index, true);
+ 
+ 	/* If no order, do nothing. */
+ 	if (order == NULL || (v->type == VEH_AIRCRAFT && !CheckForValidOrders(v))) {
+diff --git a/src/order_gui.cpp b/src/order_gui.cpp
+index bdba6bf..58d0c86 100644
+--- a/src/order_gui.cpp
++++ b/src/order_gui.cpp
+@@ -200,8 +200,15 @@ void DrawOrderString(const Vehicle *v, const Order *order, int order_index, int
+ 		DrawSprite(sprite, PAL_NONE, rtl ? right - sprite_size.width : left, y + ((int)FONT_HEIGHT_NORMAL - (int)sprite_size.height) / 2);
+ 	}
+ 
++	TextColour colour = TC_BLACK;
++	if (order->IsType(OT_AUTOMATIC)) {
++		colour =  selected ? TC_SILVER : TC_GREY;
++	} else if (selected) {
++		colour = TC_WHITE;
++	}
++
+ 	SetDParam(0, order_index + 1);
+-	DrawString(left, rtl ? right - sprite_size.width - 3 : middle, y, STR_ORDER_INDEX, selected ? TC_WHITE : TC_BLACK, SA_RIGHT | SA_FORCE);
++	DrawString(left, rtl ? right - sprite_size.width - 3 : middle, y, STR_ORDER_INDEX, colour, SA_RIGHT | SA_FORCE);
+ 
+ 	SetDParam(5, STR_EMPTY);
+ 
+@@ -211,6 +218,7 @@ void DrawOrderString(const Vehicle *v, const Order *order, int order_index, int
+ 			SetDParam(1, order->GetDestination());
+ 			break;
+ 
++		case OT_AUTOMATIC:
+ 		case OT_GOTO_STATION: {
+ 			OrderLoadFlags load = order->GetLoadType();
+ 			OrderUnloadFlags unload = order->GetUnloadType();
+@@ -273,7 +281,7 @@ void DrawOrderString(const Vehicle *v, const Order *order, int order_index, int
+ 			break;
+ 
+ 		case OT_CONDITIONAL:
+-			SetDParam(1, order->GetConditionSkipToOrder() + 1);
++			SetDParam(1, v->orders.list->TranslateIndex(order->GetConditionSkipToOrder(), IT_FLAT) + 1);
+ 			if (order->GetConditionVariable() == OCV_UNCONDITIONALLY) {
+ 				SetDParam(0, STR_ORDER_CONDITIONAL_UNCONDITIONAL);
+ 			} else {
+@@ -298,7 +306,7 @@ void DrawOrderString(const Vehicle *v, const Order *order, int order_index, int
+ 		default: NOT_REACHED();
+ 	}
+ 
+-	DrawString(rtl ? left : middle, rtl ? middle : right, y, STR_ORDER_TEXT, selected ? TC_WHITE : TC_BLACK);
++	DrawString(rtl ? left : middle, rtl ? middle : right, y, STR_ORDER_TEXT, colour);
+ }
+ 
+ 
+@@ -1352,8 +1360,8 @@ public:
+ 			this->goto_type = OPOS_GOTO;
+ 			NWidgetBase *nwid = this->GetWidget<NWidgetBase>(ORDER_WIDGET_ORDER_LIST);
+ 			if (IsInsideBS(_cursor.pos.x, this->left + nwid->pos_x, nwid->current_x) && IsInsideBS(_cursor.pos.y, this->top + nwid->pos_y, nwid->current_y)) {
+-				int order_id = this->GetOrderFromPt(_cursor.pos.y - this->top);
+-				if (order_id != INVALID_ORDER) {
++				VehicleOrderID order_id = this->vehicle->orders.list->TranslateIndex(this->GetOrderFromPt(_cursor.pos.y - this->top), IT_SKIP);
++				if (order_id != INVALID_VEH_ORDER_ID) {
+ 					Order order;
+ 					order.next = NULL;
+ 					order.index = 0;
+diff --git a/src/order_type.h b/src/order_type.h
+index 7b252ad..d32e96b 100644
+--- a/src/order_type.h
++++ b/src/order_type.h
+@@ -38,9 +38,16 @@ enum OrderType {
+ 	OT_DUMMY         = 5,
+ 	OT_GOTO_WAYPOINT = 6,
+ 	OT_CONDITIONAL   = 7,
++	OT_AUTOMATIC     = 8,
+ 	OT_END
+ };
+ 
++/** Index types for order lists */
++enum IndexType {
++	IT_FLAT = 0,
++	IT_SKIP = 1
++};
++
+ /** It needs to be 8bits, because we save and load it as such */
+ typedef SimpleTinyEnumT<OrderType, byte> OrderTypeByte;
+ 
+diff --git a/src/timetable_cmd.cpp b/src/timetable_cmd.cpp
+index 0f8fc39..12d68de 100644
+--- a/src/timetable_cmd.cpp
++++ b/src/timetable_cmd.cpp
+@@ -242,7 +242,7 @@ void UpdateVehicleTimetable(Vehicle *v, bool travelling)
+ 	bool just_started = false;
+ 
+ 	/* This vehicle is arriving at the first destination in the timetable. */
+-	if (v->cur_order_index == 0 && travelling) {
++	if (!v->current_order.IsType(OT_AUTOMATIC) && v->cur_order_index == 0 && travelling) {
+ 		/* If the start date hasn't been set, or it was set automatically when
+ 		 * the vehicle last arrived at the first destination, update it to the
+ 		 * current time. Otherwise set the late counter appropriately to when
+@@ -270,7 +270,7 @@ void UpdateVehicleTimetable(Vehicle *v, bool travelling)
+ 
+ 		/* Modify station waiting time only if our new value is larger (this is
+ 		 * always the case when we cleared the timetable). */
+-		if (!v->current_order.IsType(OT_CONDITIONAL) && (travelling || time_taken > v->current_order.wait_time)) {
++		if (!v->current_order.IsType(OT_AUTOMATIC) && !v->current_order.IsType(OT_CONDITIONAL) && (travelling || time_taken > v->current_order.wait_time)) {
+ 			/* Round the time taken up to the nearest day, as this will avoid
+ 			 * confusion for people who are timetabling in days, and can be
+ 			 * adjusted later by people who aren't. */
+@@ -279,7 +279,7 @@ void UpdateVehicleTimetable(Vehicle *v, bool travelling)
+ 			ChangeTimetable(v, v->cur_order_index, time_taken, travelling);
+ 		}
+ 
+-		if (v->cur_order_index == 0 && travelling) {
++		if (!v->current_order.IsType(OT_AUTOMATIC) && v->cur_order_index == 0 && travelling) {
+ 			/* If we just started we would have returned earlier and have not reached
+ 			 * this code. So obviously, we have completed our round: So turn autofill
+ 			 * off again. */
+diff --git a/src/vehicle.cpp b/src/vehicle.cpp
+index b7bae6c..c59962b 100644
+--- a/src/vehicle.cpp
++++ b/src/vehicle.cpp
+@@ -1197,7 +1197,7 @@ void VehicleEnterDepot(Vehicle *v)
+ 	if (v->current_order.IsType(OT_GOTO_DEPOT)) {
+ 		SetWindowDirty(WC_VEHICLE_VIEW, v->index);
+ 
+-		const Order *real_order = v->GetOrder(v->cur_order_index);
++		const Order *real_order = v->GetOrder(v->cur_order_index, true);
+ 		Order t = v->current_order;
+ 		v->current_order.MakeDummy();
+ 
+@@ -1721,8 +1721,16 @@ void Vehicle::BeginLoading()
+ 		 * whether the train is lost or not; not marking a train lost
+ 		 * that arrives at random stations is bad. */
+ 		this->current_order.SetNonStopType(ONSF_NO_STOP_AT_ANY_STATION);
+-
++		this->orders.list->DeleteAutoOrders(this->cur_order_index);
+ 	} else {
++		Order *in_list = this->GetOrder(this->cur_order_index);
++		if (in_list->IsType(OT_AUTOMATIC)) {
++			in_list->MakeAutomatic(this->last_station_visited);
++		} else {
++			Order *auto_order = new Order();
++			auto_order->MakeAutomatic(this->last_station_visited);
++			this->orders.list->InsertOrderAt(auto_order, this->cur_order_index);
++		}
+ 		current_order.MakeLoading(false);
+ 	}
+ 
+@@ -1780,7 +1788,7 @@ void Vehicle::HandleLoading(bool mode)
+ 			this->LeaveStation();
+ 
+ 			/* If this was not the final order, don't remove it from the list. */
+-			if (!at_destination_station) return;
++			if (!at_destination_station) break;
+ 			break;
+ 		}
+ 
+diff --git a/src/vehicle_base.h b/src/vehicle_base.h
+index 4dfa4e6..c320e80 100644
+--- a/src/vehicle_base.h
++++ b/src/vehicle_base.h
+@@ -641,11 +641,12 @@ public:
+ 	/**
+ 	 * Returns order 'index' of a vehicle or NULL when it doesn't exists
+ 	 * @param index the order to fetch
++	 * @param no_auto  if set the next non-automatic order after the order at index is returned
+ 	 * @return the found (or not) order
+ 	 */
+-	inline Order *GetOrder(int index) const
++	inline Order *GetOrder(int index, bool no_auto = false) const
+ 	{
+-		return (this->orders.list == NULL) ? NULL : this->orders.list->GetOrderAt(index);
++		return (this->orders.list == NULL) ? NULL : this->orders.list->GetOrderAt(index, no_auto);
+ 	}
+ 
+ 	/**
