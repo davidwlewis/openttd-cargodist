@@ -1370,7 +1370,7 @@ index 46c8045..2f8587a 100644
  		v->engine_type = e->index;
  		v->gcache.first_engine = INVALID_ENGINE; // needs to be set before first callback
 diff --git a/src/vehicle.cpp b/src/vehicle.cpp
-index bc54690..55fea16 100644
+index bc54690..bd87528 100644
 --- a/src/vehicle.cpp
 +++ b/src/vehicle.cpp
 @@ -1231,7 +1231,7 @@ void VehicleEnterDepot(Vehicle *v)
@@ -1395,14 +1395,15 @@ index bc54690..55fea16 100644
  		/* Furthermore add the Non Stop flag to mark that this station
  		 * is the actual destination of the vehicle, which is (for example)
  		 * necessary to be known for HandleTrainLoading to determine
-@@ -1755,10 +1761,36 @@ void Vehicle::BeginLoading()
+@@ -1755,10 +1761,37 @@ void Vehicle::BeginLoading()
  		this->current_order.SetNonStopType(ONSF_NO_STOP_AT_ANY_STATION);
  
  	} else {
 +		Order *in_list = this->GetOrder(this->cur_order_index);
-+		if ((in_list == NULL && this->cur_order_index == 0) || 
++		if (this->orders.list->GetNumOrders() < MAX_VEH_ORDER_ID &&
++				((in_list == NULL && this->cur_order_index == 0) ||
 +				(in_list != NULL && (!in_list->IsType(OT_AUTOMATIC) || 
-+				in_list->GetDestination() != this->last_station_visited))) {
++				in_list->GetDestination() != this->last_station_visited)))) {
 +			Order *auto_order = new Order();
 +			auto_order->MakeAutomatic(this->last_station_visited);
 +			InsertOrder(this, auto_order, this->cur_order_index);
@@ -1433,7 +1434,7 @@ index bc54690..55fea16 100644
  
  	PrepareUnload(this);
  
-@@ -1772,6 +1804,19 @@ void Vehicle::BeginLoading()
+@@ -1772,6 +1805,19 @@ void Vehicle::BeginLoading()
  	this->MarkDirty();
  }
  
@@ -1453,7 +1454,7 @@ index bc54690..55fea16 100644
  void Vehicle::LeaveStation()
  {
  	assert(current_order.IsType(OT_LOADING));
-@@ -1785,6 +1830,27 @@ void Vehicle::LeaveStation()
+@@ -1785,6 +1831,27 @@ void Vehicle::LeaveStation()
  	Station *st = Station::Get(this->last_station_visited);
  	st->loading_vehicles.remove(this);
  
@@ -1481,7 +1482,7 @@ index bc54690..55fea16 100644
  	HideFillingPercent(&this->fill_percent_te_id);
  
  	if (this->type == VEH_TRAIN && !(this->vehstatus & VS_CRASHED)) {
-@@ -1812,7 +1878,7 @@ void Vehicle::HandleLoading(bool mode)
+@@ -1812,7 +1879,7 @@ void Vehicle::HandleLoading(bool mode)
  			this->LeaveStation();
  
  			/* If this was not the final order, don't remove it from the list. */
@@ -1490,7 +1491,7 @@ index bc54690..55fea16 100644
  			break;
  		}
  
-@@ -2143,6 +2209,20 @@ void Vehicle::RemoveFromShared()
+@@ -2143,6 +2210,20 @@ void Vehicle::RemoveFromShared()
  	this->previous_shared = NULL;
  }
  
