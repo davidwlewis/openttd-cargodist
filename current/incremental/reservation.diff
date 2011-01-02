@@ -856,7 +856,7 @@ index f6e40e7..aa2a31e 100644
  		     SLE_VAR(Vehicle, day_counter,           SLE_UINT8),
  		     SLE_VAR(Vehicle, tick_counter,          SLE_UINT8),
 diff --git a/src/vehicle.cpp b/src/vehicle.cpp
-index ce1f2ab..800add5 100644
+index 219ac87..0779a31 100644
 --- a/src/vehicle.cpp
 +++ b/src/vehicle.cpp
 @@ -663,10 +663,11 @@ void Vehicle::PreDestructor()
@@ -873,7 +873,7 @@ index ce1f2ab..800add5 100644
  		delete this->cargo_payment;
  	}
  
-@@ -1790,6 +1791,22 @@ void Vehicle::BeginLoading()
+@@ -1791,6 +1792,22 @@ void Vehicle::BeginLoading()
  	this->MarkDirty();
  }
  
@@ -896,7 +896,7 @@ index ce1f2ab..800add5 100644
  void Vehicle::LeaveStation()
  {
  	assert(current_order.IsType(OT_LOADING));
-@@ -1801,6 +1818,7 @@ void Vehicle::LeaveStation()
+@@ -1802,6 +1819,7 @@ void Vehicle::LeaveStation()
  
  	current_order.MakeLeaveStation();
  	Station *st = Station::Get(this->last_station_visited);
