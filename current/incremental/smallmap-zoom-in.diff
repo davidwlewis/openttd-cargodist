@@ -1,5 +1,5 @@
 diff --git a/src/smallmap_gui.cpp b/src/smallmap_gui.cpp
-index efb3d8d..7471951 100644
+index efb3d8d..c2d211c 100644
 --- a/src/smallmap_gui.cpp
 +++ b/src/smallmap_gui.cpp
 @@ -574,6 +574,27 @@ class SmallMapWindow : public Window {
@@ -26,7 +26,7 @@ index efb3d8d..7471951 100644
 +
 +	typedef std::list<VehicleAndPosition> VehicleList;
 +	VehicleList vehicles_on_map; ///< cached vehicle positions to avoid glitches
-+	
++
  	/** Available kinds of zoomlevel changes. */
  	enum ZoomLevelChange {
  		ZLC_INITIALIZE, ///< Initialize zoom level.
@@ -306,7 +306,7 @@ index efb3d8d..7471951 100644
  		void *ptr = blitter->MoveTo(dpi->dst_ptr, -dx - 4, 0);
  		int x = - dx - 4;
  		int y = 0;
-+		int increment = this->zoom > 0 ? this->zoom * TILE_SIZE : TILE_SIZE / (-this->zoom); 
++		int increment = this->zoom > 0 ? this->zoom * TILE_SIZE : TILE_SIZE / (-this->zoom);
  
  		for (;;) {
  			/* Distance from left edge */
