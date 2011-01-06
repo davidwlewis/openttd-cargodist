@@ -800,20 +800,20 @@ index 9710885..e40fbd3 100644
  	}
  
 diff --git a/src/saveload/saveload.cpp b/src/saveload/saveload.cpp
-index 85a2579..ccb7698 100644
+index b56fe4b..8c17015 100644
 --- a/src/saveload/saveload.cpp
 +++ b/src/saveload/saveload.cpp
-@@ -221,7 +221,7 @@
-  *  154   21426
+@@ -222,7 +222,7 @@
   *  155   21453
+  *  156   21728
   */
--extern const uint16 SAVEGAME_VERSION = 155; ///< Current savegame version of OpenTTD.
+-extern const uint16 SAVEGAME_VERSION = 156; ///< Current savegame version of OpenTTD.
 +extern const uint16 SAVEGAME_VERSION = SL_RESERVATION; ///< Current savegame version of OpenTTD.
  
  SavegameType _savegame_type; ///< type of savegame we are loading
  
 diff --git a/src/saveload/saveload.h b/src/saveload/saveload.h
-index f9d1914..c0252d7 100644
+index f9d1914..e500fd5 100644
 --- a/src/saveload/saveload.h
 +++ b/src/saveload/saveload.h
 @@ -88,9 +88,6 @@ enum SLRefType {
@@ -835,7 +835,7 @@ index f9d1914..c0252d7 100644
 + * SL_TRUNK is always the current trunk version.
 + */
 +enum SaveLoadVersions {
-+	SL_TRUNK = 155,
++	SL_TRUNK = 156,
 +	SL_RESERVATION = SL_TRUNK + 10,
 +
 +	/** Highest possible savegame version. */
@@ -844,7 +844,7 @@ index f9d1914..c0252d7 100644
 +
  #endif /* SAVELOAD_H */
 diff --git a/src/saveload/vehicle_sl.cpp b/src/saveload/vehicle_sl.cpp
-index f6e40e7..aa2a31e 100644
+index 4d65a12..f848ec0 100644
 --- a/src/saveload/vehicle_sl.cpp
 +++ b/src/saveload/vehicle_sl.cpp
 @@ -462,6 +462,7 @@ const SaveLoad *GetVehicleDescription(VehicleType vt)
@@ -905,7 +905,7 @@ index 219ac87..0779a31 100644
  
  	HideFillingPercent(&this->fill_percent_te_id);
 diff --git a/src/vehicle_base.h b/src/vehicle_base.h
-index 3d956b1..0e64d99 100644
+index 1e2ae6c..3288b6b 100644
 --- a/src/vehicle_base.h
 +++ b/src/vehicle_base.h
 @@ -238,6 +238,7 @@ public:
