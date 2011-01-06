@@ -5817,7 +5817,7 @@ index 7fffc3e..58fa99d 100644
  
  		v->reliability = e->reliability;
 diff --git a/src/smallmap_gui.cpp b/src/smallmap_gui.cpp
-index efb3d8d..21afd27 100644
+index efb3d8d..2c15111 100644
 --- a/src/smallmap_gui.cpp
 +++ b/src/smallmap_gui.cpp
 @@ -26,8 +26,11 @@
@@ -5988,7 +5988,7 @@ index efb3d8d..21afd27 100644
 +
 +	typedef std::list<VehicleAndPosition> VehicleList;
 +	VehicleList vehicles_on_map; ///< cached vehicle positions to avoid glitches
-+	
++
  	/** Available kinds of zoomlevel changes. */
  	enum ZoomLevelChange {
  		ZLC_INITIALIZE, ///< Initialize zoom level.
@@ -6323,9 +6323,9 @@ index efb3d8d..21afd27 100644
 +					}
 +				}
 +			}
- 		}
- 	}
- 
++		}
++	}
++
 +	FORCEINLINE Point GetStationMiddle(const Station *st) const
 +	{
 +		int x = (st->rect.right + st->rect.left + 1) / 2;
@@ -6381,10 +6381,10 @@ index efb3d8d..21afd27 100644
 +			if (q >= 160) r++;
 +
 +			DrawVertex(pt.x, pt.y, r, colour, _colour_gradient[COLOUR_GREY][supply_details == st ? 3 : 1]);
-+		}
+ 		}
 +		return (supply_details == NULL) ? INVALID_STATION : supply_details->index;
-+	}
-+
+ 	}
+ 
 +	class LinkLineDrawer {
 +
 +	public:
@@ -6527,7 +6527,7 @@ index efb3d8d..21afd27 100644
  		void *ptr = blitter->MoveTo(dpi->dst_ptr, -dx - 4, 0);
  		int x = - dx - 4;
  		int y = 0;
-+		int increment = this->zoom > 0 ? this->zoom * TILE_SIZE : TILE_SIZE / (-this->zoom); 
++		int increment = this->zoom > 0 ? this->zoom * TILE_SIZE : TILE_SIZE / (-this->zoom);
  
  		for (;;) {
  			/* Distance from left edge */
@@ -6623,17 +6623,18 @@ index efb3d8d..21afd27 100644
  		this->LowerWidget(this->map_type + SM_WIDGET_CONTOUR);
  
  		BuildLandLegend();
-@@ -1083,8 +1495,7 @@ public:
+@@ -1083,8 +1495,8 @@ public:
  	 */
  	uint GetLegendHeight(uint num_columns) const
  	{
 -		uint num_rows = max(this->min_number_of_fixed_rows, CeilDiv(max(_smallmap_company_count, _smallmap_industry_count), num_columns));
 -		return WD_FRAMERECT_TOP + WD_FRAMERECT_BOTTOM + num_rows * FONT_HEIGHT_SMALL;
-+		return WD_FRAMERECT_TOP + WD_FRAMERECT_BOTTOM + this->GetMaxNumberRowsLegend(num_columns) * FONT_HEIGHT_SMALL;
++		return WD_FRAMERECT_TOP + WD_FRAMERECT_BOTTOM +
++				this->GetNumberRowsLegend(num_columns) * FONT_HEIGHT_SMALL;
  	}
  
  	virtual void SetStringParameters(int widget) const
-@@ -1110,6 +1521,9 @@ public:
+@@ -1110,6 +1522,9 @@ public:
  					SetDParam(0, tbl->legend);
  					SetDParam(1, IndustryPool::MAX_SIZE);
  					str = STR_SMALLMAP_INDUSTRY;
@@ -6643,7 +6644,7 @@ index efb3d8d..21afd27 100644
  				} else if (i == SMT_OWNER) {
  					if (tbl->u.company != INVALID_COMPANY) {
  						if (!Company::IsValidID(tbl->u.company)) {
-@@ -1171,7 +1585,7 @@ public:
+@@ -1171,7 +1586,7 @@ public:
  
  			case SM_WIDGET_LEGEND: {
  				uint columns = this->GetNumberColumnsLegend(r.right - r.left + 1);
@@ -6652,7 +6653,7 @@ index efb3d8d..21afd27 100644
  				bool rtl = _current_text_dir == TD_RTL;
  				uint y_org = r.top + WD_FRAMERECT_TOP;
  				uint x = rtl ? r.right - this->column_width - WD_FRAMERECT_RIGHT : r.left + WD_FRAMERECT_LEFT;
-@@ -1184,8 +1598,23 @@ public:
+@@ -1184,8 +1599,23 @@ public:
  				uint blob_left  = rtl ? this->column_width - 1 - LEGEND_BLOB_WIDTH : 0;
  				uint blob_right = rtl ? this->column_width - 1 : LEGEND_BLOB_WIDTH;
  
@@ -6677,7 +6678,7 @@ index efb3d8d..21afd27 100644
  						/* Column break needed, continue at top, COLUMN_WIDTH pixels
  						 * (one "row") to the right. */
  						x += rtl ? -(int)this->column_width : this->column_width;
-@@ -1193,35 +1622,32 @@ public:
+@@ -1193,35 +1623,32 @@ public:
  						i = 1;
  					}
  
@@ -6739,32 +6740,25 @@ index efb3d8d..21afd27 100644
  					}
  					GfxFillRect(x + blob_left + 1, y + 2, x + blob_right - 1, y + row_height - 2, tbl->colour); // Legend colour
  
-@@ -1231,7 +1657,61 @@ public:
- 		}
+@@ -1232,6 +1659,54 @@ public:
  	}
  
+ 	/**
++	 * Get the number of rows in the legend from the number of columns. Those
++	 * are at least min_number_of_fixed_rows and possibly more if there are so
++	 * many cargoes, industry types or companies that they won't fit in the
++	 * available space.
++	 * @param columns Number of columns in the legend.
++	 * @return Number of rows needed for everything to fit in.
++	 */
 +	uint GetNumberRowsLegend(uint columns) const
 +	{
-+		switch (this->map_type) {
-+			case SMT_INDUSTRY:
-+				return max(this->min_number_of_fixed_rows, CeilDiv(_smallmap_industry_count, columns));
-+			case SMT_LINKSTATS:
-+				return max(this->min_number_of_fixed_rows, CeilDiv(_smallmap_cargo_count, columns));
-+			case SMT_OWNER:
-+				return max(this->min_number_of_fixed_rows, CeilDiv(_smallmap_company_count, columns));
-+			default:
-+				return this->min_number_of_fixed_rows;
-+		}
-+	}
-+
-+	uint GetMaxNumberRowsLegend(uint columns) const
-+	{
 +		return max(this->min_number_of_fixed_rows, CeilDiv(
-+				max(max(_smallmap_cargo_count, _smallmap_industry_count), _smallmap_company_count),
-+				columns));
++				max(max(_smallmap_cargo_count, _smallmap_industry_count),
++				_smallmap_company_count), columns));
 +	}
 +
- 	/**
++	/**
 +	 * Select and toggle a legend item. When CTRL is pressed, disable all other
 +	 * items in the group defined by begin_legend_item and end_legend_item and
 +	 * keep the clicked one enabled even if it was already enabled before. If
@@ -6801,7 +6795,7 @@ index efb3d8d..21afd27 100644
  	 * Select a new map type.
  	 * @param map_type New map type.
  	 */
-@@ -1266,9 +1746,10 @@ public:
+@@ -1266,9 +1741,10 @@ public:
  				const NWidgetBase *wid = this->GetWidget<NWidgetBase>(SM_WIDGET_MAP);
  				Window *w = FindWindowById(WC_MAIN_WINDOW, 0);
  				int sub;
@@ -6815,7 +6809,7 @@ index efb3d8d..21afd27 100644
  
  				w->viewport->follow_vehicle = INVALID_VEHICLE;
  				w->viewport->dest_scrollpos_x = pt.x - (w->viewport->virtual_width  >> 1);
-@@ -1290,6 +1771,7 @@ public:
+@@ -1290,6 +1766,7 @@ public:
  			case SM_WIDGET_CONTOUR:    // Show land contours
  			case SM_WIDGET_VEHICLES:   // Show vehicles
  			case SM_WIDGET_INDUSTRIES: // Show industries
@@ -6823,7 +6817,7 @@ index efb3d8d..21afd27 100644
  			case SM_WIDGET_ROUTES:     // Show transport routes
  			case SM_WIDGET_VEGETATION: // Show vegetation
  			case SM_WIDGET_OWNERS:     // Show land owners
-@@ -1313,12 +1795,12 @@ public:
+@@ -1313,12 +1790,12 @@ public:
  
  			case SM_WIDGET_LEGEND: // Legend
  				/* If industry type small map*/
@@ -6839,7 +6833,7 @@ index efb3d8d..21afd27 100644
  					if (line >= number_of_rows) break;
  
  					bool rtl = _current_text_dir == TD_RTL;
-@@ -1326,65 +1808,19 @@ public:
+@@ -1326,65 +1803,19 @@ public:
  					if (rtl) x = wi->current_x - x;
  					uint column = (x - WD_FRAMERECT_LEFT) / this->column_width;
  
@@ -6917,7 +6911,7 @@ index efb3d8d..21afd27 100644
  						}
  					}
  					this->SetDirty();
-@@ -1392,30 +1828,25 @@ public:
+@@ -1392,30 +1823,25 @@ public:
  				break;
  
  			case SM_WIDGET_ENABLE_ALL:
@@ -6964,7 +6958,7 @@ index efb3d8d..21afd27 100644
  
  			case SM_WIDGET_SHOW_HEIGHT: // Enable/disable showing of heightmap.
  				_smallmap_show_heightmap = !_smallmap_show_heightmap;
-@@ -1477,6 +1908,8 @@ public:
+@@ -1477,6 +1903,8 @@ public:
  		/* Update the window every now and then */
  		if (--this->refresh != 0) return;
  
@@ -6973,7 +6967,7 @@ index efb3d8d..21afd27 100644
  		this->refresh = FORCE_REFRESH_PERIOD;
  		this->SetDirty();
  	}
-@@ -1492,8 +1925,13 @@ public:
+@@ -1492,8 +1920,13 @@ public:
  	{
  		const NWidgetBase *wi = this->GetWidget<NWidgetBase>(SM_WIDGET_MAP);
  		Point hv = InverseRemapCoords(wi->current_x * TILE_SIZE / 2, wi->current_y * TILE_SIZE / 2);
@@ -6989,7 +6983,7 @@ index efb3d8d..21afd27 100644
  
  		if (sx < -hv.x) {
  			sx = -hv.x;
-@@ -1523,8 +1961,8 @@ public:
+@@ -1523,8 +1956,8 @@ public:
  
  		/* While tile is at (delta.x, delta.y)? */
  		int sub;
@@ -7000,7 +6994,7 @@ index efb3d8d..21afd27 100644
  
  		this->SetDirty();
  	}
-@@ -1536,7 +1974,7 @@ public:
+@@ -1536,7 +1969,7 @@ public:
  
  		int sub;
  		const NWidgetBase *wid = this->GetWidget<NWidgetBase>(SM_WIDGET_MAP);
@@ -7009,7 +7003,7 @@ index efb3d8d..21afd27 100644
  		this->SetNewScroll(sxy.x, sxy.y, sub);
  		this->SetDirty();
  	}
-@@ -1637,6 +2075,8 @@ static const NWidgetPart _nested_smallmap_bar[] = {
+@@ -1637,6 +2070,8 @@ static const NWidgetPart _nested_smallmap_bar[] = {
  							SetDataTip(SPR_IMG_ZOOMIN, STR_TOOLBAR_TOOLTIP_ZOOM_THE_VIEW_IN), SetFill(1, 1),
  					NWidget(WWT_PUSHIMGBTN, COLOUR_BROWN, SM_WIDGET_CENTERMAP),
  							SetDataTip(SPR_IMG_SMALLMAP, STR_SMALLMAP_CENTER), SetFill(1, 1),
@@ -7018,7 +7012,7 @@ index efb3d8d..21afd27 100644
  					NWidget(WWT_IMGBTN, COLOUR_BROWN, SM_WIDGET_CONTOUR),
  							SetDataTip(SPR_IMG_SHOW_COUNTOURS, STR_SMALLMAP_TOOLTIP_SHOW_LAND_CONTOURS_ON_MAP), SetFill(1, 1),
  					NWidget(WWT_IMGBTN, COLOUR_BROWN, SM_WIDGET_VEHICLES),
-@@ -1650,6 +2090,8 @@ static const NWidgetPart _nested_smallmap_bar[] = {
+@@ -1650,6 +2085,8 @@ static const NWidgetPart _nested_smallmap_bar[] = {
  							SetDataTip(SPR_IMG_ZOOMOUT, STR_TOOLBAR_TOOLTIP_ZOOM_THE_VIEW_OUT), SetFill(1, 1),
  					NWidget(WWT_IMGBTN, COLOUR_BROWN, SM_WIDGET_TOGGLETOWNNAME),
  							SetDataTip(SPR_IMG_TOWN, STR_SMALLMAP_TOOLTIP_TOGGLE_TOWN_NAMES_ON_OFF), SetFill(1, 1),
