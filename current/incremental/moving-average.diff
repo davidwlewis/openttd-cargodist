@@ -81,10 +81,10 @@ index efcf338..613cd2b 100644
  network/network_base.h
 diff --git a/src/moving_average.cpp b/src/moving_average.cpp
 new file mode 100644
-index 0000000..3028e33
+index 0000000..22c3ccc
 --- /dev/null
 +++ b/src/moving_average.cpp
-@@ -0,0 +1,27 @@
+@@ -0,0 +1,28 @@
 +/* $Id$ */
 +
 +/*
@@ -96,6 +96,7 @@ index 0000000..3028e33
 +
 +/** @file moving_average.cpp Implementation of moving average functions. */
 +
++#include "stdafx.h"
 +#include "moving_average.h"
 +#include "date_func.h"
 +
@@ -114,10 +115,10 @@ index 0000000..3028e33
 +}
 diff --git a/src/moving_average.h b/src/moving_average.h
 new file mode 100644
-index 0000000..a3e12b5
+index 0000000..3a4d2eb
 --- /dev/null
 +++ b/src/moving_average.h
-@@ -0,0 +1,74 @@
+@@ -0,0 +1,78 @@
 +/* $Id$ */
 +
 +/*
@@ -132,7 +133,6 @@ index 0000000..a3e12b5
 +#ifndef MOVING_AVERAGE_H_
 +#define MOVING_AVERAGE_H_
 +
-+#include "stdafx.h"
 +#include "settings_type.h"
 +#include "core/math_func.hpp"
 +
@@ -168,9 +168,14 @@ index 0000000..a3e12b5
 +	}
 +
 +	/**
-+	 * Get the current average for one month from the given value.
++	 * Get the current average for 30 "length units" from the given value.
++	 * Mind that no one forces you to decrease the average daily. If you
++	 * don't this is not a real "monthly" value. In any case it's not really
++	 * "monthly" as we don't account for months with different numbers of
++	 * days than 30. It doesn't matter, though. The point is to get an
++	 * average over a defined past timeframe.
 +	 * @param value Raw moving average.
-+	 * @return Monthly average.
++	 * @return 30 "length unit" average.
 +	 */
 +	FORCEINLINE Tvalue Monthly(const Tvalue &value) const
 +	{
