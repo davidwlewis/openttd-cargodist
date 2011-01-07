@@ -5453,7 +5453,7 @@ index b400861..4bf5646 100644
  
  void UpdateOldAircraft();
 diff --git a/src/saveload/station_sl.cpp b/src/saveload/station_sl.cpp
-index 9e48724..aded6fb 100644
+index 9e48724..ff5fe61 100644
 --- a/src/saveload/station_sl.cpp
 +++ b/src/saveload/station_sl.cpp
 @@ -205,9 +205,11 @@ static const SaveLoad _old_station_desc[] = {
@@ -5519,15 +5519,14 @@ index 9e48724..aded6fb 100644
  /**
   * Wrapper function to get the GoodsEntry's internal structure while
   * some of the variables itself are private.
-@@ -238,15 +283,49 @@ const SaveLoad *GetGoodsDesc()
- 		     SLE_VAR(GoodsEntry, last_age,            SLE_UINT8),
+@@ -239,14 +284,48 @@ const SaveLoad *GetGoodsDesc()
  		SLEG_CONDVAR(            _cargo_feeder_share, SLE_FILE_U32 | SLE_VAR_I64, 14, 64),
  		SLEG_CONDVAR(            _cargo_feeder_share, SLE_INT64,                  65, 67),
-+		SLEG_CONDLST(            _packets,            REF_CARGO_PACKET,           68, SL_CARGOMAP - 1),
-+		SLEG_CONDVAR(            _num_dests,          SLE_UINT32,        SL_CARGOMAP, SL_MAX_VERSION),
  		 SLE_CONDVAR(GoodsEntry, amount_fract,        SLE_UINT8,                 150, SL_MAX_VERSION),
 -		 SLE_CONDLST(GoodsEntry, cargo.packets,       REF_CARGO_PACKET,           68, SL_MAX_VERSION),
 -
++		SLEG_CONDLST(            _packets,            REF_CARGO_PACKET,           68, SL_CARGOMAP - 1),
++		SLEG_CONDVAR(            _num_dests,          SLE_UINT32,        SL_CARGOMAP, SL_MAX_VERSION),
 +		 SLE_CONDVAR(GoodsEntry, supply,              SLE_UINT32,      SL_CAPACITIES, SL_MAX_VERSION),
 +		 SLE_CONDVAR(GoodsEntry, supply_new,          SLE_UINT32,      SL_CAPACITIES, SL_MAX_VERSION),
 +		SLEG_CONDVAR(            _num_links,          SLE_UINT16,      SL_CAPACITIES, SL_MAX_VERSION),
