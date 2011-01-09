@@ -1,0 +1,988 @@
+diff --git a/src/aircraft_cmd.cpp b/src/aircraft_cmd.cpp
+index 9afad2f..2171683 100644
+--- a/src/aircraft_cmd.cpp
++++ b/src/aircraft_cmd.cpp
+@@ -268,6 +268,7 @@ CommandCost CmdBuildAircraft(TileIndex tile, DoCommandFlag flags, const Engine *
+ 
+ 		v->name = NULL;
+ 		v->last_station_visited = INVALID_STATION;
++		v->last_loading_station = INVALID_STATION;
+ 
+ 		v->acceleration = avi->acceleration;
+ 		v->engine_type = e->index;
+diff --git a/src/core/math_func.cpp b/src/core/math_func.cpp
+index 7f0630a..bcddbfa 100644
+--- a/src/core/math_func.cpp
++++ b/src/core/math_func.cpp
+@@ -46,3 +46,24 @@ int GreatestCommonDivisor(int a, int b)
+ 	return a;
+ 
+ }
++
++/**
++ * Deterministic approximate division.
++ * Cancels out division errors stemming from the integer nature of the division over multiple runs.
++ * @param a Dividend.
++ * @param b Divisor.
++ * @return a/b or (a/b)+1.
++ */
++int DivideApprox(int a, int b)
++{
++	int random_like = ((a + b) * (a - b)) % b;
++
++	int remainder = a % b;
++
++	int ret = a / b;
++	if (abs(random_like) < abs(remainder)) {
++		ret += ((a < 0) ^ (b < 0)) ? -1 : 1;
++	}
++
++	return ret;
++}
+diff --git a/src/core/math_func.hpp b/src/core/math_func.hpp
+index 19f2f53..a824af3 100644
+--- a/src/core/math_func.hpp
++++ b/src/core/math_func.hpp
+@@ -317,6 +317,7 @@ static FORCEINLINE uint ToPercent16(uint i)
+ 
+ int LeastCommonMultiple(int a, int b);
+ int GreatestCommonDivisor(int a, int b);
++int DivideApprox(int a, int b);
+ 
+ /**
+  * Computes ceil(a / b) for non-negative a and b.
+diff --git a/src/moving_average.cpp b/src/moving_average.cpp
+index 22c3ccc..9b840e6 100644
+--- a/src/moving_average.cpp
++++ b/src/moving_average.cpp
+@@ -12,6 +12,7 @@
+ #include "stdafx.h"
+ #include "moving_average.h"
+ #include "date_func.h"
++#include "station_base.h"
+ 
+ /**
+  * Run moving average decrease function on all items from a pool which are due
+@@ -26,3 +27,6 @@ template <class Titem> void RunAverages()
+ 		if (item != NULL) item->RunAverages();
+ 	}
+ }
++
++template class MovingAverage<uint>;
++template void RunAverages<Station>();
+diff --git a/src/order_base.h b/src/order_base.h
+index b04ca2b..0afb95c 100644
+--- a/src/order_base.h
++++ b/src/order_base.h
+@@ -272,6 +272,16 @@ private:
+ 	friend void AfterLoadVehicles(bool part_of_load); ///< For instantiating the shared vehicle chain
+ 	friend const struct SaveLoad *GetOrderListDescription(); ///< Saving and loading of order lists.
+ 
++	/**
++	 * Get the order after the given one or the first one, if the given one is the
++	 * last one.
++	 * @param curr Order to find the next one for.
++	 * @return Next order.
++	 */
++	inline const Order *GetNext(const Order *curr) const { return (curr->next == NULL) ? this->GetFirstOrder() : curr->next; }
++
++	StationID GetNextStoppingStation(const Order *next, StationID curr_station, uint hops) const;
++
+ 	Order *first;                     ///< First order of the order list.
+ 	VehicleOrderID num_orders;        ///< NOSAVE: How many orders there are in the list.
+ 	VehicleOrderID num_manual_orders; ///< NOSAVE: How many manually added orders are there in the list.
+@@ -322,6 +332,8 @@ public:
+ 	 */
+ 	inline Order *GetLastOrder() const { return this->GetOrderAt(this->num_orders - 1); }
+ 
++	StationID GetNextStoppingStation(VehicleOrderID curr_order, StationID curr_station) const;
++
+ 	/**
+ 	 * Get number of orders in the order list.
+ 	 * @return number of orders in the chain.
+diff --git a/src/order_cmd.cpp b/src/order_cmd.cpp
+index fd4b64e..a358a7a 100644
+--- a/src/order_cmd.cpp
++++ b/src/order_cmd.cpp
+@@ -260,6 +260,61 @@ Order *OrderList::GetOrderAt(int index) const
+ 	return order;
+ }
+ 
++/**
++ * Recursively determine the next deterministic station to stop at.
++ * @param next First order to check.
++ * @param curr_station Station the vehicle is just visiting or INVALID_STATION.
++ * @param hops Number of orders we have already checked.
++ * @return Next stoppping station or INVALID_STATION.
++ */
++StationID OrderList::GetNextStoppingStation(const Order *next, StationID curr_station, uint hops) const
++{
++	if (next == NULL || hops > this->GetNumOrders()) {
++		return INVALID_STATION;
++	}
++
++	if (next->IsType(OT_CONDITIONAL)) {
++		StationID skip_to = this->GetNextStoppingStation(this->GetOrderAt(next->GetConditionSkipToOrder()), curr_station, hops + 1);
++		StationID advance = this->GetNextStoppingStation(this->GetNext(next), curr_station, hops + 1);
++		return (skip_to == advance) ? skip_to : INVALID_STATION;
++	}
++
++	if (!(next->IsType(OT_GOTO_STATION) || next->IsType(OT_AUTOMATIC)) ||
++			(next->GetNonStopType() & ONSF_NO_STOP_AT_DESTINATION_STATION) != 0 ||
++			next->GetDestination() == curr_station) {
++		return GetNextStoppingStation(this->GetNext(next), curr_station, hops + 1);
++	}
++
++	return next->GetDestination();
++}
++
++/**
++ * Get the next station the vehicle will stop at, if that is deterministic.
++ * @param curr_order ID of the current order.
++ * @param curr_station Station the vehicle is just visiting or INVALID_STATION.
++ * @return ID of the next station the vehicle will stop at or INVALID_STATION.
++ */
++StationID OrderList::GetNextStoppingStation(VehicleOrderID curr_order, StationID curr_station) const
++{
++	const Order *curr = this->GetOrderAt(curr_order);
++	if (curr == NULL) {
++		curr = this->GetFirstOrder();
++		if (curr == NULL) return INVALID_STATION;
++	}
++
++	/* If we're not at a station or the current order doesn't yield the station
++	 * we're at, we have to check the current order; otherwise we have to check
++	 * the next one.
++	 */
++	if (curr_station == INVALID_STATION ||
++			!(curr->IsType(OT_GOTO_STATION) || curr->IsType(OT_AUTOMATIC)) ||
++			curr_station != curr->GetDestination()) {
++		return this->GetNextStoppingStation(curr, curr_station, 0);
++	} else {
++		return this->GetNextStoppingStation(this->GetNext(curr), curr_station, 1);
++	}
++}
++
+ void OrderList::InsertOrderAt(Order *new_order, int index)
+ {
+ 	if (this->first == NULL) {
+@@ -718,6 +773,8 @@ void InsertOrder(Vehicle *v, Order *new_o, VehicleOrderID sel_ord)
+ 		}
+ 		/* Update any possible open window of the vehicle */
+ 		InvalidateVehicleOrder(u, INVALID_VEH_ORDER_ID | (sel_ord << 8));
++
++		RecalcFrozenIfLoading(u);
+ 	}
+ 
+ 	/* As we insert an order, the order to skip to will be 'wrong'. */
+@@ -750,6 +807,9 @@ static CommandCost DecloneOrder(Vehicle *dst, DoCommandFlag flags)
+ 	if (flags & DC_EXEC) {
+ 		DeleteVehicleOrders(dst);
+ 		InvalidateVehicleOrder(dst, -1);
++
++		RecalcFrozenIfLoading(dst);
++
+ 		InvalidateWindowClassesData(GetWindowClassForVehicleType(dst->type), 0);
+ 	}
+ 	return CommandCost();
+@@ -812,6 +872,8 @@ void DeleteOrder(Vehicle *v, VehicleOrderID sel_ord)
+ 
+ 		/* Update any possible open window of the vehicle */
+ 		InvalidateVehicleOrder(u, sel_ord | (INVALID_VEH_ORDER_ID << 8));
++
++		RecalcFrozenIfLoading(u);
+ 	}
+ 
+ 	/* As we delete an order, the order to skip to will be 'wrong'. */
+@@ -855,10 +917,10 @@ CommandCost CmdSkipToOrder(TileIndex tile, DoCommandFlag flags, uint32 p1, uint3
+ 	if (ret.Failed()) return ret;
+ 
+ 	if (flags & DC_EXEC) {
+-		v->cur_order_index = sel_ord;
+-
+ 		if (v->current_order.IsType(OT_LOADING)) v->LeaveStation();
+ 
++		v->cur_order_index = sel_ord;
++
+ 		InvalidateVehicleOrder(v, -2);
+ 	}
+ 
+@@ -923,6 +985,8 @@ CommandCost CmdMoveOrder(TileIndex tile, DoCommandFlag flags, uint32 p1, uint32
+ 			assert(v->orders.list == u->orders.list);
+ 			/* Update any possible open window of the vehicle */
+ 			InvalidateVehicleOrder(u, moving_order | (target_order << 8));
++
++			RecalcFrozenIfLoading(u);
+ 		}
+ 
+ 		/* As we move an order, the order to skip to will be 'wrong'. */
+@@ -1179,6 +1243,8 @@ CommandCost CmdModifyOrder(TileIndex tile, DoCommandFlag flags, uint32 p1, uint3
+ 				u->current_order.SetLoadType(order->GetLoadType());
+ 			}
+ 			InvalidateVehicleOrder(u, -2);
++
++			RecalcFrozenIfLoading(u);
+ 		}
+ 	}
+ 
+@@ -1311,6 +1377,8 @@ CommandCost CmdCloneOrder(TileIndex tile, DoCommandFlag flags, uint32 p1, uint32
+ 		default: return CMD_ERROR;
+ 	}
+ 
++	RecalcFrozenIfLoading(dst);
++
+ 	return CommandCost();
+ }
+ 
+@@ -1483,6 +1551,8 @@ void RemoveOrderFromAllVehicles(OrderType type, DestinationID destination)
+ 					/* In GUI, simulate by removing the order and adding it back */
+ 					InvalidateVehicleOrder(w, id | (INVALID_VEH_ORDER_ID << 8));
+ 					InvalidateVehicleOrder(w, (INVALID_VEH_ORDER_ID << 8) | id);
++
++					RecalcFrozenIfLoading(w);
+ 				}
+ 			}
+ 		}
+@@ -1522,6 +1592,8 @@ void DeleteVehicleOrders(Vehicle *v, bool keep_orderlist)
+ 		v->orders.list->FreeChain(keep_orderlist);
+ 		if (!keep_orderlist) v->orders.list = NULL;
+ 	}
++
++	RecalcFrozenIfLoading(v);
+ }
+ 
+ uint16 GetServiceIntervalClamped(uint interval, CompanyID company_id)
+diff --git a/src/roadveh_cmd.cpp b/src/roadveh_cmd.cpp
+index 422086e..7767c5c 100644
+--- a/src/roadveh_cmd.cpp
++++ b/src/roadveh_cmd.cpp
+@@ -235,6 +235,7 @@ CommandCost CmdBuildRoadVehicle(TileIndex tile, DoCommandFlag flags, const Engin
+ 		v->cargo_cap = rvi->capacity;
+ 
+ 		v->last_station_visited = INVALID_STATION;
++		v->last_loading_station = INVALID_STATION;
+ 		v->engine_type = e->index;
+ 		v->gcache.first_engine = INVALID_ENGINE; // needs to be set before first callback
+ 
+diff --git a/src/saveload/saveload.cpp b/src/saveload/saveload.cpp
+index b56fe4b..551e527 100644
+--- a/src/saveload/saveload.cpp
++++ b/src/saveload/saveload.cpp
+@@ -222,7 +222,7 @@
+  *  155   21453
+  *  156   21728
+  */
+-extern const uint16 SAVEGAME_VERSION = 156; ///< Current savegame version of OpenTTD.
++extern const uint16 SAVEGAME_VERSION = SL_CAPACITIES; ///< Current savegame version of OpenTTD.
+ 
+ SavegameType _savegame_type; ///< type of savegame we are loading
+ 
+diff --git a/src/saveload/saveload.h b/src/saveload/saveload.h
+index f9d1914..55355b1 100644
+--- a/src/saveload/saveload.h
++++ b/src/saveload/saveload.h
+@@ -88,9 +88,6 @@ enum SLRefType {
+ 	REF_ORDERLIST     = 8, ///< Load/save a reference to an orderlist.
+ };
+ 
+-/** Highest possible savegame version. */
+-#define SL_MAX_VERSION 255
+-
+ /** Flags of a chunk. */
+ enum ChunkType {
+ 	CH_RIFF         =  0,
+@@ -546,4 +543,16 @@ bool SaveloadCrashWithMissingNewGRFs();
+ extern char _savegame_format[8];
+ extern bool _do_autosave;
+ 
++/**
++ * Save/load versions used for the various branches.
++ * SL_TRUNK is always the current trunk version.
++ */
++enum SaveLoadVersions {
++	SL_TRUNK = 156,
++	SL_CAPACITIES = SL_TRUNK + 20,
++
++	/** Highest possible savegame version. */
++	SL_MAX_VERSION = 255
++};
++
+ #endif /* SAVELOAD_H */
+diff --git a/src/saveload/station_sl.cpp b/src/saveload/station_sl.cpp
+index 9e48724..13e3875 100644
+--- a/src/saveload/station_sl.cpp
++++ b/src/saveload/station_sl.cpp
+@@ -205,6 +205,7 @@ static const SaveLoad _old_station_desc[] = {
+ };
+ 
+ static uint16 _waiting_acceptance;
++static uint16 _num_links;
+ static uint16 _cargo_source;
+ static uint32 _cargo_source_xy;
+ static uint16 _cargo_days;
+@@ -217,6 +218,27 @@ static const SaveLoad _station_speclist_desc[] = {
+ 	SLE_END()
+ };
+ 
++static StationID _station_id;
++
++/**
++ * Wrapper function to get the LinkStat's internal structure while
++ * some of the variables are private.
++ * @return Saveload description for LinkStat.
++ */
++const SaveLoad *GetLinkStatDesc()
++{
++	static const SaveLoad linkstat_desc[] = {
++		SLEG_CONDVAR(             _station_id,         SLE_UINT16,      SL_CAPACITIES, SL_MAX_VERSION),
++		 SLE_CONDVAR(LinkStat,    length,              SLE_UINT32,      SL_CAPACITIES, SL_MAX_VERSION),
++		 SLE_CONDVAR(LinkStat,    capacity,            SLE_UINT32,      SL_CAPACITIES, SL_MAX_VERSION),
++		 SLE_CONDVAR(LinkStat,    frozen,              SLE_UINT32,      SL_CAPACITIES, SL_MAX_VERSION),
++		 SLE_CONDVAR(LinkStat,    usage,               SLE_UINT32,      SL_CAPACITIES, SL_MAX_VERSION),
++		 SLE_END()
++	};
++
++	return linkstat_desc;
++}
++
+ /**
+  * Wrapper function to get the GoodsEntry's internal structure while
+  * some of the variables itself are private.
+@@ -240,7 +262,9 @@ const SaveLoad *GetGoodsDesc()
+ 		SLEG_CONDVAR(            _cargo_feeder_share, SLE_INT64,                  65, 67),
+ 		 SLE_CONDVAR(GoodsEntry, amount_fract,        SLE_UINT8,                 150, SL_MAX_VERSION),
+ 		 SLE_CONDLST(GoodsEntry, cargo.packets,       REF_CARGO_PACKET,           68, SL_MAX_VERSION),
+-
++		 SLE_CONDVAR(GoodsEntry, supply,              SLE_UINT32,      SL_CAPACITIES, SL_MAX_VERSION),
++		 SLE_CONDVAR(GoodsEntry, supply_new,          SLE_UINT32,      SL_CAPACITIES, SL_MAX_VERSION),
++		SLEG_CONDVAR(            _num_links,          SLE_UINT16,      SL_CAPACITIES, SL_MAX_VERSION),
+ 		SLE_END()
+ 	};
+ 
+@@ -382,8 +406,14 @@ static void RealSave_STNN(BaseStation *bst)
+ 
+ 	if (!waypoint) {
+ 		Station *st = Station::From(bst);
+-		for (CargoID i = 0; i < NUM_CARGO; i++) {
+-			SlObject(&st->goods[i], GetGoodsDesc());
++		for (CargoID c = 0; c < NUM_CARGO; c++) {
++			_num_links = (uint16)st->goods[c].link_stats.size();
++			SlObject(&st->goods[c], GetGoodsDesc());
++			for (LinkStatMap::const_iterator it(st->goods[c].link_stats.begin()); it != st->goods[c].link_stats.end(); ++it) {
++				_station_id = it->first;
++				LinkStat ls(it->second); // make a copy to avoid constness problems
++				SlObject(&ls, GetLinkStatDesc());
++			}
+ 		}
+ 	}
+ 
+@@ -414,8 +444,14 @@ static void Load_STNN()
+ 
+ 		if (!waypoint) {
+ 			Station *st = Station::From(bst);
+-			for (CargoID i = 0; i < NUM_CARGO; i++) {
+-				SlObject(&st->goods[i], GetGoodsDesc());
++			for (CargoID c = 0; c < NUM_CARGO; c++) {
++				SlObject(&st->goods[c], GetGoodsDesc());
++				LinkStat ls;
++				for (uint16 i = 0; i < _num_links; ++i) {
++					SlObject(&ls, GetLinkStatDesc());
++					assert(!ls.HasCapacity());
++					st->goods[c].link_stats[_station_id] = ls;
++				}
+ 			}
+ 		}
+ 
+diff --git a/src/saveload/vehicle_sl.cpp b/src/saveload/vehicle_sl.cpp
+index 4d65a12..edc67a0 100644
+--- a/src/saveload/vehicle_sl.cpp
++++ b/src/saveload/vehicle_sl.cpp
+@@ -452,6 +452,7 @@ const SaveLoad *GetVehicleDescription(VehicleType vt)
+ 		     SLE_VAR(Vehicle, vehstatus,             SLE_UINT8),
+ 		 SLE_CONDVAR(Vehicle, last_station_visited,  SLE_FILE_U8  | SLE_VAR_U16,   0,   4),
+ 		 SLE_CONDVAR(Vehicle, last_station_visited,  SLE_UINT16,                   5, SL_MAX_VERSION),
++		 SLE_CONDVAR(Vehicle, last_loading_station,  SLE_UINT16,       SL_CAPACITIES, SL_MAX_VERSION),
+ 
+ 		     SLE_VAR(Vehicle, cargo_type,            SLE_UINT8),
+ 		 SLE_CONDVAR(Vehicle, cargo_subtype,         SLE_UINT8,                   35, SL_MAX_VERSION),
+@@ -742,6 +743,8 @@ void Load_VEHS()
+ 			v->last_station_visited = INVALID_STATION;
+ 		}
+ 
++		if (IsSavegameVersionBefore(SL_CAPACITIES)) v->last_loading_station = INVALID_STATION;
++
+ 		if (IsSavegameVersionBefore(5)) {
+ 			/* Convert the current_order.type (which is a mix of type and flags, because
+ 			 *  in those versions, they both were 4 bits big) to type and flags */
+diff --git a/src/ship_cmd.cpp b/src/ship_cmd.cpp
+index 7fffc3e..58fa99d 100644
+--- a/src/ship_cmd.cpp
++++ b/src/ship_cmd.cpp
+@@ -614,6 +614,7 @@ CommandCost CmdBuildShip(TileIndex tile, DoCommandFlag flags, const Engine *e, u
+ 		v->cargo_cap = svi->capacity;
+ 
+ 		v->last_station_visited = INVALID_STATION;
++		v->last_loading_station = INVALID_STATION;
+ 		v->engine_type = e->index;
+ 
+ 		v->reliability = e->reliability;
+diff --git a/src/station.cpp b/src/station.cpp
+index 003798a..6211daa 100644
+--- a/src/station.cpp
++++ b/src/station.cpp
+@@ -63,7 +63,8 @@ Station::Station(TileIndex tile) :
+ }
+ 
+ /**
+- * Clean up a station by clearing vehicle orders and invalidating windows.
++ * Clean up a station by clearing vehicle orders, invalidating windows and
++ * removing link stats.
+  * Aircraft-Hangar orders need special treatment here, as the hangars are
+  * actually part of a station (tiletype is STATION), but the order type
+  * is OT_GOTO_DEPOT.
+@@ -82,12 +83,23 @@ Station::~Station()
+ 		if (a->targetairport == this->index) a->targetairport = INVALID_STATION;
+ 	}
+ 
++	Station *st;
++	FOR_ALL_STATIONS(st) {
++		for (CargoID c = 0; c < NUM_CARGO; ++c) {
++			GoodsEntry &ge = st->goods[c];
++			ge.link_stats.erase(this->index);
++		}
++	}
++
+ 	Vehicle *v;
+ 	FOR_ALL_VEHICLES(v) {
+ 		/* Forget about this station if this station is removed */
+ 		if (v->last_station_visited == this->index) {
+ 			v->last_station_visited = INVALID_STATION;
+ 		}
++		if (v->last_loading_station == this->index) {
++			v->last_loading_station = INVALID_STATION;
++		}
+ 	}
+ 
+ 	InvalidateWindowData(WC_STATION_LIST, this->owner, 0);
+diff --git a/src/station_base.h b/src/station_base.h
+index d595379..b488aae 100644
+--- a/src/station_base.h
++++ b/src/station_base.h
+@@ -17,12 +17,152 @@
+ #include "cargopacket.h"
+ #include "industry_type.h"
+ #include "newgrf_storage.h"
++#include "moving_average.h"
++#include <map>
+ 
+ typedef Pool<BaseStation, StationID, 32, 64000> StationPool;
+ extern StationPool _station_pool;
+ 
+ static const byte INITIAL_STATION_RATING = 175;
+ 
++/**
++ * Link statistics. They include figures for capacity and usage of a link. Both
++ * are moving averages which are increased for every vehicle arriving at the
++ * destination station and decreased in regular intervals. Additionally while a
++ * vehicle is loading at the source station part of the capacity is frozen and
++ * prevented from being decreased. This is done so that the link won't break
++ * down all the time when the typical "full load" order is used.
++ */
++class LinkStat : private MovingAverage<uint> {
++private:
++	/**
++	 * Capacity of the link.
++	 * This is a moving average. Use MovingAverage::Monthly() to get a meaningful value.
++	 */
++	uint capacity;
++
++	/**
++	 * Capacity of currently loading vehicles.
++	 */
++	uint frozen;
++
++	/**
++	 * Usage of the link.
++	 * This is a moving average. Use MovingAverage::Monthly() to get a meaningful value.
++	 */
++	uint usage;
++
++public:
++	/**
++	 * Minimum length of moving averages for capacity and usage.
++	 */
++	static const uint MIN_AVERAGE_LENGTH = 96;
++
++	friend const SaveLoad *GetLinkStatDesc();
++
++	FORCEINLINE LinkStat(uint distance = 1, uint capacity = 0, uint frozen = 0, uint usage = 0) :
++		MovingAverage<uint>(distance), capacity(capacity), frozen(frozen), usage(usage) {}
++
++	/**
++	 * Reset everything to 0.
++	 */
++	FORCEINLINE void Clear()
++	{
++		this->capacity = 0;
++		this->usage = 0;
++		this->frozen = 0;
++	}
++
++	/**
++	 * Apply the moving averages to usage and capacity.
++	 */
++	FORCEINLINE void Decrease()
++	{
++		this->MovingAverage<uint>::Decrease(this->usage);
++		this->capacity = max(this->MovingAverage<uint>::Decrease(this->capacity), this->frozen);
++	}
++
++	/**
++	 * Get an estimate of the current the capacity by calculating the moving average.
++	 * @return Capacity.
++	 */
++	FORCEINLINE uint Capacity() const
++	{
++		return this->MovingAverage<uint>::Monthly(this->capacity);
++	}
++
++	/**
++	 * Get an estimage of the current usage by calculating the moving average.
++	 * @return Usage.
++	 */
++	FORCEINLINE uint Usage() const
++	{
++		return this->MovingAverage<uint>::Monthly(this->usage);
++	}
++
++	/**
++	 * Get the amount of frozen capacity.
++	 * @return Frozen capacity.
++	 */
++	FORCEINLINE uint Frozen() const
++	{
++		return this->frozen;
++	}
++
++	/**
++	 * Add some capacity and usage.
++	 * @param capacity Additional capacity.
++	 * @param usage Additional usage.
++	 */
++	FORCEINLINE void Increase(uint capacity, uint usage)
++	{
++		this->capacity += capacity;
++		this->usage += usage;
++	}
++
++	/**
++	 * Freeze some of the capacity and prevent it from being decreased by the
++	 * moving average.
++	 * @param capacity Amount of capacity to be frozen.
++	 */
++	FORCEINLINE void Freeze(uint capacity)
++	{
++		this->frozen += capacity;
++		this->capacity = max(this->frozen, this->capacity);
++	}
++
++	/**
++	 * Thaw some of the frozen capacity and make it available for Decrease().
++	 * @oaram capacity Capacity to be thawed.
++	 */
++	FORCEINLINE void Unfreeze(uint capacity)
++	{
++		this->frozen -= capacity;
++	}
++
++	/**
++	 * Thaw all frozen capacity.
++	 */
++	FORCEINLINE void Unfreeze()
++	{
++		this->frozen = 0;
++	}
++
++	/**
++	 * Check if the capacity is 0. This is necessary as Capacity() might return
++	 * 0 even if there is a miniscule amount of capacity left.
++	 * @return If capacity is 0.
++	 */
++	FORCEINLINE bool HasCapacity() const
++	{
++		return this->capacity == 0;
++	}
++};
++
++typedef std::map<StationID, LinkStat> LinkStatMap;
++
++uint GetMovingAverageLength(const Station *from, const Station *to);
++
+ struct GoodsEntry {
+ 	enum AcceptancePickup {
+ 		ACCEPTANCE,
+@@ -34,7 +174,9 @@ struct GoodsEntry {
+ 		days_since_pickup(255),
+ 		rating(INITIAL_STATION_RATING),
+ 		last_speed(0),
+-		last_age(255)
++		last_age(255),
++		supply(0),
++		supply_new(0)
+ 	{}
+ 
+ 	byte acceptance_pickup;
+@@ -42,8 +184,11 @@ struct GoodsEntry {
+ 	byte rating;
+ 	byte last_speed;
+ 	byte last_age;
+-	byte amount_fract;      ///< Fractional part of the amount in the cargo list
+-	StationCargoList cargo; ///< The cargo packets of cargo waiting in this station
++	byte amount_fract;      ///< Fractional part of the amount in the cargo list.
++	StationCargoList cargo; ///< The cargo packets of cargo waiting in this station.
++	uint supply;            ///< Cargo supplied last month.
++	uint supply_new;        ///< Cargo supplied so far this month.
++	LinkStatMap link_stats; ///< Capacities and usage statistics for outgoing links.
+ };
+ 
+ /** All airport-related information. Only valid if tile != INVALID_TILE. */
+@@ -229,6 +374,8 @@ public:
+ 	/* virtual */ uint32 GetNewGRFVariable(const ResolverObject *object, byte variable, byte parameter, bool *available) const;
+ 
+ 	/* virtual */ void GetTileArea(TileArea *ta, StationType type) const;
++
++	void RunAverages();
+ };
+ 
+ #define FOR_ALL_STATIONS(var) FOR_ALL_BASE_STATIONS_OF_TYPE(Station, var)
+diff --git a/src/station_cmd.cpp b/src/station_cmd.cpp
+index fc6faff..10e1ba5 100644
+--- a/src/station_cmd.cpp
++++ b/src/station_cmd.cpp
+@@ -45,6 +45,7 @@
+ #include "debug.h"
+ #include "core/random_func.hpp"
+ #include "company_base.h"
++#include "moving_average.h"
+ #include "table/airporttile_ids.h"
+ #include "newgrf_airporttiles.h"
+ #include "order_backup.h"
+@@ -3148,6 +3149,150 @@ static void UpdateStationRating(Station *st)
+ 	}
+ }
+ 
++/**
++ * Get the length of a moving average for a link between two stations.
++ * @param from Source station.
++ * @param to Destination station.
++ * @return Moving average length.
++ */
++uint GetMovingAverageLength(const Station *from, const Station *to)
++{
++	return LinkStat::MIN_AVERAGE_LENGTH + (DistanceManhattan(from->xy, to->xy) >> 2);
++}
++
++/**
++ * Run the moving average decrease function for all link stats.
++ */
++void Station::RunAverages()
++{
++	for (int goods_index = 0; goods_index < NUM_CARGO; ++goods_index) {
++		LinkStatMap &links = this->goods[goods_index].link_stats;
++		for (LinkStatMap::iterator i = links.begin(); i != links.end();) {
++			StationID id = i->first;
++			Station *other = Station::GetIfValid(id);
++			if (other == NULL) {
++				links.erase(i++);
++			} else {
++				LinkStat &ls = i->second;
++				ls.Decrease();
++				if (ls.HasCapacity()) {
++					links.erase(i++);
++				} else {
++					++i;
++				}
++			}
++		}
++	}
++}
++
++/**
++ * Recalculate the frozen value of the station the given vehicle is loading at
++ * if the vehicle is loading.
++ * @param v Vehicle to be examined.
++ */
++void RecalcFrozenIfLoading(const Vehicle *v)
++{
++	if (v->current_order.IsType(OT_LOADING)) {
++		RecalcFrozen(Station::Get(v->last_station_visited));
++	}
++}
++
++/**
++ * Recalculate all frozen values for all link stats of a station. This is done
++ * by adding up the capacities of all loading vehicles.
++ * @param st Station.
++ */
++void RecalcFrozen(Station *st)
++{
++	for (int goods_index = 0; goods_index < NUM_CARGO; ++goods_index) {
++		GoodsEntry &good = st->goods[goods_index];
++		LinkStatMap &links = good.link_stats;
++		for (LinkStatMap::iterator i = links.begin(); i != links.end(); ++i) {
++			i->second.Unfreeze();
++		}
++	}
++
++	std::list<Vehicle *>::iterator v_it = st->loading_vehicles.begin();
++	while(v_it != st->loading_vehicles.end()) {
++		const Vehicle *front = *v_it;
++		OrderList *orders = front->orders.list;
++		if (orders != NULL) {
++			StationID next_station_id = orders->GetNextStoppingStation(front->cur_order_index, st->index);
++			if (next_station_id != INVALID_STATION && next_station_id != st->index) {
++				IncreaseStats(st, front, next_station_id, true);
++			}
++		}
++		++v_it;
++	}
++}
++
++/**
++ * Decrease the frozen values of all link stats associated with vehicles in the
++ * given consist (ie the consist is leaving the station).
++ * @param st Station to decrease the frozen values on.
++ * @param front First vehicle in the consist.
++ * @param next_station_id Station the vehicle is leaving for.
++ */
++void DecreaseFrozen(Station *st, const Vehicle *front, StationID next_station_id)
++{
++	assert(st->index != next_station_id);
++       	assert(next_station_id != INVALID_STATION);
++	for (const Vehicle *v = front; v != NULL; v = v->Next()) {
++		if (v->cargo_cap <= 0) continue;
++
++		LinkStatMap &link_stats = st->goods[v->cargo_type].link_stats;
++		LinkStatMap::iterator lstat_it = link_stats.find(next_station_id);
++		if (lstat_it == link_stats.end()) {
++			DEBUG(misc, 1, "frozen not in linkstat list.");
++			RecalcFrozen(st);
++			return;
++		}
++
++		LinkStat &link_stat = lstat_it->second;
++		if (link_stat.Frozen() < v->cargo_cap) {
++			DEBUG(misc, 1, "frozen is smaller than cargo cap.");
++			RecalcFrozen(st);
++			return;
++		}
++		link_stat.Unfreeze(v->cargo_cap);
++		assert(!link_stat.HasCapacity());
++	}
++}
++
++/**
++ * Either freeze or increase capacity for all link stats associated with vehicles
++ * in the given consist.
++ * @param st Station to get the link stats from.
++ * @param front First vehicle in the consist.
++ * @param next_station_id Station the consist will be travelling to next.
++ * @param freeze If true, freeze capacity, otherwise increase capacity.
++ */
++void IncreaseStats(Station *st, const Vehicle *front, StationID next_station_id, bool freeze)
++{
++	Station *next = Station::GetIfValid(next_station_id);
++	assert(st->index != next_station_id && next != NULL);
++	uint average_length = GetMovingAverageLength(st, next);
++
++	for (const Vehicle *v = front; v != NULL; v = v->Next()) {
++		if (v->cargo_cap > 0) {
++			LinkStatMap &stats = st->goods[v->cargo_type].link_stats;
++			LinkStatMap::iterator i = stats.find(next_station_id);
++			if (i == stats.end()) {
++				stats.insert(std::make_pair(next_station_id, LinkStat(average_length,
++						v->cargo_cap, freeze ? v->cargo_cap : 0, freeze ? 0 : v->cargo.Count())));
++			} else {
++				LinkStat &link_stat = i->second;
++				if (freeze) {
++					link_stat.Freeze(v->cargo_cap);
++				} else {
++					link_stat.Increase(v->cargo_cap, v->cargo.Count());
++				}
++				assert(!link_stat.HasCapacity());
++			}
++		}
++	}
++}
++
+ /* called for every station each tick */
+ static void StationHandleSmallTick(BaseStation *st)
+ {
+@@ -3164,6 +3309,8 @@ void OnTick_Station()
+ {
+ 	if (_game_mode == GM_EDITOR) return;
+ 
++	RunAverages<Station>();
++
+ 	BaseStation *st;
+ 	FOR_ALL_BASE_STATIONS(st) {
+ 		StationHandleSmallTick(st);
+@@ -3182,7 +3329,13 @@ void OnTick_Station()
+ 
+ void StationMonthlyLoop()
+ {
+-	/* not used */
++	Station *st;
++	FOR_ALL_STATIONS(st) {
++		for(int goods_index = 0; goods_index < NUM_CARGO; ++goods_index) {
++			st->goods[goods_index].supply = st->goods[goods_index].supply_new;
++			st->goods[goods_index].supply_new = 0;
++		}
++	}
+ }
+ 
+ 
+@@ -3215,6 +3368,7 @@ static uint UpdateStationWaiting(Station *st, CargoID type, uint amount, SourceT
+ 	if (amount == 0) return 0;
+ 
+ 	ge.cargo.Append(new CargoPacket(st->index, st->xy, amount, source_type, source_id));
++	ge.supply_new += amount;
+ 
+ 	if (!HasBit(ge.acceptance_pickup, GoodsEntry::PICKUP)) {
+ 		InvalidateWindowData(WC_STATION_LIST, st->index);
+diff --git a/src/station_func.h b/src/station_func.h
+index 0fe5b2f..fbe0a3e 100644
+--- a/src/station_func.h
++++ b/src/station_func.h
+@@ -18,6 +18,7 @@
+ #include "road_type.h"
+ #include "cargo_type.h"
+ #include "company_type.h"
++#include "vehicle_type.h"
+ 
+ void ModifyStationRatingAround(TileIndex tile, Owner owner, int amount, uint radius);
+ 
+@@ -46,4 +47,12 @@ bool IsStationTileElectrifiable(TileIndex tile);
+ 
+ void UpdateAirportsNoise();
+ 
++void DecreaseFrozen(Station *st, const Vehicle *v, StationID next_station_id);
++
++void RecalcFrozen(Station *st);
++
++void RecalcFrozenIfLoading(const Vehicle *v);
++
++void IncreaseStats(Station *st, const Vehicle *v, StationID next_station_id, bool freeze);
++
+ #endif /* STATION_FUNC_H */
+diff --git a/src/train_cmd.cpp b/src/train_cmd.cpp
+index 46c8045..2f8587a 100644
+--- a/src/train_cmd.cpp
++++ b/src/train_cmd.cpp
+@@ -695,6 +695,7 @@ CommandCost CmdBuildRailVehicle(TileIndex tile, DoCommandFlag flags, const Engin
+ 		v->cargo_type = e->GetDefaultCargoType();
+ 		v->cargo_cap = rvi->capacity;
+ 		v->last_station_visited = INVALID_STATION;
++		v->last_loading_station = INVALID_STATION;
+ 
+ 		v->engine_type = e->index;
+ 		v->gcache.first_engine = INVALID_ENGINE; // needs to be set before first callback
+diff --git a/src/vehicle.cpp b/src/vehicle.cpp
+index 8777ea1..b118f39 100644
+--- a/src/vehicle.cpp
++++ b/src/vehicle.cpp
+@@ -1779,7 +1779,24 @@ void Vehicle::BeginLoading()
+ 		this->current_order.MakeLoading(false);
+ 	}
+ 
+-	Station::Get(this->last_station_visited)->loading_vehicles.push_back(this);
++	Station *curr_station = Station::Get(this->last_station_visited);
++	curr_station->loading_vehicles.push_back(this);
++
++	StationID next_station_id = INVALID_STATION;
++	OrderList *orders = this->orders.list;
++	if (orders != NULL) {
++		next_station_id = orders->GetNextStoppingStation(this->cur_order_index, this->last_station_visited);
++	}
++
++	if (this->last_loading_station != INVALID_STATION && this->last_loading_station != this->last_station_visited) {
++		IncreaseStats(Station::Get(this->last_loading_station), this, this->last_station_visited, false);
++	}
++
++	if (this->CanLeaveWithCargo() && next_station_id != INVALID_STATION) {
++		assert(next_station_id != this->last_station_visited);
++		/* freeze stats for the next link */
++		IncreaseStats(curr_station, this, next_station_id, true);
++	}
+ 
+ 	PrepareUnload(this);
+ 
+@@ -1793,6 +1810,19 @@ void Vehicle::BeginLoading()
+ 	this->MarkDirty();
+ }
+ 
++/**
++ * A vehicle can leave the current station with cargo if:
++ * 1. it can load cargo here OR
++ * 2a. it could leave the last station with cargo AND
++ * 2b. it doesn't have to unload all cargo here.
++ */
++bool Vehicle::CanLeaveWithCargo()
++{
++	return (this->current_order.GetLoadType() & OLFB_NO_LOAD) == 0 ||
++			((this->current_order.GetUnloadType() & (OUFB_UNLOAD | OUFB_TRANSFER)) == 0 &&
++			this->last_loading_station != INVALID_STATION);
++}
++
+ void Vehicle::LeaveStation()
+ {
+ 	assert(current_order.IsType(OT_LOADING));
+@@ -1806,6 +1836,27 @@ void Vehicle::LeaveStation()
+ 	Station *st = Station::Get(this->last_station_visited);
+ 	st->loading_vehicles.remove(this);
+ 
++	OrderList *orders = this->orders.list;
++	if (orders != NULL) {
++		StationID next_station_id = orders->GetNextStoppingStation(this->cur_order_index, this->last_station_visited);
++		if (next_station_id != INVALID_STATION && next_station_id != this->last_station_visited) {
++			DecreaseFrozen(st, this, next_station_id);
++		}
++	} else {
++		DEBUG(misc, 1, "orders are NULL");
++		RecalcFrozen(st);
++	}
++
++	if (this->CanLeaveWithCargo()) {
++		/* if the vehicle could load here or could stop with cargo loaded set the last loading station */
++		this->last_loading_station = this->last_station_visited;
++	} else {
++		/* if the vehicle couldn't load and had to unload or transfer everything
++		 * set the last loading station to invalid as it will leave empty.
++		 */
++		this->last_loading_station = INVALID_STATION;
++	}
++
+ 	HideFillingPercent(&this->fill_percent_te_id);
+ 
+ 	if (this->type == VEH_TRAIN && !(this->vehstatus & VS_CRASHED)) {
+diff --git a/src/vehicle_base.h b/src/vehicle_base.h
+index 1e2ae6c..b7389ce 100644
+--- a/src/vehicle_base.h
++++ b/src/vehicle_base.h
+@@ -114,6 +114,8 @@ private:
+ 
+ 	Vehicle *next_shared;               ///< pointer to the next vehicle that shares the order
+ 	Vehicle *previous_shared;           ///< NOSAVE: pointer to the previous vehicle in the shared order chain
++
++	bool CanLeaveWithCargo();
+ public:
+ 	friend const SaveLoad *GetVehicleDescription(VehicleType vt); ///< So we can use private/protected variables in the saveload code
+ 	friend bool AfterLoadGame();
+@@ -198,6 +200,7 @@ public:
+ 	byte waiting_triggers;              ///< triggers to be yet matched
+ 
+ 	StationID last_station_visited;
++	StationID last_loading_station;
+ 
+ 	CargoID cargo_type;                 ///< type of cargo this vehicle is carrying
+ 	byte cargo_subtype;                 ///< Used for livery refits (NewGRF variations)

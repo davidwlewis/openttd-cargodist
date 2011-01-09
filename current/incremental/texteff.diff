@@ -76,7 +76,7 @@ index 882a23f..8395bf5 100644
  void AskExitGame();
  void AskExitToGameMenu();
 diff --git a/src/lang/english.txt b/src/lang/english.txt
-index a09eed0..b791488 100644
+index 32a47c0..c08cb0a 100644
 --- a/src/lang/english.txt
 +++ b/src/lang/english.txt
 @@ -3418,6 +3418,8 @@ STR_INCOME_FLOAT_INCOME_SMALL                                   :{TINYFONT}{GREE
