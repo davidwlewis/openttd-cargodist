@@ -1,5 +1,5 @@
 diff --git a/src/economy.cpp b/src/economy.cpp
-index 9710885..2b50afb 100644
+index 9710885..0ab63ef 100644
 --- a/src/economy.cpp
 +++ b/src/economy.cpp
 @@ -1017,21 +1017,23 @@ CargoPayment::~CargoPayment()
@@ -28,7 +28,7 @@ index 9710885..2b50afb 100644
 -		ShowFeederIncomeAnimation(this->front->x_pos, this->front->y_pos, this->front->z_pos, this->visual_profit);
 +	if (this->visual_transfer != 0){
 +		ShowFeederIncomeAnimation(this->front->x_pos, this->front->y_pos,
-+				this->front->z_pos,	this->visual_transfer, -this->visual_profit);
++				this->front->z_pos, this->visual_transfer, -this->visual_profit);
 +	} else if (this->visual_profit) {
 +		ShowCostOrIncomeAnimation(this->front->x_pos, this->front->y_pos,
 +				this->front->z_pos, -this->visual_profit);
@@ -76,14 +76,16 @@ index 882a23f..8395bf5 100644
  void AskExitGame();
  void AskExitToGameMenu();
 diff --git a/src/lang/english.txt b/src/lang/english.txt
-index 32a47c0..c08cb0a 100644
+index 32a47c0..f28839c 100644
 --- a/src/lang/english.txt
 +++ b/src/lang/english.txt
-@@ -3418,6 +3418,8 @@ STR_INCOME_FLOAT_INCOME_SMALL                                   :{TINYFONT}{GREE
+@@ -3418,6 +3418,10 @@ STR_INCOME_FLOAT_INCOME_SMALL                                   :{TINYFONT}{GREE
  STR_INCOME_FLOAT_INCOME                                         :{GREEN}Income: {CURRENCY}
  STR_FEEDER_TINY                                                 :{TINYFONT}{YELLOW}Transfer: {CURRENCY}
  STR_FEEDER                                                      :{YELLOW}Transfer: {CURRENCY}
++STR_FEEDER_INCOME_TINY                                          :{TINYFONT}{YELLOW}Transfer: {CURRENCY}{WHITE} / {GREEN}Income: {CURRENCY}
 +STR_FEEDER_INCOME                                               :{YELLOW}Transfer: {CURRENCY}{WHITE} / {GREEN}Income: {CURRENCY}
++STR_FEEDER_COST_TINY                                            :{TINYFONT}{YELLOW}Transfer: {CURRENCY}{WHITE} / {RED}Cost: {CURRENCY}
 +STR_FEEDER_COST                                                 :{YELLOW}Transfer: {CURRENCY}{WHITE} / {RED}Cost: {CURRENCY}
  STR_MESSAGE_ESTIMATED_COST                                      :{WHITE}Estimated Cost: {CURRENCY}
  STR_MESSAGE_ESTIMATED_INCOME                                    :{WHITE}Estimated Income: {CURRENCY}
