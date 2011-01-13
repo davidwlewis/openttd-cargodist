@@ -1,5 +1,5 @@
 diff --git a/src/lang/english.txt b/src/lang/english.txt
-index 3f264d4..d0b5f8b 100644
+index 3f264d4..084982b 100644
 --- a/src/lang/english.txt
 +++ b/src/lang/english.txt
 @@ -655,17 +655,20 @@ STR_SMALLMAP_CAPTION                                            :{WHITE}Map - {S
@@ -23,7 +23,14 @@ index 3f264d4..d0b5f8b 100644
  
  STR_SMALLMAP_LEGENDA_ROADS                                      :{TINYFONT}{BLACK}Roads
  STR_SMALLMAP_LEGENDA_RAILROADS                                  :{TINYFONT}{BLACK}Railways
-@@ -699,6 +702,7 @@ STR_SMALLMAP_LEGENDA_SNOW                                       :{TINYFONT}{BLAC
+@@ -696,9 +699,14 @@ STR_SMALLMAP_LEGENDA_INDUSTRIES                                 :{TINYFONT}{BLAC
+ STR_SMALLMAP_LEGENDA_DESERT                                     :{TINYFONT}{BLACK}Desert
+ STR_SMALLMAP_LEGENDA_SNOW                                       :{TINYFONT}{BLACK}Snow
+ 
++STR_SMALLMAP_LEGENDA_LINK_UNUSED                                :{TINYFONT}{BLACK}unused
++STR_SMALLMAP_LEGENDA_LINK_SATURATED                             :{TINYFONT}{BLACK}saturated
++STR_SMALLMAP_LEGENDA_LINK_OVERLOADED                            :{TINYFONT}{BLACK}overloaded
++
  STR_SMALLMAP_TOOLTIP_TOGGLE_TOWN_NAMES_ON_OFF                   :{BLACK}Toggle town names on/off on map
  STR_SMALLMAP_CENTER                                             :{BLACK}Centre the smallmap on the current position
  STR_SMALLMAP_INDUSTRY                                           :{TINYFONT}{STRING} ({NUM})
@@ -31,7 +38,7 @@ index 3f264d4..d0b5f8b 100644
  STR_SMALLMAP_COMPANY                                            :{TINYFONT}{COMPANY}
  STR_SMALLMAP_TOWN                                               :{TINYFONT}{WHITE}{TOWN}
  STR_SMALLMAP_DISABLE_ALL                                        :{BLACK}Disable all
-@@ -709,6 +713,8 @@ STR_SMALLMAP_TOOLTIP_ENABLE_ALL_INDUSTRIES                      :{BLACK}Display
+@@ -709,6 +717,8 @@ STR_SMALLMAP_TOOLTIP_ENABLE_ALL_INDUSTRIES                      :{BLACK}Display
  STR_SMALLMAP_TOOLTIP_SHOW_HEIGHT                                :{BLACK}Toggle display of heightmap
  STR_SMALLMAP_TOOLTIP_DISABLE_ALL_COMPANIES                      :{BLACK}Display no company property on the map
  STR_SMALLMAP_TOOLTIP_ENABLE_ALL_COMPANIES                       :{BLACK}Display all company property on the map
@@ -55,7 +62,7 @@ index 4fb8fa7..6ebced3 100644
  	FinaliseAirportsArray();
  	BindAirportSpecs();
 diff --git a/src/smallmap_gui.cpp b/src/smallmap_gui.cpp
-index c2d211c..2c15111 100644
+index c2d211c..82d273e 100644
 --- a/src/smallmap_gui.cpp
 +++ b/src/smallmap_gui.cpp
 @@ -26,8 +26,11 @@
@@ -110,12 +117,12 @@ index c2d211c..2c15111 100644
   * Fills an array for the industries legends.
   */
  void BuildIndustriesLegend()
-@@ -207,10 +224,37 @@ void BuildIndustriesLegend()
+@@ -207,10 +224,52 @@ void BuildIndustriesLegend()
  	_smallmap_industry_count = j;
  }
  
 +/** Legend entries for the link stats view. */
-+static LegendAndColour _legend_linkstats[NUM_CARGO + 1];
++static LegendAndColour _legend_linkstats[NUM_CARGO + sizeof(_smallmap_link_colours) + 1];
 +
 +/**
 + * Populate legend table for the link stat view.
@@ -135,9 +142,24 @@ index c2d211c..2c15111 100644
 +		_legend_linkstats[i].show_on_map = true;
 +	}
 +
-+	_legend_linkstats[i].end = true;
-+
++	_legend_linkstats[i].col_break = true;
 +	_smallmap_cargo_count = i;
++
++	_legend_linkstats[i].legend = STR_SMALLMAP_LEGENDA_LINK_UNUSED;
++	_legend_linkstats[i].colour = _smallmap_link_colours[0];
++	_legend_linkstats[i].show_on_map = true;
++
++	for (++i; i < _smallmap_cargo_count + sizeof(_smallmap_link_colours) / 2; ++i) {
++		_legend_linkstats[i].legend = STR_EMPTY;
++		_legend_linkstats[i].colour = _smallmap_link_colours[(i - _smallmap_cargo_count) * 2];
++		_legend_linkstats[i].show_on_map = true;
++	}
++
++	_legend_linkstats[i].legend = STR_SMALLMAP_LEGENDA_LINK_OVERLOADED;
++	_legend_linkstats[i].colour = _smallmap_link_colours[sizeof(_smallmap_link_colours) - 1];
++	_legend_linkstats[i].show_on_map = true;
++	_legend_linkstats[(_smallmap_cargo_count + i) / 2].legend = STR_SMALLMAP_LEGENDA_LINK_SATURATED;
++	_legend_linkstats[++i].end = true;
 +}
 +
  static const LegendAndColour * const _legend_table[] = {
@@ -148,7 +170,7 @@ index c2d211c..2c15111 100644
  	_legend_routes,
  	_legend_vegetation,
  	_legend_land_owners,
-@@ -484,6 +528,17 @@ static inline uint32 GetSmallMapRoutesPixels(TileIndex tile, TileType t)
+@@ -484,6 +543,17 @@ static inline uint32 GetSmallMapRoutesPixels(TileIndex tile, TileType t)
  	return ApplyMask(cs->default_colour, &_smallmap_contours_andor[t]);
  }
  
@@ -166,7 +188,7 @@ index c2d211c..2c15111 100644
  
  static const uint32 _vegetation_clear_bits[] = {
  	MKCOLOUR(0x54545454), ///< full grass
-@@ -561,6 +616,29 @@ static const byte _vehicle_type_colours[6] = {
+@@ -561,6 +631,29 @@ static const byte _vehicle_type_colours[6] = {
  	184, 191, 152, 15, 215, 184
  };
  
@@ -196,7 +218,7 @@ index c2d211c..2c15111 100644
  
  /** Class managing the smallmap window. */
  class SmallMapWindow : public Window {
-@@ -569,6 +647,7 @@ class SmallMapWindow : public Window {
+@@ -569,6 +662,7 @@ class SmallMapWindow : public Window {
  		SMT_CONTOUR,
  		SMT_VEHICLES,
  		SMT_INDUSTRY,
@@ -204,7 +226,7 @@ index c2d211c..2c15111 100644
  		SMT_ROUTES,
  		SMT_VEGETATION,
  		SMT_OWNER,
-@@ -610,6 +689,62 @@ class SmallMapWindow : public Window {
+@@ -610,6 +704,62 @@ class SmallMapWindow : public Window {
  	uint min_number_of_fixed_rows; ///< Minimal number of rows in the legends for the fixed layouts only (all except #SMT_INDUSTRY).
  	uint column_width;             ///< Width of a column in the #SM_WIDGET_LEGEND widget.
  
@@ -267,7 +289,7 @@ index c2d211c..2c15111 100644
  	int32 scroll_x;  ///< Horizontal world coordinate of the base tile left of the top-left corner of the smallmap display.
  	int32 scroll_y;  ///< Vertical world coordinate of the base tile left of the top-left corner of the smallmap display.
  	int32 subscroll; ///< Number of pixels (0..3) between the right end of the base tile and the pixel at the top-left corner of the smallmap display.
-@@ -810,6 +945,9 @@ class SmallMapWindow : public Window {
+@@ -810,6 +960,9 @@ class SmallMapWindow : public Window {
  			case SMT_OWNER:
  				return GetSmallMapOwnerPixels(tile, et);
  
@@ -277,7 +299,7 @@ index c2d211c..2c15111 100644
  			default: NOT_REACHED();
  		}
  	}
-@@ -905,6 +1043,190 @@ class SmallMapWindow : public Window {
+@@ -905,6 +1058,190 @@ class SmallMapWindow : public Window {
  		}
  	}
  
@@ -468,7 +490,7 @@ index c2d211c..2c15111 100644
  	/**
  	 * Adds town names to the smallmap.
  	 * @param dpi the part of the smallmap to be drawn into
-@@ -1038,6 +1360,12 @@ class SmallMapWindow : public Window {
+@@ -1038,6 +1375,12 @@ class SmallMapWindow : public Window {
  		/* Draw vehicles */
  		if (this->map_type == SMT_CONTOUR || this->map_type == SMT_VEHICLES) this->DrawVehicles(dpi, blitter);
  
@@ -481,7 +503,7 @@ index c2d211c..2c15111 100644
  		/* Draw town names */
  		if (this->show_towns) this->DrawTowns(dpi);
  
-@@ -1097,6 +1425,13 @@ class SmallMapWindow : public Window {
+@@ -1097,6 +1440,13 @@ class SmallMapWindow : public Window {
  				plane = 0;
  				break;
  
@@ -495,7 +517,7 @@ index c2d211c..2c15111 100644
  			default:
  				legend_tooltip = STR_NULL;
  				enable_all_tooltip = STR_NULL;
-@@ -1117,6 +1452,11 @@ public:
+@@ -1117,6 +1467,11 @@ public:
  	SmallMapWindow(const WindowDesc *desc, int window_number) : Window(), refresh(FORCE_REFRESH_PERIOD)
  	{
  		this->InitNested(desc, window_number);
@@ -507,7 +529,7 @@ index c2d211c..2c15111 100644
  		this->LowerWidget(this->map_type + SM_WIDGET_CONTOUR);
  
  		BuildLandLegend();
-@@ -1155,8 +1495,8 @@ public:
+@@ -1155,8 +1510,8 @@ public:
  	 */
  	uint GetLegendHeight(uint num_columns) const
  	{
@@ -518,7 +540,16 @@ index c2d211c..2c15111 100644
  	}
  
  	virtual void SetStringParameters(int widget) const
-@@ -1182,6 +1522,9 @@ public:
+@@ -1172,7 +1527,7 @@ public:
+ 	{
+ 		uint min_width = 0;
+ 		this->min_number_of_columns = INDUSTRY_MIN_NUMBER_OF_COLUMNS;
+-		this->min_number_of_fixed_rows = 0;
++		this->min_number_of_fixed_rows = sizeof(_smallmap_link_colours) / 2 + 1;
+ 		for (uint i = 0; i < lengthof(_legend_table); i++) {
+ 			uint height = 0;
+ 			uint num_columns = 1;
+@@ -1182,6 +1537,9 @@ public:
  					SetDParam(0, tbl->legend);
  					SetDParam(1, IndustryPool::MAX_SIZE);
  					str = STR_SMALLMAP_INDUSTRY;
@@ -528,7 +559,7 @@ index c2d211c..2c15111 100644
  				} else if (i == SMT_OWNER) {
  					if (tbl->u.company != INVALID_COMPANY) {
  						if (!Company::IsValidID(tbl->u.company)) {
-@@ -1243,7 +1586,7 @@ public:
+@@ -1243,7 +1601,7 @@ public:
  
  			case SM_WIDGET_LEGEND: {
  				uint columns = this->GetNumberColumnsLegend(r.right - r.left + 1);
@@ -537,7 +568,7 @@ index c2d211c..2c15111 100644
  				bool rtl = _current_text_dir == TD_RTL;
  				uint y_org = r.top + WD_FRAMERECT_TOP;
  				uint x = rtl ? r.right - this->column_width - WD_FRAMERECT_RIGHT : r.left + WD_FRAMERECT_LEFT;
-@@ -1256,8 +1599,23 @@ public:
+@@ -1256,8 +1614,23 @@ public:
  				uint blob_left  = rtl ? this->column_width - 1 - LEGEND_BLOB_WIDTH : 0;
  				uint blob_right = rtl ? this->column_width - 1 : LEGEND_BLOB_WIDTH;
  
@@ -562,7 +593,7 @@ index c2d211c..2c15111 100644
  						/* Column break needed, continue at top, COLUMN_WIDTH pixels
  						 * (one "row") to the right. */
  						x += rtl ? -(int)this->column_width : this->column_width;
-@@ -1265,35 +1623,32 @@ public:
+@@ -1265,35 +1638,32 @@ public:
  						i = 1;
  					}
  
@@ -624,7 +655,7 @@ index c2d211c..2c15111 100644
  					}
  					GfxFillRect(x + blob_left + 1, y + 2, x + blob_right - 1, y + row_height - 2, tbl->colour); // Legend colour
  
-@@ -1304,6 +1659,54 @@ public:
+@@ -1304,6 +1674,56 @@ public:
  	}
  
  	/**
@@ -637,9 +668,11 @@ index c2d211c..2c15111 100644
 +	 */
 +	uint GetNumberRowsLegend(uint columns) const
 +	{
-+		return max(this->min_number_of_fixed_rows, CeilDiv(
-+				max(max(_smallmap_cargo_count, _smallmap_industry_count),
-+				_smallmap_company_count), columns));
++		/* reserve one column for link colours */
++		uint num_rows_linkstats = CeilDiv(_smallmap_cargo_count, columns - 1);
++
++		uint num_rows_others = CeilDiv(max(_smallmap_industry_count,_smallmap_company_count), columns);
++		return max(this->min_number_of_fixed_rows, max(num_rows_linkstats, num_rows_others));
 +	}
 +
 +	/**
@@ -679,7 +712,7 @@ index c2d211c..2c15111 100644
  	 * Select a new map type.
  	 * @param map_type New map type.
  	 */
-@@ -1363,6 +1766,7 @@ public:
+@@ -1363,6 +1783,7 @@ public:
  			case SM_WIDGET_CONTOUR:    // Show land contours
  			case SM_WIDGET_VEHICLES:   // Show vehicles
  			case SM_WIDGET_INDUSTRIES: // Show industries
@@ -687,7 +720,7 @@ index c2d211c..2c15111 100644
  			case SM_WIDGET_ROUTES:     // Show transport routes
  			case SM_WIDGET_VEGETATION: // Show vegetation
  			case SM_WIDGET_OWNERS:     // Show land owners
-@@ -1386,12 +1790,12 @@ public:
+@@ -1386,12 +1807,12 @@ public:
  
  			case SM_WIDGET_LEGEND: // Legend
  				/* If industry type small map*/
@@ -703,7 +736,7 @@ index c2d211c..2c15111 100644
  					if (line >= number_of_rows) break;
  
  					bool rtl = _current_text_dir == TD_RTL;
-@@ -1399,65 +1803,19 @@ public:
+@@ -1399,65 +1820,19 @@ public:
  					if (rtl) x = wi->current_x - x;
  					uint column = (x - WD_FRAMERECT_LEFT) / this->column_width;
  
@@ -781,7 +814,7 @@ index c2d211c..2c15111 100644
  						}
  					}
  					this->SetDirty();
-@@ -1465,30 +1823,25 @@ public:
+@@ -1465,30 +1840,25 @@ public:
  				break;
  
  			case SM_WIDGET_ENABLE_ALL:
@@ -828,7 +861,7 @@ index c2d211c..2c15111 100644
  
  			case SM_WIDGET_SHOW_HEIGHT: // Enable/disable showing of heightmap.
  				_smallmap_show_heightmap = !_smallmap_show_heightmap;
-@@ -1717,6 +2070,8 @@ static const NWidgetPart _nested_smallmap_bar[] = {
+@@ -1717,6 +2087,8 @@ static const NWidgetPart _nested_smallmap_bar[] = {
  							SetDataTip(SPR_IMG_ZOOMIN, STR_TOOLBAR_TOOLTIP_ZOOM_THE_VIEW_IN), SetFill(1, 1),
  					NWidget(WWT_PUSHIMGBTN, COLOUR_BROWN, SM_WIDGET_CENTERMAP),
  							SetDataTip(SPR_IMG_SMALLMAP, STR_SMALLMAP_CENTER), SetFill(1, 1),
@@ -837,7 +870,7 @@ index c2d211c..2c15111 100644
  					NWidget(WWT_IMGBTN, COLOUR_BROWN, SM_WIDGET_CONTOUR),
  							SetDataTip(SPR_IMG_SHOW_COUNTOURS, STR_SMALLMAP_TOOLTIP_SHOW_LAND_CONTOURS_ON_MAP), SetFill(1, 1),
  					NWidget(WWT_IMGBTN, COLOUR_BROWN, SM_WIDGET_VEHICLES),
-@@ -1730,6 +2085,8 @@ static const NWidgetPart _nested_smallmap_bar[] = {
+@@ -1730,6 +2102,8 @@ static const NWidgetPart _nested_smallmap_bar[] = {
  							SetDataTip(SPR_IMG_ZOOMOUT, STR_TOOLBAR_TOOLTIP_ZOOM_THE_VIEW_OUT), SetFill(1, 1),
  					NWidget(WWT_IMGBTN, COLOUR_BROWN, SM_WIDGET_TOGGLETOWNNAME),
  							SetDataTip(SPR_IMG_TOWN, STR_SMALLMAP_TOOLTIP_TOGGLE_TOWN_NAMES_ON_OFF), SetFill(1, 1),
@@ -846,6 +879,15 @@ index c2d211c..2c15111 100644
  					NWidget(WWT_IMGBTN, COLOUR_BROWN, SM_WIDGET_ROUTES),
  							SetDataTip(SPR_IMG_SHOW_ROUTES, STR_SMALLMAP_TOOLTIP_SHOW_TRANSPORT_ROUTES_ON), SetFill(1, 1),
  					NWidget(WWT_IMGBTN, COLOUR_BROWN, SM_WIDGET_VEGETATION),
+@@ -1781,7 +2155,7 @@ static const NWidgetPart _nested_smallmap_widgets[] = {
+ };
+ 
+ static const WindowDesc _smallmap_desc(
+-	WDP_AUTO, 446, 314,
++	WDP_AUTO, 484, 314,
+ 	WC_SMALLMAP, WC_NONE,
+ 	WDF_UNCLICK_BUTTONS,
+ 	_nested_smallmap_widgets, lengthof(_nested_smallmap_widgets)
 diff --git a/src/smallmap_gui.h b/src/smallmap_gui.h
 index 572a175..2f3a9a7 100644
 --- a/src/smallmap_gui.h
