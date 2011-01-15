@@ -1,5 +1,5 @@
 diff --git a/src/smallmap_gui.cpp b/src/smallmap_gui.cpp
-index efb3d8d..c2d211c 100644
+index 84faaef..bc37261 100644
 --- a/src/smallmap_gui.cpp
 +++ b/src/smallmap_gui.cpp
 @@ -574,6 +574,27 @@ class SmallMapWindow : public Window {

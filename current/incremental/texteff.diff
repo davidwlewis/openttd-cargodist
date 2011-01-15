@@ -76,10 +76,10 @@ index 882a23f..8395bf5 100644
  void AskExitGame();
  void AskExitToGameMenu();
 diff --git a/src/lang/english.txt b/src/lang/english.txt
-index 3580753..6f56736 100644
+index 98a2e7e..7798514 100644
 --- a/src/lang/english.txt
 +++ b/src/lang/english.txt
-@@ -3418,6 +3418,10 @@ STR_INCOME_FLOAT_INCOME_SMALL                                   :{TINYFONT}{GREE
+@@ -3419,6 +3419,10 @@ STR_INCOME_FLOAT_INCOME_SMALL                                   :{TINYFONT}{GREE
  STR_INCOME_FLOAT_INCOME                                         :{GREEN}Income: {CURRENCY}
  STR_FEEDER_TINY                                                 :{TINYFONT}{YELLOW}Transfer: {CURRENCY}
  STR_FEEDER                                                      :{YELLOW}Transfer: {CURRENCY}
@@ -91,7 +91,7 @@ index 3580753..6f56736 100644
  STR_MESSAGE_ESTIMATED_INCOME                                    :{WHITE}Estimated Income: {CURRENCY}
  
 diff --git a/src/misc_gui.cpp b/src/misc_gui.cpp
-index 9181cd6..660caf9 100644
+index 31c3eda..aa98a9e 100644
 --- a/src/misc_gui.cpp
 +++ b/src/misc_gui.cpp
 @@ -759,12 +759,22 @@ void ShowCostOrIncomeAnimation(int x, int y, int z, Money cost)
