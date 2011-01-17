@@ -5907,7 +5907,7 @@ index 7fffc3e..58fa99d 100644
  
  		v->reliability = e->reliability;
 diff --git a/src/smallmap_gui.cpp b/src/smallmap_gui.cpp
-index 576abd3..735605c 100644
+index 576abd3..b3f71f2 100644
 --- a/src/smallmap_gui.cpp
 +++ b/src/smallmap_gui.cpp
 @@ -26,8 +26,11 @@
@@ -5945,7 +5945,7 @@ index 576abd3..735605c 100644
  /** Macro for ordinary entry of LegendAndColour */
  #define MK(a, b) {a, b, INVALID_INDUSTRYTYPE, 0, INVALID_COMPANY, true, false, false}
  
-@@ -175,6 +182,16 @@ static bool _smallmap_show_heightmap = false;
+@@ -175,6 +182,19 @@ static bool _smallmap_show_heightmap = false;
  static uint _company_to_list_pos[MAX_COMPANIES];
  
  /**
@@ -5958,16 +5958,19 @@ index 576abd3..735605c 100644
 +	0xba, 0xb9, 0xb7, 0xb5
 +};
 +
++/** Link stat colours shown in legenda. */
++static uint8 _linkstat_colours_in_legenda[] = {0, 1, 3, 5, 7, 9, 11};
++
 +/**
   * Fills an array for the industries legends.
   */
  void BuildIndustriesLegend()
-@@ -205,10 +222,52 @@ void BuildIndustriesLegend()
+@@ -205,10 +225,47 @@ void BuildIndustriesLegend()
  	_smallmap_industry_count = j;
  }
  
 +/** Legend entries for the link stats view. */
-+static LegendAndColour _legend_linkstats[NUM_CARGO + sizeof(_smallmap_link_colours) + 1];
++static LegendAndColour _legend_linkstats[NUM_CARGO + sizeof(_linkstat_colours_in_legenda) + 1];
 +
 +/**
 + * Populate legend table for the link stat view.
@@ -5990,21 +5993,16 @@ index 576abd3..735605c 100644
 +	_legend_linkstats[i].col_break = true;
 +	_smallmap_cargo_count = i;
 +
-+	_legend_linkstats[i].legend = STR_SMALLMAP_LEGENDA_LINK_UNUSED;
-+	_legend_linkstats[i].colour = _smallmap_link_colours[0];
-+	_legend_linkstats[i].show_on_map = true;
-+
-+	for (++i; i < _smallmap_cargo_count + sizeof(_smallmap_link_colours) / 2; ++i) {
++	for (; i < _smallmap_cargo_count + sizeof(_linkstat_colours_in_legenda); ++i) {
 +		_legend_linkstats[i].legend = STR_EMPTY;
-+		_legend_linkstats[i].colour = _smallmap_link_colours[(i - _smallmap_cargo_count) * 2];
++		_legend_linkstats[i].colour = _smallmap_link_colours[_linkstat_colours_in_legenda[i - _smallmap_cargo_count]];
 +		_legend_linkstats[i].show_on_map = true;
 +	}
 +
-+	_legend_linkstats[i].legend = STR_SMALLMAP_LEGENDA_LINK_OVERLOADED;
-+	_legend_linkstats[i].colour = _smallmap_link_colours[sizeof(_smallmap_link_colours) - 1];
-+	_legend_linkstats[i].show_on_map = true;
-+	_legend_linkstats[(_smallmap_cargo_count + i) / 2].legend = STR_SMALLMAP_LEGENDA_LINK_SATURATED;
-+	_legend_linkstats[++i].end = true;
++	_legend_linkstats[_smallmap_cargo_count].legend = STR_SMALLMAP_LEGENDA_LINK_UNUSED;
++	_legend_linkstats[i - 1].legend = STR_SMALLMAP_LEGENDA_LINK_OVERLOADED;
++	_legend_linkstats[(_smallmap_cargo_count + i - 1) / 2].legend = STR_SMALLMAP_LEGENDA_LINK_SATURATED;
++	_legend_linkstats[i].end = true;
 +}
 +
  static const LegendAndColour * const _legend_table[] = {
@@ -6015,7 +6013,7 @@ index 576abd3..735605c 100644
  	_legend_routes,
  	_legend_vegetation,
  	_legend_land_owners,
-@@ -482,6 +541,17 @@ static inline uint32 GetSmallMapRoutesPixels(TileIndex tile, TileType t)
+@@ -482,6 +539,17 @@ static inline uint32 GetSmallMapRoutesPixels(TileIndex tile, TileType t)
  	return ApplyMask(cs->default_colour, &_smallmap_contours_andor[t]);
  }
  
@@ -6033,7 +6031,7 @@ index 576abd3..735605c 100644
  
  static const uint32 _vegetation_clear_bits[] = {
  	MKCOLOUR(0x54545454), ///< full grass
-@@ -559,6 +629,29 @@ static const byte _vehicle_type_colours[6] = {
+@@ -559,6 +627,29 @@ static const byte _vehicle_type_colours[6] = {
  	184, 191, 152, 15, 215, 184
  };
  
@@ -6063,7 +6061,7 @@ index 576abd3..735605c 100644
  
  /** Class managing the smallmap window. */
  class SmallMapWindow : public Window {
-@@ -567,11 +660,33 @@ class SmallMapWindow : public Window {
+@@ -567,11 +658,33 @@ class SmallMapWindow : public Window {
  		SMT_CONTOUR,
  		SMT_VEHICLES,
  		SMT_INDUSTRY,
@@ -6097,7 +6095,7 @@ index 576abd3..735605c 100644
  	/** Available kinds of zoomlevel changes. */
  	enum ZoomLevelChange {
  		ZLC_INITIALIZE, ///< Initialize zoom level.
-@@ -587,12 +702,69 @@ class SmallMapWindow : public Window {
+@@ -587,12 +700,69 @@ class SmallMapWindow : public Window {
  	uint min_number_of_fixed_rows; ///< Minimal number of rows in the legends for the fixed layouts only (all except #SMT_INDUSTRY).
  	uint column_width;             ///< Width of a column in the #SM_WIDGET_LEGEND widget.
  
@@ -6167,7 +6165,7 @@ index 576abd3..735605c 100644
  	uint8 refresh; ///< refresh counter, zeroed every FORCE_REFRESH_PERIOD ticks
  
  	/**
-@@ -603,43 +775,61 @@ class SmallMapWindow : public Window {
+@@ -603,43 +773,61 @@ class SmallMapWindow : public Window {
  	 */
  	FORCEINLINE Point RemapTile(int tile_x, int tile_y) const
  	{
@@ -6243,7 +6241,7 @@ index 576abd3..735605c 100644
  				px -= 2;
  			}
  		}
-@@ -662,19 +852,21 @@ class SmallMapWindow : public Window {
+@@ -662,19 +850,21 @@ class SmallMapWindow : public Window {
  		assert(x >= 0 && y >= 0);
  
  		int new_sub;
@@ -6270,7 +6268,7 @@ index 576abd3..735605c 100644
  		}
  		return scroll;
  	}
-@@ -687,16 +879,17 @@ class SmallMapWindow : public Window {
+@@ -687,16 +877,17 @@ class SmallMapWindow : public Window {
  	 */
  	void SetZoomLevel(ZoomLevelChange change, const Point *zoom_pt)
  	{
@@ -6291,7 +6289,7 @@ index 576abd3..735605c 100644
  				break;
  
  			case ZLC_ZOOM_IN:
-@@ -706,7 +899,7 @@ class SmallMapWindow : public Window {
+@@ -706,7 +897,7 @@ class SmallMapWindow : public Window {
  				}
  				assert(cur_index <= MAX_ZOOM_INDEX);
  
@@ -6300,7 +6298,7 @@ index 576abd3..735605c 100644
  				new_index = Clamp(cur_index + ((change == ZLC_ZOOM_IN) ? -1 : 1), MIN_ZOOM_INDEX, MAX_ZOOM_INDEX);
  				break;
  
-@@ -716,9 +909,9 @@ class SmallMapWindow : public Window {
+@@ -716,9 +907,9 @@ class SmallMapWindow : public Window {
  		if (new_index != cur_index) {
  			this->zoom = zoomlevels[new_index];
  			if (cur_index >= 0) {
@@ -6313,7 +6311,7 @@ index 576abd3..735605c 100644
  			}
  			this->SetWidgetDisabledState(SM_WIDGET_ZOOM_IN,  this->zoom == zoomlevels[MIN_ZOOM_INDEX]);
  			this->SetWidgetDisabledState(SM_WIDGET_ZOOM_OUT, this->zoom == zoomlevels[MAX_ZOOM_INDEX]);
-@@ -765,6 +958,9 @@ class SmallMapWindow : public Window {
+@@ -765,6 +956,9 @@ class SmallMapWindow : public Window {
  			case SMT_OWNER:
  				return GetSmallMapOwnerPixels(tile, et);
  
@@ -6323,7 +6321,7 @@ index 576abd3..735605c 100644
  			default: NOT_REACHED();
  		}
  	}
-@@ -773,8 +969,8 @@ class SmallMapWindow : public Window {
+@@ -773,8 +967,8 @@ class SmallMapWindow : public Window {
  	 * Draws one column of tiles of the small map in a certain mode onto the screen buffer, skipping the shifted rows in between.
  	 *
  	 * @param dst Pointer to a part of the screen buffer to write to.
@@ -6334,7 +6332,7 @@ index 576abd3..735605c 100644
  	 * @param pitch Number of pixels to advance in the screen buffer each time a pixel is written.
  	 * @param reps Number of lines to draw
  	 * @param start_pos Position of first pixel to draw.
-@@ -788,9 +984,12 @@ class SmallMapWindow : public Window {
+@@ -788,9 +982,12 @@ class SmallMapWindow : public Window {
  		void *dst_ptr_abs_end = blitter->MoveTo(_screen.dst_ptr, 0, _screen.height);
  		uint min_xy = _settings_game.construction.freeform_edges ? 1 : 0;
  
@@ -6348,7 +6346,7 @@ index 576abd3..735605c 100644
  
  			/* Check if the dst pointer points to a pixel inside the screen buffer */
  			if (dst < _screen.dst_ptr) continue;
-@@ -798,12 +997,12 @@ class SmallMapWindow : public Window {
+@@ -798,12 +995,12 @@ class SmallMapWindow : public Window {
  
  			/* Construct tilearea covered by (xc, yc, xc + this->zoom, yc + this->zoom) such that it is within min_xy limits. */
  			TileArea ta;
@@ -6365,7 +6363,7 @@ index 576abd3..735605c 100644
  			}
  			ta.ClampToMap(); // Clamp to map boundaries (may contain MP_VOID tiles!).
  
-@@ -815,7 +1014,7 @@ class SmallMapWindow : public Window {
+@@ -815,7 +1012,7 @@ class SmallMapWindow : public Window {
  				idx++;
  			}
  		/* Switch to next tile in the column */
@@ -6374,7 +6372,7 @@ index 576abd3..735605c 100644
  	}
  
  	/**
-@@ -825,39 +1024,222 @@ class SmallMapWindow : public Window {
+@@ -825,39 +1022,222 @@ class SmallMapWindow : public Window {
  	 */
  	void DrawVehicles(const DrawPixelInfo *dpi, Blitter *blitter) const
  	{
@@ -6618,7 +6616,7 @@ index 576abd3..735605c 100644
  	/**
  	 * Adds town names to the smallmap.
  	 * @param dpi the part of the smallmap to be drawn into
-@@ -954,13 +1336,14 @@ class SmallMapWindow : public Window {
+@@ -954,13 +1334,14 @@ class SmallMapWindow : public Window {
  
  		/* Which tile is displayed at (dpi->left, dpi->top)? */
  		int dx;
@@ -6636,7 +6634,7 @@ index 576abd3..735605c 100644
  
  		for (;;) {
  			/* Distance from left edge */
-@@ -970,16 +1353,16 @@ class SmallMapWindow : public Window {
+@@ -970,16 +1351,16 @@ class SmallMapWindow : public Window {
  				int end_pos = min(dpi->width, x + 4);
  				int reps = (dpi->height - y + 1) / 2; // Number of lines.
  				if (reps > 0) {
@@ -6656,7 +6654,7 @@ index 576abd3..735605c 100644
  				y--;
  				ptr = blitter->MoveTo(ptr, 0, -1);
  			}
-@@ -990,6 +1373,12 @@ class SmallMapWindow : public Window {
+@@ -990,6 +1371,12 @@ class SmallMapWindow : public Window {
  		/* Draw vehicles */
  		if (this->map_type == SMT_CONTOUR || this->map_type == SMT_VEHICLES) this->DrawVehicles(dpi, blitter);
  
@@ -6669,7 +6667,7 @@ index 576abd3..735605c 100644
  		/* Draw town names */
  		if (this->show_towns) this->DrawTowns(dpi);
  
-@@ -1000,6 +1389,32 @@ class SmallMapWindow : public Window {
+@@ -1000,6 +1387,32 @@ class SmallMapWindow : public Window {
  	}
  
  	/**
@@ -6702,7 +6700,7 @@ index 576abd3..735605c 100644
  	 * Function to set up widgets depending on the information being shown on the smallmap.
  	 */
  	void SetupWidgetData()
-@@ -1023,6 +1438,13 @@ class SmallMapWindow : public Window {
+@@ -1023,6 +1436,13 @@ class SmallMapWindow : public Window {
  				plane = 0;
  				break;
  
@@ -6716,7 +6714,7 @@ index 576abd3..735605c 100644
  			default:
  				legend_tooltip = STR_NULL;
  				enable_all_tooltip = STR_NULL;
-@@ -1043,6 +1465,11 @@ public:
+@@ -1043,6 +1463,11 @@ public:
  	SmallMapWindow(const WindowDesc *desc, int window_number) : Window(), refresh(FORCE_REFRESH_PERIOD)
  	{
  		this->InitNested(desc, window_number);
@@ -6728,7 +6726,7 @@ index 576abd3..735605c 100644
  		this->LowerWidget(this->map_type + SM_WIDGET_CONTOUR);
  
  		BuildLandLegend();
-@@ -1081,8 +1508,8 @@ public:
+@@ -1081,8 +1506,8 @@ public:
  	 */
  	uint GetLegendHeight(uint num_columns) const
  	{
@@ -6739,7 +6737,7 @@ index 576abd3..735605c 100644
  	}
  
  	virtual void SetStringParameters(int widget) const
-@@ -1098,7 +1525,7 @@ public:
+@@ -1098,7 +1523,7 @@ public:
  	{
  		uint min_width = 0;
  		this->min_number_of_columns = INDUSTRY_MIN_NUMBER_OF_COLUMNS;
@@ -6748,7 +6746,7 @@ index 576abd3..735605c 100644
  		for (uint i = 0; i < lengthof(_legend_table); i++) {
  			uint height = 0;
  			uint num_columns = 1;
-@@ -1108,6 +1535,9 @@ public:
+@@ -1108,6 +1533,9 @@ public:
  					SetDParam(0, tbl->legend);
  					SetDParam(1, IndustryPool::MAX_SIZE);
  					str = STR_SMALLMAP_INDUSTRY;
@@ -6758,7 +6756,7 @@ index 576abd3..735605c 100644
  				} else if (i == SMT_OWNER) {
  					if (tbl->company != INVALID_COMPANY) {
  						if (!Company::IsValidID(tbl->company)) {
-@@ -1169,7 +1599,7 @@ public:
+@@ -1169,7 +1597,7 @@ public:
  
  			case SM_WIDGET_LEGEND: {
  				uint columns = this->GetNumberColumnsLegend(r.right - r.left + 1);
@@ -6767,7 +6765,7 @@ index 576abd3..735605c 100644
  				bool rtl = _current_text_dir == TD_RTL;
  				uint y_org = r.top + WD_FRAMERECT_TOP;
  				uint x = rtl ? r.right - this->column_width - WD_FRAMERECT_RIGHT : r.left + WD_FRAMERECT_LEFT;
-@@ -1182,8 +1612,23 @@ public:
+@@ -1182,8 +1610,23 @@ public:
  				uint blob_left  = rtl ? this->column_width - 1 - LEGEND_BLOB_WIDTH : 0;
  				uint blob_right = rtl ? this->column_width - 1 : LEGEND_BLOB_WIDTH;
  
@@ -6792,7 +6790,7 @@ index 576abd3..735605c 100644
  						/* Column break needed, continue at top, COLUMN_WIDTH pixels
  						 * (one "row") to the right. */
  						x += rtl ? -(int)this->column_width : this->column_width;
-@@ -1191,35 +1636,32 @@ public:
+@@ -1191,35 +1634,32 @@ public:
  						i = 1;
  					}
  
@@ -6854,7 +6852,7 @@ index 576abd3..735605c 100644
  					}
  					GfxFillRect(x + blob_left + 1, y + 2, x + blob_right - 1, y + row_height - 2, tbl->colour); // Legend colour
  
-@@ -1230,6 +1672,56 @@ public:
+@@ -1230,6 +1670,56 @@ public:
  	}
  
  	/**
@@ -6911,7 +6909,7 @@ index 576abd3..735605c 100644
  	 * Select a new map type.
  	 * @param map_type New map type.
  	 */
-@@ -1264,9 +1756,10 @@ public:
+@@ -1264,9 +1754,10 @@ public:
  				const NWidgetBase *wid = this->GetWidget<NWidgetBase>(SM_WIDGET_MAP);
  				Window *w = FindWindowById(WC_MAIN_WINDOW, 0);
  				int sub;
@@ -6925,7 +6923,7 @@ index 576abd3..735605c 100644
  
  				w->viewport->follow_vehicle = INVALID_VEHICLE;
  				w->viewport->dest_scrollpos_x = pt.x - (w->viewport->virtual_width  >> 1);
-@@ -1288,6 +1781,7 @@ public:
+@@ -1288,6 +1779,7 @@ public:
  			case SM_WIDGET_CONTOUR:    // Show land contours
  			case SM_WIDGET_VEHICLES:   // Show vehicles
  			case SM_WIDGET_INDUSTRIES: // Show industries
@@ -6933,7 +6931,7 @@ index 576abd3..735605c 100644
  			case SM_WIDGET_ROUTES:     // Show transport routes
  			case SM_WIDGET_VEGETATION: // Show vegetation
  			case SM_WIDGET_OWNERS:     // Show land owners
-@@ -1311,12 +1805,12 @@ public:
+@@ -1311,12 +1803,12 @@ public:
  
  			case SM_WIDGET_LEGEND: // Legend
  				/* If industry type small map*/
@@ -6949,7 +6947,7 @@ index 576abd3..735605c 100644
  					if (line >= number_of_rows) break;
  
  					bool rtl = _current_text_dir == TD_RTL;
-@@ -1324,65 +1818,19 @@ public:
+@@ -1324,65 +1816,19 @@ public:
  					if (rtl) x = wi->current_x - x;
  					uint column = (x - WD_FRAMERECT_LEFT) / this->column_width;
  
@@ -7027,7 +7025,7 @@ index 576abd3..735605c 100644
  						}
  					}
  					this->SetDirty();
-@@ -1390,30 +1838,25 @@ public:
+@@ -1390,30 +1836,27 @@ public:
  				break;
  
  			case SM_WIDGET_ENABLE_ALL:
@@ -7038,19 +7036,6 @@ index 576abd3..735605c 100644
 -				} else if (this->map_type == SMT_OWNER) {
 -					for (int i = NUM_NO_COMPANY_ENTRIES; i != _smallmap_company_count; i++) {
 -						_legend_land_owners[i].show_on_map = true;
--					}
--				}
--				this->SetDirty();
--				break;
--
--			case SM_WIDGET_DISABLE_ALL:
--				if (this->map_type == SMT_INDUSTRY) {
--					for (int i = 0; i != _smallmap_industry_count; i++) {
--						_legend_from_industries[i].show_on_map = false;
--					}
--				} else {
--					for (int i = NUM_NO_COMPANY_ENTRIES; i != _smallmap_company_count; i++) {
--						_legend_land_owners[i].show_on_map = false;
 -					}
 +			case SM_WIDGET_DISABLE_ALL: {
 +				LegendAndColour *tbl = NULL;
@@ -7067,7 +7052,21 @@ index 576abd3..735605c 100644
 +					default:
 +						NOT_REACHED();
  				}
-+				for (;!tbl->end; ++tbl) tbl->show_on_map = (widget == SM_WIDGET_ENABLE_ALL);
+-				this->SetDirty();
+-				break;
+-
+-			case SM_WIDGET_DISABLE_ALL:
+-				if (this->map_type == SMT_INDUSTRY) {
+-					for (int i = 0; i != _smallmap_industry_count; i++) {
+-						_legend_from_industries[i].show_on_map = false;
+-					}
+-				} else {
+-					for (int i = NUM_NO_COMPANY_ENTRIES; i != _smallmap_company_count; i++) {
+-						_legend_land_owners[i].show_on_map = false;
+-					}
++				for (;!tbl->end && tbl->legend != STR_SMALLMAP_LEGENDA_LINK_UNUSED; ++tbl) {
++					tbl->show_on_map = (widget == SM_WIDGET_ENABLE_ALL);
+ 				}
  				this->SetDirty();
  				break;
 +			}
