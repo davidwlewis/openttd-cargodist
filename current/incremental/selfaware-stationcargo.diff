@@ -1,5 +1,5 @@
 diff --git a/src/cargopacket.cpp b/src/cargopacket.cpp
-index 2735a38..088129d 100644
+index 37091fd..ab4032d 100644
 --- a/src/cargopacket.cpp
 +++ b/src/cargopacket.cpp
 @@ -389,6 +389,20 @@ void VehicleCargoList::InvalidateCache()
