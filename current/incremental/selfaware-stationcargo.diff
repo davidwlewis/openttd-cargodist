@@ -1,8 +1,8 @@
 diff --git a/src/cargopacket.cpp b/src/cargopacket.cpp
-index 418eb8e..2541312 100644
+index 2735a38..088129d 100644
 --- a/src/cargopacket.cpp
 +++ b/src/cargopacket.cpp
-@@ -282,6 +282,20 @@ void VehicleCargoList::InvalidateCache()
+@@ -389,6 +389,20 @@ void VehicleCargoList::InvalidateCache()
  	this->Parent::InvalidateCache();
  }
  
@@ -24,7 +24,7 @@ index 418eb8e..2541312 100644
   * We have to instantiate everything we want to be usable.
   */
 diff --git a/src/cargopacket.h b/src/cargopacket.h
-index 77f656b..8d6ec07 100644
+index 72465d9..d2a5fa6 100644
 --- a/src/cargopacket.h
 +++ b/src/cargopacket.h
 @@ -16,6 +16,7 @@
@@ -35,7 +35,7 @@ index 77f656b..8d6ec07 100644
  #include "vehicle_type.h"
  #include <list>
  
-@@ -395,6 +396,8 @@ public:
+@@ -311,6 +312,8 @@ public:
  	/** The stations, via GoodsEntry, have a CargoList. */
  	friend const struct SaveLoad *GetGoodsDesc();
  
@@ -44,7 +44,7 @@ index 77f656b..8d6ec07 100644
  	/**
  	 * Are two the two CargoPackets mergeable in the context of
  	 * a list of CargoPackets for a Vehicle?
-@@ -409,6 +412,12 @@ public:
+@@ -325,6 +328,12 @@ public:
  				cp1->source_type     == cp2->source_type &&
  				cp1->source_id       == cp2->source_id;
  	}
@@ -58,7 +58,7 @@ index 77f656b..8d6ec07 100644
  
  #endif /* CARGOPACKET_H */
 diff --git a/src/station.cpp b/src/station.cpp
-index 003798a..e0cc963 100644
+index cafdf51..cb63bc7 100644
 --- a/src/station.cpp
 +++ b/src/station.cpp
 @@ -60,6 +60,11 @@ Station::Station(TileIndex tile) :

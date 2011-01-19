@@ -63,10 +63,10 @@ index 5d7124c..c6b9241 100644
  	/* Unsaved variables */
  	Company *owner;            ///< The owner of the vehicle
 diff --git a/src/functions.h b/src/functions.h
-index 882a23f..8395bf5 100644
+index b8cbdd1..08b9806 100644
 --- a/src/functions.h
 +++ b/src/functions.h
-@@ -36,7 +36,7 @@ CommandCost CheckTileOwnership(TileIndex tile);
+@@ -31,7 +31,7 @@ CommandCost CheckTileOwnership(TileIndex tile);
  void MarkTileDirtyByTile(TileIndex tile);
  
  void ShowCostOrIncomeAnimation(int x, int y, int z, Money cost);
