@@ -1,5 +1,5 @@
 diff --git a/src/cargopacket.cpp b/src/cargopacket.cpp
-index 99ed588..a13afe8 100644
+index 37091fd..f72aeb6 100644
 --- a/src/cargopacket.cpp
 +++ b/src/cargopacket.cpp
 @@ -182,14 +182,15 @@ void CargoList<Tinst>::AddToCache(const CargoPacket *cp)
@@ -141,7 +141,7 @@ index 99ed588..a13afe8 100644
  
  /*
 diff --git a/src/cargopacket.h b/src/cargopacket.h
-index 6c72505..e73f771 100644
+index 72465d9..7ec758d 100644
 --- a/src/cargopacket.h
 +++ b/src/cargopacket.h
 @@ -29,6 +29,7 @@ typedef Pool<CargoPacket, CargoPacketID, 1024, 0xFFF000, true, false> CargoPacke
@@ -152,7 +152,7 @@ index 6c72505..e73f771 100644
  extern const struct SaveLoad *GetCargoPacketDesc();
  
  /**
-@@ -180,6 +181,7 @@ public:
+@@ -177,6 +178,7 @@ public:
  	enum MoveToAction {
  		MTA_FINAL_DELIVERY, ///< "Deliver" the packet to the final destination, i.e. destroy the packet.
  		MTA_CARGO_LOAD,     ///< Load the packet onto a vehicle, i.e. set the last loaded station ID.
@@ -160,7 +160,7 @@ index 6c72505..e73f771 100644
  		MTA_TRANSFER,       ///< The cargo is moved as part of a transfer.
  		MTA_UNLOAD,         ///< The cargo is moved as part of a forced unload.
  	};
-@@ -228,15 +230,6 @@ public:
+@@ -225,15 +227,6 @@ public:
  	}
  
  	/**
@@ -176,17 +176,16 @@ index 6c72505..e73f771 100644
  	 * Returns average number of days in transit for a cargo entity.
  	 * @return The before mentioned number.
  	 */
-@@ -245,8 +238,7 @@ public:
- 		return this->count == 0 ? 0 : this->cargo_days_in_transit / this->count;
+@@ -243,7 +236,7 @@ public:
  	}
  
--
+ 
 -	void Append(CargoPacket *cp);
 +	void Append(CargoPacket *cp, bool update_cache = true);
- 
  	void Truncate(uint max_remaining);
  
-@@ -264,7 +256,9 @@ protected:
+ 	template <class Tother_inst>
+@@ -260,7 +253,9 @@ protected:
  	/** The (direct) parent of this class. */
  	typedef CargoList<VehicleCargoList> Parent;
  
@@ -196,8 +195,8 @@ index 6c72505..e73f771 100644
 +	uint reserved_count; ///< Cache for the number of reserved cargo entities.
  
  	void AddToCache(const CargoPacket *cp);
- 
-@@ -285,6 +279,58 @@ public:
+ 	void RemoveFromCache(const CargoPacket *cp);
+@@ -280,6 +275,58 @@ public:
  		return this->feeder_share;
  	}
  
@@ -256,7 +255,7 @@ index 6c72505..e73f771 100644
  	void AgeCargo();
  
  	void InvalidateCache();
-@@ -330,6 +376,15 @@ public:
+@@ -325,6 +372,15 @@ public:
  				cp1->source_type     == cp2->source_type &&
  				cp1->source_id       == cp2->source_id;
  	}
@@ -273,7 +272,7 @@ index 6c72505..e73f771 100644
  
  #endif /* CARGOPACKET_H */
 diff --git a/src/economy.cpp b/src/economy.cpp
-index 9710885..e40fbd3 100644
+index 9710885..224c122 100644
 --- a/src/economy.cpp
 +++ b/src/economy.cpp
 @@ -1102,38 +1102,53 @@ void PrepareUnload(Vehicle *front_v)
@@ -446,7 +445,7 @@ index 9710885..e40fbd3 100644
  
 -			dirty_vehicle = dirty_station = true;
 +				dirty_vehicle = dirty_station = true;
-+			} else if  (_settings_game.order.improved_load && HasBit(cargos_reserved, v->cargo_type)) {
++			} else if (_settings_game.order.improved_load && HasBit(cargos_reserved, v->cargo_type)) {
 +				/* Skip loading this vehicle if another train/vehicle is already handling
 +				 * the same cargo type at this station */
 +				SetBit(cargo_not_full, v->cargo_type);
@@ -512,20 +511,20 @@ index 9710885..e40fbd3 100644
  	}
  
 diff --git a/src/saveload/saveload.cpp b/src/saveload/saveload.cpp
-index b56fe4b..8c17015 100644
+index 4d68133..dc4332c 100644
 --- a/src/saveload/saveload.cpp
 +++ b/src/saveload/saveload.cpp
-@@ -222,7 +222,7 @@
-  *  155   21453
+@@ -223,7 +223,7 @@
   *  156   21728
+  *  157   21862
   */
--extern const uint16 SAVEGAME_VERSION = 156; ///< Current savegame version of OpenTTD.
+-extern const uint16 SAVEGAME_VERSION = 157; ///< Current savegame version of OpenTTD.
 +extern const uint16 SAVEGAME_VERSION = SL_RESERVATION; ///< Current savegame version of OpenTTD.
  
  SavegameType _savegame_type; ///< type of savegame we are loading
  
 diff --git a/src/saveload/saveload.h b/src/saveload/saveload.h
-index f9d1914..e500fd5 100644
+index f9d1914..337160f 100644
 --- a/src/saveload/saveload.h
 +++ b/src/saveload/saveload.h
 @@ -88,9 +88,6 @@ enum SLRefType {
@@ -547,7 +546,7 @@ index f9d1914..e500fd5 100644
 + * SL_TRUNK is always the current trunk version.
 + */
 +enum SaveLoadVersions {
-+	SL_TRUNK = 156,
++	SL_TRUNK = 157,
 +	SL_RESERVATION = SL_TRUNK + 10,
 +
 +	/** Highest possible savegame version. */
@@ -556,10 +555,10 @@ index f9d1914..e500fd5 100644
 +
  #endif /* SAVELOAD_H */
 diff --git a/src/saveload/vehicle_sl.cpp b/src/saveload/vehicle_sl.cpp
-index 4d65a12..f848ec0 100644
+index d93b749..537fb4e 100644
 --- a/src/saveload/vehicle_sl.cpp
 +++ b/src/saveload/vehicle_sl.cpp
-@@ -462,6 +462,7 @@ const SaveLoad *GetVehicleDescription(VehicleType vt)
+@@ -481,6 +481,7 @@ const SaveLoad *GetVehicleDescription(VehicleType vt)
  		     SLE_VAR(Vehicle, cargo_cap,             SLE_UINT16),
  		SLEG_CONDVAR(         _cargo_count,          SLE_UINT16,                   0,  67),
  		 SLE_CONDLST(Vehicle, cargo.packets,         REF_CARGO_PACKET,            68, SL_MAX_VERSION),
@@ -568,10 +567,10 @@ index 4d65a12..f848ec0 100644
  		     SLE_VAR(Vehicle, day_counter,           SLE_UINT8),
  		     SLE_VAR(Vehicle, tick_counter,          SLE_UINT8),
 diff --git a/src/vehicle.cpp b/src/vehicle.cpp
-index 0452104..848489d 100644
+index 94428ee..912ed1f 100644
 --- a/src/vehicle.cpp
 +++ b/src/vehicle.cpp
-@@ -662,10 +662,11 @@ void Vehicle::PreDestructor()
+@@ -674,10 +674,11 @@ void Vehicle::PreDestructor()
  	if (CleaningPool()) return;
  
  	if (Station::IsValidID(this->last_station_visited)) {
@@ -585,17 +584,26 @@ index 0452104..848489d 100644
  		delete this->cargo_payment;
  	}
  
-@@ -1799,6 +1800,22 @@ void Vehicle::BeginLoading()
+@@ -1162,7 +1163,7 @@ uint8 CalcPercentVehicleFilled(const Vehicle *v, StringID *colour)
+ 
+ 	/* Count up max and used */
+ 	for (; v != NULL; v = v->Next()) {
+-		count += v->cargo.Count();
++		count += v->cargo.OnboardCount();
+ 		max += v->cargo_cap;
+ 		if (v->cargo_cap != 0 && colour != NULL) {
+ 			unloading += HasBit(v->vehicle_flags, VF_CARGO_UNLOADING) ? 1 : 0;
+@@ -1836,6 +1837,22 @@ void Vehicle::BeginLoading()
  	this->MarkDirty();
  }
  
 +/**
-+ * return all reserved cargo packets to the station
++ * Return all reserved cargo packets to the station.
 + * @param st the station where the reserved packets should go.
 + */
 +void Vehicle::CancelReservation(Station *st)
 +{
-+	for(Vehicle *v = this; v != NULL; v = v->next) {
++	for (Vehicle *v = this; v != NULL; v = v->next) {
 +		VehicleCargoList &cargo = v->cargo;
 +		if (cargo.ReservedCount() > 0) {
 +			DEBUG(misc, 1, "cancelling cargo reservation");
@@ -608,7 +616,7 @@ index 0452104..848489d 100644
  void Vehicle::LeaveStation()
  {
  	assert(current_order.IsType(OT_LOADING));
-@@ -1810,6 +1827,7 @@ void Vehicle::LeaveStation()
+@@ -1847,6 +1864,7 @@ void Vehicle::LeaveStation()
  
  	current_order.MakeLeaveStation();
  	Station *st = Station::Get(this->last_station_visited);
@@ -617,10 +625,10 @@ index 0452104..848489d 100644
  
  	HideFillingPercent(&this->fill_percent_te_id);
 diff --git a/src/vehicle_base.h b/src/vehicle_base.h
-index 5ef9831..1c07886 100644
+index de592e7..040170b 100644
 --- a/src/vehicle_base.h
 +++ b/src/vehicle_base.h
-@@ -238,6 +238,7 @@ public:
+@@ -236,6 +236,7 @@ public:
  	virtual ~Vehicle();
  
  	void BeginLoading();
