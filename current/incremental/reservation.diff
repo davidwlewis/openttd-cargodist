@@ -511,7 +511,7 @@ index 9710885..224c122 100644
  	}
  
 diff --git a/src/saveload/saveload.cpp b/src/saveload/saveload.cpp
-index 4d68133..dc4332c 100644
+index ec0bec7..2318ff3 100644
 --- a/src/saveload/saveload.cpp
 +++ b/src/saveload/saveload.cpp
 @@ -223,7 +223,7 @@
