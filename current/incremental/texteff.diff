@@ -1,8 +1,8 @@
 diff --git a/src/economy.cpp b/src/economy.cpp
-index 9710885..0ab63ef 100644
+index 50d1fa3..3b40f81 100644
 --- a/src/economy.cpp
 +++ b/src/economy.cpp
-@@ -1017,21 +1017,23 @@ CargoPayment::~CargoPayment()
+@@ -1018,21 +1018,23 @@ CargoPayment::~CargoPayment()
  
  	this->front->cargo_payment = NULL;
  
@@ -35,7 +35,7 @@ index 9710885..0ab63ef 100644
  	}
  
  	cur_company.Restore();
-@@ -1073,7 +1075,7 @@ Money CargoPayment::PayTransfer(const CargoPacket *cp, uint count)
+@@ -1074,7 +1076,7 @@ Money CargoPayment::PayTransfer(const CargoPacket *cp, uint count)
  
  	profit = profit * _settings_game.economy.feeder_payment_share / 100;
  
@@ -91,10 +91,10 @@ index 887010f..06faa9f 100644
  STR_MESSAGE_ESTIMATED_INCOME                                    :{WHITE}Estimated Income: {CURRENCY}
  
 diff --git a/src/misc_gui.cpp b/src/misc_gui.cpp
-index 31c3eda..aa98a9e 100644
+index 80ea503..dfc1fc5 100644
 --- a/src/misc_gui.cpp
 +++ b/src/misc_gui.cpp
-@@ -759,12 +759,22 @@ void ShowCostOrIncomeAnimation(int x, int y, int z, Money cost)
+@@ -758,12 +758,22 @@ void ShowCostOrIncomeAnimation(int x, int y, int z, Money cost)
  	AddTextEffect(msg, pt.x, pt.y, DAY_TICKS, TE_RISING);
  }
  

@@ -1,5 +1,5 @@
 diff --git a/src/smallmap_gui.cpp b/src/smallmap_gui.cpp
-index 576abd3..19a5d76 100644
+index 576abd3..abf0a0e 100644
 --- a/src/smallmap_gui.cpp
 +++ b/src/smallmap_gui.cpp
 @@ -572,6 +572,27 @@ class SmallMapWindow : public Window {
@@ -249,7 +249,7 @@ index 576abd3..19a5d76 100644
  
  			/* Remap into flat coordinates. */
 -			Point pt = this->RemapTile(v->x_pos / TILE_SIZE, v->y_pos / TILE_SIZE);
-+			Point pt = RemapTile(i->position.x / (int)TILE_SIZE, i->position.y / (int)TILE_SIZE);
++			Point pt = this->RemapTile(i->position.x / (int)TILE_SIZE, i->position.y / (int)TILE_SIZE);
  
  			int y = pt.y - dpi->top;
 -			if (!IsInsideMM(y, 0, dpi->height)) continue; // y is out of bounds.
@@ -348,7 +348,7 @@ index 576abd3..19a5d76 100644
 +			if (v->vehstatus & (VS_HIDDEN | VS_UNCLICKABLE)) continue;
 +
 +			/* Remap into flat coordinates. We have to do that again in DrawVehicles to account for scrolling. */
-+			Point pos = RemapTile(v->x_pos / (int)TILE_SIZE, v->y_pos / (int)TILE_SIZE);
++			Point pos = this->RemapTile(v->x_pos / (int)TILE_SIZE, v->y_pos / (int)TILE_SIZE);
 +
 +			/* Check if rhombus is inside bounds */
 +			if (IsInsideMM(pos.x, -2 * scale, wi->current_x + 2 * scale) &&

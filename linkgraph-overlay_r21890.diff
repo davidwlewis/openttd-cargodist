@@ -35,7 +35,7 @@ index 0000000..ddb125a
 +graph calculations. Generally the accurace is inversely correlated to the
 +CPU requirements of the MCF algorithm.
 diff --git a/projects/openttd_vs100.vcxproj b/projects/openttd_vs100.vcxproj
-index 69360a6..1c3c5fa 100644
+index 69360a6..026d8f4 100644
 --- a/projects/openttd_vs100.vcxproj
 +++ b/projects/openttd_vs100.vcxproj
 @@ -326,6 +326,10 @@
@@ -49,10 +49,11 @@ index 69360a6..1c3c5fa 100644
      <ClCompile Include="..\src\map.cpp" />
      <ClCompile Include="..\src\misc.cpp" />
      <ClCompile Include="..\src\mixer.cpp" />
-@@ -454,10 +458,17 @@
+@@ -454,10 +458,18 @@
      <ClInclude Include="..\src\landscape.h" />
      <ClInclude Include="..\src\landscape_type.h" />
      <ClInclude Include="..\src\language.h" />
++    <ClInclude Include="..\src\linkgraph_gui.h" />
 +    <ClInclude Include="..\src\linkgraph\demands.h" />
 +    <ClInclude Include="..\src\linkgraph\flowmapper.h" />
 +    <ClInclude Include="..\src\linkgraph\linkgraph.h" />
@@ -67,7 +68,7 @@ index 69360a6..1c3c5fa 100644
      <ClInclude Include="..\src\network\network.h" />
      <ClInclude Include="..\src\network\network_admin.h" />
      <ClInclude Include="..\src\network\network_base.h" />
-@@ -618,6 +629,7 @@
+@@ -618,6 +630,7 @@
      <ClCompile Include="..\src\core\math_func.cpp" />
      <ClInclude Include="..\src\core\math_func.hpp" />
      <ClInclude Include="..\src\core\mem_func.hpp" />
@@ -75,7 +76,15 @@ index 69360a6..1c3c5fa 100644
      <ClInclude Include="..\src\core\overflowsafe_type.hpp" />
      <ClInclude Include="..\src\core\pool_func.hpp" />
      <ClInclude Include="..\src\core\pool_type.hpp" />
-@@ -723,6 +735,7 @@
+@@ -646,6 +659,7 @@
+     <ClCompile Include="..\src\highscore_gui.cpp" />
+     <ClCompile Include="..\src\industry_gui.cpp" />
+     <ClCompile Include="..\src\intro_gui.cpp" />
++    <ClCompile Include="..\src\linkgraph_gui.cpp" />
+     <ClCompile Include="..\src\main_gui.cpp" />
+     <ClCompile Include="..\src\misc_gui.cpp" />
+     <ClCompile Include="..\src\music_gui.cpp" />
+@@ -723,6 +737,7 @@
      <ClCompile Include="..\src\saveload\group_sl.cpp" />
      <ClCompile Include="..\src\saveload\industry_sl.cpp" />
      <ClCompile Include="..\src\saveload\labelmaps_sl.cpp" />
@@ -84,7 +93,7 @@ index 69360a6..1c3c5fa 100644
      <ClCompile Include="..\src\saveload\misc_sl.cpp" />
      <ClCompile Include="..\src\saveload\newgrf_sl.cpp" />
 diff --git a/projects/openttd_vs100.vcxproj.filters b/projects/openttd_vs100.vcxproj.filters
-index fd904c1..e4ca8a4 100644
+index fd904c1..fd25049 100644
 --- a/projects/openttd_vs100.vcxproj.filters
 +++ b/projects/openttd_vs100.vcxproj.filters
 @@ -198,6 +198,18 @@
@@ -106,10 +115,13 @@ index fd904c1..e4ca8a4 100644
      <ClCompile Include="..\src\map.cpp">
        <Filter>Source Files</Filter>
      </ClCompile>
-@@ -582,6 +594,21 @@
+@@ -582,6 +594,24 @@
      <ClInclude Include="..\src\language.h">
        <Filter>Header Files</Filter>
      </ClInclude>
++    <ClInclude Include="..\src\linkgraph_gui.h">
++      <Filter>Header Files</Filter>
++    </ClInclude>
 +    <ClInclude Include="..\src\linkgraph\demands.h">
 +      <Filter>Header Files</Filter>
 +    </ClInclude>
@@ -128,7 +140,7 @@ index fd904c1..e4ca8a4 100644
      <ClInclude Include="..\src\livery.h">
        <Filter>Header Files</Filter>
      </ClInclude>
-@@ -594,6 +621,12 @@
+@@ -594,6 +624,12 @@
      <ClInclude Include="..\src\mixer.h">
        <Filter>Header Files</Filter>
      </ClInclude>
@@ -141,7 +153,7 @@ index fd904c1..e4ca8a4 100644
      <ClInclude Include="..\src\network\network.h">
        <Filter>Header Files</Filter>
      </ClInclude>
-@@ -1074,6 +1107,9 @@
+@@ -1074,6 +1110,9 @@
      <ClInclude Include="..\src\core\mem_func.hpp">
        <Filter>Core Source Code</Filter>
      </ClInclude>
@@ -151,7 +163,17 @@ index fd904c1..e4ca8a4 100644
      <ClInclude Include="..\src\core\overflowsafe_type.hpp">
        <Filter>Core Source Code</Filter>
      </ClInclude>
-@@ -1389,6 +1425,9 @@
+@@ -1158,6 +1197,9 @@
+     <ClCompile Include="..\src\intro_gui.cpp">
+       <Filter>GUI Source Code</Filter>
+     </ClCompile>
++    <ClCompile Include="..\src\linkgraph_gui.cpp">
++      <Filter>GUI Source Code</Filter>
++    </ClCompile>
+     <ClCompile Include="..\src\main_gui.cpp">
+       <Filter>GUI Source Code</Filter>
+     </ClCompile>
+@@ -1389,6 +1431,9 @@
      <ClCompile Include="..\src\saveload\labelmaps_sl.cpp">
        <Filter>Save/Load handlers</Filter>
      </ClCompile>
@@ -162,7 +184,7 @@ index fd904c1..e4ca8a4 100644
        <Filter>Save/Load handlers</Filter>
      </ClCompile>
 diff --git a/projects/openttd_vs80.vcproj b/projects/openttd_vs80.vcproj
-index 92813de..e80152e 100644
+index 92813de..d6552fb 100644
 --- a/projects/openttd_vs80.vcproj
 +++ b/projects/openttd_vs80.vcproj
 @@ -575,6 +575,22 @@
@@ -188,10 +210,14 @@ index 92813de..e80152e 100644
  				RelativePath=".\..\src\map.cpp"
  				>
  			</File>
-@@ -1091,6 +1107,26 @@
+@@ -1091,6 +1107,30 @@
  				>
  			</File>
  			<File
++				RelativePath=".\..\src\linkgraph_gui.h"
++				>
++			</File>
++			<File
 +				RelativePath=".\..\src\linkgraph\demands.h"
 +				>
 +			</File>
@@ -215,7 +241,7 @@ index 92813de..e80152e 100644
  				RelativePath=".\..\src\livery.h"
  				>
  			</File>
-@@ -1107,6 +1143,14 @@
+@@ -1107,6 +1147,14 @@
  				>
  			</File>
  			<File
@@ -230,7 +256,7 @@ index 92813de..e80152e 100644
  				RelativePath=".\..\src\network\network.h"
  				>
  			</File>
-@@ -1751,6 +1795,10 @@
+@@ -1751,6 +1799,10 @@
  				>
  			</File>
  			<File
@@ -241,7 +267,18 @@ index 92813de..e80152e 100644
  				RelativePath=".\..\src\core\overflowsafe_type.hpp"
  				>
  			</File>
-@@ -2187,6 +2235,10 @@
+@@ -1867,6 +1919,10 @@
+ 				>
+ 			</File>
+ 			<File
++				RelativePath=".\..\src\linkgraph_gui.cpp"
++				>
++			</File>
++			<File
+ 				RelativePath=".\..\src\main_gui.cpp"
+ 				>
+ 			</File>
+@@ -2187,6 +2243,10 @@
  				>
  			</File>
  			<File
@@ -253,7 +290,7 @@ index 92813de..e80152e 100644
  				>
  			</File>
 diff --git a/projects/openttd_vs90.vcproj b/projects/openttd_vs90.vcproj
-index f04386b..49fa4e6 100644
+index f04386b..b0e21f1 100644
 --- a/projects/openttd_vs90.vcproj
 +++ b/projects/openttd_vs90.vcproj
 @@ -572,6 +572,22 @@
@@ -279,10 +316,14 @@ index f04386b..49fa4e6 100644
  				RelativePath=".\..\src\map.cpp"
  				>
  			</File>
-@@ -1088,6 +1104,26 @@
+@@ -1088,6 +1104,30 @@
  				>
  			</File>
  			<File
++				RelativePath=".\..\src\linkgraph_gui.h"
++				>
++			</File>
++			<File
 +				RelativePath=".\..\src\linkgraph\demands.h"
 +				>
 +			</File>
@@ -306,7 +347,7 @@ index f04386b..49fa4e6 100644
  				RelativePath=".\..\src\livery.h"
  				>
  			</File>
-@@ -1104,6 +1140,14 @@
+@@ -1104,6 +1144,14 @@
  				>
  			</File>
  			<File
@@ -321,7 +362,7 @@ index f04386b..49fa4e6 100644
  				RelativePath=".\..\src\network\network.h"
  				>
  			</File>
-@@ -1748,6 +1792,10 @@
+@@ -1748,6 +1796,10 @@
  				>
  			</File>
  			<File
@@ -332,7 +373,18 @@ index f04386b..49fa4e6 100644
  				RelativePath=".\..\src\core\overflowsafe_type.hpp"
  				>
  			</File>
-@@ -2184,6 +2232,10 @@
+@@ -1864,6 +1916,10 @@
+ 				>
+ 			</File>
+ 			<File
++				RelativePath=".\..\src\linkgraph_gui.cpp"
++				>
++			</File>
++			<File
+ 				RelativePath=".\..\src\main_gui.cpp"
+ 				>
+ 			</File>
+@@ -2184,6 +2240,10 @@
  				>
  			</File>
  			<File
@@ -344,7 +396,7 @@ index f04386b..49fa4e6 100644
  				>
  			</File>
 diff --git a/source.list b/source.list
-index efcf338..0b0e43e 100644
+index efcf338..ee94698 100644
 --- a/source.list
 +++ b/source.list
 @@ -34,6 +34,10 @@ highscore.cpp
@@ -358,10 +410,11 @@ index efcf338..0b0e43e 100644
  map.cpp
  misc.cpp
  mixer.cpp
-@@ -187,10 +191,17 @@ ini_type.h
+@@ -187,10 +191,18 @@ ini_type.h
  landscape.h
  landscape_type.h
  language.h
++linkgraph_gui.h
 +linkgraph/demands.h
 +linkgraph/flowmapper.h
 +linkgraph/linkgraph.h
@@ -376,7 +429,7 @@ index efcf338..0b0e43e 100644
  network/network.h
  network/network_admin.h
  network/network_base.h
-@@ -368,6 +379,7 @@ core/geometry_type.hpp
+@@ -368,6 +380,7 @@ core/geometry_type.hpp
  core/math_func.cpp
  core/math_func.hpp
  core/mem_func.hpp
@@ -384,7 +437,15 @@ index efcf338..0b0e43e 100644
  core/overflowsafe_type.hpp
  core/pool_func.hpp
  core/pool_type.hpp
-@@ -481,6 +493,7 @@ saveload/gamelog_sl.cpp
+@@ -398,6 +411,7 @@ group_gui.cpp
+ highscore_gui.cpp
+ industry_gui.cpp
+ intro_gui.cpp
++linkgraph_gui.cpp
+ main_gui.cpp
+ misc_gui.cpp
+ music_gui.cpp
+@@ -481,6 +495,7 @@ saveload/gamelog_sl.cpp
  saveload/group_sl.cpp
  saveload/industry_sl.cpp
  saveload/labelmaps_sl.cpp
@@ -2431,55 +2492,10 @@ index 4229362..d61c120 100644
 +	OnTick_LinkGraph();
  }
 diff --git a/src/lang/english.txt b/src/lang/english.txt
-index 887010f..4adaec8 100644
+index 887010f..63bb1d8 100644
 --- a/src/lang/english.txt
 +++ b/src/lang/english.txt
-@@ -655,17 +655,20 @@ STR_SMALLMAP_CAPTION                                            :{WHITE}Map - {S
- STR_SMALLMAP_TYPE_CONTOURS                                      :Contours
- STR_SMALLMAP_TYPE_VEHICLES                                      :Vehicles
- STR_SMALLMAP_TYPE_INDUSTRIES                                    :Industries
-+STR_SMALLMAP_TYPE_ROUTEMAP                                      :Link Statistics
- STR_SMALLMAP_TYPE_ROUTES                                        :Routes
- STR_SMALLMAP_TYPE_VEGETATION                                    :Vegetation
- STR_SMALLMAP_TYPE_OWNERS                                        :Owners
- STR_SMALLMAP_TOOLTIP_SHOW_LAND_CONTOURS_ON_MAP                  :{BLACK}Show land contours on map
- STR_SMALLMAP_TOOLTIP_SHOW_VEHICLES_ON_MAP                       :{BLACK}Show vehicles on map
- STR_SMALLMAP_TOOLTIP_SHOW_INDUSTRIES_ON_MAP                     :{BLACK}Show industries on map
-+STR_SMALLMAP_TOOLTIP_SHOW_LINK_STATS_ON_MAP                     :{BLACK}Show link statistics on map
- STR_SMALLMAP_TOOLTIP_SHOW_TRANSPORT_ROUTES_ON                   :{BLACK}Show transport routes on map
- STR_SMALLMAP_TOOLTIP_SHOW_VEGETATION_ON_MAP                     :{BLACK}Show vegetation on map
- STR_SMALLMAP_TOOLTIP_SHOW_LAND_OWNERS_ON_MAP                    :{BLACK}Show land owners on map
- STR_SMALLMAP_TOOLTIP_INDUSTRY_SELECTION                         :{BLACK}Click on an industry type to toggle displaying it. Ctrl+Click disables all types except the selected one. Ctrl+Click on it again to enable all industry types
- STR_SMALLMAP_TOOLTIP_COMPANY_SELECTION                          :{BLACK}Click on a company to toggle displaying its property. Ctrl+Click disables all companies except the selected one. Ctrl+Click on it again to enable all companies
-+STR_SMALLMAP_TOOLTIP_CARGO_SELECTION                            :{BLACK}Click on a cargo to toggle displaying its property. Ctrl+Click disables all cargos except the selected one. Ctrl+Click on it again to enable all cargos
- 
- STR_SMALLMAP_LEGENDA_ROADS                                      :{TINYFONT}{BLACK}Roads
- STR_SMALLMAP_LEGENDA_RAILROADS                                  :{TINYFONT}{BLACK}Railways
-@@ -696,9 +699,14 @@ STR_SMALLMAP_LEGENDA_INDUSTRIES                                 :{TINYFONT}{BLAC
- STR_SMALLMAP_LEGENDA_DESERT                                     :{TINYFONT}{BLACK}Desert
- STR_SMALLMAP_LEGENDA_SNOW                                       :{TINYFONT}{BLACK}Snow
- 
-+STR_SMALLMAP_LEGENDA_LINK_UNUSED                                :{TINYFONT}{BLACK}unused
-+STR_SMALLMAP_LEGENDA_LINK_SATURATED                             :{TINYFONT}{BLACK}saturated
-+STR_SMALLMAP_LEGENDA_LINK_OVERLOADED                            :{TINYFONT}{BLACK}overloaded
-+
- STR_SMALLMAP_TOOLTIP_TOGGLE_TOWN_NAMES_ON_OFF                   :{BLACK}Toggle town names on/off on map
- STR_SMALLMAP_CENTER                                             :{BLACK}Centre the smallmap on the current position
- STR_SMALLMAP_INDUSTRY                                           :{TINYFONT}{STRING} ({NUM})
-+STR_SMALLMAP_LINKSTATS                                          :{TINYFONT}{STRING}
- STR_SMALLMAP_COMPANY                                            :{TINYFONT}{COMPANY}
- STR_SMALLMAP_TOWN                                               :{TINYFONT}{WHITE}{TOWN}
- STR_SMALLMAP_DISABLE_ALL                                        :{BLACK}Disable all
-@@ -709,6 +717,8 @@ STR_SMALLMAP_TOOLTIP_ENABLE_ALL_INDUSTRIES                      :{BLACK}Display
- STR_SMALLMAP_TOOLTIP_SHOW_HEIGHT                                :{BLACK}Toggle display of heightmap
- STR_SMALLMAP_TOOLTIP_DISABLE_ALL_COMPANIES                      :{BLACK}Display no company property on the map
- STR_SMALLMAP_TOOLTIP_ENABLE_ALL_COMPANIES                       :{BLACK}Display all company property on the map
-+STR_SMALLMAP_TOOLTIP_DISABLE_ALL_CARGOS                         :{BLACK}Display no cargos on the map
-+STR_SMALLMAP_TOOLTIP_ENABLE_ALL_CARGOS                          :{BLACK}Display all cargos on the map
- 
- # Status bar messages
- STR_STATUSBAR_TOOLTIP_SHOW_LAST_NEWS                            :{BLACK}Show last message or news report
-@@ -1333,11 +1343,38 @@ STR_CONFIG_SETTING_LARGER_TOWNS_DISABLED                        :{LTBLUE}Proport
+@@ -1333,11 +1333,38 @@ STR_CONFIG_SETTING_LARGER_TOWNS_DISABLED                        :{LTBLUE}Proport
  STR_CONFIG_SETTING_CITY_SIZE_MULTIPLIER                         :{LTBLUE}Initial city size multiplier: {ORANGE}{STRING1}
  STR_CONFIG_SETTING_MODIFIED_ROAD_REBUILD                        :{LTBLUE}Remove absurd road-elements during the road construction: {ORANGE}{STRING1}
  
@@ -2518,7 +2534,7 @@ index 887010f..4adaec8 100644
  STR_CONFIG_SETTING_AI                                           :{ORANGE}Competitors
  STR_CONFIG_SETTING_DISPLAY_OPTIONS                              :{ORANGE}Display options
  STR_CONFIG_SETTING_INTERACTION                                  :{ORANGE}Interaction
-@@ -3419,6 +3456,10 @@ STR_INCOME_FLOAT_INCOME_SMALL                                   :{TINYFONT}{GREE
+@@ -3419,6 +3446,10 @@ STR_INCOME_FLOAT_INCOME_SMALL                                   :{TINYFONT}{GREE
  STR_INCOME_FLOAT_INCOME                                         :{GREEN}Income: {CURRENCY}
  STR_FEEDER_TINY                                                 :{TINYFONT}{YELLOW}Transfer: {CURRENCY}
  STR_FEEDER                                                      :{YELLOW}Transfer: {CURRENCY}
@@ -4482,6 +4498,274 @@ index 0000000..f1a6349
 +};
 +
 +#endif /* MCF_H_ */
+diff --git a/src/linkgraph_gui.cpp b/src/linkgraph_gui.cpp
+new file mode 100644
+index 0000000..a6db017
+--- /dev/null
++++ b/src/linkgraph_gui.cpp
+@@ -0,0 +1,189 @@
++/* $Id$ */
++
++/*
++ * This file is part of OpenTTD.
++ * OpenTTD is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, version 2.
++ * OpenTTD is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
++ * See the GNU General Public License for more details. You should have received a copy of the GNU General Public License along with OpenTTD. If not, see <http://www.gnu.org/licenses/>.
++ */
++
++/** @file linkgraph_gui.cpp Implementation of linkgraph overlay GUI. */
++
++#include "stdafx.h"
++#include "station_base.h"
++#include "widget_type.h"
++#include "window_gui.h"
++#include "linkgraph_gui.h"
++
++template<class Twindow>
++void LinkGraphOverlay<Twindow>::Draw() const
++{
++	std::set<StationID> seen_stations;
++	std::set<std::pair<StationID, StationID> > seen_links;
++
++	const Station *sta;
++	FOR_ALL_STATIONS(sta) {
++		/* Show links between own stations or "neutral" ones like oilrigs.*/
++		if (!HasBit(this->company_mask, sta->owner)) continue;
++		CargoID c;
++		FOR_EACH_SET_CARGO_ID(c, this->cargo_mask) {
++			if (!CargoSpec::Get(c)->IsValid()) continue;
++
++			const LinkStatMap &links = sta->goods[c].link_stats;
++			for (LinkStatMap::const_iterator i = links.begin(); i != links.end(); ++i) {
++				StationID from = sta->index;
++				StationID to = i->first;
++				if (Station::IsValidID(to) && seen_stations.find(to) == seen_stations.end()) {
++					const Station *stb = Station::Get(to);
++
++					if (!HasBit(this->company_mask, stb->owner)) continue;
++					if (sta->rect.IsEmpty() || stb->rect.IsEmpty()) continue;
++					if (seen_links.find(std::make_pair(to, from)) != seen_links.end()) continue;
++
++					Point pta = this->window->GetStationMiddle(sta);
++					Point ptb = this->window->GetStationMiddle(stb);
++					if (!this->IsLinkVisible(pta, ptb)) continue;
++
++					this->DrawForwBackLinks(pta, sta->index, ptb, stb->index);
++					seen_stations.insert(to);
++				}
++				seen_links.insert(std::make_pair(from, to));
++			}
++		}
++		seen_stations.clear();
++	}
++
++	this->DrawStationDots();
++}
++
++template<class Twindow>
++FORCEINLINE bool LinkGraphOverlay<Twindow>::IsLinkVisible(Point pta, Point ptb) const
++{
++	const NWidgetBase *wi = static_cast<const Window *>(this->window)->GetWidget<NWidgetBase>(this->widget_id);
++	return !((pta.x < 0 && ptb.x < 0) ||
++			(pta.y < 0 && ptb.y < 0) ||
++			(pta.x > (int)wi->current_x && ptb.x > (int)wi->current_x) ||
++			(pta.y > (int)wi->current_y && ptb.y > (int)wi->current_y));
++}
++
++template<class Twindow>
++void LinkGraphOverlay<Twindow>::AddLinks(StationID sta, StationID stb, LinkProperties &cargo) const
++{
++	CargoID c;
++	FOR_EACH_SET_CARGO_ID(c, this->cargo_mask) {
++		if (!CargoSpec::Get(c)->IsValid()) continue;
++		GoodsEntry &ge = Station::Get(sta)->goods[c];
++		FlowStat sum_flows = ge.GetSumFlowVia(stb);
++		const LinkStatMap &ls_map = ge.link_stats;
++		LinkStatMap::const_iterator i = ls_map.find(stb);
++		if (i != ls_map.end()) {
++			const LinkStat &link_stat = i->second;
++			this->AddStats(link_stat, sum_flows, cargo);
++		}
++	}
++}
++
++template<class Twindow>
++/* static */ void LinkGraphOverlay<Twindow>::AddStats(const LinkStat &orig_link, const FlowStat &orig_flow, LinkProperties &cargo)
++{
++	uint new_cap = orig_link.Capacity();
++	uint new_usg = orig_link.Usage();
++	uint new_plan = orig_flow.Planned();
++
++	/* multiply the numbers by 32 in order to avoid comparing to 0 too often. */
++	if (cargo.capacity == 0 ||
++			max(cargo.usage, cargo.planned) * 32 / (cargo.capacity + 1) < max(new_usg, new_plan) * 32 / (new_cap + 1)) {
++		cargo.capacity = new_cap;
++		cargo.usage = new_usg;
++		cargo.planned = new_plan;
++	}
++}
++
++template<class Twindow>
++void LinkGraphOverlay<Twindow>::DrawForwBackLinks(Point pta, StationID sta, Point ptb, StationID stb) const
++{
++	LinkProperties forward, backward;
++	this->AddLinks(sta, stb, forward);
++	this->AddLinks(stb, sta, backward);
++	GfxDrawLine(pta.x, pta.y, ptb.x, ptb.y, _colour_gradient[COLOUR_GREY][1]);
++	this->DrawContent(pta, ptb, forward);
++	this->DrawContent(ptb, pta, backward);
++
++}
++
++template<class Twindow>
++/* static */ void LinkGraphOverlay<Twindow>::DrawContent(Point pta, Point ptb, LinkProperties &cargo)
++{
++	if (cargo.capacity <= 0) return;
++	int direction_y = (pta.x < ptb.x ? 1 : -1);
++	int direction_x = (pta.y > ptb.y ? 1 : -1);;
++
++	uint usage_or_plan = min(cargo.capacity * 2, max(cargo.usage, cargo.planned));
++	int colour = LinkGraphOverlay<Twindow>::LINK_COLOURS[usage_or_plan * lengthof(LinkGraphOverlay<Twindow>::LINK_COLOURS) / (cargo.capacity * 2 + 1)];
++	GfxDrawLine(pta.x + direction_x, pta.y, ptb.x + direction_x, ptb.y, colour);
++	GfxDrawLine(pta.x, pta.y + direction_y, ptb.x, ptb.y + direction_y, colour);
++}
++
++/**
++ * Draw dots for stations into the smallmap. The dots' sizes are determined by the amount of
++ * cargo produced there, their colours by the type of cargo produced.
++ */
++template<class Twindow>
++void LinkGraphOverlay<Twindow>::DrawStationDots() const
++{
++	const Station *st;
++	FOR_ALL_STATIONS(st) {
++		if (!HasBit(this->company_mask, st->owner) || st->rect.IsEmpty()) continue;
++		Point pt = this->window->GetStationMiddle(st);
++		const NWidgetBase *wi = static_cast<const Window *>(this->window)->GetWidget<NWidgetBase>(this->widget_id);
++		if (pt.x < 0 || pt.y < 0 || pt.x > (int)wi->current_x || pt.y > (int)wi->current_y) continue;
++
++		/* Add up cargo supplied for each selected cargo type */
++		uint q = 0;
++		int colour = 0;
++		int numCargos = 0;
++		CargoID c;
++		FOR_EACH_SET_CARGO_ID(c, this->cargo_mask) {
++			if (!CargoSpec::Get(c)->IsValid()) continue;
++			uint supply = st->goods[c].supply;
++			if (supply > 0) {
++				q += supply;
++				colour += CargoSpec::Get(c)->legend_colour;
++				++numCargos;
++			}
++		}
++		if (numCargos > 1) colour /= numCargos;
++
++		uint r = 1;
++		if (q >= 20) r++;
++		if (q >= 90) r++;
++		if (q >= 160) r++;
++
++		LinkGraphOverlay::DrawVertex(pt.x, pt.y, r, colour, _colour_gradient[COLOUR_GREY][3]);
++	}
++}
++
++/**
++ * Draw a square symbolizing a producer of cargo.
++ * @param x the x coordinate of the middle of the vertex
++ * @param y the y coordinate of the middle of the vertex
++ * @param size the x and y extend of the vertex
++ * @param colour the colour with which the vertex will be filled
++ * @param border_colour the colour for the border of the vertex
++ */
++template<class Twindow>
++/* static */ void LinkGraphOverlay<Twindow>::DrawVertex(int x, int y, int size, int colour, int border_colour)
++{
++	size--;
++	int w1 = size / 2;
++	int w2 = size / 2 + size % 2;
++
++	GfxFillRect(x - w1, y - w1, x + w2, y + w2, colour);
++
++	w1++;
++	w2++;
++	GfxDrawLine(x - w1, y - w1, x + w2, y - w1, border_colour);
++	GfxDrawLine(x - w1, y + w2, x + w2, y + w2, border_colour);
++	GfxDrawLine(x - w1, y - w1, x - w1, y + w2, border_colour);
++	GfxDrawLine(x + w2, y - w1, x + w2, y + w2, border_colour);
++}
+diff --git a/src/linkgraph_gui.h b/src/linkgraph_gui.h
+new file mode 100644
+index 0000000..803afbc
+--- /dev/null
++++ b/src/linkgraph_gui.h
+@@ -0,0 +1,67 @@
++/* $Id$ */
++
++/*
++ * This file is part of OpenTTD.
++ * OpenTTD is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, version 2.
++ * OpenTTD is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
++ * See the GNU General Public License for more details. You should have received a copy of the GNU General Public License along with OpenTTD. If not, see <http://www.gnu.org/licenses/>.
++ */
++
++/** @file linkgraph_gui.h Declaration of linkgraph overlay GUI. */
++
++#ifndef LINKGRAPH_GUI_H_
++#define LINKGRAPH_GUI_H_
++
++#include "company_func.h"
++
++/**
++ * Properties of a link between two stations.
++ */
++struct LinkProperties {
++	LinkProperties() { this->Clear(); }
++
++	void Clear() { this->capacity = this->usage = this->planned = 0; }
++
++	uint capacity;
++	uint usage;
++	uint planned;
++};
++
++/**
++ * Handles drawing of links into some window.
++ * @tparam Twindow window type to be drawn into. Must provide methods:
++ * - Point GetStationMiddle(Station *st) const
++ */
++template<class Twindow>
++class LinkGraphOverlay {
++public:
++	static const uint8 LINK_COLOURS[];
++
++	/**
++	 * Create a link graph overlay for the specified window.
++	 * @param w Window to be drawn into.
++	 */
++	LinkGraphOverlay(const Twindow *w, uint wid, uint32 cargo_mask = 0xFFFF,
++			uint32 company_mask = (1 << _local_company) | INVALID_COMPANY) :
++			window(w), widget_id(wid), cargo_mask(cargo_mask), company_mask(company_mask)
++	{}
++
++	void Draw() const;
++
++protected:
++	const Twindow *window; ///< Window to be drawn into.
++	uint widget_id;        ///< ID of widget in window to be drawn into.
++	uint32 cargo_mask;     ///< Bitmask of cargos to be displayed.
++	uint32 company_mask;   ///< Bitmask of companies to be displayed.
++
++	void DrawForwBackLinks(Point pta, StationID sta, Point ptb, StationID stb) const;
++	void AddLinks(StationID sta, StationID stb, LinkProperties &cargo) const;
++	void DrawStationDots() const;
++	bool IsLinkVisible(Point pta, Point ptb) const;
++
++	static void AddStats(const LinkStat &orig_link, const FlowStat &orig_flow, LinkProperties &cargo);
++	static void DrawContent(Point pta, Point ptb, LinkProperties &cargo);
++	static void DrawVertex(int x, int y, int size, int colour, int border_colour);
++};
++
++#endif /* LINKGRAPH_GUI_H_ */
 diff --git a/src/misc.cpp b/src/misc.cpp
 index 40fd7e0..e530759 100644
 --- a/src/misc.cpp
@@ -4654,20 +4938,6 @@ index 0000000..3a4d2eb
 +
 +#endif /* MOVING_AVERAGE_H_ */
 +
-diff --git a/src/newgrf.cpp b/src/newgrf.cpp
-index e398edb..647c47f 100644
---- a/src/newgrf.cpp
-+++ b/src/newgrf.cpp
-@@ -8094,6 +8094,9 @@ static void AfterLoadGRFs()
- 	/* Create dynamic list of industry legends for smallmap_gui.cpp */
- 	BuildIndustriesLegend();
- 
-+	/* build the routemap legend, based on the available cargos */
-+	BuildLinkStatsLegend();
-+
- 	/* Add all new airports to the airports array. */
- 	FinaliseAirportsArray();
- 	BindAirportSpecs();
 diff --git a/src/openttd.cpp b/src/openttd.cpp
 index dcdb835..b8f14f3 100644
 --- a/src/openttd.cpp
@@ -5573,1263 +5843,6 @@ index f5a6ac6..72af35c 100644
  		v->engine_type = e->index;
  
  		v->reliability = e->reliability;
-diff --git a/src/smallmap_gui.cpp b/src/smallmap_gui.cpp
-index 576abd3..8bcc881 100644
---- a/src/smallmap_gui.cpp
-+++ b/src/smallmap_gui.cpp
-@@ -26,8 +26,11 @@
- #include "sound_func.h"
- #include "window_func.h"
- #include "company_base.h"
-+#include "company_func.h"
-+#include "station_base.h"
- 
- #include "table/strings.h"
-+#include <vector>
- 
- /** Widget numbers of the small map window. */
- enum SmallMapWindowWidgets {
-@@ -35,11 +38,13 @@ enum SmallMapWindowWidgets {
- 	SM_WIDGET_MAP_BORDER,        ///< Border around the smallmap.
- 	SM_WIDGET_MAP,               ///< Panel containing the smallmap.
- 	SM_WIDGET_LEGEND,            ///< Bottom panel to display smallmap legends.
-+	SM_WIDGET_BLANK,             ///< Empty button as placeholder.
- 	SM_WIDGET_ZOOM_IN,           ///< Button to zoom in one step.
- 	SM_WIDGET_ZOOM_OUT,          ///< Button to zoom out one step.
- 	SM_WIDGET_CONTOUR,           ///< Button to select the contour view (height map).
- 	SM_WIDGET_VEHICLES,          ///< Button to select the vehicles view.
- 	SM_WIDGET_INDUSTRIES,        ///< Button to select the industries view.
-+	SM_WIDGET_LINKSTATS,         ///< Button to select the link stats view.
- 	SM_WIDGET_ROUTES,            ///< Button to select the routes view.
- 	SM_WIDGET_VEGETATION,        ///< Button to select the vegetation view.
- 	SM_WIDGET_OWNERS,            ///< Button to select the owners view.
-@@ -56,6 +61,8 @@ static int _smallmap_company_count;  ///< Number of entries in the owner legend.
- 
- static const int NUM_NO_COMPANY_ENTRIES = 4; ///< Number of entries in the owner legend that are not companies.
- 
-+static int _smallmap_cargo_count; ///< number of cargos in the link stats legend
-+
- /** Macro for ordinary entry of LegendAndColour */
- #define MK(a, b) {a, b, INVALID_INDUSTRYTYPE, 0, INVALID_COMPANY, true, false, false}
- 
-@@ -175,6 +182,19 @@ static bool _smallmap_show_heightmap = false;
- static uint _company_to_list_pos[MAX_COMPANIES];
- 
- /**
-+ * Colours for the various "load" states of links. Ordered from "empty" to
-+ * "overcrowded".
-+ */
-+static const uint8 _smallmap_link_colours[] = {
-+	0x0f, 0xd1, 0xd0, 0x57,
-+	0x55, 0x53, 0xbf, 0xbd,
-+	0xba, 0xb9, 0xb7, 0xb5
-+};
-+
-+/** Link stat colours shown in legenda. */
-+static uint8 _linkstat_colours_in_legenda[] = {0, 1, 3, 5, 7, 9, 11};
-+
-+/**
-  * Fills an array for the industries legends.
-  */
- void BuildIndustriesLegend()
-@@ -205,10 +225,47 @@ void BuildIndustriesLegend()
- 	_smallmap_industry_count = j;
- }
- 
-+/** Legend entries for the link stats view. */
-+static LegendAndColour _legend_linkstats[NUM_CARGO + lengthof(_linkstat_colours_in_legenda) + 1];
-+
-+/**
-+ * Populate legend table for the link stat view.
-+ */
-+void BuildLinkStatsLegend()
-+{
-+	/* Clear the legend */
-+	memset(_legend_linkstats, 0, sizeof(_legend_linkstats));
-+
-+	uint i = 0;
-+	for (; i < _sorted_cargo_specs_size; ++i) {
-+		const CargoSpec *cs = _sorted_cargo_specs[i];
-+
-+		_legend_linkstats[i].legend = cs->name;
-+		_legend_linkstats[i].colour = cs->legend_colour;
-+		_legend_linkstats[i].type = cs->Index();
-+		_legend_linkstats[i].show_on_map = true;
-+	}
-+
-+	_legend_linkstats[i].col_break = true;
-+	_smallmap_cargo_count = i;
-+
-+	for (; i < _smallmap_cargo_count + lengthof(_linkstat_colours_in_legenda); ++i) {
-+		_legend_linkstats[i].legend = STR_EMPTY;
-+		_legend_linkstats[i].colour = _smallmap_link_colours[_linkstat_colours_in_legenda[i - _smallmap_cargo_count]];
-+		_legend_linkstats[i].show_on_map = true;
-+	}
-+
-+	_legend_linkstats[_smallmap_cargo_count].legend = STR_SMALLMAP_LEGENDA_LINK_UNUSED;
-+	_legend_linkstats[i - 1].legend = STR_SMALLMAP_LEGENDA_LINK_OVERLOADED;
-+	_legend_linkstats[(_smallmap_cargo_count + i - 1) / 2].legend = STR_SMALLMAP_LEGENDA_LINK_SATURATED;
-+	_legend_linkstats[i].end = true;
-+}
-+
- static const LegendAndColour * const _legend_table[] = {
- 	_legend_land_contours,
- 	_legend_vehicles,
- 	_legend_from_industries,
-+	_legend_linkstats,
- 	_legend_routes,
- 	_legend_vegetation,
- 	_legend_land_owners,
-@@ -482,6 +539,17 @@ static inline uint32 GetSmallMapRoutesPixels(TileIndex tile, TileType t)
- 	return ApplyMask(cs->default_colour, &_smallmap_contours_andor[t]);
- }
- 
-+/**
-+ * Return the colour a tile would be displayed with in the small map in mode "link stats".
-+ *
-+ * @param tile The tile of which we would like to get the colour.
-+ * @param t    Effective tile type of the tile (see #GetEffectiveTileType).
-+ * @return The colour of tile in the small map in mode "link stats"
-+ */
-+static inline uint32 GetSmallMapLinkStatsPixels(TileIndex tile, TileType t)
-+{
-+	return _smallmap_show_heightmap ? GetSmallMapContoursPixels(tile, t) : GetSmallMapRoutesPixels(tile, t);
-+}
- 
- static const uint32 _vegetation_clear_bits[] = {
- 	MKCOLOUR(0x54545454), ///< full grass
-@@ -559,6 +627,29 @@ static const byte _vehicle_type_colours[6] = {
- 	184, 191, 152, 15, 215, 184
- };
- 
-+/**
-+ * Draw a square symbolizing a producer of cargo in the link stats view.
-+ * @param x the x coordinate of the middle of the vertex
-+ * @param y the y coordinate of the middle of the vertex
-+ * @param size the x and y extend of the vertex
-+ * @param colour the colour with which the vertex will be filled
-+ * @param border_colour the colour for the border of the vertex
-+ */
-+void DrawVertex(int x, int y, int size, int colour, int border_colour)
-+{
-+	size--;
-+	int w1 = size / 2;
-+	int w2 = size / 2 + size % 2;
-+
-+	GfxFillRect(x - w1, y - w1, x + w2, y + w2, colour);
-+
-+	w1++;
-+	w2++;
-+	GfxDrawLine(x - w1, y - w1, x + w2, y - w1, border_colour);
-+	GfxDrawLine(x - w1, y + w2, x + w2, y + w2, border_colour);
-+	GfxDrawLine(x - w1, y - w1, x - w1, y + w2, border_colour);
-+	GfxDrawLine(x + w2, y - w1, x + w2, y + w2, border_colour);
-+}
- 
- /** Class managing the smallmap window. */
- class SmallMapWindow : public Window {
-@@ -567,11 +658,33 @@ class SmallMapWindow : public Window {
- 		SMT_CONTOUR,
- 		SMT_VEHICLES,
- 		SMT_INDUSTRY,
-+		SMT_LINKSTATS,
- 		SMT_ROUTES,
- 		SMT_VEGETATION,
- 		SMT_OWNER,
- 	};
- 
-+	/**
-+	 * Save the Vehicle's old position here, so that we don't get glitches when
-+	 * redrawing.
-+	 * The glitches happen when a vehicle occupies a larger area (zoom-in) and
-+	 * a partial redraw happens which only covers part of the vehicle. If the
-+	 * vehicle has moved in the meantime, it looks ugly afterwards.
-+	 */
-+	struct VehicleAndPosition {
-+		VehicleAndPosition(const Vehicle *v) : vehicle(v->index)
-+		{
-+			this->position.x = v->x_pos;
-+			this->position.y = v->y_pos;
-+		}
-+
-+		Point position;
-+		VehicleID vehicle;
-+	};
-+
-+	typedef std::list<VehicleAndPosition> VehicleList;
-+	VehicleList vehicles_on_map; ///< cached vehicle positions to avoid glitches
-+
- 	/** Available kinds of zoomlevel changes. */
- 	enum ZoomLevelChange {
- 		ZLC_INITIALIZE, ///< Initialize zoom level.
-@@ -587,12 +700,69 @@ class SmallMapWindow : public Window {
- 	uint min_number_of_fixed_rows; ///< Minimal number of rows in the legends for the fixed layouts only (all except #SMT_INDUSTRY).
- 	uint column_width;             ///< Width of a column in the #SM_WIDGET_LEGEND widget.
- 
-+	/**
-+	 * Properties of a link between two stations.
-+	 */
-+	struct LinkProperties {
-+		LinkProperties() { this->Clear(); }
-+
-+		void Clear() { this->capacity = this->usage = this->planned = 0; }
-+
-+		uint capacity;
-+		uint usage;
-+		uint planned;
-+	};
-+
-+	/**
-+	 * Properties of a link in connection with a legent entry.
-+	 */
-+	struct LinkLegendProperties : public LinkProperties {
-+		LinkLegendProperties(const LegendAndColour *c, const LinkStat &ls, const FlowStat &fs) : legend(c)
-+		{
-+			this->AddLink(ls, fs);
-+		}
-+
-+		void AddLink(const LinkStat &orig_link, const FlowStat &orig_flow)
-+		{
-+			this->capacity += orig_link.Capacity();
-+			this->usage += orig_link.Usage();
-+			this->planned += orig_flow.Planned();
-+		}
-+
-+		const LegendAndColour *legend;
-+	};
-+
-+	typedef std::vector<LinkLegendProperties> StatVector;
-+
-+	/**
-+	 * Properties of multiple parallel links.
-+	 */
-+	struct MultiLinkProperties {
-+		MultiLinkProperties() { this->Clear(); }
-+
-+		StationID sta;
-+		StationID stb;
-+		StatVector a_to_b;
-+		StatVector b_to_a;
-+
-+		void Clear()
-+		{
-+			this->sta = INVALID_STATION;
-+			this->stb = INVALID_STATION;
-+			this->a_to_b.clear();
-+			this->b_to_a.clear();
-+		}
-+
-+		bool Empty() const { return this->sta == INVALID_STATION; }
-+	};
-+
- 	int32 scroll_x;  ///< Horizontal world coordinate of the base tile left of the top-left corner of the smallmap display.
- 	int32 scroll_y;  ///< Vertical world coordinate of the base tile left of the top-left corner of the smallmap display.
- 	int32 subscroll; ///< Number of pixels (0..3) between the right end of the base tile and the pixel at the top-left corner of the smallmap display.
- 	int zoom;        ///< Zoom level. Bigger number means more zoom-out (further away).
- 
- 	static const uint8 FORCE_REFRESH_PERIOD = 0x1F; ///< map is redrawn after that many ticks
-+	static const uint8 REFRESH_NEXT_TICK = 1;       ///< if refresh has this value the map is redrawn in the next tick
- 	uint8 refresh; ///< refresh counter, zeroed every FORCE_REFRESH_PERIOD ticks
- 
- 	/**
-@@ -603,43 +773,61 @@ class SmallMapWindow : public Window {
- 	 */
- 	FORCEINLINE Point RemapTile(int tile_x, int tile_y) const
- 	{
--		int x_offset = tile_x - this->scroll_x / (int)TILE_SIZE;
--		int y_offset = tile_y - this->scroll_y / (int)TILE_SIZE;
-+		if (this->zoom > 0) {
-+			int x_offset = tile_x - this->scroll_x / (int)TILE_SIZE;
-+			int y_offset = tile_y - this->scroll_y / (int)TILE_SIZE;
- 
--		if (this->zoom == 1) return RemapCoords(x_offset, y_offset, 0);
-+			/* For negative offsets, round towards -inf. */
-+			if (x_offset < 0) x_offset -= this->zoom - 1;
-+			if (y_offset < 0) y_offset -= this->zoom - 1;
- 
--		/* For negative offsets, round towards -inf. */
--		if (x_offset < 0) x_offset -= this->zoom - 1;
--		if (y_offset < 0) y_offset -= this->zoom - 1;
-+			return RemapCoords(x_offset / this->zoom, y_offset / this->zoom, 0);
-+		} else {
-+			int x_offset = tile_x * (-this->zoom) - this->scroll_x * (-this->zoom) / (int)TILE_SIZE;
-+			int y_offset = tile_y * (-this->zoom) - this->scroll_y * (-this->zoom) / (int)TILE_SIZE;
- 
--		return RemapCoords(x_offset / this->zoom, y_offset / this->zoom, 0);
-+			return RemapCoords(x_offset, y_offset, 0);
-+		}
- 	}
- 
- 	/**
--	 * Determine the tile relative to the base tile of the smallmap, and the pixel position at
--	 * that tile for a point in the smallmap.
-+	 * Determine the world coordinates relative to the base tile of the smallmap, and the pixel position at
-+	 * that location for a point in the smallmap.
- 	 * @param px       Horizontal coordinate of the pixel.
- 	 * @param py       Vertical coordinate of the pixel.
- 	 * @param sub[out] Pixel position at the tile (0..3).
- 	 * @param add_sub  Add current #subscroll to the position.
--	 * @return Tile being displayed at the given position relative to #scroll_x and #scroll_y.
-+	 * @return world coordinates being displayed at the given position relative to #scroll_x and #scroll_y.
- 	 * @note The #subscroll offset is already accounted for.
- 	 */
--	FORCEINLINE Point PixelToTile(int px, int py, int *sub, bool add_sub = true) const
-+	FORCEINLINE Point PixelToWorld(int px, int py, int *sub, bool add_sub = true) const
- 	{
- 		if (add_sub) px += this->subscroll;  // Total horizontal offset.
- 
- 		/* For each two rows down, add a x and a y tile, and
- 		 * For each four pixels to the right, move a tile to the right. */
--		Point pt = {((py >> 1) - (px >> 2)) * this->zoom, ((py >> 1) + (px >> 2)) * this->zoom};
-+		Point pt = {
-+			((py >> 1) - (px >> 2)) * TILE_SIZE,
-+			((py >> 1) + (px >> 2)) * TILE_SIZE
-+		};
-+
-+		if (this->zoom > 0) {
-+			pt.x *= this->zoom;
-+			pt.y *= this->zoom;
-+		} else {
-+			pt.x /= (-this->zoom);
-+			pt.y /= (-this->zoom);
-+		}
-+
- 		px &= 3;
- 
- 		if (py & 1) { // Odd number of rows, handle the 2 pixel shift.
-+			int offset = this->zoom > 0 ? this->zoom * TILE_SIZE : TILE_SIZE / (-this->zoom);
- 			if (px < 2) {
--				pt.x += this->zoom;
-+				pt.x += offset;
- 				px += 2;
- 			} else {
--				pt.y += this->zoom;
-+				pt.y += offset;
- 				px -= 2;
- 			}
- 		}
-@@ -662,19 +850,21 @@ class SmallMapWindow : public Window {
- 		assert(x >= 0 && y >= 0);
- 
- 		int new_sub;
--		Point tile_xy = PixelToTile(x, y, &new_sub, false);
-+		Point tile_xy = PixelToWorld(x, y, &new_sub, false);
- 		tx -= tile_xy.x;
- 		ty -= tile_xy.y;
- 
-+		int offset = this->zoom < 0 ? TILE_SIZE / (-this->zoom) : this->zoom * TILE_SIZE;
-+
- 		Point scroll;
- 		if (new_sub == 0) {
- 			*sub = 0;
--			scroll.x = (tx + this->zoom) * TILE_SIZE;
--			scroll.y = (ty - this->zoom) * TILE_SIZE;
-+			scroll.x = tx + offset;
-+			scroll.y = ty - offset;
- 		} else {
- 			*sub = 4 - new_sub;
--			scroll.x = (tx + 2 * this->zoom) * TILE_SIZE;
--			scroll.y = (ty - 2 * this->zoom) * TILE_SIZE;
-+			scroll.x = tx + 2 * offset;
-+			scroll.y = ty - 2 * offset;
- 		}
- 		return scroll;
- 	}
-@@ -687,16 +877,17 @@ class SmallMapWindow : public Window {
- 	 */
- 	void SetZoomLevel(ZoomLevelChange change, const Point *zoom_pt)
- 	{
--		static const int zoomlevels[] = {1, 2, 4, 6, 8}; // Available zoom levels. Bigger number means more zoom-out (further away).
-+		static const int zoomlevels[] = {-4, -2, 1, 2, 4, 6, 8}; // Available zoom levels. Bigger number means more zoom-out (further away).
- 		static const int MIN_ZOOM_INDEX = 0;
-+		static const int DEFAULT_ZOOM_INDEX = 2;
- 		static const int MAX_ZOOM_INDEX = lengthof(zoomlevels) - 1;
- 
- 		int new_index, cur_index, sub;
--		Point tile;
-+		Point position;
- 		switch (change) {
- 			case ZLC_INITIALIZE:
- 				cur_index = - 1; // Definitely different from new_index.
--				new_index = MIN_ZOOM_INDEX;
-+				new_index = DEFAULT_ZOOM_INDEX;
- 				break;
- 
- 			case ZLC_ZOOM_IN:
-@@ -706,7 +897,7 @@ class SmallMapWindow : public Window {
- 				}
- 				assert(cur_index <= MAX_ZOOM_INDEX);
- 
--				tile = this->PixelToTile(zoom_pt->x, zoom_pt->y, &sub);
-+				position = this->PixelToWorld(zoom_pt->x, zoom_pt->y, &sub);
- 				new_index = Clamp(cur_index + ((change == ZLC_ZOOM_IN) ? -1 : 1), MIN_ZOOM_INDEX, MAX_ZOOM_INDEX);
- 				break;
- 
-@@ -716,9 +907,9 @@ class SmallMapWindow : public Window {
- 		if (new_index != cur_index) {
- 			this->zoom = zoomlevels[new_index];
- 			if (cur_index >= 0) {
--				Point new_tile = this->PixelToTile(zoom_pt->x, zoom_pt->y, &sub);
--				this->SetNewScroll(this->scroll_x + (tile.x - new_tile.x) * TILE_SIZE,
--						this->scroll_y + (tile.y - new_tile.y) * TILE_SIZE, sub);
-+				Point new_pos = this->PixelToWorld(zoom_pt->x, zoom_pt->y, &sub);
-+				this->SetNewScroll(this->scroll_x + position.x - new_pos.x,
-+						this->scroll_y + position.y - new_pos.y, sub);
- 			}
- 			this->SetWidgetDisabledState(SM_WIDGET_ZOOM_IN,  this->zoom == zoomlevels[MIN_ZOOM_INDEX]);
- 			this->SetWidgetDisabledState(SM_WIDGET_ZOOM_OUT, this->zoom == zoomlevels[MAX_ZOOM_INDEX]);
-@@ -765,6 +956,9 @@ class SmallMapWindow : public Window {
- 			case SMT_OWNER:
- 				return GetSmallMapOwnerPixels(tile, et);
- 
-+			case SMT_LINKSTATS:
-+				return GetSmallMapLinkStatsPixels(tile, et);
-+
- 			default: NOT_REACHED();
- 		}
- 	}
-@@ -773,8 +967,8 @@ class SmallMapWindow : public Window {
- 	 * Draws one column of tiles of the small map in a certain mode onto the screen buffer, skipping the shifted rows in between.
- 	 *
- 	 * @param dst Pointer to a part of the screen buffer to write to.
--	 * @param xc The X coordinate of the first tile in the column.
--	 * @param yc The Y coordinate of the first tile in the column
-+	 * @param xc The world X coordinate of the rightmost place in the column.
-+	 * @param yc The world Y coordinate of the topmost place in the column.
- 	 * @param pitch Number of pixels to advance in the screen buffer each time a pixel is written.
- 	 * @param reps Number of lines to draw
- 	 * @param start_pos Position of first pixel to draw.
-@@ -788,9 +982,12 @@ class SmallMapWindow : public Window {
- 		void *dst_ptr_abs_end = blitter->MoveTo(_screen.dst_ptr, 0, _screen.height);
- 		uint min_xy = _settings_game.construction.freeform_edges ? 1 : 0;
- 
-+		int increment = this->zoom > 0 ? this->zoom * TILE_SIZE : TILE_SIZE / (-this->zoom);
-+		int extent = this->zoom > 0 ? this->zoom : 1;
-+
- 		do {
- 			/* Check if the tile (xc,yc) is within the map range */
--			if (xc >= MapMaxX() || yc >= MapMaxY()) continue;
-+			if (xc / TILE_SIZE >= MapMaxX() || yc / TILE_SIZE >= MapMaxY()) continue;
- 
- 			/* Check if the dst pointer points to a pixel inside the screen buffer */
- 			if (dst < _screen.dst_ptr) continue;
-@@ -798,12 +995,12 @@ class SmallMapWindow : public Window {
- 
- 			/* Construct tilearea covered by (xc, yc, xc + this->zoom, yc + this->zoom) such that it is within min_xy limits. */
- 			TileArea ta;
--			if (min_xy == 1 && (xc == 0 || yc == 0)) {
--				if (this->zoom == 1) continue; // The tile area is empty, don't draw anything.
-+			if (min_xy == 1 && (xc < TILE_SIZE || yc < TILE_SIZE)) {
-+				if (this->zoom <= 1) continue; // The tile area is empty, don't draw anything.
- 
--				ta = TileArea(TileXY(max(min_xy, xc), max(min_xy, yc)), this->zoom - (xc == 0), this->zoom - (yc == 0));
-+				ta = TileArea(TileXY(max(min_xy, xc / TILE_SIZE), max(min_xy, yc / TILE_SIZE)), this->zoom - (xc < TILE_SIZE), this->zoom - (yc < TILE_SIZE));
- 			} else {
--				ta = TileArea(TileXY(xc, yc), this->zoom, this->zoom);
-+				ta = TileArea(TileXY(xc / TILE_SIZE, yc / TILE_SIZE), extent, extent);
- 			}
- 			ta.ClampToMap(); // Clamp to map boundaries (may contain MP_VOID tiles!).
- 
-@@ -815,7 +1012,7 @@ class SmallMapWindow : public Window {
- 				idx++;
- 			}
- 		/* Switch to next tile in the column */
--		} while (xc += this->zoom, yc += this->zoom, dst = blitter->MoveTo(dst, pitch, 0), --reps != 0);
-+		} while (xc += increment, yc += increment, dst = blitter->MoveTo(dst, pitch, 0), --reps != 0);
- 	}
- 
- 	/**
-@@ -825,39 +1022,223 @@ class SmallMapWindow : public Window {
- 	 */
- 	void DrawVehicles(const DrawPixelInfo *dpi, Blitter *blitter) const
- 	{
--		const Vehicle *v;
--		FOR_ALL_VEHICLES(v) {
--			if (v->type == VEH_EFFECT) continue;
--			if (v->vehstatus & (VS_HIDDEN | VS_UNCLICKABLE)) continue;
-+		for(VehicleList::const_iterator i = this->vehicles_on_map.begin(); i != this->vehicles_on_map.end(); ++i) {
-+			const Vehicle *v = Vehicle::GetIfValid(i->vehicle);
-+			if (v == NULL) continue;
- 
- 			/* Remap into flat coordinates. */
--			Point pt = this->RemapTile(v->x_pos / TILE_SIZE, v->y_pos / TILE_SIZE);
-+			Point pt = this->RemapTile(i->position.x / (int)TILE_SIZE, i->position.y / (int)TILE_SIZE);
- 
- 			int y = pt.y - dpi->top;
--			if (!IsInsideMM(y, 0, dpi->height)) continue; // y is out of bounds.
--
--			bool skip = false; // Default is to draw both pixels.
- 			int x = pt.x - this->subscroll - 3 - dpi->left; // Offset X coordinate.
--			if (x < 0) {
--				/* if x+1 is 0, that means we're on the very left edge,
--				 * and should thus only draw a single pixel */
--				if (++x != 0) continue;
--				skip = true;
--			} else if (x >= dpi->width - 1) {
--				/* Check if we're at the very right edge, and if so draw only a single pixel */
--				if (x != dpi->width - 1) continue;
--				skip = true;
--			}
-+
-+			int scale = this->zoom < 0 ? -this->zoom : 1;
- 
- 			/* Calculate pointer to pixel and the colour */
- 			byte colour = (this->map_type == SMT_VEHICLES) ? _vehicle_type_colours[v->type] : 0xF;
- 
--			/* And draw either one or two pixels depending on clipping */
--			blitter->SetPixel(dpi->dst_ptr, x, y, colour);
--			if (!skip) blitter->SetPixel(dpi->dst_ptr, x + 1, y, colour);
-+			/* Draw rhombus */
-+			for (int dy = 0; dy < scale; dy++) {
-+				for (int dx = 0; dx < scale; dx++) {
-+					Point pt = RemapCoords(dx, dy, 0);
-+					if (IsInsideMM(y + pt.y, 0, dpi->height)) {
-+						if (IsInsideMM(x + pt.x, 0, dpi->width)) {
-+							blitter->SetPixel(dpi->dst_ptr, x + pt.x, y + pt.y, colour);
-+						}
-+						if (IsInsideMM(x + pt.x + 1, 0, dpi->width)) {
-+							blitter->SetPixel(dpi->dst_ptr, x + pt.x + 1, y + pt.y, colour);
-+						}
-+					}
-+				}
-+			}
-+		}
-+	}
-+
-+	FORCEINLINE Point GetStationMiddle(const Station *st) const
-+	{
-+		int x = (st->rect.right + st->rect.left + 1) / 2;
-+		int y = (st->rect.bottom + st->rect.top + 1) / 2;
-+		Point ret = this->RemapTile(x, y);
-+		ret.x -= 3 + this->subscroll; 
-+		if (this->zoom < 0) {
-+			/* add half a tile if width or height is odd */
-+			if (((st->rect.bottom - st->rect.top) & 1) == 0) {
-+				Point offset = RemapCoords(0, -this->zoom / 2, 0);
-+				ret.x += offset.x;
-+				ret.y += offset.y;
-+			}
-+			if (((st->rect.right - st->rect.left) & 1) == 0) {
-+				Point offset = RemapCoords(-this->zoom / 2, 0, 0);
-+				ret.x += offset.x;
-+				ret.y += offset.y;
-+			}
-+		}
-+		return ret;
-+	}
-+
-+	StationID DrawStationDots() const
-+	{
-+		const Station *supply_details = NULL;
-+
-+		const Station *st;
-+		FOR_ALL_STATIONS(st) {
-+			if ((st->owner != _local_company && Company::IsValidID(st->owner)) || st->rect.IsEmpty()) continue;
-+
-+			Point pt = GetStationMiddle(st);
-+
-+			/* Add up cargo supplied for each selected cargo type */
-+			uint q = 0;
-+			int colour = 0;
-+			int numCargos = 0;
-+			for (int i = 0; i < _smallmap_cargo_count; ++i) {
-+				const LegendAndColour &tbl = _legend_table[this->map_type][i];
-+				if (!tbl.show_on_map && supply_details != st) continue;
-+				uint supply = st->goods[tbl.type].supply;
-+				if (supply > 0) {
-+					q += supply;
-+					colour += tbl.colour;
-+					numCargos++;
-+				}
-+			}
-+			if (numCargos > 1) colour /= numCargos;
-+
-+			uint r = 1;
-+			if (q >= 20) r++;
-+			if (q >= 90) r++;
-+			if (q >= 160) r++;
-+
-+			DrawVertex(pt.x, pt.y, r, colour, _colour_gradient[COLOUR_GREY][supply_details == st ? 3 : 1]);
- 		}
-+		return (supply_details == NULL) ? INVALID_STATION : supply_details->index;
- 	}
- 
-+	class LinkLineDrawer {
-+
-+	public:
-+		LinkLineDrawer(const SmallMapWindow *w) : window(w)
-+		{
-+			this->pta.x = this->pta.y = this->ptb.x = this->ptb.y = -1;
-+		}
-+
-+		void DrawLinks()
-+		{
-+			std::set<StationID> seen_stations;
-+			std::set<std::pair<StationID, StationID> > seen_links;
-+
-+			const Station *sta;
-+			FOR_ALL_STATIONS(sta) {
-+				/* Show links between own stations or "neutral" ones like oilrigs.*/
-+				if (sta->owner != _local_company && Company::IsValidID(sta->owner)) continue;
-+				for (int i = 0; i < _smallmap_cargo_count; ++i) {
-+					const LegendAndColour &tbl = _legend_table[window->map_type][i];
-+					if (!tbl.show_on_map) continue;
-+
-+					CargoID c = tbl.type;
-+					const LinkStatMap &links = sta->goods[c].link_stats;
-+					for (LinkStatMap::const_iterator i = links.begin(); i != links.end(); ++i) {
-+						StationID from = sta->index;
-+						StationID to = i->first;
-+						if (Station::IsValidID(to) && seen_stations.find(to) == seen_stations.end()) {
-+							const Station *stb = Station::Get(to);
-+
-+							if (stb->owner != _local_company && Company::IsValidID(stb->owner)) continue;
-+							if (sta->rect.IsEmpty() || stb->rect.IsEmpty()) continue;
-+							if (seen_links.find(std::make_pair(to, from)) != seen_links.end()) continue;
-+
-+							this->pta = this->window->GetStationMiddle(sta);
-+							this->ptb = this->window->GetStationMiddle(stb);
-+							if (!this->IsLinkVisible()) continue;
-+
-+							this->DrawForwBackLinks(sta->index, stb->index);
-+							seen_stations.insert(to);
-+						}
-+						seen_links.insert(std::make_pair(from, to));
-+					}
-+				}
-+				seen_stations.clear();
-+			}
-+		}
-+
-+	protected:
-+
-+		Point pta, ptb;
-+		LinkProperties forward, backward;
-+		const SmallMapWindow *window;
-+
-+		FORCEINLINE bool IsLinkVisible()
-+		{
-+			const NWidgetBase *wi = this->window->GetWidget<NWidgetCore>(SM_WIDGET_MAP);
-+			return !((this->pta.x < 0 && this->ptb.x < 0) ||
-+					(this->pta.y < 0 && this->ptb.y < 0) ||
-+					(this->pta.x > (int)wi->current_x && this->ptb.x > (int)wi->current_x) ||
-+					(this->pta.y > (int)wi->current_y && this->ptb.y > (int)wi->current_y));
-+		}
-+
-+		void DrawLink(StationID sta, StationID stb, bool backward)
-+		{
-+			for (int i = 0; i < _smallmap_cargo_count; ++i) {
-+				const LegendAndColour &cargo_entry = _legend_table[this->window->map_type][i];
-+				CargoID cargo = cargo_entry.type;
-+				if (cargo_entry.show_on_map) {
-+					GoodsEntry &ge = Station::Get(sta)->goods[cargo];
-+					FlowStat sum_flows = ge.GetSumFlowVia(stb);
-+					const LinkStatMap &ls_map = ge.link_stats;
-+					LinkStatMap::const_iterator i = ls_map.find(stb);
-+					if (i != ls_map.end()) {
-+						const LinkStat &link_stat = i->second;
-+						this->AddLink(link_stat, sum_flows, backward ? this->backward : this->forward);
-+					}
-+				}
-+			}
-+		}
-+
-+		void AddLink(const LinkStat &orig_link, const FlowStat &orig_flow, LinkProperties &cargo)
-+		{
-+			uint new_cap = orig_link.Capacity();
-+			uint new_usg = orig_link.Usage();
-+			uint new_plan = orig_flow.Planned();
-+
-+			/* multiply the numbers by 32 in order to avoid comparing to 0 too often. */
-+			if (cargo.capacity == 0 ||
-+					max(cargo.usage, cargo.planned) * 32 / (cargo.capacity + 1) < max(new_usg, new_plan) * 32 / (new_cap + 1)) {
-+				cargo.capacity = new_cap;
-+				cargo.usage = new_usg;
-+				cargo.planned = new_plan;
-+			}
-+		}
-+
-+		void DrawForwBackLinks(StationID sta, StationID stb)
-+		{
-+			this->DrawLink(sta, stb, false);
-+			this->DrawLink(stb, sta, true);
-+			this->DrawContent();
-+			this->forward.Clear();
-+			this->backward.Clear();
-+		}
-+
-+		void DrawContent()
-+		{
-+			GfxDrawLine(this->pta.x, this->pta.y, this->ptb.x, this->ptb.y, _colour_gradient[COLOUR_GREY][1]);
-+
-+			int direction_y = (this->pta.x < this->ptb.x ? 1 : -1);
-+			int direction_x = (this->pta.y > this->ptb.y ? 1 : -1);;
-+
-+			if (this->forward.capacity > 0) {
-+				uint usage_or_plan = min(this->forward.capacity * 2, max(this->forward.usage, this->forward.planned));
-+				int colour = _smallmap_link_colours[usage_or_plan * lengthof(_smallmap_link_colours) / (this->forward.capacity * 2 + 1)];
-+				GfxDrawLine(this->pta.x + direction_x, this->pta.y, this->ptb.x + direction_x, this->ptb.y, colour);
-+				GfxDrawLine(this->pta.x, this->pta.y + direction_y, this->ptb.x, this->ptb.y + direction_y, colour);
-+			}
-+
-+			if (this->backward.capacity > 0) {
-+				uint usage_or_plan = min(this->backward.capacity * 2, max(this->backward.usage, this->backward.planned));
-+				int colour = _smallmap_link_colours[usage_or_plan * lengthof(_smallmap_link_colours) / (this->backward.capacity * 2 + 1)];
-+				GfxDrawLine(this->pta.x - direction_x, this->pta.y, this->ptb.x - direction_x, this->ptb.y, colour);
-+				GfxDrawLine(this->pta.x, this->pta.y - direction_y, this->ptb.x, this->ptb.y - direction_y, colour);
-+			}
-+		}
-+	};
-+
- 	/**
- 	 * Adds town names to the smallmap.
- 	 * @param dpi the part of the smallmap to be drawn into
-@@ -954,13 +1335,14 @@ class SmallMapWindow : public Window {
- 
- 		/* Which tile is displayed at (dpi->left, dpi->top)? */
- 		int dx;
--		Point tile = this->PixelToTile(dpi->left, dpi->top, &dx);
--		int tile_x = this->scroll_x / (int)TILE_SIZE + tile.x;
--		int tile_y = this->scroll_y / (int)TILE_SIZE + tile.y;
-+		Point position = this->PixelToWorld(dpi->left, dpi->top, &dx);
-+		int pos_x = this->scroll_x + position.x;
-+		int pos_y = this->scroll_y + position.y;
- 
- 		void *ptr = blitter->MoveTo(dpi->dst_ptr, -dx - 4, 0);
- 		int x = - dx - 4;
- 		int y = 0;
-+		int increment = this->zoom > 0 ? this->zoom * TILE_SIZE : TILE_SIZE / (-this->zoom);
- 
- 		for (;;) {
- 			/* Distance from left edge */
-@@ -970,16 +1352,16 @@ class SmallMapWindow : public Window {
- 				int end_pos = min(dpi->width, x + 4);
- 				int reps = (dpi->height - y + 1) / 2; // Number of lines.
- 				if (reps > 0) {
--					this->DrawSmallMapColumn(ptr, tile_x, tile_y, dpi->pitch * 2, reps, x, end_pos, blitter);
-+					this->DrawSmallMapColumn(ptr, pos_x, pos_y, dpi->pitch * 2, reps, x, end_pos, blitter);
- 				}
- 			}
- 
- 			if (y == 0) {
--				tile_y += this->zoom;
-+				pos_y += increment;
- 				y++;
- 				ptr = blitter->MoveTo(ptr, 0, 1);
- 			} else {
--				tile_x -= this->zoom;
-+				pos_x -= increment;
- 				y--;
- 				ptr = blitter->MoveTo(ptr, 0, -1);
- 			}
-@@ -990,6 +1372,12 @@ class SmallMapWindow : public Window {
- 		/* Draw vehicles */
- 		if (this->map_type == SMT_CONTOUR || this->map_type == SMT_VEHICLES) this->DrawVehicles(dpi, blitter);
- 
-+		if (this->map_type == SMT_LINKSTATS && _game_mode == GM_NORMAL) {
-+			LinkLineDrawer lines(this);
-+			lines.DrawLinks();
-+			DrawStationDots();
-+		}
-+
- 		/* Draw town names */
- 		if (this->show_towns) this->DrawTowns(dpi);
- 
-@@ -1000,6 +1388,32 @@ class SmallMapWindow : public Window {
- 	}
- 
- 	/**
-+	 * recalculate which vehicles are visible and their positions.
-+	 */
-+	void RecalcVehiclePositions()
-+	{
-+		this->vehicles_on_map.clear();
-+		const Vehicle *v;
-+		const NWidgetCore *wi = this->GetWidget<NWidgetCore>(SM_WIDGET_MAP);
-+		int scale = this->zoom < 0 ? -this->zoom : 1;
-+
-+		FOR_ALL_VEHICLES(v) {
-+			if (v->type == VEH_EFFECT) continue;
-+			if (v->vehstatus & (VS_HIDDEN | VS_UNCLICKABLE)) continue;
-+
-+			/* Remap into flat coordinates. We have to do that again in DrawVehicles to account for scrolling. */
-+			Point pos = this->RemapTile(v->x_pos / (int)TILE_SIZE, v->y_pos / (int)TILE_SIZE);
-+
-+			/* Check if rhombus is inside bounds */
-+			if (IsInsideMM(pos.x, -2 * scale, wi->current_x + 2 * scale) &&
-+				IsInsideMM(pos.y, -2 * scale, wi->current_y + 2 * scale)) {
-+
-+				this->vehicles_on_map.push_back(VehicleAndPosition(v));
-+			}
-+		}
-+	}
-+
-+	/**
- 	 * Function to set up widgets depending on the information being shown on the smallmap.
- 	 */
- 	void SetupWidgetData()
-@@ -1023,6 +1437,13 @@ class SmallMapWindow : public Window {
- 				plane = 0;
- 				break;
- 
-+			case SMT_LINKSTATS:
-+				legend_tooltip = STR_SMALLMAP_TOOLTIP_CARGO_SELECTION;
-+				enable_all_tooltip = STR_SMALLMAP_TOOLTIP_ENABLE_ALL_CARGOS;
-+				disable_all_tooltip = STR_SMALLMAP_TOOLTIP_DISABLE_ALL_CARGOS;
-+				plane = 0;
-+				break;
-+
- 			default:
- 				legend_tooltip = STR_NULL;
- 				enable_all_tooltip = STR_NULL;
-@@ -1043,6 +1464,11 @@ public:
- 	SmallMapWindow(const WindowDesc *desc, int window_number) : Window(), refresh(FORCE_REFRESH_PERIOD)
- 	{
- 		this->InitNested(desc, window_number);
-+		if (_smallmap_cargo_count == 0) {
-+			this->DisableWidget(SM_WIDGET_LINKSTATS);
-+			if (this->map_type == SMT_LINKSTATS) this->map_type = SMT_CONTOUR;
-+		}
-+
- 		this->LowerWidget(this->map_type + SM_WIDGET_CONTOUR);
- 
- 		BuildLandLegend();
-@@ -1081,8 +1507,8 @@ public:
- 	 */
- 	uint GetLegendHeight(uint num_columns) const
- 	{
--		uint num_rows = max(this->min_number_of_fixed_rows, CeilDiv(max(_smallmap_company_count, _smallmap_industry_count), num_columns));
--		return WD_FRAMERECT_TOP + WD_FRAMERECT_BOTTOM + num_rows * FONT_HEIGHT_SMALL;
-+		return WD_FRAMERECT_TOP + WD_FRAMERECT_BOTTOM +
-+				this->GetNumberRowsLegend(num_columns) * FONT_HEIGHT_SMALL;
- 	}
- 
- 	virtual void SetStringParameters(int widget) const
-@@ -1098,7 +1524,7 @@ public:
- 	{
- 		uint min_width = 0;
- 		this->min_number_of_columns = INDUSTRY_MIN_NUMBER_OF_COLUMNS;
--		this->min_number_of_fixed_rows = 0;
-+		this->min_number_of_fixed_rows = lengthof(_smallmap_link_colours) / 2 + 1;
- 		for (uint i = 0; i < lengthof(_legend_table); i++) {
- 			uint height = 0;
- 			uint num_columns = 1;
-@@ -1108,6 +1534,9 @@ public:
- 					SetDParam(0, tbl->legend);
- 					SetDParam(1, IndustryPool::MAX_SIZE);
- 					str = STR_SMALLMAP_INDUSTRY;
-+				} else if (i == SMT_LINKSTATS) {
-+					SetDParam(0, tbl->legend);
-+					str = STR_SMALLMAP_LINKSTATS;
- 				} else if (i == SMT_OWNER) {
- 					if (tbl->company != INVALID_COMPANY) {
- 						if (!Company::IsValidID(tbl->company)) {
-@@ -1169,7 +1598,7 @@ public:
- 
- 			case SM_WIDGET_LEGEND: {
- 				uint columns = this->GetNumberColumnsLegend(r.right - r.left + 1);
--				uint number_of_rows = max((this->map_type == SMT_INDUSTRY || this->map_type == SMT_OWNER) ? CeilDiv(max(_smallmap_company_count, _smallmap_industry_count), columns) : 0, this->min_number_of_fixed_rows);
-+				uint number_of_rows = this->GetNumberRowsLegend(columns);
- 				bool rtl = _current_text_dir == TD_RTL;
- 				uint y_org = r.top + WD_FRAMERECT_TOP;
- 				uint x = rtl ? r.right - this->column_width - WD_FRAMERECT_RIGHT : r.left + WD_FRAMERECT_LEFT;
-@@ -1182,8 +1611,23 @@ public:
- 				uint blob_left  = rtl ? this->column_width - 1 - LEGEND_BLOB_WIDTH : 0;
- 				uint blob_right = rtl ? this->column_width - 1 : LEGEND_BLOB_WIDTH;
- 
-+				StringID string = STR_NULL;
-+				switch (this->map_type) {
-+					case SMT_INDUSTRY:
-+						string = STR_SMALLMAP_INDUSTRY;
-+						break;
-+					case SMT_LINKSTATS:
-+						string = STR_SMALLMAP_LINKSTATS;
-+						break;
-+					case SMT_OWNER:
-+						string = STR_SMALLMAP_COMPANY;
-+						break;
-+					default:
-+						break;
-+				}
-+
- 				for (const LegendAndColour *tbl = _legend_table[this->map_type]; !tbl->end; ++tbl) {
--					if (tbl->col_break || ((this->map_type == SMT_INDUSTRY || this->map_type == SMT_OWNER) && i++ >= number_of_rows)) {
-+					if (tbl->col_break || ((this->map_type == SMT_INDUSTRY || this->map_type == SMT_OWNER || this->map_type == SMT_LINKSTATS) && i++ >= number_of_rows)) {
- 						/* Column break needed, continue at top, COLUMN_WIDTH pixels
- 						 * (one "row") to the right. */
- 						x += rtl ? -(int)this->column_width : this->column_width;
-@@ -1191,35 +1635,35 @@ public:
- 						i = 1;
- 					}
- 
--					if (this->map_type == SMT_INDUSTRY) {
--						/* Industry name must be formatted, since it's not in tiny font in the specs.
--						 * So, draw with a parameter and use the STR_SMALLMAP_INDUSTRY string, which is tiny font */
--						SetDParam(0, tbl->legend);
--						SetDParam(1, Industry::GetIndustryTypeCount(tbl->type));
--						if (!tbl->show_on_map) {
--							/* Simply draw the string, not the black border of the legend colour.
--							 * This will enforce the idea of the disabled item */
--							DrawString(x + text_left, x + text_right, y, STR_SMALLMAP_INDUSTRY, TC_GREY);
--						} else {
--							DrawString(x + text_left, x + text_right, y, STR_SMALLMAP_INDUSTRY, TC_BLACK);
--							GfxFillRect(x + blob_left, y + 1, x + blob_right, y + row_height - 1, 0); // Outer border of the legend colour
--						}
--					} else if (this->map_type == SMT_OWNER && tbl->company != INVALID_COMPANY) {
--						SetDParam(0, tbl->company);
--						if (!tbl->show_on_map) {
--							/* Simply draw the string, not the black border of the legend colour.
--							 * This will enforce the idea of the disabled item */
--							DrawString(x + text_left, x + text_right, y, STR_SMALLMAP_COMPANY, TC_GREY);
--						} else {
--							DrawString(x + text_left, x + text_right, y, STR_SMALLMAP_COMPANY, TC_BLACK);
--							GfxFillRect(x + blob_left, y + 1, x + blob_right, y + row_height - 1, 0); // Outer border of the legend colour
--						}
--					} else {
--						if (this->map_type == SMT_CONTOUR) SetDParam(0, tbl->height * TILE_HEIGHT_STEP);
--
--						/* Anything that is not an industry or a company is using normal process */
--						GfxFillRect(x + blob_left, y + 1, x + blob_right, y + row_height - 1, 0);
--						DrawString(x + text_left, x + text_right, y, tbl->legend);
-+					switch (this->map_type) {
-+						case SMT_INDUSTRY:
-+							/* Industry name must be formatted, since it's not in tiny font in the specs.
-+							 * So, draw with a parameter and use the STR_SMALLMAP_INDUSTRY string, which is tiny font */
-+							SetDParam(1, Industry::GetIndustryTypeCount(tbl->type));
-+						case SMT_LINKSTATS:
-+							SetDParam(0, tbl->legend);
-+							/* FALL_THROUGH */
-+						case SMT_OWNER:
-+							if (this->map_type != SMT_OWNER || tbl->company != INVALID_COMPANY) {
-+								if (this->map_type == SMT_OWNER) SetDParam(0, tbl->company);
-+								if (!tbl->show_on_map) {
-+									/* Simply draw the string, not the black border of the legend colour.
-+									 * This will enforce the idea of the disabled item */
-+									DrawString(x + text_left, x + text_right, y, string, TC_GREY);
-+								} else {
-+									DrawString(x + text_left, x + text_right, y, string, TC_BLACK);
-+									GfxFillRect(x + blob_left, y + 1, x + blob_right, y + row_height - 1, 0); // Outer border of the legend colour
-+								}
-+								break;
-+							}
-+							/* FALL_THROUGH */
-+						default:
-+							if (this->map_type == SMT_CONTOUR) SetDParam(0, tbl->height * TILE_HEIGHT_STEP);
-+
-+							/* Anything that is not an industry or a company is using normal process */
-+							GfxFillRect(x + blob_left, y + 1, x + blob_right, y + row_height - 1, 0);
-+							DrawString(x + text_left, x + text_right, y, tbl->legend);
-+							break;
- 					}
- 					GfxFillRect(x + blob_left + 1, y + 2, x + blob_right - 1, y + row_height - 2, tbl->colour); // Legend colour
- 
-@@ -1230,6 +1674,56 @@ public:
- 	}
- 
- 	/**
-+	 * Get the number of rows in the legend from the number of columns. Those
-+	 * are at least min_number_of_fixed_rows and possibly more if there are so
-+	 * many cargoes, industry types or companies that they won't fit in the
-+	 * available space.
-+	 * @param columns Number of columns in the legend.
-+	 * @return Number of rows needed for everything to fit in.
-+	 */
-+	uint GetNumberRowsLegend(uint columns) const
-+	{
-+		/* reserve one column for link colours */
-+		uint num_rows_linkstats = CeilDiv(_smallmap_cargo_count, columns - 1);
-+
-+		uint num_rows_others = CeilDiv(max(_smallmap_industry_count,_smallmap_company_count), columns);
-+		return max(this->min_number_of_fixed_rows, max(num_rows_linkstats, num_rows_others));
-+	}
-+
-+	/**
-+	 * Select and toggle a legend item. When CTRL is pressed, disable all other
-+	 * items in the group defined by begin_legend_item and end_legend_item and
-+	 * keep the clicked one enabled even if it was already enabled before. If
-+	 * the other items in the group are all disabled already and CTRL is pressed
-+	 * enable them instead.
-+	 * @param click_pos the index of the item being selected
-+	 * @param legend the legend from which we select
-+	 * @param end_legend_item index one past the last item in the group to be inverted
-+	 */
-+	void SelectLegendItem(int click_pos, LegendAndColour *legend, int end_legend_item, int begin_legend_item = 0)
-+	{
-+		if (_ctrl_pressed) {
-+			/* Disable all, except the clicked one */
-+			bool changes = false;
-+			for (int i = begin_legend_item; i != end_legend_item; i++) {
-+				bool new_state = (i == click_pos);
-+				if (legend[i].show_on_map != new_state) {
-+					changes = true;
-+					legend[i].show_on_map = new_state;
-+				}
-+			}
-+			if (!changes) {
-+				/* Nothing changed? Then show all (again). */
-+				for (int i = begin_legend_item; i != end_legend_item; i++) {
-+					legend[i].show_on_map = true;
-+				}
-+			}
-+		} else {
-+			legend[click_pos].show_on_map = !legend[click_pos].show_on_map;
-+		}
-+	}
-+
-+	/*
- 	 * Select a new map type.
- 	 * @param map_type New map type.
- 	 */
-@@ -1264,9 +1758,10 @@ public:
- 				const NWidgetBase *wid = this->GetWidget<NWidgetBase>(SM_WIDGET_MAP);
- 				Window *w = FindWindowById(WC_MAIN_WINDOW, 0);
- 				int sub;
--				pt = this->PixelToTile(pt.x - wid->pos_x, pt.y - wid->pos_y, &sub);
--				pt = RemapCoords(this->scroll_x + pt.x * TILE_SIZE + this->zoom * (TILE_SIZE - sub * TILE_SIZE / 4),
--						this->scroll_y + pt.y * TILE_SIZE + sub * this->zoom * TILE_SIZE / 4, 0);
-+				pt = this->PixelToWorld(pt.x - wid->pos_x, pt.y - wid->pos_y, &sub);
-+				int offset = this->zoom > 0 ? this->zoom * TILE_SIZE : TILE_SIZE / (-this->zoom);
-+				pt = RemapCoords(this->scroll_x + pt.x + offset - offset * sub / 4,
-+						this->scroll_y + pt.y + sub * offset / 4, 0);
- 
- 				w->viewport->follow_vehicle = INVALID_VEHICLE;
- 				w->viewport->dest_scrollpos_x = pt.x - (w->viewport->virtual_width  >> 1);
-@@ -1288,6 +1783,7 @@ public:
- 			case SM_WIDGET_CONTOUR:    // Show land contours
- 			case SM_WIDGET_VEHICLES:   // Show vehicles
- 			case SM_WIDGET_INDUSTRIES: // Show industries
-+			case SM_WIDGET_LINKSTATS:  // Show route map
- 			case SM_WIDGET_ROUTES:     // Show transport routes
- 			case SM_WIDGET_VEGETATION: // Show vegetation
- 			case SM_WIDGET_OWNERS:     // Show land owners
-@@ -1311,12 +1807,12 @@ public:
- 
- 			case SM_WIDGET_LEGEND: // Legend
- 				/* If industry type small map*/
--				if (this->map_type == SMT_INDUSTRY) {
--					/* If click on industries label, find right industry type and enable/disable it */
-+				if (this->map_type == SMT_INDUSTRY || this->map_type == SMT_LINKSTATS || this->map_type == SMT_OWNER) {
-+					/* If click on label, find right type and enable/disable it */
- 					const NWidgetBase *wi = this->GetWidget<NWidgetBase>(SM_WIDGET_LEGEND); // Label panel
- 					uint line = (pt.y - wi->pos_y - WD_FRAMERECT_TOP) / FONT_HEIGHT_SMALL;
- 					uint columns = this->GetNumberColumnsLegend(wi->current_x);
--					uint number_of_rows = max(CeilDiv(max(_smallmap_company_count, _smallmap_industry_count), columns), this->min_number_of_fixed_rows);
-+					uint number_of_rows = this->GetNumberRowsLegend(columns);
- 					if (line >= number_of_rows) break;
- 
- 					bool rtl = _current_text_dir == TD_RTL;
-@@ -1324,65 +1820,19 @@ public:
- 					if (rtl) x = wi->current_x - x;
- 					uint column = (x - WD_FRAMERECT_LEFT) / this->column_width;
- 
--					/* Check if click is on industry label*/
--					int industry_pos = (column * number_of_rows) + line;
--					if (industry_pos < _smallmap_industry_count) {
--						if (_ctrl_pressed) {
--							/* Disable all, except the clicked one */
--							bool changes = false;
--							for (int i = 0; i != _smallmap_industry_count; i++) {
--								bool new_state = i == industry_pos;
--								if (_legend_from_industries[i].show_on_map != new_state) {
--									changes = true;
--									_legend_from_industries[i].show_on_map = new_state;
--								}
--							}
--							if (!changes) {
--								/* Nothing changed? Then show all (again). */
--								for (int i = 0; i != _smallmap_industry_count; i++) {
--									_legend_from_industries[i].show_on_map = true;
--								}
--							}
--						} else {
--							_legend_from_industries[industry_pos].show_on_map = !_legend_from_industries[industry_pos].show_on_map;
-+					/* Check if click is on label*/
-+					int click_pos = (column * number_of_rows) + line;
-+					if (this->map_type == SMT_INDUSTRY) {
-+						if (click_pos < _smallmap_industry_count) {
-+							this->SelectLegendItem(click_pos, _legend_from_industries, _smallmap_industry_count);
- 						}
--					}
--					this->SetDirty();
--				} else if (this->map_type == SMT_OWNER) {
--					/* If click on companies label, find right company and enable/disable it. */
--					const NWidgetBase *wi = this->GetWidget<NWidgetBase>(SM_WIDGET_LEGEND);
--					uint line = (pt.y - wi->pos_y - WD_FRAMERECT_TOP) / FONT_HEIGHT_SMALL;
--					uint columns = this->GetNumberColumnsLegend(wi->current_x);
--					uint number_of_rows = max(CeilDiv(max(_smallmap_company_count, _smallmap_industry_count), columns), this->min_number_of_fixed_rows);
--					if (line >= number_of_rows) break;
--
--					bool rtl = _current_text_dir == TD_RTL;
--					int x = pt.x - wi->pos_x;
--					if (rtl) x = wi->current_x - x;
--					uint column = (x - WD_FRAMERECT_LEFT) / this->column_width;
--
--					/* Check if click is on company label. */
--					int company_pos = (column * number_of_rows) + line;
--					if (company_pos < NUM_NO_COMPANY_ENTRIES) break;
--					if (company_pos < _smallmap_company_count) {
--						if (_ctrl_pressed) {
--							/* Disable all, except the clicked one */
--							bool changes = false;
--							for (int i = NUM_NO_COMPANY_ENTRIES; i != _smallmap_company_count; i++) {
--								bool new_state = i == company_pos;
--								if (_legend_land_owners[i].show_on_map != new_state) {
--									changes = true;
--									_legend_land_owners[i].show_on_map = new_state;
--								}
--							}
--							if (!changes) {
--								/* Nothing changed? Then show all (again). */
--								for (int i = NUM_NO_COMPANY_ENTRIES; i != _smallmap_company_count; i++) {
--									_legend_land_owners[i].show_on_map = true;
--								}
--							}
--						} else {
--							_legend_land_owners[company_pos].show_on_map = !_legend_land_owners[company_pos].show_on_map;
-+					} else if (this->map_type == SMT_LINKSTATS) {
-+						if (click_pos < _smallmap_cargo_count) {
-+							this->SelectLegendItem(click_pos, _legend_linkstats, _smallmap_cargo_count);
-+						}
-+					} else if (this->map_type == SMT_OWNER) {
-+						if (click_pos < _smallmap_company_count) {
-+							this->SelectLegendItem(click_pos, _legend_land_owners, _smallmap_company_count, NUM_NO_COMPANY_ENTRIES);
- 						}
- 					}
- 					this->SetDirty();
-@@ -1390,30 +1840,27 @@ public:
- 				break;
- 
- 			case SM_WIDGET_ENABLE_ALL:
--				if (this->map_type == SMT_INDUSTRY) {
--					for (int i = 0; i != _smallmap_industry_count; i++) {
--						_legend_from_industries[i].show_on_map = true;
--					}
--				} else if (this->map_type == SMT_OWNER) {
--					for (int i = NUM_NO_COMPANY_ENTRIES; i != _smallmap_company_count; i++) {
--						_legend_land_owners[i].show_on_map = true;
--					}
-+			case SM_WIDGET_DISABLE_ALL: {
-+				LegendAndColour *tbl = NULL;
-+				switch (this->map_type) {
-+					case SMT_INDUSTRY:
-+						tbl = _legend_from_industries;
-+						break;
-+					case SMT_OWNER:
-+						tbl = &(_legend_land_owners[NUM_NO_COMPANY_ENTRIES]);
-+						break;
-+					case SMT_LINKSTATS:
-+						tbl = _legend_linkstats;
-+						break;
-+					default:
-+						NOT_REACHED();
- 				}
--				this->SetDirty();
--				break;
--
--			case SM_WIDGET_DISABLE_ALL:
--				if (this->map_type == SMT_INDUSTRY) {
--					for (int i = 0; i != _smallmap_industry_count; i++) {
--						_legend_from_industries[i].show_on_map = false;
--					}
--				} else {
--					for (int i = NUM_NO_COMPANY_ENTRIES; i != _smallmap_company_count; i++) {
--						_legend_land_owners[i].show_on_map = false;
--					}
-+				for (;!tbl->end && tbl->legend != STR_SMALLMAP_LEGENDA_LINK_UNUSED; ++tbl) {
-+					tbl->show_on_map = (widget == SM_WIDGET_ENABLE_ALL);
- 				}
- 				this->SetDirty();
- 				break;
-+			}
- 
- 			case SM_WIDGET_SHOW_HEIGHT: // Enable/disable showing of heightmap.
- 				_smallmap_show_heightmap = !_smallmap_show_heightmap;
-@@ -1475,6 +1922,8 @@ public:
- 		/* Update the window every now and then */
- 		if (--this->refresh != 0) return;
- 
-+		this->RecalcVehiclePositions();
-+
- 		this->refresh = FORCE_REFRESH_PERIOD;
- 		this->SetDirty();
- 	}
-@@ -1490,8 +1939,13 @@ public:
- 	{
- 		const NWidgetBase *wi = this->GetWidget<NWidgetBase>(SM_WIDGET_MAP);
- 		Point hv = InverseRemapCoords(wi->current_x * TILE_SIZE / 2, wi->current_y * TILE_SIZE / 2);
--		hv.x *= this->zoom;
--		hv.y *= this->zoom;
-+		if (this->zoom > 0) {
-+			hv.x *= this->zoom;
-+			hv.y *= this->zoom;
-+		} else {
-+			hv.x /= (-this->zoom);
-+			hv.y /= (-this->zoom);
-+		}
- 
- 		if (sx < -hv.x) {
- 			sx = -hv.x;
-@@ -1521,8 +1975,8 @@ public:
- 
- 		/* While tile is at (delta.x, delta.y)? */
- 		int sub;
--		Point pt = this->PixelToTile(delta.x, delta.y, &sub);
--		this->SetNewScroll(this->scroll_x + pt.x * TILE_SIZE, this->scroll_y + pt.y * TILE_SIZE, sub);
-+		Point pt = this->PixelToWorld(delta.x, delta.y, &sub);
-+		this->SetNewScroll(this->scroll_x + pt.x, this->scroll_y + pt.y, sub);
- 
- 		this->SetDirty();
- 	}
-@@ -1534,7 +1988,7 @@ public:
- 
- 		int sub;
- 		const NWidgetBase *wid = this->GetWidget<NWidgetBase>(SM_WIDGET_MAP);
--		Point sxy = this->ComputeScroll(pt.x / TILE_SIZE, pt.y / TILE_SIZE, max(0, (int)wid->current_x / 2 - 2), wid->current_y / 2, &sub);
-+		Point sxy = this->ComputeScroll(pt.x, pt.y, max(0, (int)wid->current_x / 2 - 2), wid->current_y / 2, &sub);
- 		this->SetNewScroll(sxy.x, sxy.y, sub);
- 		this->SetDirty();
- 	}
-@@ -1635,6 +2089,8 @@ static const NWidgetPart _nested_smallmap_bar[] = {
- 							SetDataTip(SPR_IMG_ZOOMIN, STR_TOOLBAR_TOOLTIP_ZOOM_THE_VIEW_IN), SetFill(1, 1),
- 					NWidget(WWT_PUSHIMGBTN, COLOUR_BROWN, SM_WIDGET_CENTERMAP),
- 							SetDataTip(SPR_IMG_SMALLMAP, STR_SMALLMAP_CENTER), SetFill(1, 1),
-+					NWidget(WWT_IMGBTN, COLOUR_BROWN, SM_WIDGET_BLANK),
-+							SetDataTip(SPR_DOT_SMALL, STR_NULL), SetFill(1, 1),
- 					NWidget(WWT_IMGBTN, COLOUR_BROWN, SM_WIDGET_CONTOUR),
- 							SetDataTip(SPR_IMG_SHOW_COUNTOURS, STR_SMALLMAP_TOOLTIP_SHOW_LAND_CONTOURS_ON_MAP), SetFill(1, 1),
- 					NWidget(WWT_IMGBTN, COLOUR_BROWN, SM_WIDGET_VEHICLES),
-@@ -1648,6 +2104,8 @@ static const NWidgetPart _nested_smallmap_bar[] = {
- 							SetDataTip(SPR_IMG_ZOOMOUT, STR_TOOLBAR_TOOLTIP_ZOOM_THE_VIEW_OUT), SetFill(1, 1),
- 					NWidget(WWT_IMGBTN, COLOUR_BROWN, SM_WIDGET_TOGGLETOWNNAME),
- 							SetDataTip(SPR_IMG_TOWN, STR_SMALLMAP_TOOLTIP_TOGGLE_TOWN_NAMES_ON_OFF), SetFill(1, 1),
-+					NWidget(WWT_IMGBTN, COLOUR_BROWN, SM_WIDGET_LINKSTATS),
-+							SetDataTip(SPR_IMG_GRAPHS, STR_SMALLMAP_TOOLTIP_SHOW_LINK_STATS_ON_MAP), SetFill(1, 1),
- 					NWidget(WWT_IMGBTN, COLOUR_BROWN, SM_WIDGET_ROUTES),
- 							SetDataTip(SPR_IMG_SHOW_ROUTES, STR_SMALLMAP_TOOLTIP_SHOW_TRANSPORT_ROUTES_ON), SetFill(1, 1),
- 					NWidget(WWT_IMGBTN, COLOUR_BROWN, SM_WIDGET_VEGETATION),
-@@ -1699,7 +2157,7 @@ static const NWidgetPart _nested_smallmap_widgets[] = {
- };
- 
- static const WindowDesc _smallmap_desc(
--	WDP_AUTO, 446, 314,
-+	WDP_AUTO, 484, 314,
- 	WC_SMALLMAP, WC_NONE,
- 	WDF_UNCLICK_BUTTONS,
- 	_nested_smallmap_widgets, lengthof(_nested_smallmap_widgets)
-diff --git a/src/smallmap_gui.h b/src/smallmap_gui.h
-index 572a175..2f3a9a7 100644
---- a/src/smallmap_gui.h
-+++ b/src/smallmap_gui.h
-@@ -12,6 +12,9 @@
- #ifndef SMALLMAP_GUI_H
- #define SMALLMAP_GUI_H
- 
-+/* set up the cargos to be displayed in the smallmap's route legend */
-+void BuildLinkStatsLegend();
-+
- void BuildIndustriesLegend();
- void ShowSmallMap();
- void BuildLandLegend();
 diff --git a/src/station.cpp b/src/station.cpp
 index cafdf51..b2ba160 100644
 --- a/src/station.cpp

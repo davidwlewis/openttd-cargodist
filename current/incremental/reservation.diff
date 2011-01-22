@@ -272,10 +272,10 @@ index 72465d9..7ec758d 100644
  
  #endif /* CARGOPACKET_H */
 diff --git a/src/economy.cpp b/src/economy.cpp
-index 9710885..224c122 100644
+index 50d1fa3..59e3893 100644
 --- a/src/economy.cpp
 +++ b/src/economy.cpp
-@@ -1102,38 +1102,53 @@ void PrepareUnload(Vehicle *front_v)
+@@ -1103,38 +1103,53 @@ void PrepareUnload(Vehicle *front_v)
  }
  
  /**
@@ -346,7 +346,7 @@ index 9710885..224c122 100644
  	}
  
  	int unloading_time = 0;
-@@ -1169,7 +1184,7 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
+@@ -1170,7 +1185,7 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
  		GoodsEntry *ge = &st->goods[v->cargo_type];
  
  		if (HasBit(v->vehicle_flags, VF_CARGO_UNLOADING) && (u->current_order.GetUnloadType() & OUFB_NO_UNLOAD) == 0) {
@@ -355,7 +355,7 @@ index 9710885..224c122 100644
  			uint amount_unloaded = _settings_game.order.gradual_loading ? min(cargo_count, load_amount) : cargo_count;
  			bool remaining = false; // Are there cargo entities in this vehicle that can still be unloaded here?
  			bool accepted  = false; // Is the cargo accepted by the station?
-@@ -1189,7 +1204,7 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
+@@ -1190,7 +1205,7 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
  			 * they were loaded, but to not force unload the vehicle when the
  			 * station is still accepting the cargo in the vehicle. It doesn't
  			 * accept cargo that was loaded at the same station. */
@@ -364,7 +364,7 @@ index 9710885..224c122 100644
  				remaining = v->cargo.MoveTo(&ge->cargo, amount_unloaded, u->current_order.GetUnloadType() & OUFB_TRANSFER ? VehicleCargoList::MTA_TRANSFER : VehicleCargoList::MTA_UNLOAD, payment);
  				if (!HasBit(ge->acceptance_pickup, GoodsEntry::PICKUP)) {
  					InvalidateWindowData(WC_STATION_LIST, last_visited);
-@@ -1255,39 +1270,30 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
+@@ -1256,39 +1271,30 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
  
  		/* If there's goods waiting at the station, and the vehicle
  		 * has capacity for it, load it on the vehicle. */
@@ -418,7 +418,7 @@ index 9710885..224c122 100644
  			/* TODO: Regarding this, when we do gradual loading, we
  			 * should first unload all vehicles and then start
  			 * loading them. Since this will cause
-@@ -1295,23 +1301,28 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
+@@ -1296,23 +1302,28 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
  			 * the whole vehicle chain is really totally empty, the
  			 * completely_emptied assignment can then be safely
  			 * removed; that's how TTDPatch behaves too. --pasky */
@@ -458,7 +458,7 @@ index 9710885..224c122 100644
  			SetBit(cargo_full, v->cargo_type);
  		} else {
  			SetBit(cargo_not_full, v->cargo_type);
-@@ -1321,18 +1332,6 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
+@@ -1322,18 +1333,6 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
  	/* Only set completely_emptied, if we just unloaded all remaining cargo */
  	completely_emptied &= anything_unloaded;
  
@@ -477,7 +477,7 @@ index 9710885..224c122 100644
  	v = u;
  
  	if (!anything_unloaded) delete payment;
-@@ -1358,7 +1357,7 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
+@@ -1359,7 +1358,7 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
  			if (v->current_order.GetLoadType() == OLF_FULL_LOAD_ANY) {
  				/* if the aircraft carries passengers and is NOT full, then
  				 * continue loading, no matter how much mail is in */
@@ -486,7 +486,7 @@ index 9710885..224c122 100644
  						(cargo_not_full && (cargo_full & ~cargo_not_full) == 0)) { // There are still non-full cargoes
  					finished_loading = false;
  				}
-@@ -1412,6 +1411,7 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
+@@ -1413,6 +1412,7 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
  		st->MarkTilesDirty(true);
  		SetWindowDirty(WC_STATION_VIEW, last_visited);
  	}
@@ -494,7 +494,7 @@ index 9710885..224c122 100644
  }
  
  /**
-@@ -1446,13 +1446,11 @@ void LoadUnloadStation(Station *st)
+@@ -1447,13 +1447,11 @@ void LoadUnloadStation(Station *st)
  	 */
  	if (last_loading == NULL) return;
  
@@ -567,10 +567,10 @@ index d93b749..537fb4e 100644
  		     SLE_VAR(Vehicle, day_counter,           SLE_UINT8),
  		     SLE_VAR(Vehicle, tick_counter,          SLE_UINT8),
 diff --git a/src/vehicle.cpp b/src/vehicle.cpp
-index 94428ee..912ed1f 100644
+index 19c11ea..370bd21 100644
 --- a/src/vehicle.cpp
 +++ b/src/vehicle.cpp
-@@ -674,10 +674,11 @@ void Vehicle::PreDestructor()
+@@ -673,10 +673,11 @@ void Vehicle::PreDestructor()
  	if (CleaningPool()) return;
  
  	if (Station::IsValidID(this->last_station_visited)) {
@@ -584,7 +584,7 @@ index 94428ee..912ed1f 100644
  		delete this->cargo_payment;
  	}
  
-@@ -1162,7 +1163,7 @@ uint8 CalcPercentVehicleFilled(const Vehicle *v, StringID *colour)
+@@ -1161,7 +1162,7 @@ uint8 CalcPercentVehicleFilled(const Vehicle *v, StringID *colour)
  
  	/* Count up max and used */
  	for (; v != NULL; v = v->Next()) {
@@ -593,7 +593,7 @@ index 94428ee..912ed1f 100644
  		max += v->cargo_cap;
  		if (v->cargo_cap != 0 && colour != NULL) {
  			unloading += HasBit(v->vehicle_flags, VF_CARGO_UNLOADING) ? 1 : 0;
-@@ -1836,6 +1837,22 @@ void Vehicle::BeginLoading()
+@@ -1835,6 +1836,22 @@ void Vehicle::BeginLoading()
  	this->MarkDirty();
  }
  
@@ -616,7 +616,7 @@ index 94428ee..912ed1f 100644
  void Vehicle::LeaveStation()
  {
  	assert(current_order.IsType(OT_LOADING));
-@@ -1847,6 +1864,7 @@ void Vehicle::LeaveStation()
+@@ -1846,6 +1863,7 @@ void Vehicle::LeaveStation()
  
  	current_order.MakeLeaveStation();
  	Station *st = Station::Get(this->last_station_visited);
@@ -625,10 +625,10 @@ index 94428ee..912ed1f 100644
  
  	HideFillingPercent(&this->fill_percent_te_id);
 diff --git a/src/vehicle_base.h b/src/vehicle_base.h
-index de592e7..040170b 100644
+index e6e68d0..df1b7aa 100644
 --- a/src/vehicle_base.h
 +++ b/src/vehicle_base.h
-@@ -236,6 +236,7 @@ public:
+@@ -235,6 +235,7 @@ public:
  	virtual ~Vehicle();
  
  	void BeginLoading();
