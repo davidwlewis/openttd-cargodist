@@ -951,7 +951,7 @@ void SmallMapWindow::DrawSmallMap(DrawPixelInfo *dpi) const
 	if (this->map_type == SMT_CONTOUR || this->map_type == SMT_VEHICLES) this->DrawVehicles(dpi, blitter);
 
 	/* Draw link stat overlay */
-	if (this->map_type == SMT_LINKSTATS) this->overlay.Draw();
+	if (this->map_type == SMT_LINKSTATS) this->overlay.Draw(dpi);
 
 	/* Draw town names */
 	if (this->show_towns) this->DrawTowns(dpi);
