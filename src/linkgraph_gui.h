@@ -15,7 +15,7 @@
 #include "company_func.h"
 #include "station_base.h"
 #include <map>
-#include <set>
+#include <list>
 
 /**
  * Properties of a link between two stations.
@@ -39,10 +39,9 @@ public:
 	typedef LinkGraphOverlay<Twindow, Twidget_id> Self;
 	typedef std::map<StationID, LinkProperties> StationLinkMap;
 	typedef std::map<StationID, StationLinkMap> LinkMap;
-	typedef std::set<StationID> StationSet;
+	typedef std::list<std::pair<StationID, uint> > StationSupplyList;
 
 	static const uint8 LINK_COLOURS[];
-	static const uint REFRESH_INTERVAL = 0x1F;
 
 	/**
 	 * Create a link graph overlay for the specified window.
@@ -53,27 +52,26 @@ public:
 			window(w), cargo_mask(cargo_mask), company_mask(company_mask)
 	{}
 
-	void DrawOrRebuildCache();
-	void SetCargoMask(uint32 cargo_mask) {this->cargo_mask = cargo_mask; this->last_refresh_tick = 0;}
-	void SetCompanyMask(uint32 company_mask) {this->company_mask = company_mask; this->last_refresh_tick = 0;}
+	void RebuildCache();
+	void Draw() const { this->DrawLinks(); this->DrawStationDots(); }
+	void SetCargoMask(uint32 cargo_mask) {this->cargo_mask = cargo_mask;}
+	void SetCompanyMask(uint32 company_mask) {this->company_mask = company_mask;}
 
 protected:
-	const Twindow *window;      ///< Window to be drawn into.
-	uint32 cargo_mask;          ///< Bitmask of cargos to be displayed.
-	uint32 company_mask;        ///< Bitmask of companies to be displayed.
-	LinkMap cached_links;       ///< Cache for links to reduce recalculation.
-	StationSet cached_stations; ///< Cache for stations to be drawn.
-	uint16 last_refresh_tick;   ///< Last time of cache rebuild.
+	const Twindow *window;             ///< Window to be drawn into.
+	uint32 cargo_mask;                 ///< Bitmask of cargos to be displayed.
+	uint32 company_mask;               ///< Bitmask of companies to be displayed.
+	LinkMap cached_links;              ///< Cache for links to reduce recalculation.
+	StationSupplyList cached_stations; ///< Cache for stations to be drawn.
 
 	void DrawForwBackLinks(Point pta, StationID sta, Point ptb, StationID stb) const;
 	void AddLinks(const Station *sta, const Station *stb);
-	void BuildCache();
 	void DrawLinks() const;
 	void DrawStationDots() const;
 	bool IsLinkVisible(Point pta, Point ptb) const;
 
 	static void AddStats(const LinkStat &orig_link, const FlowStat &orig_flow, LinkProperties &cargo);
-	static void DrawContent(Point pta, Point ptb, LinkProperties &cargo);
+	static void DrawContent(Point pta, Point ptb, const LinkProperties &cargo);
 	static void DrawVertex(int x, int y, int size, int colour, int border_colour);
 };
 

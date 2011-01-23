@@ -18,10 +18,10 @@
 #include "smallmap_gui.h"
 
 template<class Twindow, uint Twidget_id>
-void LinkGraphOverlay<Twindow, Twidget_id>::BuildCache()
+void LinkGraphOverlay<Twindow, Twidget_id>::RebuildCache()
 {
 	this->cached_links.clear();
-	this->stations.clear();
+	this->cached_stations.clear();
 
 	const NWidgetBase *wi = static_cast<const Window *>(this->window)->GetWidget<NWidgetBase>(Twidget_id);
 	const Station *sta;
@@ -30,18 +30,17 @@ void LinkGraphOverlay<Twindow, Twidget_id>::BuildCache()
 		if (sta->owner != INVALID_COMPANY && !HasBit(this->company_mask, sta->owner)) continue;
 		if (sta->rect.IsEmpty()) continue;
 
-		StationID from = sta->index;
 		Point pta = this->window->GetStationMiddle(sta);
-		if (pta.x > 0 && pta.y > 0 && pta.x < (int)wi->current_x && pta.y < (int)wi->current_y) {
-			this->cached_stations.insert(from);
-		}
 
+		StationID from = sta->index;
 		StationLinkMap &seen_links = this->cached_links[from];
 
+		uint supply = 0;
 		CargoID c;
 		FOR_EACH_SET_CARGO_ID(c, this->cargo_mask) {
 			if (!CargoSpec::Get(c)->IsValid()) continue;
 
+			supply += sta->goods[c].supply;
 			const LinkStatMap &links = sta->goods[c].link_stats;
 			for (LinkStatMap::const_iterator i = links.begin(); i != links.end(); ++i) {
 				StationID to = i->first;
@@ -58,6 +57,9 @@ void LinkGraphOverlay<Twindow, Twidget_id>::BuildCache()
 				this->AddLinks(stb, sta);
 				seen_links[to]; // make sure it is created and marked as seen
 			}
+		}
+		if (pta.x > 0 && pta.y > 0 && pta.x < (int)wi->current_x && pta.y < (int)wi->current_y) {
+			this->cached_stations.push_back(std::make_pair(from, supply));
 		}
 	}
 }
@@ -78,7 +80,7 @@ void LinkGraphOverlay<Twindow, Twidget_id>::AddLinks(const Station *from, const 
 	CargoID c;
 	FOR_EACH_SET_CARGO_ID(c, this->cargo_mask) {
 		if (!CargoSpec::Get(c)->IsValid()) continue;
-		GoodsEntry &ge = from->goods[c];
+		const GoodsEntry &ge = from->goods[c];
 		FlowStat sum_flows = ge.GetSumFlowVia(to->index);
 		const LinkStatMap &ls_map = ge.link_stats;
 		LinkStatMap::const_iterator i = ls_map.find(to->index);
@@ -105,19 +107,6 @@ template<class Twindow, uint Twidget_id>
 	}
 }
 
-
-template<class Twindow, uint Twidget_id>
-void LinkGraphOverlay<Twindow, Twidget_id>::DrawOrRebuildCache()
-{
-	if (_tick_counter < this->last_refresh_tick ||
-			_tick_counter > this->last_refresh_tick + Self::REFRESH_INTERVAL) {
-		this->BuildCache();
-		this->last_refresh_tick = _tick_counter;
-	}
-	this->DrawLinks();
-	this->DrawStationDots();
-}
-
 template<class Twindow, uint Twidget_id>
 void LinkGraphOverlay<Twindow, Twidget_id>::DrawLinks() const
 {
@@ -130,13 +119,13 @@ void LinkGraphOverlay<Twindow, Twidget_id>::DrawLinks() const
 			if (pta.x > ptb.x || (pta.x == ptb.x && pta.y > ptb.y)) {
 				GfxDrawLine(pta.x, pta.y, ptb.x, ptb.y, _colour_gradient[COLOUR_GREY][1]);
 			}
-			this->DrawContent(pta, ptb, j->second);
+			Self::DrawContent(pta, ptb, j->second);
 		}
 	}
 }
 
 template<class Twindow, uint Twidget_id>
-/* static */ void LinkGraphOverlay<Twindow, Twidget_id>::DrawContent(Point pta, Point ptb, LinkProperties &cargo)
+/* static */ void LinkGraphOverlay<Twindow, Twidget_id>::DrawContent(Point pta, Point ptb, const LinkProperties &cargo)
 {
 	if (cargo.capacity <= 0) return;
 	int direction_y = (pta.x < ptb.x ? 1 : -1);
@@ -156,28 +145,16 @@ template<class Twindow, uint Twidget_id>
 void LinkGraphOverlay<Twindow, Twidget_id>::DrawStationDots() const
 {
 
-	for (StationSet::const_iterator i(this->cached_stations.begin()); i != this->cached_stations.end(); ++i) {
-		const Station *st = Station::GetIfValid(*i);
+	for (StationSupplyList::const_iterator i(this->cached_stations.begin()); i != this->cached_stations.end(); ++i) {
+		const Station *st = Station::GetIfValid(i->first);
 		if (st == NULL) continue;
 
-		Point pt = this->window->GetStationMiddle(st);
-
-		/* Add up cargo supplied for each selected cargo type */
-		uint q = 0;
-		CargoID c;
-		FOR_EACH_SET_CARGO_ID(c, this->cargo_mask) {
-			if (!CargoSpec::Get(c)->IsValid()) continue;
-			uint supply = st->goods[c].supply;
-			if (supply > 0) {
-				q += supply;
-			}
-		}
-
 		uint r = 1;
-		if (q >= 20) r++;
-		if (q >= 90) r++;
-		if (q >= 160) r++;
+		if (i->second >= 20) r++;
+		if (i->second >= 90) r++;
+		if (i->second >= 160) r++;
 
+		Point pt = this->window->GetStationMiddle(st);
 		Self::DrawVertex(pt.x, pt.y, r, _colour_gradient[Company::Get(st->owner)->colour][5], _colour_gradient[COLOUR_GREY][1]);
 	}
 }
