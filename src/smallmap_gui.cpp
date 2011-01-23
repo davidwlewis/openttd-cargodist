@@ -698,6 +698,8 @@ void SmallMapWindow::SetZoomLevel(ZoomLevelChange change, const Point *zoom_pt)
 			Point new_tile = this->PixelToTile(zoom_pt->x, zoom_pt->y, &sub);
 			this->SetNewScroll(this->scroll_x + (tile.x - new_tile.x) * TILE_SIZE,
 					this->scroll_y + (tile.y - new_tile.y) * TILE_SIZE, sub);
+		} else if (this->map_type == SMT_LINKSTATS) {
+			this->overlay.RebuildCache();
 		}
 		this->SetWidgetDisabledState(SM_WIDGET_ZOOM_IN,  this->zoom == zoomlevels[MIN_ZOOM_INDEX]);
 		this->SetWidgetDisabledState(SM_WIDGET_ZOOM_OUT, this->zoom == zoomlevels[MAX_ZOOM_INDEX]);
@@ -1254,6 +1256,7 @@ void SmallMapWindow::SetOverlayCargoMask()
 			if (_legend_linkstats[i].show_on_map) SetBit(cargo_mask, _legend_linkstats[i].type);
 		}
 		this->overlay.SetCargoMask(cargo_mask);
+		this->overlay.RebuildCache();
 	}
 }
 
@@ -1269,6 +1272,7 @@ void SmallMapWindow::SwitchMapType(SmallMapType map_type)
 
 	this->SetupWidgetData();
 
+	if (map_type == SMT_LINKSTATS) this->overlay.RebuildCache();
 	this->SetDirty();
 }
 
@@ -1456,6 +1460,7 @@ void SmallMapWindow::OnTick()
 	/* Update the window every now and then */
 	if (--this->refresh != 0) return;
 
+	if (this->map_type == SMT_LINKSTATS) this->overlay.RebuildCache();
 	this->refresh = FORCE_REFRESH_PERIOD;
 	this->SetDirty();
 }
@@ -1494,6 +1499,7 @@ void SmallMapWindow::SetNewScroll(int sx, int sy, int sub)
 	this->scroll_x = sx;
 	this->scroll_y = sy;
 	this->subscroll = sub;
+	if (this->map_type == SMT_LINKSTATS) this->overlay.RebuildCache();
 }
 
 void SmallMapWindow::OnScroll(Point delta)
