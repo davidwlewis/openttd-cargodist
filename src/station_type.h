@@ -14,6 +14,7 @@
 
 #include "core/smallvec_type.hpp"
 #include "tilearea_type.h"
+#include <list>
 
 typedef uint16 StationID;
 typedef uint16 RoadStopID;
@@ -87,6 +88,9 @@ enum CatchmentArea {
 
 static const uint MAX_LENGTH_STATION_NAME_CHARS  =  32; ///< The maximum length of a station name in characters including '\0'
 static const uint MAX_LENGTH_STATION_NAME_PIXELS = 180; ///< The maximum length of a station name in pixels
+
+/** List of station IDs */
+typedef std::list<StationID> StationIDList;
 
 /** List of stations */
 typedef SmallVector<Station *, 2> StationList;

@@ -113,6 +113,8 @@ private:
 
 	Vehicle *next_shared;               ///< pointer to the next vehicle that shares the order
 	Vehicle *previous_shared;           ///< NOSAVE: pointer to the previous vehicle in the shared order chain
+
+	bool CanLeaveWithCargo();
 public:
 	friend const SaveLoad *GetVehicleDescription(VehicleType vt); ///< So we can use private/protected variables in the saveload code
 	friend bool AfterLoadGame();
@@ -196,7 +198,8 @@ public:
 	byte random_bits;
 	byte waiting_triggers;              ///< triggers to be yet matched
 
-	StationID last_station_visited;
+	StationID last_station_visited;     ///< Last station the vehicle has visited, possibly without even stopping.
+	StationID last_loading_station;     ///< Last station the vehicle has stopped at and could possibly leave from with any cargo loaded.
 
 	CargoID cargo_type;                 ///< type of cargo this vehicle is carrying
 	byte cargo_subtype;                 ///< Used for livery refits (NewGRF variations)
@@ -235,6 +238,7 @@ public:
 	virtual ~Vehicle();
 
 	void BeginLoading();
+	void CancelReservation(StationID next, Station *st);
 	void LeaveStation();
 
 	GroundVehicleCache *GetGroundVehicleCache();

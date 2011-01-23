@@ -1613,7 +1613,7 @@ void DeleteGRFPresetFromConfig(const char *config_name)
 	delete ini;
 }
 
-static const SettingDesc *GetSettingDescription(uint index)
+const SettingDesc *GetSettingDescription(uint index)
 {
 	if (index >= lengthof(_settings)) return NULL;
 	return &_settings[index];
