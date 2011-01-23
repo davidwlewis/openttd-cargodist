@@ -35,7 +35,7 @@ index 0000000..ddb125a
 +graph calculations. Generally the accurace is inversely correlated to the
 +CPU requirements of the MCF algorithm.
 diff --git a/projects/openttd_vs100.vcxproj b/projects/openttd_vs100.vcxproj
-index 69360a6..026d8f4 100644
+index 69360a6..1c3c5fa 100644
 --- a/projects/openttd_vs100.vcxproj
 +++ b/projects/openttd_vs100.vcxproj
 @@ -326,6 +326,10 @@
@@ -49,11 +49,10 @@ index 69360a6..026d8f4 100644
      <ClCompile Include="..\src\map.cpp" />
      <ClCompile Include="..\src\misc.cpp" />
      <ClCompile Include="..\src\mixer.cpp" />
-@@ -454,10 +458,18 @@
+@@ -454,10 +458,17 @@
      <ClInclude Include="..\src\landscape.h" />
      <ClInclude Include="..\src\landscape_type.h" />
      <ClInclude Include="..\src\language.h" />
-+    <ClInclude Include="..\src\linkgraph_gui.h" />
 +    <ClInclude Include="..\src\linkgraph\demands.h" />
 +    <ClInclude Include="..\src\linkgraph\flowmapper.h" />
 +    <ClInclude Include="..\src\linkgraph\linkgraph.h" />
@@ -68,7 +67,7 @@ index 69360a6..026d8f4 100644
      <ClInclude Include="..\src\network\network.h" />
      <ClInclude Include="..\src\network\network_admin.h" />
      <ClInclude Include="..\src\network\network_base.h" />
-@@ -618,6 +630,7 @@
+@@ -618,6 +629,7 @@
      <ClCompile Include="..\src\core\math_func.cpp" />
      <ClInclude Include="..\src\core\math_func.hpp" />
      <ClInclude Include="..\src\core\mem_func.hpp" />
@@ -76,15 +75,7 @@ index 69360a6..026d8f4 100644
      <ClInclude Include="..\src\core\overflowsafe_type.hpp" />
      <ClInclude Include="..\src\core\pool_func.hpp" />
      <ClInclude Include="..\src\core\pool_type.hpp" />
-@@ -646,6 +659,7 @@
-     <ClCompile Include="..\src\highscore_gui.cpp" />
-     <ClCompile Include="..\src\industry_gui.cpp" />
-     <ClCompile Include="..\src\intro_gui.cpp" />
-+    <ClCompile Include="..\src\linkgraph_gui.cpp" />
-     <ClCompile Include="..\src\main_gui.cpp" />
-     <ClCompile Include="..\src\misc_gui.cpp" />
-     <ClCompile Include="..\src\music_gui.cpp" />
-@@ -723,6 +737,7 @@
+@@ -723,6 +735,7 @@
      <ClCompile Include="..\src\saveload\group_sl.cpp" />
      <ClCompile Include="..\src\saveload\industry_sl.cpp" />
      <ClCompile Include="..\src\saveload\labelmaps_sl.cpp" />
@@ -93,7 +84,7 @@ index 69360a6..026d8f4 100644
      <ClCompile Include="..\src\saveload\misc_sl.cpp" />
      <ClCompile Include="..\src\saveload\newgrf_sl.cpp" />
 diff --git a/projects/openttd_vs100.vcxproj.filters b/projects/openttd_vs100.vcxproj.filters
-index fd904c1..fd25049 100644
+index fd904c1..e4ca8a4 100644
 --- a/projects/openttd_vs100.vcxproj.filters
 +++ b/projects/openttd_vs100.vcxproj.filters
 @@ -198,6 +198,18 @@
@@ -115,13 +106,10 @@ index fd904c1..fd25049 100644
      <ClCompile Include="..\src\map.cpp">
        <Filter>Source Files</Filter>
      </ClCompile>
-@@ -582,6 +594,24 @@
+@@ -582,6 +594,21 @@
      <ClInclude Include="..\src\language.h">
        <Filter>Header Files</Filter>
      </ClInclude>
-+    <ClInclude Include="..\src\linkgraph_gui.h">
-+      <Filter>Header Files</Filter>
-+    </ClInclude>
 +    <ClInclude Include="..\src\linkgraph\demands.h">
 +      <Filter>Header Files</Filter>
 +    </ClInclude>
@@ -140,7 +128,7 @@ index fd904c1..fd25049 100644
      <ClInclude Include="..\src\livery.h">
        <Filter>Header Files</Filter>
      </ClInclude>
-@@ -594,6 +624,12 @@
+@@ -594,6 +621,12 @@
      <ClInclude Include="..\src\mixer.h">
        <Filter>Header Files</Filter>
      </ClInclude>
@@ -153,7 +141,7 @@ index fd904c1..fd25049 100644
      <ClInclude Include="..\src\network\network.h">
        <Filter>Header Files</Filter>
      </ClInclude>
-@@ -1074,6 +1110,9 @@
+@@ -1074,6 +1107,9 @@
      <ClInclude Include="..\src\core\mem_func.hpp">
        <Filter>Core Source Code</Filter>
      </ClInclude>
@@ -163,17 +151,7 @@ index fd904c1..fd25049 100644
      <ClInclude Include="..\src\core\overflowsafe_type.hpp">
        <Filter>Core Source Code</Filter>
      </ClInclude>
-@@ -1158,6 +1197,9 @@
-     <ClCompile Include="..\src\intro_gui.cpp">
-       <Filter>GUI Source Code</Filter>
-     </ClCompile>
-+    <ClCompile Include="..\src\linkgraph_gui.cpp">
-+      <Filter>GUI Source Code</Filter>
-+    </ClCompile>
-     <ClCompile Include="..\src\main_gui.cpp">
-       <Filter>GUI Source Code</Filter>
-     </ClCompile>
-@@ -1389,6 +1431,9 @@
+@@ -1389,6 +1425,9 @@
      <ClCompile Include="..\src\saveload\labelmaps_sl.cpp">
        <Filter>Save/Load handlers</Filter>
      </ClCompile>
@@ -184,7 +162,7 @@ index fd904c1..fd25049 100644
        <Filter>Save/Load handlers</Filter>
      </ClCompile>
 diff --git a/projects/openttd_vs80.vcproj b/projects/openttd_vs80.vcproj
-index 92813de..d6552fb 100644
+index 92813de..e80152e 100644
 --- a/projects/openttd_vs80.vcproj
 +++ b/projects/openttd_vs80.vcproj
 @@ -575,6 +575,22 @@
@@ -210,14 +188,10 @@ index 92813de..d6552fb 100644
  				RelativePath=".\..\src\map.cpp"
  				>
  			</File>
-@@ -1091,6 +1107,30 @@
+@@ -1091,6 +1107,26 @@
  				>
  			</File>
  			<File
-+				RelativePath=".\..\src\linkgraph_gui.h"
-+				>
-+			</File>
-+			<File
 +				RelativePath=".\..\src\linkgraph\demands.h"
 +				>
 +			</File>
@@ -241,7 +215,7 @@ index 92813de..d6552fb 100644
  				RelativePath=".\..\src\livery.h"
  				>
  			</File>
-@@ -1107,6 +1147,14 @@
+@@ -1107,6 +1143,14 @@
  				>
  			</File>
  			<File
@@ -256,7 +230,7 @@ index 92813de..d6552fb 100644
  				RelativePath=".\..\src\network\network.h"
  				>
  			</File>
-@@ -1751,6 +1799,10 @@
+@@ -1751,6 +1795,10 @@
  				>
  			</File>
  			<File
@@ -267,18 +241,7 @@ index 92813de..d6552fb 100644
  				RelativePath=".\..\src\core\overflowsafe_type.hpp"
  				>
  			</File>
-@@ -1867,6 +1919,10 @@
- 				>
- 			</File>
- 			<File
-+				RelativePath=".\..\src\linkgraph_gui.cpp"
-+				>
-+			</File>
-+			<File
- 				RelativePath=".\..\src\main_gui.cpp"
- 				>
- 			</File>
-@@ -2187,6 +2243,10 @@
+@@ -2187,6 +2235,10 @@
  				>
  			</File>
  			<File
@@ -290,7 +253,7 @@ index 92813de..d6552fb 100644
  				>
  			</File>
 diff --git a/projects/openttd_vs90.vcproj b/projects/openttd_vs90.vcproj
-index f04386b..b0e21f1 100644
+index f04386b..49fa4e6 100644
 --- a/projects/openttd_vs90.vcproj
 +++ b/projects/openttd_vs90.vcproj
 @@ -572,6 +572,22 @@
@@ -316,14 +279,10 @@ index f04386b..b0e21f1 100644
  				RelativePath=".\..\src\map.cpp"
  				>
  			</File>
-@@ -1088,6 +1104,30 @@
+@@ -1088,6 +1104,26 @@
  				>
  			</File>
  			<File
-+				RelativePath=".\..\src\linkgraph_gui.h"
-+				>
-+			</File>
-+			<File
 +				RelativePath=".\..\src\linkgraph\demands.h"
 +				>
 +			</File>
@@ -347,7 +306,7 @@ index f04386b..b0e21f1 100644
  				RelativePath=".\..\src\livery.h"
  				>
  			</File>
-@@ -1104,6 +1144,14 @@
+@@ -1104,6 +1140,14 @@
  				>
  			</File>
  			<File
@@ -362,7 +321,7 @@ index f04386b..b0e21f1 100644
  				RelativePath=".\..\src\network\network.h"
  				>
  			</File>
-@@ -1748,6 +1796,10 @@
+@@ -1748,6 +1792,10 @@
  				>
  			</File>
  			<File
@@ -373,18 +332,7 @@ index f04386b..b0e21f1 100644
  				RelativePath=".\..\src\core\overflowsafe_type.hpp"
  				>
  			</File>
-@@ -1864,6 +1916,10 @@
- 				>
- 			</File>
- 			<File
-+				RelativePath=".\..\src\linkgraph_gui.cpp"
-+				>
-+			</File>
-+			<File
- 				RelativePath=".\..\src\main_gui.cpp"
- 				>
- 			</File>
-@@ -2184,6 +2240,10 @@
+@@ -2184,6 +2232,10 @@
  				>
  			</File>
  			<File
@@ -396,7 +344,7 @@ index f04386b..b0e21f1 100644
  				>
  			</File>
 diff --git a/source.list b/source.list
-index efcf338..ee94698 100644
+index efcf338..0b0e43e 100644
 --- a/source.list
 +++ b/source.list
 @@ -34,6 +34,10 @@ highscore.cpp
@@ -410,11 +358,10 @@ index efcf338..ee94698 100644
  map.cpp
  misc.cpp
  mixer.cpp
-@@ -187,10 +191,18 @@ ini_type.h
+@@ -187,10 +191,17 @@ ini_type.h
  landscape.h
  landscape_type.h
  language.h
-+linkgraph_gui.h
 +linkgraph/demands.h
 +linkgraph/flowmapper.h
 +linkgraph/linkgraph.h
@@ -429,7 +376,7 @@ index efcf338..ee94698 100644
  network/network.h
  network/network_admin.h
  network/network_base.h
-@@ -368,6 +380,7 @@ core/geometry_type.hpp
+@@ -368,6 +379,7 @@ core/geometry_type.hpp
  core/math_func.cpp
  core/math_func.hpp
  core/mem_func.hpp
@@ -437,15 +384,7 @@ index efcf338..ee94698 100644
  core/overflowsafe_type.hpp
  core/pool_func.hpp
  core/pool_type.hpp
-@@ -398,6 +411,7 @@ group_gui.cpp
- highscore_gui.cpp
- industry_gui.cpp
- intro_gui.cpp
-+linkgraph_gui.cpp
- main_gui.cpp
- misc_gui.cpp
- music_gui.cpp
-@@ -481,6 +495,7 @@ saveload/gamelog_sl.cpp
+@@ -481,6 +493,7 @@ saveload/gamelog_sl.cpp
  saveload/group_sl.cpp
  saveload/industry_sl.cpp
  saveload/labelmaps_sl.cpp
@@ -479,7 +418,7 @@ index 1ff9bcf..b3477f6 100644
  	}
  
 diff --git a/src/cargopacket.cpp b/src/cargopacket.cpp
-index 37091fd..e35b6d5 100644
+index 37091fd..c91568d 100644
 --- a/src/cargopacket.cpp
 +++ b/src/cargopacket.cpp
 @@ -10,7 +10,9 @@
@@ -1070,7 +1009,7 @@ index 37091fd..e35b6d5 100644
   * Ages the all cargo in this list.
   */
  void VehicleCargoList::AgeCargo()
-@@ -382,22 +688,181 @@ void VehicleCargoList::AgeCargo()
+@@ -382,22 +688,192 @@ void VehicleCargoList::AgeCargo()
  	}
  }
  
@@ -1192,31 +1131,42 @@ index 37091fd..e35b6d5 100644
 +
 +/**
 + * Truncate where each destination loses roughly the same percentage of its cargo.
-+ * This is done by randomizing the selection of packets to be removed.
-+ * @param max_remaining maximum amount of cargo to keep in the list.
++ * This is done by randomizing the selection of packets to be removed. Also count
++ * the cargo by origin station.
++ * @param max_remaining Maximum amount of cargo to keep in the station.
++ * @param cargo_per_source Container for counting the cargo by origin list.
 + */
-+void StationCargoList::RandomTruncate(uint max_remaining)
++void StationCargoList::CountAndTruncate(uint max_remaining, StationCargoAmountMap &cargo_per_source)
 +{
 +	uint prev_count = this->count;
++	uint loop = 0;
 +	while (this->count > max_remaining) {
 +		for (Iterator it(this->packets.begin()); it != this->packets.end();) {
++			CargoPacket *packet = *it;
++			if (loop == 0) cargo_per_source[packet->source] += packet->count;
++
 +			if (RandomRange(prev_count) < max_remaining) {
 +				++it;
 +				continue;
 +			}
-+			CargoPacket *packet = *it;
++
 +			uint diff = this->count - max_remaining;
 +			if (packet->count > diff) {
 +				packet->count -= diff;
 +				this->count = max_remaining;
 +				this->cargo_days_in_transit -= packet->days_in_transit * diff;
-+				return;
++				if (loop > 0) {
++					return;
++				} else {
++					++it;
++				}
 +			} else {
 +				this->packets.erase(it++);
 +				this->RemoveFromCache(packet);
 +				delete packet;
 +			}
 +		}
++		loop++;
 +	}
 +}
 +
@@ -1232,8 +1182,8 @@ index 37091fd..e35b6d5 100644
 +		this->AddToCache(*it);
 +		this->reserved_count += (*it)->count;
 +	}
-+}
-+
+ }
+ 
 +/**
 + * Assign the cargo list to a goods entry.
 + * @param station the station the cargo list is assigned to
@@ -1245,8 +1195,8 @@ index 37091fd..e35b6d5 100644
 +	assert(station != NULL && cargo != INVALID_CARGO);
 +	this->station = station;
 +	this->cargo = cargo;
- }
- 
++}
++
 +
  /*
   * We have to instantiate everything we want to be usable.
@@ -1263,7 +1213,7 @@ index 37091fd..e35b6d5 100644
 +template class CargoList<VehicleCargoList, CargoPacketList>;
 +template class CargoList<StationCargoList, StationCargoPacketMap>;
 diff --git a/src/cargopacket.h b/src/cargopacket.h
-index 72465d9..86fbd35 100644
+index 72465d9..ac74e2d 100644
 --- a/src/cargopacket.h
 +++ b/src/cargopacket.h
 @@ -15,8 +15,11 @@
@@ -1516,11 +1466,12 @@ index 72465d9..86fbd35 100644
  	/**
  	 * Are two the two CargoPackets mergeable in the context of
  	 * a list of CargoPackets for a Vehicle?
-@@ -301,16 +370,20 @@ public:
+@@ -301,16 +370,21 @@ public:
  	}
  };
  
 +typedef MultiMap<StationID, CargoPacket *> StationCargoPacketMap;
++typedef std::map<StationID, uint> StationCargoAmountMap;
 +
  /**
   * CargoList that is used for stations.
@@ -1539,7 +1490,7 @@ index 72465d9..86fbd35 100644
  	/**
  	 * Are two the two CargoPackets mergeable in the context of
  	 * a list of CargoPackets for a Vehicle?
-@@ -325,6 +398,40 @@ public:
+@@ -325,6 +399,40 @@ public:
  				cp1->source_type     == cp2->source_type &&
  				cp1->source_id       == cp2->source_id;
  	}
@@ -1552,7 +1503,7 @@ index 72465d9..86fbd35 100644
 +
 +	void RerouteStalePackets(StationID to);
 +
-+	void RandomTruncate(uint max_remaining);
++	void CountAndTruncate(uint max_remaining, StationCargoAmountMap &cargo_per_source);
 +
 +	/**
 +	 * Returns source of the first cargo packet in this list.
@@ -4498,277 +4449,6 @@ index 0000000..f1a6349
 +};
 +
 +#endif /* MCF_H_ */
-diff --git a/src/linkgraph_gui.cpp b/src/linkgraph_gui.cpp
-new file mode 100644
-index 0000000..0e9c11f
---- /dev/null
-+++ b/src/linkgraph_gui.cpp
-@@ -0,0 +1,188 @@
-+/* $Id$ */
-+
-+/*
-+ * This file is part of OpenTTD.
-+ * OpenTTD is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, version 2.
-+ * OpenTTD is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-+ * See the GNU General Public License for more details. You should have received a copy of the GNU General Public License along with OpenTTD. If not, see <http://www.gnu.org/licenses/>.
-+ */
-+
-+/** @file linkgraph_gui.cpp Implementation of linkgraph overlay GUI. */
-+
-+#include "stdafx.h"
-+#include "widget_type.h"
-+#include "window_gui.h"
-+#include "linkgraph_gui.h"
-+
-+template<class Twindow, uint Twidget_id>
-+void LinkGraphOverlay<Twindow, Twidget_id>::Draw() const
-+{
-+	std::set<StationID> seen_stations;
-+	std::set<std::pair<StationID, StationID> > seen_links;
-+
-+	const Station *sta;
-+	FOR_ALL_STATIONS(sta) {
-+		/* Show links between own stations or "neutral" ones like oilrigs.*/
-+		if (sta->owner != INVALID_COMPANY && !HasBit(this->company_mask, sta->owner)) continue;
-+		CargoID c;
-+		FOR_EACH_SET_CARGO_ID(c, this->cargo_mask) {
-+			if (!CargoSpec::Get(c)->IsValid()) continue;
-+
-+			const LinkStatMap &links = sta->goods[c].link_stats;
-+			for (LinkStatMap::const_iterator i = links.begin(); i != links.end(); ++i) {
-+				StationID from = sta->index;
-+				StationID to = i->first;
-+				if (Station::IsValidID(to) && seen_stations.find(to) == seen_stations.end()) {
-+					const Station *stb = Station::Get(to);
-+
-+					if (stb->owner != INVALID_COMPANY && !HasBit(this->company_mask, stb->owner)) continue;
-+					if (sta->rect.IsEmpty() || stb->rect.IsEmpty()) continue;
-+					if (seen_links.find(std::make_pair(to, from)) != seen_links.end()) continue;
-+
-+					Point pta = this->window->GetStationMiddle(sta);
-+					Point ptb = this->window->GetStationMiddle(stb);
-+					if (!this->IsLinkVisible(pta, ptb)) continue;
-+
-+					this->DrawForwBackLinks(pta, sta->index, ptb, stb->index);
-+					seen_stations.insert(to);
-+				}
-+				seen_links.insert(std::make_pair(from, to));
-+			}
-+		}
-+		seen_stations.clear();
-+	}
-+
-+	this->DrawStationDots();
-+}
-+
-+template<class Twindow, uint Twidget_id>
-+FORCEINLINE bool LinkGraphOverlay<Twindow, Twidget_id>::IsLinkVisible(Point pta, Point ptb) const
-+{
-+	const NWidgetBase *wi = static_cast<const Window *>(this->window)->GetWidget<NWidgetBase>(Twidget_id);
-+	return !((pta.x < 0 && ptb.x < 0) ||
-+			(pta.y < 0 && ptb.y < 0) ||
-+			(pta.x > (int)wi->current_x && ptb.x > (int)wi->current_x) ||
-+			(pta.y > (int)wi->current_y && ptb.y > (int)wi->current_y));
-+}
-+
-+template<class Twindow, uint Twidget_id>
-+void LinkGraphOverlay<Twindow, Twidget_id>::AddLinks(StationID sta, StationID stb, LinkProperties &cargo) const
-+{
-+	CargoID c;
-+	FOR_EACH_SET_CARGO_ID(c, this->cargo_mask) {
-+		if (!CargoSpec::Get(c)->IsValid()) continue;
-+		GoodsEntry &ge = Station::Get(sta)->goods[c];
-+		FlowStat sum_flows = ge.GetSumFlowVia(stb);
-+		const LinkStatMap &ls_map = ge.link_stats;
-+		LinkStatMap::const_iterator i = ls_map.find(stb);
-+		if (i != ls_map.end()) {
-+			const LinkStat &link_stat = i->second;
-+			this->AddStats(link_stat, sum_flows, cargo);
-+		}
-+	}
-+}
-+
-+template<class Twindow, uint Twidget_id>
-+/* static */ void LinkGraphOverlay<Twindow, Twidget_id>::AddStats(const LinkStat &orig_link, const FlowStat &orig_flow, LinkProperties &cargo)
-+{
-+	uint new_cap = orig_link.Capacity();
-+	uint new_usg = orig_link.Usage();
-+	uint new_plan = orig_flow.Planned();
-+
-+	/* multiply the numbers by 32 in order to avoid comparing to 0 too often. */
-+	if (cargo.capacity == 0 ||
-+			max(cargo.usage, cargo.planned) * 32 / (cargo.capacity + 1) < max(new_usg, new_plan) * 32 / (new_cap + 1)) {
-+		cargo.capacity = new_cap;
-+		cargo.usage = new_usg;
-+		cargo.planned = new_plan;
-+	}
-+}
-+
-+template<class Twindow, uint Twidget_id>
-+void LinkGraphOverlay<Twindow, Twidget_id>::DrawForwBackLinks(Point pta, StationID sta, Point ptb, StationID stb) const
-+{
-+	LinkProperties forward, backward;
-+	this->AddLinks(sta, stb, forward);
-+	this->AddLinks(stb, sta, backward);
-+	GfxDrawLine(pta.x, pta.y, ptb.x, ptb.y, _colour_gradient[COLOUR_GREY][1]);
-+	this->DrawContent(pta, ptb, forward);
-+	this->DrawContent(ptb, pta, backward);
-+
-+}
-+
-+template<class Twindow, uint Twidget_id>
-+/* static */ void LinkGraphOverlay<Twindow, Twidget_id>::DrawContent(Point pta, Point ptb, LinkProperties &cargo)
-+{
-+	if (cargo.capacity <= 0) return;
-+	int direction_y = (pta.x < ptb.x ? 1 : -1);
-+	int direction_x = (pta.y > ptb.y ? 1 : -1);;
-+
-+	uint usage_or_plan = min(cargo.capacity * 2, max(cargo.usage, cargo.planned));
-+	int colour = Self::LINK_COLOURS[usage_or_plan * lengthof(Self::LINK_COLOURS) / (cargo.capacity * 2 + 1)];
-+	GfxDrawLine(pta.x + direction_x, pta.y, ptb.x + direction_x, ptb.y, colour);
-+	GfxDrawLine(pta.x, pta.y + direction_y, ptb.x, ptb.y + direction_y, colour);
-+}
-+
-+/**
-+ * Draw dots for stations into the smallmap. The dots' sizes are determined by the amount of
-+ * cargo produced there, their colours by the type of cargo produced.
-+ */
-+template<class Twindow, uint Twidget_id>
-+void LinkGraphOverlay<Twindow, Twidget_id>::DrawStationDots() const
-+{
-+	const Station *st;
-+	FOR_ALL_STATIONS(st) {
-+		if ((st->owner != INVALID_COMPANY && !HasBit(this->company_mask, st->owner)) || st->rect.IsEmpty()) continue;
-+		Point pt = this->window->GetStationMiddle(st);
-+		const NWidgetBase *wi = static_cast<const Window *>(this->window)->GetWidget<NWidgetBase>(Twidget_id);
-+		if (pt.x < 0 || pt.y < 0 || pt.x > (int)wi->current_x || pt.y > (int)wi->current_y) continue;
-+
-+		/* Add up cargo supplied for each selected cargo type */
-+		uint q = 0;
-+		int colour = 0;
-+		int numCargos = 0;
-+		CargoID c;
-+		FOR_EACH_SET_CARGO_ID(c, this->cargo_mask) {
-+			if (!CargoSpec::Get(c)->IsValid()) continue;
-+			uint supply = st->goods[c].supply;
-+			if (supply > 0) {
-+				q += supply;
-+				colour += CargoSpec::Get(c)->legend_colour;
-+				++numCargos;
-+			}
-+		}
-+		if (numCargos > 1) colour /= numCargos;
-+
-+		uint r = 1;
-+		if (q >= 20) r++;
-+		if (q >= 90) r++;
-+		if (q >= 160) r++;
-+
-+		Self::DrawVertex(pt.x, pt.y, r, colour, _colour_gradient[COLOUR_GREY][1]);
-+	}
-+}
-+
-+/**
-+ * Draw a square symbolizing a producer of cargo.
-+ * @param x the x coordinate of the middle of the vertex
-+ * @param y the y coordinate of the middle of the vertex
-+ * @param size the x and y extend of the vertex
-+ * @param colour the colour with which the vertex will be filled
-+ * @param border_colour the colour for the border of the vertex
-+ */
-+template<class Twindow, uint Twidget_id>
-+/* static */ void LinkGraphOverlay<Twindow, Twidget_id>::DrawVertex(int x, int y, int size, int colour, int border_colour)
-+{
-+	size--;
-+	int w1 = size / 2;
-+	int w2 = size / 2 + size % 2;
-+
-+	GfxFillRect(x - w1, y - w1, x + w2, y + w2, colour);
-+
-+	w1++;
-+	w2++;
-+	GfxDrawLine(x - w1, y - w1, x + w2, y - w1, border_colour);
-+	GfxDrawLine(x - w1, y + w2, x + w2, y + w2, border_colour);
-+	GfxDrawLine(x - w1, y - w1, x - w1, y + w2, border_colour);
-+	GfxDrawLine(x + w2, y - w1, x + w2, y + w2, border_colour);
-+}
-diff --git a/src/linkgraph_gui.h b/src/linkgraph_gui.h
-new file mode 100644
-index 0000000..6bc809f
---- /dev/null
-+++ b/src/linkgraph_gui.h
-@@ -0,0 +1,71 @@
-+/* $Id$ */
-+
-+/*
-+ * This file is part of OpenTTD.
-+ * OpenTTD is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, version 2.
-+ * OpenTTD is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-+ * See the GNU General Public License for more details. You should have received a copy of the GNU General Public License along with OpenTTD. If not, see <http://www.gnu.org/licenses/>.
-+ */
-+
-+/** @file linkgraph_gui.h Declaration of linkgraph overlay GUI. */
-+
-+#ifndef LINKGRAPH_GUI_H_
-+#define LINKGRAPH_GUI_H_
-+
-+#include "company_func.h"
-+#include "station_base.h"
-+
-+/**
-+ * Properties of a link between two stations.
-+ */
-+struct LinkProperties {
-+	LinkProperties() { this->Clear(); }
-+
-+	void Clear() { this->capacity = this->usage = this->planned = 0; }
-+
-+	uint capacity;
-+	uint usage;
-+	uint planned;
-+};
-+
-+/**
-+ * Handles drawing of links into some window.
-+ * @tparam Twindow window type to be drawn into. Must provide "Point GetStationMiddle(const Station *st) const"
-+ * @tparam Twidget_id ID of widget in window to be drawn into.
-+ */
-+template<class Twindow, uint Twidget_id>
-+class LinkGraphOverlay {
-+public:
-+	typedef LinkGraphOverlay<Twindow, Twidget_id> Self;
-+
-+	static const uint8 LINK_COLOURS[];
-+
-+	/**
-+	 * Create a link graph overlay for the specified window.
-+	 * @param w Window to be drawn into.
-+	 */
-+	LinkGraphOverlay(const Twindow *w, uint32 cargo_mask = 0xFFFF,
-+			uint32 company_mask = 1 << _local_company) :
-+			window(w), cargo_mask(cargo_mask), company_mask(company_mask)
-+	{}
-+
-+	void Draw() const;
-+	void SetCargoMask(uint32 cargo_mask) {this->cargo_mask = cargo_mask;}
-+	void SetCompanyMask(uint32 company_mask) {this->company_mask = company_mask;}
-+
-+protected:
-+	const Twindow *window; ///< Window to be drawn into.
-+	uint32 cargo_mask;     ///< Bitmask of cargos to be displayed.
-+	uint32 company_mask;   ///< Bitmask of companies to be displayed.
-+
-+	void DrawForwBackLinks(Point pta, StationID sta, Point ptb, StationID stb) const;
-+	void AddLinks(StationID sta, StationID stb, LinkProperties &cargo) const;
-+	void DrawStationDots() const;
-+	bool IsLinkVisible(Point pta, Point ptb) const;
-+
-+	static void AddStats(const LinkStat &orig_link, const FlowStat &orig_flow, LinkProperties &cargo);
-+	static void DrawContent(Point pta, Point ptb, LinkProperties &cargo);
-+	static void DrawVertex(int x, int y, int size, int colour, int border_colour);
-+};
-+
-+#endif /* LINKGRAPH_GUI_H_ */
 diff --git a/src/misc.cpp b/src/misc.cpp
 index 40fd7e0..e530759 100644
 --- a/src/misc.cpp
@@ -5397,7 +5077,7 @@ index f6572cd..3974169 100644
  
  	return true;
 diff --git a/src/saveload/saveload.cpp b/src/saveload/saveload.cpp
-index ec0bec7..a5b83b5 100644
+index ec0bec7..ec9faf5 100644
 --- a/src/saveload/saveload.cpp
 +++ b/src/saveload/saveload.cpp
 @@ -223,7 +223,7 @@
@@ -5405,7 +5085,7 @@ index ec0bec7..a5b83b5 100644
   *  157   21862
   */
 -extern const uint16 SAVEGAME_VERSION = 157; ///< Current savegame version of OpenTTD.
-+extern const uint16 SAVEGAME_VERSION = SL_CARGOMAP; ///< Current savegame version of OpenTTD.
++extern const uint16 SAVEGAME_VERSION = SL_EXT_RATING; ///< Current savegame version of OpenTTD.
  
  SavegameType _savegame_type; ///< type of savegame we are loading
  
@@ -5426,7 +5106,7 @@ index ec0bec7..a5b83b5 100644
  	_object_chunk_handlers,
  	NULL,
 diff --git a/src/saveload/saveload.h b/src/saveload/saveload.h
-index f9d1914..34e7834 100644
+index f9d1914..2b73f21 100644
 --- a/src/saveload/saveload.h
 +++ b/src/saveload/saveload.h
 @@ -88,9 +88,6 @@ enum SLRefType {
@@ -5439,7 +5119,7 @@ index f9d1914..34e7834 100644
  /** Flags of a chunk. */
  enum ChunkType {
  	CH_RIFF         =  0,
-@@ -546,4 +543,22 @@ bool SaveloadCrashWithMissingNewGRFs();
+@@ -546,4 +543,23 @@ bool SaveloadCrashWithMissingNewGRFs();
  extern char _savegame_format[8];
  extern bool _do_autosave;
  
@@ -5456,6 +5136,7 @@ index f9d1914..34e7834 100644
 +	SL_MCF,
 +	SL_FLOWMAP,
 +	SL_CARGOMAP,
++	SL_EXT_RATING,
 +
 +	/** Highest possible savegame version. */
 +	SL_MAX_VERSION = 255
@@ -5475,7 +5156,7 @@ index b400861..4bf5646 100644
  
  void UpdateOldAircraft();
 diff --git a/src/saveload/station_sl.cpp b/src/saveload/station_sl.cpp
-index b0535d9..2c22a37 100644
+index b0535d9..9e6ef1e 100644
 --- a/src/saveload/station_sl.cpp
 +++ b/src/saveload/station_sl.cpp
 @@ -221,9 +221,11 @@ static const SaveLoad _old_station_desc[] = {
@@ -5541,7 +5222,7 @@ index b0535d9..2c22a37 100644
  /**
   * Wrapper function to get the GoodsEntry's internal structure while
   * some of the variables itself are private.
-@@ -255,14 +300,48 @@ const SaveLoad *GetGoodsDesc()
+@@ -255,14 +300,49 @@ const SaveLoad *GetGoodsDesc()
  		SLEG_CONDVAR(            _cargo_feeder_share, SLE_FILE_U32 | SLE_VAR_I64, 14, 64),
  		SLEG_CONDVAR(            _cargo_feeder_share, SLE_INT64,                  65, 67),
  		 SLE_CONDVAR(GoodsEntry, amount_fract,        SLE_UINT8,                 150, SL_MAX_VERSION),
@@ -5554,6 +5235,7 @@ index b0535d9..2c22a37 100644
 +		SLEG_CONDVAR(            _num_links,          SLE_UINT16,      SL_CAPACITIES, SL_MAX_VERSION),
 +		SLEG_CONDVAR(            _num_flows,          SLE_UINT32,         SL_FLOWMAP, SL_MAX_VERSION),
 +		 SLE_CONDVAR(GoodsEntry, last_component,      SLE_UINT16,      SL_COMPONENTS, SL_MAX_VERSION),
++		 SLE_CONDVAR(GoodsEntry, max_waiting_cargo,   SLE_UINT32,      SL_EXT_RATING, SL_MAX_VERSION),
  		SLE_END()
  	};
  
@@ -5592,7 +5274,7 @@ index b0535d9..2c22a37 100644
  
  static void Load_STNS()
  {
-@@ -278,6 +357,7 @@ static void Load_STNS()
+@@ -278,6 +358,7 @@ static void Load_STNS()
  		for (CargoID i = 0; i < num_cargo; i++) {
  			GoodsEntry *ge = &st->goods[i];
  			SlObject(ge, GetGoodsDesc());
@@ -5600,7 +5282,7 @@ index b0535d9..2c22a37 100644
  			if (IsSavegameVersionBefore(68)) {
  				SB(ge->acceptance_pickup, GoodsEntry::ACCEPTANCE, 1, HasBit(_waiting_acceptance, 15));
  				if (GB(_waiting_acceptance, 0, 12) != 0) {
-@@ -285,8 +365,8 @@ static void Load_STNS()
+@@ -285,8 +366,8 @@ static void Load_STNS()
  					StationID source = (IsSavegameVersionBefore(7) && _cargo_source == 0xFF) ? INVALID_STATION : _cargo_source;
  
  					/* Don't construct the packet with station here, because that'll fail with old savegames */
@@ -5611,7 +5293,7 @@ index b0535d9..2c22a37 100644
  				}
  			}
  		}
-@@ -311,7 +391,9 @@ static void Ptrs_STNS()
+@@ -311,7 +392,9 @@ static void Ptrs_STNS()
  		if (!IsSavegameVersionBefore(68)) {
  			for (CargoID i = 0; i < NUM_CARGO; i++) {
  				GoodsEntry *ge = &st->goods[i];
@@ -5621,7 +5303,7 @@ index b0535d9..2c22a37 100644
  			}
  		}
  		SlObject(st, _old_station_desc);
-@@ -398,8 +480,29 @@ static void RealSave_STNN(BaseStation *bst)
+@@ -398,8 +481,29 @@ static void RealSave_STNN(BaseStation *bst)
  
  	if (!waypoint) {
  		Station *st = Station::From(bst);
@@ -5653,7 +5335,7 @@ index b0535d9..2c22a37 100644
  		}
  	}
  
-@@ -430,8 +533,29 @@ static void Load_STNN()
+@@ -430,8 +534,29 @@ static void Load_STNN()
  
  		if (!waypoint) {
  			Station *st = Station::From(bst);
@@ -5685,7 +5367,7 @@ index b0535d9..2c22a37 100644
  			}
  		}
  
-@@ -454,7 +578,16 @@ static void Ptrs_STNN()
+@@ -454,7 +579,16 @@ static void Ptrs_STNN()
  	FOR_ALL_STATIONS(st) {
  		for (CargoID i = 0; i < NUM_CARGO; i++) {
  			GoodsEntry *ge = &st->goods[i];
@@ -5895,7 +5577,7 @@ index cafdf51..b2ba160 100644
  
  	InvalidateWindowData(WC_STATION_LIST, this->owner, 0);
 diff --git a/src/station_base.h b/src/station_base.h
-index 7d64664..e5ba013 100644
+index 7d64664..9356abd 100644
 --- a/src/station_base.h
 +++ b/src/station_base.h
 @@ -16,13 +16,288 @@
@@ -6187,7 +5869,7 @@ index 7d64664..e5ba013 100644
  struct GoodsEntry {
  	enum AcceptancePickup {
  		ACCEPTANCE,
-@@ -34,7 +309,10 @@ struct GoodsEntry {
+@@ -34,7 +309,11 @@ struct GoodsEntry {
  		days_since_pickup(255),
  		rating(INITIAL_STATION_RATING),
  		last_speed(0),
@@ -6195,11 +5877,12 @@ index 7d64664..e5ba013 100644
 +		last_age(255),
 +		supply(0),
 +		supply_new(0),
-+		last_component(INVALID_LINKGRAPH_COMPONENT)
++		last_component(INVALID_LINKGRAPH_COMPONENT),
++		max_waiting_cargo(0)
  	{}
  
  	byte acceptance_pickup;
-@@ -42,8 +320,20 @@ struct GoodsEntry {
+@@ -42,8 +321,21 @@ struct GoodsEntry {
  	byte rating;
  	byte last_speed;
  	byte last_age;
@@ -6212,6 +5895,7 @@ index 7d64664..e5ba013 100644
 +	FlowStatMap flows;                   ///< Planned flows through this station.
 +	LinkStatMap link_stats;              ///< Capacities and usage statistics for outgoing links.
 +	LinkGraphComponentID last_component; ///< Component this station was last part of in this cargo's link graph.
++	uint max_waiting_cargo;              ///< Max cargo from this station waiting at any station.
 +	FlowStat GetSumFlowVia(StationID via) const;
 +
 +	void UpdateFlowStats(StationID source, uint count, StationID next);
@@ -6222,7 +5906,7 @@ index 7d64664..e5ba013 100644
  };
  
  /** All airport-related information. Only valid if tile != INVALID_TILE. */
-@@ -224,6 +514,8 @@ public:
+@@ -224,6 +516,8 @@ public:
  	/* virtual */ uint32 GetNewGRFVariable(const ResolverObject *object, byte variable, byte parameter, bool *available) const;
  
  	/* virtual */ void GetTileArea(TileArea *ta, StationType type) const;
@@ -6232,7 +5916,7 @@ index 7d64664..e5ba013 100644
  
  #define FOR_ALL_STATIONS(var) FOR_ALL_BASE_STATIONS_OF_TYPE(Station, var)
 diff --git a/src/station_cmd.cpp b/src/station_cmd.cpp
-index 68f5c14..64a1851 100644
+index 68f5c14..f07d7d4 100644
 --- a/src/station_cmd.cpp
 +++ b/src/station_cmd.cpp
 @@ -45,6 +45,7 @@
@@ -6243,16 +5927,109 @@ index 68f5c14..64a1851 100644
  #include "table/airporttile_ids.h"
  #include "newgrf_airporttiles.h"
  #include "order_backup.h"
-@@ -3135,7 +3136,7 @@ static void UpdateStationRating(Station *st)
+@@ -3046,6 +3047,19 @@ static void UpdateStationRating(Station *st)
+ 			int rating = 0;
+ 			uint waiting = ge->cargo.Count();
+ 
++			/* num_dests is at least 1 if there is any cargo as
++			 * INVALID_STATION is also a destination.
++			 */
++			uint num_dests = (uint)ge->cargo.Packets()->MapSize();
++
++			/* Average amount of cargo per next hop, but prefer solitary stations
++			 * with only one or two next hops. They are allowed to have more
++			 * cargo waiting per next hop.
++			 * With manual cargo distribution waiting_avg = waiting / 2 as then
++			 * INVALID_STATION is the only destination.
++			 */
++			uint waiting_avg = waiting / (num_dests + 1);
++
+ 			if (HasBit(cs->callback_mask, CBM_CARGO_STATION_RATING_CALC)) {
+ 				/* Perform custom station rating. If it succeeds the speed, days in transit and
+ 				 * waiting cargo ratings must not be executed. */
+@@ -3054,7 +3068,7 @@ static void UpdateStationRating(Station *st)
+ 				uint last_speed = ge->last_speed;
+ 				if (last_speed == 0) last_speed = 0xFF;
+ 
+-				uint32 var18 = min(ge->days_since_pickup, 0xFF) | (min(waiting, 0xFFFF) << 8) | (min(last_speed, 0xFF) << 24);
++				uint32 var18 = min(ge->days_since_pickup, 0xFF) | (min(ge->max_waiting_cargo, 0xFFFF) << 8) | (min(last_speed, 0xFF) << 24);
+ 				/* Convert to the 'old' vehicle types */
+ 				uint32 var10 = (st->last_vehicle_type == VEH_INVALID) ? 0x0 : (st->last_vehicle_type + 0x10);
+ 				uint16 callback = GetCargoCallback(CBID_CARGO_STATION_RATING_CALC, var10, var18, cs);
+@@ -3079,11 +3093,11 @@ static void UpdateStationRating(Station *st)
+ 				(rating += 45, days > 3) ||
+ 				(rating += 35, true);
+ 
+-				(rating -= 90, waiting > 1500) ||
+-				(rating += 55, waiting > 1000) ||
+-				(rating += 35, waiting > 600) ||
+-				(rating += 10, waiting > 300) ||
+-				(rating += 20, waiting > 100) ||
++				(rating -= 90, ge->max_waiting_cargo > 1500) ||
++				(rating += 55, ge->max_waiting_cargo > 1000) ||
++				(rating += 35, ge->max_waiting_cargo > 600) ||
++				(rating += 10, ge->max_waiting_cargo > 300) ||
++				(rating += 20, ge->max_waiting_cargo > 100) ||
+ 				(rating += 10, true);
+ 			}
+ 
+@@ -3101,12 +3115,12 @@ static void UpdateStationRating(Station *st)
+ 				/* only modify rating in steps of -2, -1, 0, 1 or 2 */
+ 				ge->rating = rating = or_ + Clamp(Clamp(rating, 0, 255) - or_, -2, 2);
+ 
+-				/* if rating is <= 64 and more than 200 items waiting,
++				/* if rating is <= 64 and more than 100 items waiting on average per destination,
+ 				 * remove some random amount of goods from the station */
+-				if (rating <= 64 && waiting >= 200) {
++				if (rating <= 64 && waiting_avg >= 100) {
+ 					int dec = Random() & 0x1F;
+-					if (waiting < 400) dec &= 7;
+-					waiting -= dec + 1;
++					if (waiting_avg < 200) dec &= 7;
++					waiting -= (dec + 1) * num_dests;
+ 					waiting_changed = true;
+ 				}
+ 
+@@ -3115,7 +3129,7 @@ static void UpdateStationRating(Station *st)
+ 					uint32 r = Random();
+ 					if (rating <= (int)GB(r, 0, 7)) {
+ 						/* Need to have int, otherwise it will just overflow etc. */
+-						waiting = max((int)waiting - (int)GB(r, 8, 2) - 1, 0);
++						waiting = max((int)waiting - (int)((GB(r, 8, 2) - 1) * num_dests), 0);
+ 						waiting_changed = true;
+ 					}
+ 				}
+@@ -3135,7 +3149,28 @@ static void UpdateStationRating(Station *st)
  					waiting_changed = true;
  				}
  
 -				if (waiting_changed) ge->cargo.Truncate(waiting);
-+				if (waiting_changed) ge->cargo.RandomTruncate(waiting);
++				if (waiting_changed) {
++					/* feed back the exact own waiting cargo at this station for the
++					 * next rating calculation.
++					 */
++					ge->max_waiting_cargo = 0;
++
++					/* If truncating also punish the source stations' ratings to
++					 * decrease the flow of incoming cargo. */
++
++					StationCargoAmountMap waiting_per_source;
++					ge->cargo.CountAndTruncate(waiting, waiting_per_source);
++					for (StationCargoAmountMap::iterator i(waiting_per_source.begin()); i != waiting_per_source.end(); ++i) {
++						Station *source_station = Station::GetIfValid(i->first);
++						if (source_station == NULL) continue;
++
++						GoodsEntry &source_ge = source_station->goods[cs->Index()];
++						source_ge.max_waiting_cargo = max(source_ge.max_waiting_cargo, i->second);
++					}
++				} else {
++					/* if the average number per next hop is low, be more forgiving. */
++					ge->max_waiting_cargo = waiting_avg;
++				}
  			}
  		}
  	}
-@@ -3148,6 +3149,202 @@ static void UpdateStationRating(Station *st)
+@@ -3148,6 +3183,202 @@ static void UpdateStationRating(Station *st)
  	}
  }
  
@@ -6455,7 +6232,7 @@ index 68f5c14..64a1851 100644
  /* called for every station each tick */
  static void StationHandleSmallTick(BaseStation *st)
  {
-@@ -3164,6 +3361,8 @@ void OnTick_Station()
+@@ -3164,6 +3395,8 @@ void OnTick_Station()
  {
  	if (_game_mode == GM_EDITOR) return;
  
@@ -6464,7 +6241,7 @@ index 68f5c14..64a1851 100644
  	BaseStation *st;
  	FOR_ALL_BASE_STATIONS(st) {
  		StationHandleSmallTick(st);
-@@ -3182,7 +3381,13 @@ void OnTick_Station()
+@@ -3182,7 +3415,13 @@ void OnTick_Station()
  
  void StationMonthlyLoop()
  {
@@ -6479,7 +6256,7 @@ index 68f5c14..64a1851 100644
  }
  
  
-@@ -3214,7 +3419,17 @@ static uint UpdateStationWaiting(Station *st, CargoID type, uint amount, SourceT
+@@ -3214,7 +3453,17 @@ static uint UpdateStationWaiting(Station *st, CargoID type, uint amount, SourceT
  	/* No new "real" cargo item yet. */
  	if (amount == 0) return 0;
  
@@ -6498,7 +6275,7 @@ index 68f5c14..64a1851 100644
  
  	if (!HasBit(ge.acceptance_pickup, GoodsEntry::PICKUP)) {
  		InvalidateWindowData(WC_STATION_LIST, st->index);
-@@ -3577,6 +3792,96 @@ static CommandCost TerraformTile_Station(TileIndex tile, DoCommandFlag flags, ui
+@@ -3577,6 +3826,96 @@ static CommandCost TerraformTile_Station(TileIndex tile, DoCommandFlag flags, ui
  	return DoCommand(tile, 0, 0, flags, CMD_LANDSCAPE_CLEAR);
  }
  
