@@ -132,7 +132,7 @@ void LinkGraphOverlay<Twindow, Twidget_id>::DrawStationDots() const
 {
 	const Station *st;
 	FOR_ALL_STATIONS(st) {
-		if (st->owner != INVALID_COMPANY && !HasBit(this->company_mask, st->owner) || st->rect.IsEmpty()) continue;
+		if ((st->owner != INVALID_COMPANY && !HasBit(this->company_mask, st->owner)) || st->rect.IsEmpty()) continue;
 		Point pt = this->window->GetStationMiddle(st);
 		const NWidgetBase *wi = static_cast<const Window *>(this->window)->GetWidget<NWidgetBase>(Twidget_id);
 		if (pt.x < 0 || pt.y < 0 || pt.x > (int)wi->current_x || pt.y > (int)wi->current_y) continue;
@@ -158,7 +158,7 @@ void LinkGraphOverlay<Twindow, Twidget_id>::DrawStationDots() const
 		if (q >= 90) r++;
 		if (q >= 160) r++;
 
-		Self::DrawVertex(pt.x, pt.y, r, colour, _colour_gradient[COLOUR_GREY][3]);
+		Self::DrawVertex(pt.x, pt.y, r, colour, _colour_gradient[COLOUR_GREY][1]);
 	}
 }
 
