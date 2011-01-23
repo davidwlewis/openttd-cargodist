@@ -62,26 +62,29 @@ void LinkGraphOverlay<Twindow, Twidget_id>::RebuildCache()
 				seen_links[to]; // make sure it is created and marked as seen
 			}
 		}
-		if (this->IsPointVisible(pta)) {
+		if (this->IsPointVisible(pta, &dpi)) {
 			this->cached_stations.push_back(std::make_pair(from, supply));
 		}
 	}
 }
 
 template<class Twindow, uint Twidget_id>
-FORCEINLINE bool LinkGraphOverlay<Twindow, Twidget_id>::IsPointVisible(Point pt, const DrawPixelInfo *dpi) const
+FORCEINLINE bool LinkGraphOverlay<Twindow, Twidget_id>::IsPointVisible(Point pt, const DrawPixelInfo *dpi, int padding) const
 {
-	return pt.x > dpi->left && pt.y > dpi->top && pt.x < dpi->left + dpi->width &&
-			pt.y < dpi->top + dpi->height;
+	return pt.x > dpi->left - padding && pt.y > dpi->top - padding &&
+			pt.x < dpi->left + dpi->width + padding &&
+			pt.y < dpi->top + dpi->height + padding;
 }
 
 template<class Twindow, uint Twidget_id>
-FORCEINLINE bool LinkGraphOverlay<Twindow, Twidget_id>::IsLinkVisible(Point pta, Point ptb, const DrawPixelInfo *dpi) const
+FORCEINLINE bool LinkGraphOverlay<Twindow, Twidget_id>::IsLinkVisible(Point pta, Point ptb, const DrawPixelInfo *dpi, int padding) const
 {
-	return !((pta.x < dpi->left && ptb.x < dpi->left) ||
-			(pta.y < dpi->top && ptb.y < dpi->top) ||
-			(pta.x > dpi->left + dpi->width && ptb.x > dpi->left + dpi->width) ||
-			(pta.y > dpi->top + dpi->height && ptb.y > dpi->top + dpi->height));
+	return !((pta.x < dpi->left - padding && ptb.x < dpi->left - padding) ||
+			(pta.y < dpi->top - padding && ptb.y < dpi->top - padding) ||
+			(pta.x > dpi->left + dpi->width + padding &&
+					ptb.x > dpi->left + dpi->width + padding) ||
+			(pta.y > dpi->top + dpi->height + padding &&
+					ptb.y > dpi->top + dpi->height + padding));
 }
 
 template<class Twindow, uint Twidget_id>
@@ -159,7 +162,7 @@ void LinkGraphOverlay<Twindow, Twidget_id>::DrawStationDots(const DrawPixelInfo 
 		const Station *st = Station::GetIfValid(i->first);
 		if (st == NULL) continue;
 		Point pt = this->window->GetStationMiddle(st);
-		if (!this->IsPointVisible(pt, dpi)) continue;
+		if (!this->IsPointVisible(pt, dpi, 10)) continue;
 
 		uint r = 1;
 		if (i->second >= 20) r++;
