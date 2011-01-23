@@ -23,6 +23,11 @@ void LinkGraphOverlay<Twindow, Twidget_id>::RebuildCache()
 	this->cached_stations.clear();
 
 	const NWidgetBase *wi = static_cast<const Window *>(this->window)->GetWidget<NWidgetBase>(Twidget_id);
+	DrawPixelInfo dpi;
+	dpi.left = dpi.top = 0;
+	dpi.width = wi->current_x;
+	dpi.height = wi->current_y;
+
 	const Station *sta;
 	FOR_ALL_STATIONS(sta) {
 		/* Show links between own stations or "neutral" ones like oilrigs.*/
@@ -50,27 +55,33 @@ void LinkGraphOverlay<Twindow, Twidget_id>::RebuildCache()
 				if (stb->owner != INVALID_COMPANY && !HasBit(this->company_mask, stb->owner)) continue;
 				if (stb->rect.IsEmpty()) continue;
 
-				if (!this->IsLinkVisible(pta, this->window->GetStationMiddle(stb))) continue;
+				if (!this->IsLinkVisible(pta, this->window->GetStationMiddle(stb), &dpi)) continue;
 
 				this->AddLinks(sta, stb);
 				this->AddLinks(stb, sta);
 				seen_links[to]; // make sure it is created and marked as seen
 			}
 		}
-		if (pta.x > 0 && pta.y > 0 && pta.x < (int)wi->current_x && pta.y < (int)wi->current_y) {
+		if (this->IsPointVisible(pta)) {
 			this->cached_stations.push_back(std::make_pair(from, supply));
 		}
 	}
 }
 
 template<class Twindow, uint Twidget_id>
-FORCEINLINE bool LinkGraphOverlay<Twindow, Twidget_id>::IsLinkVisible(Point pta, Point ptb) const
+FORCEINLINE bool LinkGraphOverlay<Twindow, Twidget_id>::IsPointVisible(Point pt, const DrawPixelInfo *dpi) const
 {
-	const NWidgetBase *wi = static_cast<const Window *>(this->window)->GetWidget<NWidgetBase>(Twidget_id);
-	return !((pta.x < 0 && ptb.x < 0) ||
-			(pta.y < 0 && ptb.y < 0) ||
-			(pta.x > (int)wi->current_x && ptb.x > (int)wi->current_x) ||
-			(pta.y > (int)wi->current_y && ptb.y > (int)wi->current_y));
+	return pt.x > dpi->left && pt.y > dpi->top && pt.x < dpi->left + dpi->width &&
+			pt.y < dpi->top + dpi->height;
+}
+
+template<class Twindow, uint Twidget_id>
+FORCEINLINE bool LinkGraphOverlay<Twindow, Twidget_id>::IsLinkVisible(Point pta, Point ptb, const DrawPixelInfo *dpi) const
+{
+	return !((pta.x < dpi->left && ptb.x < dpi->left) ||
+			(pta.y < dpi->top && ptb.y < dpi->top) ||
+			(pta.x > dpi->left + dpi->width && ptb.x > dpi->left + dpi->width) ||
+			(pta.y > dpi->top + dpi->height && ptb.y > dpi->top + dpi->height));
 }
 
 template<class Twindow, uint Twidget_id>
@@ -107,7 +118,7 @@ template<class Twindow, uint Twidget_id>
 }
 
 template<class Twindow, uint Twidget_id>
-void LinkGraphOverlay<Twindow, Twidget_id>::DrawLinks() const
+void LinkGraphOverlay<Twindow, Twidget_id>::DrawLinks(const DrawPixelInfo *dpi) const
 {
 	for (LinkMap::const_iterator i(this->cached_links.begin()); i != this->cached_links.end(); ++i) {
 		if (!Station::IsValidID(i->first)) continue;
@@ -115,6 +126,7 @@ void LinkGraphOverlay<Twindow, Twidget_id>::DrawLinks() const
 		for (StationLinkMap::const_iterator j(i->second.begin()); j != i->second.end(); ++j) {
 			if (!Station::IsValidID(j->first)) continue;
 			Point ptb = this->window->GetStationMiddle(Station::Get(j->first));
+			if (!this->IsLinkVisible(pta, ptb, dpi)) continue;
 			if (pta.x > ptb.x || (pta.x == ptb.x && pta.y > ptb.y)) {
 				GfxDrawLine(pta.x, pta.y, ptb.x, ptb.y, _colour_gradient[COLOUR_GREY][1]);
 			}
@@ -141,19 +153,19 @@ template<class Twindow, uint Twidget_id>
  * cargo produced there, their colours by the type of cargo produced.
  */
 template<class Twindow, uint Twidget_id>
-void LinkGraphOverlay<Twindow, Twidget_id>::DrawStationDots() const
+void LinkGraphOverlay<Twindow, Twidget_id>::DrawStationDots(const DrawPixelInfo *dpi) const
 {
-
 	for (StationSupplyList::const_iterator i(this->cached_stations.begin()); i != this->cached_stations.end(); ++i) {
 		const Station *st = Station::GetIfValid(i->first);
 		if (st == NULL) continue;
+		Point pt = this->window->GetStationMiddle(st);
+		if (!this->IsPointVisible(pt, dpi)) continue;
 
 		uint r = 1;
 		if (i->second >= 20) r++;
 		if (i->second >= 90) r++;
 		if (i->second >= 160) r++;
 
-		Point pt = this->window->GetStationMiddle(st);
 		Self::DrawVertex(pt.x, pt.y, r, _colour_gradient[Company::Get(st->owner)->colour][5], _colour_gradient[COLOUR_GREY][1]);
 	}
 }
