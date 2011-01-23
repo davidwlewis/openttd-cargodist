@@ -30,9 +30,8 @@ struct LinkProperties {
 
 /**
  * Handles drawing of links into some window.
+ * @tparam Twindow window type to be drawn into. Must provide "Point GetStationMiddle(const Station *st) const"
  * @tparam Twidget_id ID of widget in window to be drawn into.
- * @tparam Twindow window type to be drawn into. Must provide methods:
- * - Point GetStationMiddle(const Station *st) const
  */
 template<class Twindow, uint Twidget_id>
 class LinkGraphOverlay {
@@ -52,7 +51,7 @@ public:
 
 	void Draw() const;
 	void SetCargoMask(uint32 cargo_mask) {this->cargo_mask = cargo_mask;}
-	void SetCompanyMask(uint32 cargo_mask) {this->company_mask = company_mask;}
+	void SetCompanyMask(uint32 company_mask) {this->company_mask = company_mask;}
 
 protected:
 	const Twindow *window; ///< Window to be drawn into.

@@ -119,7 +119,6 @@ template<class Twindow, uint Twidget_id>
 	int direction_x = (pta.y > ptb.y ? 1 : -1);;
 
 	uint usage_or_plan = min(cargo.capacity * 2, max(cargo.usage, cargo.planned));
-
 	int colour = Self::LINK_COLOURS[usage_or_plan * lengthof(Self::LINK_COLOURS) / (cargo.capacity * 2 + 1)];
 	GfxDrawLine(pta.x + direction_x, pta.y, ptb.x + direction_x, ptb.y, colour);
 	GfxDrawLine(pta.x, pta.y + direction_y, ptb.x, ptb.y + direction_y, colour);
