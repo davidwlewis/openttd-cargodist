@@ -10,13 +10,13 @@
 /** @file linkgraph_gui.cpp Implementation of linkgraph overlay GUI. */
 
 #include "stdafx.h"
-#include "station_base.h"
 #include "widget_type.h"
 #include "window_gui.h"
 #include "linkgraph_gui.h"
+#include "smallmap_gui.h"
 
-template<class Twindow>
-void LinkGraphOverlay<Twindow>::Draw() const
+template<class Twindow, uint Twidget_id>
+void LinkGraphOverlay<Twindow, Twidget_id>::Draw() const
 {
 	std::set<StationID> seen_stations;
 	std::set<std::pair<StationID, StationID> > seen_links;
@@ -24,7 +24,7 @@ void LinkGraphOverlay<Twindow>::Draw() const
 	const Station *sta;
 	FOR_ALL_STATIONS(sta) {
 		/* Show links between own stations or "neutral" ones like oilrigs.*/
-		if (!HasBit(this->company_mask, sta->owner)) continue;
+		if (sta->owner != INVALID_COMPANY && !HasBit(this->company_mask, sta->owner)) continue;
 		CargoID c;
 		FOR_EACH_SET_CARGO_ID(c, this->cargo_mask) {
 			if (!CargoSpec::Get(c)->IsValid()) continue;
@@ -36,7 +36,7 @@ void LinkGraphOverlay<Twindow>::Draw() const
 				if (Station::IsValidID(to) && seen_stations.find(to) == seen_stations.end()) {
 					const Station *stb = Station::Get(to);
 
-					if (!HasBit(this->company_mask, stb->owner)) continue;
+					if (stb->owner != INVALID_COMPANY && !HasBit(this->company_mask, stb->owner)) continue;
 					if (sta->rect.IsEmpty() || stb->rect.IsEmpty()) continue;
 					if (seen_links.find(std::make_pair(to, from)) != seen_links.end()) continue;
 
@@ -56,18 +56,18 @@ void LinkGraphOverlay<Twindow>::Draw() const
 	this->DrawStationDots();
 }
 
-template<class Twindow>
-FORCEINLINE bool LinkGraphOverlay<Twindow>::IsLinkVisible(Point pta, Point ptb) const
+template<class Twindow, uint Twidget_id>
+FORCEINLINE bool LinkGraphOverlay<Twindow, Twidget_id>::IsLinkVisible(Point pta, Point ptb) const
 {
-	const NWidgetBase *wi = static_cast<const Window *>(this->window)->GetWidget<NWidgetBase>(this->widget_id);
+	const NWidgetBase *wi = static_cast<const Window *>(this->window)->GetWidget<NWidgetBase>(Twidget_id);
 	return !((pta.x < 0 && ptb.x < 0) ||
 			(pta.y < 0 && ptb.y < 0) ||
 			(pta.x > (int)wi->current_x && ptb.x > (int)wi->current_x) ||
 			(pta.y > (int)wi->current_y && ptb.y > (int)wi->current_y));
 }
 
-template<class Twindow>
-void LinkGraphOverlay<Twindow>::AddLinks(StationID sta, StationID stb, LinkProperties &cargo) const
+template<class Twindow, uint Twidget_id>
+void LinkGraphOverlay<Twindow, Twidget_id>::AddLinks(StationID sta, StationID stb, LinkProperties &cargo) const
 {
 	CargoID c;
 	FOR_EACH_SET_CARGO_ID(c, this->cargo_mask) {
@@ -83,8 +83,8 @@ void LinkGraphOverlay<Twindow>::AddLinks(StationID sta, StationID stb, LinkPrope
 	}
 }
 
-template<class Twindow>
-/* static */ void LinkGraphOverlay<Twindow>::AddStats(const LinkStat &orig_link, const FlowStat &orig_flow, LinkProperties &cargo)
+template<class Twindow, uint Twidget_id>
+/* static */ void LinkGraphOverlay<Twindow, Twidget_id>::AddStats(const LinkStat &orig_link, const FlowStat &orig_flow, LinkProperties &cargo)
 {
 	uint new_cap = orig_link.Capacity();
 	uint new_usg = orig_link.Usage();
@@ -99,8 +99,8 @@ template<class Twindow>
 	}
 }
 
-template<class Twindow>
-void LinkGraphOverlay<Twindow>::DrawForwBackLinks(Point pta, StationID sta, Point ptb, StationID stb) const
+template<class Twindow, uint Twidget_id>
+void LinkGraphOverlay<Twindow, Twidget_id>::DrawForwBackLinks(Point pta, StationID sta, Point ptb, StationID stb) const
 {
 	LinkProperties forward, backward;
 	this->AddLinks(sta, stb, forward);
@@ -111,15 +111,16 @@ void LinkGraphOverlay<Twindow>::DrawForwBackLinks(Point pta, StationID sta, Poin
 
 }
 
-template<class Twindow>
-/* static */ void LinkGraphOverlay<Twindow>::DrawContent(Point pta, Point ptb, LinkProperties &cargo)
+template<class Twindow, uint Twidget_id>
+/* static */ void LinkGraphOverlay<Twindow, Twidget_id>::DrawContent(Point pta, Point ptb, LinkProperties &cargo)
 {
 	if (cargo.capacity <= 0) return;
 	int direction_y = (pta.x < ptb.x ? 1 : -1);
 	int direction_x = (pta.y > ptb.y ? 1 : -1);;
 
 	uint usage_or_plan = min(cargo.capacity * 2, max(cargo.usage, cargo.planned));
-	int colour = LinkGraphOverlay<Twindow>::LINK_COLOURS[usage_or_plan * lengthof(LinkGraphOverlay<Twindow>::LINK_COLOURS) / (cargo.capacity * 2 + 1)];
+
+	int colour = Self::LINK_COLOURS[usage_or_plan * lengthof(Self::LINK_COLOURS) / (cargo.capacity * 2 + 1)];
 	GfxDrawLine(pta.x + direction_x, pta.y, ptb.x + direction_x, ptb.y, colour);
 	GfxDrawLine(pta.x, pta.y + direction_y, ptb.x, ptb.y + direction_y, colour);
 }
@@ -128,14 +129,14 @@ template<class Twindow>
  * Draw dots for stations into the smallmap. The dots' sizes are determined by the amount of
  * cargo produced there, their colours by the type of cargo produced.
  */
-template<class Twindow>
-void LinkGraphOverlay<Twindow>::DrawStationDots() const
+template<class Twindow, uint Twidget_id>
+void LinkGraphOverlay<Twindow, Twidget_id>::DrawStationDots() const
 {
 	const Station *st;
 	FOR_ALL_STATIONS(st) {
-		if (!HasBit(this->company_mask, st->owner) || st->rect.IsEmpty()) continue;
+		if ((st->owner != INVALID_COMPANY && !HasBit(this->company_mask, st->owner)) || st->rect.IsEmpty()) continue;
 		Point pt = this->window->GetStationMiddle(st);
-		const NWidgetBase *wi = static_cast<const Window *>(this->window)->GetWidget<NWidgetBase>(this->widget_id);
+		const NWidgetBase *wi = static_cast<const Window *>(this->window)->GetWidget<NWidgetBase>(Twidget_id);
 		if (pt.x < 0 || pt.y < 0 || pt.x > (int)wi->current_x || pt.y > (int)wi->current_y) continue;
 
 		/* Add up cargo supplied for each selected cargo type */
@@ -159,7 +160,7 @@ void LinkGraphOverlay<Twindow>::DrawStationDots() const
 		if (q >= 90) r++;
 		if (q >= 160) r++;
 
-		LinkGraphOverlay::DrawVertex(pt.x, pt.y, r, colour, _colour_gradient[COLOUR_GREY][3]);
+		Self::DrawVertex(pt.x, pt.y, r, colour, _colour_gradient[COLOUR_GREY][1]);
 	}
 }
 
@@ -171,8 +172,8 @@ void LinkGraphOverlay<Twindow>::DrawStationDots() const
  * @param colour the colour with which the vertex will be filled
  * @param border_colour the colour for the border of the vertex
  */
-template<class Twindow>
-/* static */ void LinkGraphOverlay<Twindow>::DrawVertex(int x, int y, int size, int colour, int border_colour)
+template<class Twindow, uint Twidget_id>
+/* static */ void LinkGraphOverlay<Twindow, Twidget_id>::DrawVertex(int x, int y, int size, int colour, int border_colour)
 {
 	size--;
 	int w1 = size / 2;
@@ -187,3 +188,14 @@ template<class Twindow>
 	GfxDrawLine(x - w1, y - w1, x - w1, y + w2, border_colour);
 	GfxDrawLine(x + w2, y - w1, x + w2, y + w2, border_colour);
 }
+
+template class LinkGraphOverlay<SmallMapWindow, SM_WIDGET_MAP>;
+/**
+ * Colours for the various "load" states of links. Ordered from "empty" to
+ * "overcrowded".
+ */
+template<> const uint8 LinkGraphOverlay<SmallMapWindow, SM_WIDGET_MAP>::LINK_COLOURS[] = {
+	0x0f, 0xd1, 0xd0, 0x57,
+	0x55, 0x53, 0xbf, 0xbd,
+	0xba, 0xb9, 0xb7, 0xb5
+};
