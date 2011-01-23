@@ -76,10 +76,10 @@ index b8cbdd1..08b9806 100644
  void AskExitGame();
  void AskExitToGameMenu();
 diff --git a/src/lang/english.txt b/src/lang/english.txt
-index 887010f..06faa9f 100644
+index 1ddf73d..cc327d9 100644
 --- a/src/lang/english.txt
 +++ b/src/lang/english.txt
-@@ -3419,6 +3419,10 @@ STR_INCOME_FLOAT_INCOME_SMALL                                   :{TINYFONT}{GREE
+@@ -3411,6 +3411,10 @@ STR_INCOME_FLOAT_INCOME_SMALL                                   :{TINYFONT}{GREE
  STR_INCOME_FLOAT_INCOME                                         :{GREEN}Income: {CURRENCY}
  STR_FEEDER_TINY                                                 :{TINYFONT}{YELLOW}Transfer: {CURRENCY}
  STR_FEEDER                                                      :{YELLOW}Transfer: {CURRENCY}
