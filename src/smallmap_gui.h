@@ -12,6 +12,7 @@
 #ifndef SMALLMAP_GUI_H
 #define SMALLMAP_GUI_H
 
+#include "industry_type.h"
 #include "window_gui.h"
 #include "strings_func.h"
 #include "blitter/factory.hpp"
@@ -20,6 +21,40 @@ void BuildIndustriesLegend();
 void ShowSmallMap();
 void BuildLandLegend();
 void BuildOwnerLegend();
+
+/** Structure for holding relevant data for legends in small map */
+struct LegendAndColour {
+	uint8 colour;              ///< Colour of the item on the map.
+	StringID legend;           ///< String corresponding to the coloured item.
+	IndustryType type;         ///< Type of industry. Only valid for industry entries.
+	uint8 height;              ///< Height in tiles. Only valid for height legend entries.
+	CompanyID company;         ///< Company to display. Only valid for company entries of the owner legend.
+	bool show_on_map;          ///< For filtering industries, if \c true, industry is shown on the map in colour.
+	bool end;                  ///< This is the end of the list.
+	bool col_break;            ///< Perform a column break and go further at the next column.
+};
+
+/** Widget numbers of the small map window. */
+enum SmallMapWindowWidgets {
+	SM_WIDGET_CAPTION,           ///< Caption widget.
+	SM_WIDGET_MAP_BORDER,        ///< Border around the smallmap.
+	SM_WIDGET_MAP,               ///< Panel containing the smallmap.
+	SM_WIDGET_LEGEND,            ///< Bottom panel to display smallmap legends.
+	SM_WIDGET_ZOOM_IN,           ///< Button to zoom in one step.
+	SM_WIDGET_ZOOM_OUT,          ///< Button to zoom out one step.
+	SM_WIDGET_CONTOUR,           ///< Button to select the contour view (height map).
+	SM_WIDGET_VEHICLES,          ///< Button to select the vehicles view.
+	SM_WIDGET_INDUSTRIES,        ///< Button to select the industries view.
+	SM_WIDGET_ROUTES,            ///< Button to select the routes view.
+	SM_WIDGET_VEGETATION,        ///< Button to select the vegetation view.
+	SM_WIDGET_OWNERS,            ///< Button to select the owners view.
+	SM_WIDGET_CENTERMAP,         ///< Button to move smallmap center to main window center.
+	SM_WIDGET_TOGGLETOWNNAME,    ///< Toggle button to display town names.
+	SM_WIDGET_SELECT_BUTTONS,    ///< Selection widget for the buttons present in some smallmap modes.
+	SM_WIDGET_ENABLE_ALL,        ///< Button to enable display of all legend entries.
+	SM_WIDGET_DISABLE_ALL,       ///< Button to disable display of all legend entries.
+	SM_WIDGET_SHOW_HEIGHT,       ///< Show heightmap toggle button.
+};
 
 /** Class managing the smallmap window. */
 class SmallMapWindow : public Window {
@@ -118,9 +153,21 @@ public:
 		return width / this->column_width;
 	}
 
-	uint GetLegendHeight(uint num_columns) const;
+	/**
+	 * Compute height given a number of columns.
+	 * @param Number of columns.
+	 * @return Needed height for displaying the smallmap legends in pixels.
+	 */
+	inline uint GetLegendHeight(uint num_columns) const
+	{
+		return WD_FRAMERECT_TOP + WD_FRAMERECT_BOTTOM +
+				this->GetNumberRowsLegend(num_columns) * FONT_HEIGHT_SMALL;
+	}
+
+	uint GetNumberRowsLegend(uint columns) const;
 	void SwitchMapType(SmallMapType map_type);
 	void SetNewScroll(int sx, int sy, int sub);
+	void SelectLegendItem(int click_pos, LegendAndColour *legend, int end_legend_item, int begin_legend_item = 0);
 	void SmallMapCenterOnCurrentPos();
 
 	virtual void SetStringParameters(int widget) const;
