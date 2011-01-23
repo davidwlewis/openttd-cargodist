@@ -1,0 +1,172 @@
+diff --git a/src/economy.cpp b/src/economy.cpp
+index 50d1fa3..3b40f81 100644
+--- a/src/economy.cpp
++++ b/src/economy.cpp
+@@ -1018,21 +1018,23 @@ CargoPayment::~CargoPayment()
+ 
+ 	this->front->cargo_payment = NULL;
+ 
+-	if (this->visual_profit == 0) return;
++	if (this->visual_profit == 0 && this->visual_transfer == 0) return;
+ 
+ 	Backup<CompanyByte> cur_company(_current_company, this->front->owner, FILE_LINE);
+ 
+ 	SubtractMoneyFromCompany(CommandCost(this->front->GetExpenseType(true), -this->route_profit));
+-	this->front->profit_this_year += this->visual_profit << 8;
++	this->front->profit_this_year += (this->visual_profit + this->visual_transfer) << 8;
+ 
+-	if (this->route_profit != 0) {
+-		if (IsLocalCompany() && !PlayVehicleSound(this->front, VSE_LOAD_UNLOAD)) {
+-			SndPlayVehicleFx(SND_14_CASHTILL, this->front);
+-		}
++	if (this->route_profit != 0 && IsLocalCompany() && !PlayVehicleSound(this->front, VSE_LOAD_UNLOAD)) {
++		SndPlayVehicleFx(SND_14_CASHTILL, this->front);
++	}
+ 
+-		ShowCostOrIncomeAnimation(this->front->x_pos, this->front->y_pos, this->front->z_pos, -this->visual_profit);
+-	} else {
+-		ShowFeederIncomeAnimation(this->front->x_pos, this->front->y_pos, this->front->z_pos, this->visual_profit);
++	if (this->visual_transfer != 0){
++		ShowFeederIncomeAnimation(this->front->x_pos, this->front->y_pos,
++				this->front->z_pos, this->visual_transfer, -this->visual_profit);
++	} else if (this->visual_profit) {
++		ShowCostOrIncomeAnimation(this->front->x_pos, this->front->y_pos,
++				this->front->z_pos, -this->visual_profit);
+ 	}
+ 
+ 	cur_company.Restore();
+@@ -1074,7 +1076,7 @@ Money CargoPayment::PayTransfer(const CargoPacket *cp, uint count)
+ 
+ 	profit = profit * _settings_game.economy.feeder_payment_share / 100;
+ 
+-	this->visual_profit += profit; // accumulate transfer profits for whole vehicle
++	this->visual_transfer += profit; // accumulate transfer profits for whole vehicle
+ 	return profit; // account for the (virtual) profit already made for the cargo packet
+ }
+ 
+diff --git a/src/economy_base.h b/src/economy_base.h
+index 5d7124c..c6b9241 100644
+--- a/src/economy_base.h
++++ b/src/economy_base.h
+@@ -24,9 +24,10 @@ extern CargoPaymentPool _cargo_payment_pool;
+  * Helper class to perform the cargo payment.
+  */
+ struct CargoPayment : CargoPaymentPool::PoolItem<&_cargo_payment_pool> {
+-	Vehicle *front;      ///< The front vehicle to do the payment of
+-	Money route_profit;  ///< The amount of money to add/remove from the bank account
+-	Money visual_profit; ///< The visual profit to show
++	Vehicle *front;        ///< The front vehicle to do the payment of
++	Money route_profit;    ///< The amount of money to add/remove from the bank account
++	Money visual_profit;   ///< The visual profit to show
++	Money visual_transfer; ///< The transfer credits to be shown
+ 
+ 	/* Unsaved variables */
+ 	Company *owner;            ///< The owner of the vehicle
+diff --git a/src/functions.h b/src/functions.h
+index b8cbdd1..08b9806 100644
+--- a/src/functions.h
++++ b/src/functions.h
+@@ -31,7 +31,7 @@ CommandCost CheckTileOwnership(TileIndex tile);
+ void MarkTileDirtyByTile(TileIndex tile);
+ 
+ void ShowCostOrIncomeAnimation(int x, int y, int z, Money cost);
+-void ShowFeederIncomeAnimation(int x, int y, int z, Money cost);
++void ShowFeederIncomeAnimation(int x, int y, int z, Money transfer, Money income);
+ 
+ void AskExitGame();
+ void AskExitToGameMenu();
+diff --git a/src/lang/english.txt b/src/lang/english.txt
+index 1ddf73d..cc327d9 100644
+--- a/src/lang/english.txt
++++ b/src/lang/english.txt
+@@ -3411,6 +3411,10 @@ STR_INCOME_FLOAT_INCOME_SMALL                                   :{TINYFONT}{GREE
+ STR_INCOME_FLOAT_INCOME                                         :{GREEN}Income: {CURRENCY}
+ STR_FEEDER_TINY                                                 :{TINYFONT}{YELLOW}Transfer: {CURRENCY}
+ STR_FEEDER                                                      :{YELLOW}Transfer: {CURRENCY}
++STR_FEEDER_INCOME_TINY                                          :{TINYFONT}{YELLOW}Transfer: {CURRENCY}{WHITE} / {GREEN}Income: {CURRENCY}
++STR_FEEDER_INCOME                                               :{YELLOW}Transfer: {CURRENCY}{WHITE} / {GREEN}Income: {CURRENCY}
++STR_FEEDER_COST_TINY                                            :{TINYFONT}{YELLOW}Transfer: {CURRENCY}{WHITE} / {RED}Cost: {CURRENCY}
++STR_FEEDER_COST                                                 :{YELLOW}Transfer: {CURRENCY}{WHITE} / {RED}Cost: {CURRENCY}
+ STR_MESSAGE_ESTIMATED_COST                                      :{WHITE}Estimated Cost: {CURRENCY}
+ STR_MESSAGE_ESTIMATED_INCOME                                    :{WHITE}Estimated Income: {CURRENCY}
+ 
+diff --git a/src/misc_gui.cpp b/src/misc_gui.cpp
+index 80ea503..dfc1fc5 100644
+--- a/src/misc_gui.cpp
++++ b/src/misc_gui.cpp
+@@ -758,12 +758,22 @@ void ShowCostOrIncomeAnimation(int x, int y, int z, Money cost)
+ 	AddTextEffect(msg, pt.x, pt.y, DAY_TICKS, TE_RISING);
+ }
+ 
+-void ShowFeederIncomeAnimation(int x, int y, int z, Money cost)
++void ShowFeederIncomeAnimation(int x, int y, int z, Money transfer, Money income)
+ {
+ 	Point pt = RemapCoords(x, y, z);
+ 
+-	SetDParam(0, cost);
+-	AddTextEffect(STR_FEEDER, pt.x, pt.y, DAY_TICKS, TE_RISING);
++	SetDParam(0, transfer);
++	if (income == 0) {
++		AddTextEffect(STR_FEEDER, pt.x, pt.y, DAY_TICKS, TE_RISING);
++	} else {
++		StringID msg = STR_FEEDER_COST;
++		if (income < 0) {
++			income = -income;
++			msg = STR_FEEDER_INCOME;
++		}
++		SetDParam(1, income);
++		AddTextEffect(msg, pt.x, pt.y, DAY_TICKS, TE_RISING);
++	}
+ }
+ 
+ TextEffectID ShowFillingPercent(int x, int y, int z, uint8 percent, StringID string)
+diff --git a/src/saveload/economy_sl.cpp b/src/saveload/economy_sl.cpp
+index 9bdad61..be66e70 100644
+--- a/src/saveload/economy_sl.cpp
++++ b/src/saveload/economy_sl.cpp
+@@ -66,7 +66,7 @@ static const SaveLoad _cargopayment_desc[] = {
+ 	SLE_REF(CargoPayment, front,         REF_VEHICLE),
+ 	SLE_VAR(CargoPayment, route_profit,  SLE_INT64),
+ 	SLE_VAR(CargoPayment, visual_profit, SLE_INT64),
+-
++//	SLE_CONDVAR(CargoPayment, visual_transfer,  SLE_INT64, <some version>, SL_MAX_VERSION),
+ 	SLE_END()
+ };
+ 
+diff --git a/src/texteff.cpp b/src/texteff.cpp
+index 0feb522..644b281 100644
+--- a/src/texteff.cpp
++++ b/src/texteff.cpp
+@@ -20,6 +20,7 @@
+ /** Container for all information about a text effect */
+ struct TextEffect : public ViewportSign {
+ 	uint64 params_1;     ///< DParam parameter
++	uint64 params_2;     ///< second DParam parameter
+ 	StringID string_id;  ///< String to draw for the text effect, if INVALID_STRING_ID then it's not valid
+ 	uint8 duration;      ///< How long the text effect should stay, in ticks (applies only when mode == TE_RISING)
+ 	TextEffectMode mode; ///< Type of text effect
+@@ -52,6 +53,7 @@ TextEffectID AddTextEffect(StringID msg, int center, int y, uint8 duration, Text
+ 	te->string_id = msg;
+ 	te->duration = duration;
+ 	te->params_1 = GetDParam(0);
++	te->params_2 = GetDParam(1);
+ 	te->mode = mode;
+ 
+ 	/* Make sure we only dirty the new area */
+@@ -67,6 +69,7 @@ void UpdateTextEffect(TextEffectID te_id, StringID msg)
+ 	TextEffect *te = _text_effects.Get(te_id);
+ 	te->string_id = msg;
+ 	te->params_1 = GetDParam(0);
++	te->params_2 = GetDParam(1);
+ 
+ 	te->UpdatePosition(te->center, te->top, msg);
+ }
+@@ -108,7 +111,7 @@ void DrawTextEffects(DrawPixelInfo *dpi)
+ 	for (TextEffect *te = _text_effects.Begin(); te != end; te++) {
+ 		if (te->string_id == INVALID_STRING_ID) continue;
+ 		if (te->mode == TE_RISING || (_settings_client.gui.loading_indicators && !IsTransparencySet(TO_LOADING))) {
+-			ViewportAddString(dpi, ZOOM_LVL_OUT_2X, te, te->string_id, te->string_id - 1, 0, te->params_1);
++			ViewportAddString(dpi, ZOOM_LVL_OUT_2X, te, te->string_id, te->string_id - 1, 0, te->params_1, te->params_2);
+ 		}
+ 	}
+ }
