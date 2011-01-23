@@ -12,7 +12,7 @@
 #ifndef SMALLMAP_GUI_H
 #define SMALLMAP_GUI_H
 
-#include "industry.h"
+#include "industry_type.h"
 #include "window_gui.h"
 #include "strings_func.h"
 #include "blitter/factory.hpp"

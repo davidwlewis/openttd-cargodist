@@ -11,6 +11,7 @@
 
 #include "stdafx.h"
 #include "clear_map.h"
+#include "industry.h"
 #include "station_map.h"
 #include "landscape.h"
 #include "tree_map.h"
@@ -1157,6 +1158,7 @@ void SmallMapWindow::DrawWidget(const Rect &r, int widget) const
 						/* Industry name must be formatted, since it's not in tiny font in the specs.
 						 * So, draw with a parameter and use the STR_SMALLMAP_INDUSTRY string, which is tiny font */
 						SetDParam(1, Industry::GetIndustryTypeCount(tbl->type));
+						/* FALL THROUGH */
 					case SMT_LINKSTATS:
 						SetDParam(0, tbl->legend);
 						/* FALL_THROUGH */
@@ -1215,6 +1217,7 @@ FORCEINLINE uint SmallMapWindow::GetNumberRowsLegend(uint columns) const
  * @param click_pos the index of the item being selected
  * @param legend the legend from which we select
  * @param end_legend_item index one past the last item in the group to be inverted
+ * @param begin_legend_item index of the first item in the group to be inverted
  */
 void SmallMapWindow::SelectLegendItem(int click_pos, LegendAndColour *legend, int end_legend_item, int begin_legend_item)
 {
