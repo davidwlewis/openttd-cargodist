@@ -53,7 +53,7 @@ public:
 	{}
 
 	void RebuildCache();
-	void Draw(const DrawPixelInfo *dpi) const { this->DrawLinks(dpi); this->DrawStationDots(dpi); }
+	void Draw(const DrawPixelInfo *dpi = NULL) const;
 	void SetCargoMask(uint32 cargo_mask) {this->cargo_mask = cargo_mask;}
 	void SetCompanyMask(uint32 company_mask) {this->company_mask = company_mask;}
 
@@ -70,6 +70,7 @@ protected:
 	void DrawStationDots(const DrawPixelInfo *dpi) const;
 	bool IsLinkVisible(Point pta, Point ptb, const DrawPixelInfo *dpi, int padding = 0) const;
 	bool IsPointVisible(Point pt, const DrawPixelInfo *dpi, int padding = 0) const;
+	void GetWidgetDpi(DrawPixelInfo *dpi) const;
 
 	static void AddStats(const LinkStat &orig_link, const FlowStat &orig_flow, LinkProperties &cargo);
 	static void DrawContent(Point pta, Point ptb, const LinkProperties &cargo);

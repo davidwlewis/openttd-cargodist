@@ -15,6 +15,17 @@
 #include "company_base.h"
 #include "date_func.h"
 #include "linkgraph_gui.h"
+#include "main_gui.h"
+
+template<class Twindow, uint Twidget_id>
+void LinkGraphOverlay<Twindow, Twidget_id>::GetWidgetDpi(DrawPixelInfo *dpi) const
+{
+	const NWidgetBase *wi = static_cast<const Window *>(this->window)->GetWidget<NWidgetBase>(Twidget_id);
+	dpi->left = dpi->top = 0;
+	dpi->width = wi->current_x;
+	dpi->height = wi->current_y;
+}
+
 
 template<class Twindow, uint Twidget_id>
 void LinkGraphOverlay<Twindow, Twidget_id>::RebuildCache()
@@ -22,11 +33,8 @@ void LinkGraphOverlay<Twindow, Twidget_id>::RebuildCache()
 	this->cached_links.clear();
 	this->cached_stations.clear();
 
-	const NWidgetBase *wi = static_cast<const Window *>(this->window)->GetWidget<NWidgetBase>(Twidget_id);
 	DrawPixelInfo dpi;
-	dpi.left = dpi.top = 0;
-	dpi.width = wi->current_x;
-	dpi.height = wi->current_y;
+	this->GetWidgetDpi(&dpi);
 
 	const Station *sta;
 	FOR_ALL_STATIONS(sta) {
@@ -121,6 +129,19 @@ template<class Twindow, uint Twidget_id>
 }
 
 template<class Twindow, uint Twidget_id>
+void LinkGraphOverlay<Twindow, Twidget_id>::Draw(const DrawPixelInfo *dpi) const
+{
+	if (dpi == NULL) {
+		DrawPixelInfo new_dpi;
+		this->GetWidgetDpi(&new_dpi);
+		dpi = &new_dpi;
+	}
+	this->DrawLinks(dpi);
+	this->DrawStationDots(dpi);
+}
+
+
+template<class Twindow, uint Twidget_id>
 void LinkGraphOverlay<Twindow, Twidget_id>::DrawLinks(const DrawPixelInfo *dpi) const
 {
 	for (LinkMap::const_iterator i(this->cached_links.begin()); i != this->cached_links.end(); ++i) {
@@ -197,3 +218,14 @@ template<class Twindow, uint Twidget_id>
 	GfxDrawLine(x - w1, y - w1, x - w1, y + w2, border_colour);
 	GfxDrawLine(x + w2, y - w1, x + w2, y + w2, border_colour);
 }
+
+template class LinkGraphOverlay<MainWindow, MW_VIEWPORT>;
+/**
+ * Colours for the various "load" states of links. Ordered from "empty" to
+ * "overcrowded".
+ */
+template<> const uint8 LinkGraphOverlay<MainWindow, MW_VIEWPORT>::LINK_COLOURS[] = {
+	0x0f, 0xd1, 0xd0, 0x57,
+	0x55, 0x53, 0xbf, 0xbd,
+	0xba, 0xb9, 0xb7, 0xb5
+};
