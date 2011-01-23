@@ -12,47 +12,53 @@
 #include "stdafx.h"
 #include "widget_type.h"
 #include "window_gui.h"
+#include "company_base.h"
+#include "date_func.h"
 #include "linkgraph_gui.h"
 
 template<class Twindow, uint Twidget_id>
-void LinkGraphOverlay<Twindow, Twidget_id>::Draw() const
+void LinkGraphOverlay<Twindow, Twidget_id>::BuildCache()
 {
-	std::set<StationID> seen_stations;
-	std::set<std::pair<StationID, StationID> > seen_links;
+	this->cached_links.clear();
+	this->stations.clear();
 
+	const NWidgetBase *wi = static_cast<const Window *>(this->window)->GetWidget<NWidgetBase>(Twidget_id);
 	const Station *sta;
 	FOR_ALL_STATIONS(sta) {
 		/* Show links between own stations or "neutral" ones like oilrigs.*/
 		if (sta->owner != INVALID_COMPANY && !HasBit(this->company_mask, sta->owner)) continue;
+		if (sta->rect.IsEmpty()) continue;
+
+		StationID from = sta->index;
+		Point pta = this->window->GetStationMiddle(sta);
+		if (pta.x > 0 && pta.y > 0 && pta.x < (int)wi->current_x && pta.y < (int)wi->current_y) {
+			this->cached_stations.insert(from);
+		}
+
+		StationLinkMap &seen_links = this->cached_links[from];
+
 		CargoID c;
 		FOR_EACH_SET_CARGO_ID(c, this->cargo_mask) {
 			if (!CargoSpec::Get(c)->IsValid()) continue;
 
 			const LinkStatMap &links = sta->goods[c].link_stats;
 			for (LinkStatMap::const_iterator i = links.begin(); i != links.end(); ++i) {
-				StationID from = sta->index;
 				StationID to = i->first;
-				if (Station::IsValidID(to) && seen_stations.find(to) == seen_stations.end()) {
-					const Station *stb = Station::Get(to);
+				if (seen_links.find(to) != seen_links.end()) continue;
 
-					if (stb->owner != INVALID_COMPANY && !HasBit(this->company_mask, stb->owner)) continue;
-					if (sta->rect.IsEmpty() || stb->rect.IsEmpty()) continue;
-					if (seen_links.find(std::make_pair(to, from)) != seen_links.end()) continue;
+				if (!Station::IsValidID(to)) continue;
+				const Station *stb = Station::Get(to);
+				if (stb->owner != INVALID_COMPANY && !HasBit(this->company_mask, stb->owner)) continue;
+				if (stb->rect.IsEmpty()) continue;
 
-					Point pta = this->window->GetStationMiddle(sta);
-					Point ptb = this->window->GetStationMiddle(stb);
-					if (!this->IsLinkVisible(pta, ptb)) continue;
+				if (!this->IsLinkVisible(pta, this->window->GetStationMiddle(stb))) continue;
 
-					this->DrawForwBackLinks(pta, sta->index, ptb, stb->index);
-					seen_stations.insert(to);
-				}
-				seen_links.insert(std::make_pair(from, to));
+				this->AddLinks(sta, stb);
+				this->AddLinks(stb, sta);
+				seen_links[to]; // make sure it is created and marked as seen
 			}
 		}
-		seen_stations.clear();
 	}
-
-	this->DrawStationDots();
 }
 
 template<class Twindow, uint Twidget_id>
@@ -66,18 +72,18 @@ FORCEINLINE bool LinkGraphOverlay<Twindow, Twidget_id>::IsLinkVisible(Point pta,
 }
 
 template<class Twindow, uint Twidget_id>
-void LinkGraphOverlay<Twindow, Twidget_id>::AddLinks(StationID sta, StationID stb, LinkProperties &cargo) const
+void LinkGraphOverlay<Twindow, Twidget_id>::AddLinks(const Station *from, const Station *to)
 {
 	CargoID c;
 	FOR_EACH_SET_CARGO_ID(c, this->cargo_mask) {
 		if (!CargoSpec::Get(c)->IsValid()) continue;
-		GoodsEntry &ge = Station::Get(sta)->goods[c];
-		FlowStat sum_flows = ge.GetSumFlowVia(stb);
+		GoodsEntry &ge = from->goods[c];
+		FlowStat sum_flows = ge.GetSumFlowVia(to->index);
 		const LinkStatMap &ls_map = ge.link_stats;
-		LinkStatMap::const_iterator i = ls_map.find(stb);
+		LinkStatMap::const_iterator i = ls_map.find(to->index);
 		if (i != ls_map.end()) {
 			const LinkStat &link_stat = i->second;
-			this->AddStats(link_stat, sum_flows, cargo);
+			this->AddStats(link_stat, sum_flows, this->cached_links[from->index][to->index]);
 		}
 	}
 }
@@ -98,16 +104,34 @@ template<class Twindow, uint Twidget_id>
 	}
 }
 
-template<class Twindow, uint Twidget_id>
-void LinkGraphOverlay<Twindow, Twidget_id>::DrawForwBackLinks(Point pta, StationID sta, Point ptb, StationID stb) const
-{
-	LinkProperties forward, backward;
-	this->AddLinks(sta, stb, forward);
-	this->AddLinks(stb, sta, backward);
-	GfxDrawLine(pta.x, pta.y, ptb.x, ptb.y, _colour_gradient[COLOUR_GREY][1]);
-	this->DrawContent(pta, ptb, forward);
-	this->DrawContent(ptb, pta, backward);
 
+template<class Twindow, uint Twidget_id>
+void LinkGraphOverlay<Twindow, Twidget_id>::DrawOrRebuildCache()
+{
+	if (_tick_counter < this->last_refresh_tick ||
+			_tick_counter > this->last_refresh_tick + Self::REFRESH_INTERVAL) {
+		this->BuildCache();
+		this->last_refresh_tick = _tick_counter;
+	}
+	this->DrawLinks();
+	this->DrawStationDots();
+}
+
+template<class Twindow, uint Twidget_id>
+void LinkGraphOverlay<Twindow, Twidget_id>::DrawLinks() const
+{
+	for (LinkMap::const_iterator i(this->cached_links.begin()); i != this->cached_links.end(); ++i) {
+		if (!Station::IsValidID(i->first)) continue;
+		Point pta = this->window->GetStationMiddle(Station::Get(i->first));
+		for (StationLinkMap::const_iterator j(i->second.begin()); j != i->second.end(); ++j) {
+			if (!Station::IsValidID(j->first)) continue;
+			Point ptb = this->window->GetStationMiddle(Station::Get(j->first));
+			if (pta.x > ptb.x || (pta.x == ptb.x && pta.y > ptb.y)) {
+				GfxDrawLine(pta.x, pta.y, ptb.x, ptb.y, _colour_gradient[COLOUR_GREY][1]);
+			}
+			this->DrawContent(pta, ptb, j->second);
+		}
+	}
 }
 
 template<class Twindow, uint Twidget_id>
@@ -130,35 +154,30 @@ template<class Twindow, uint Twidget_id>
 template<class Twindow, uint Twidget_id>
 void LinkGraphOverlay<Twindow, Twidget_id>::DrawStationDots() const
 {
-	const Station *st;
-	FOR_ALL_STATIONS(st) {
-		if ((st->owner != INVALID_COMPANY && !HasBit(this->company_mask, st->owner)) || st->rect.IsEmpty()) continue;
+
+	for (StationSet::const_iterator i(this->cached_stations.begin()); i != this->cached_stations.end(); ++i) {
+		const Station *st = Station::GetIfValid(*i);
+		if (st == NULL) continue;
+
 		Point pt = this->window->GetStationMiddle(st);
-		const NWidgetBase *wi = static_cast<const Window *>(this->window)->GetWidget<NWidgetBase>(Twidget_id);
-		if (pt.x < 0 || pt.y < 0 || pt.x > (int)wi->current_x || pt.y > (int)wi->current_y) continue;
 
 		/* Add up cargo supplied for each selected cargo type */
 		uint q = 0;
-		int colour = 0;
-		int numCargos = 0;
 		CargoID c;
 		FOR_EACH_SET_CARGO_ID(c, this->cargo_mask) {
 			if (!CargoSpec::Get(c)->IsValid()) continue;
 			uint supply = st->goods[c].supply;
 			if (supply > 0) {
 				q += supply;
-				colour += CargoSpec::Get(c)->legend_colour;
-				++numCargos;
 			}
 		}
-		if (numCargos > 1) colour /= numCargos;
 
 		uint r = 1;
 		if (q >= 20) r++;
 		if (q >= 90) r++;
 		if (q >= 160) r++;
 
-		Self::DrawVertex(pt.x, pt.y, r, colour, _colour_gradient[COLOUR_GREY][1]);
+		Self::DrawVertex(pt.x, pt.y, r, _colour_gradient[Company::Get(st->owner)->colour][5], _colour_gradient[COLOUR_GREY][1]);
 	}
 }
 
