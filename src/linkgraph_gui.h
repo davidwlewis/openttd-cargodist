@@ -45,7 +45,7 @@ public:
 	 * @param w Window to be drawn into.
 	 */
 	LinkGraphOverlay(const Twindow *w, uint32 cargo_mask = 0xFFFF,
-			uint32 company_mask = (1 << _local_company)) :
+			uint32 company_mask = 1 << _local_company) :
 			window(w), cargo_mask(cargo_mask), company_mask(company_mask)
 	{}
 
