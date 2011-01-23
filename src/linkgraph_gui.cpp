@@ -18,16 +18,23 @@
 #include "smallmap_gui.h"
 
 template<class Twindow, uint Twidget_id>
+void LinkGraphOverlay<Twindow, Twidget_id>::GetWidgetDpi(DrawPixelInfo *dpi) const
+{
+	const NWidgetBase *wi = static_cast<const Window *>(this->window)->GetWidget<NWidgetBase>(Twidget_id);
+	dpi->left = dpi->top = 0;
+	dpi->width = wi->current_x;
+	dpi->height = wi->current_y;
+}
+
+
+template<class Twindow, uint Twidget_id>
 void LinkGraphOverlay<Twindow, Twidget_id>::RebuildCache()
 {
 	this->cached_links.clear();
 	this->cached_stations.clear();
 
-	const NWidgetBase *wi = static_cast<const Window *>(this->window)->GetWidget<NWidgetBase>(Twidget_id);
 	DrawPixelInfo dpi;
-	dpi.left = dpi.top = 0;
-	dpi.width = wi->current_x;
-	dpi.height = wi->current_y;
+	this->GetWidgetDpi(&dpi);
 
 	const Station *sta;
 	FOR_ALL_STATIONS(sta) {
@@ -120,6 +127,19 @@ template<class Twindow, uint Twidget_id>
 		cargo.planned = new_plan;
 	}
 }
+
+template<class Twindow, uint Twidget_id>
+void LinkGraphOverlay<Twindow, Twidget_id>::Draw(const DrawPixelInfo *dpi) const
+{
+	if (dpi == NULL) {
+		DrawPixelInfo new_dpi;
+		this->GetWidgetDpi(&new_dpi);
+		dpi = &new_dpi;
+	}
+	this->DrawLinks(dpi);
+	this->DrawStationDots(dpi);
+}
+
 
 template<class Twindow, uint Twidget_id>
 void LinkGraphOverlay<Twindow, Twidget_id>::DrawLinks(const DrawPixelInfo *dpi) const
