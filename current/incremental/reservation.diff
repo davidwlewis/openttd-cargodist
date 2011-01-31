@@ -567,7 +567,7 @@ index 61dece3..08c767c 100644
  		     SLE_VAR(Vehicle, day_counter,           SLE_UINT8),
  		     SLE_VAR(Vehicle, tick_counter,          SLE_UINT8),
 diff --git a/src/vehicle.cpp b/src/vehicle.cpp
-index f69cf03..3f5154d 100644
+index d2e4556..0d1ce4c 100644
 --- a/src/vehicle.cpp
 +++ b/src/vehicle.cpp
 @@ -673,10 +673,11 @@ void Vehicle::PreDestructor()
@@ -584,7 +584,7 @@ index f69cf03..3f5154d 100644
  		delete this->cargo_payment;
  	}
  
-@@ -1161,7 +1162,7 @@ uint8 CalcPercentVehicleFilled(const Vehicle *v, StringID *colour)
+@@ -1176,7 +1177,7 @@ uint8 CalcPercentVehicleFilled(const Vehicle *v, StringID *colour)
  
  	/* Count up max and used */
  	for (; v != NULL; v = v->Next()) {
@@ -593,7 +593,7 @@ index f69cf03..3f5154d 100644
  		max += v->cargo_cap;
  		if (v->cargo_cap != 0 && colour != NULL) {
  			unloading += HasBit(v->vehicle_flags, VF_CARGO_UNLOADING) ? 1 : 0;
-@@ -1835,6 +1836,22 @@ void Vehicle::BeginLoading()
+@@ -1854,6 +1855,22 @@ void Vehicle::BeginLoading()
  	this->MarkDirty();
  }
  
@@ -616,7 +616,7 @@ index f69cf03..3f5154d 100644
  void Vehicle::LeaveStation()
  {
  	assert(current_order.IsType(OT_LOADING));
-@@ -1846,6 +1863,7 @@ void Vehicle::LeaveStation()
+@@ -1865,6 +1882,7 @@ void Vehicle::LeaveStation()
  
  	current_order.MakeLeaveStation();
  	Station *st = Station::Get(this->last_station_visited);
@@ -625,10 +625,10 @@ index f69cf03..3f5154d 100644
  
  	HideFillingPercent(&this->fill_percent_te_id);
 diff --git a/src/vehicle_base.h b/src/vehicle_base.h
-index e6e68d0..df1b7aa 100644
+index c5290e7..4ba415b 100644
 --- a/src/vehicle_base.h
 +++ b/src/vehicle_base.h
-@@ -235,6 +235,7 @@ public:
+@@ -249,6 +249,7 @@ public:
  	virtual ~Vehicle();
  
  	void BeginLoading();
