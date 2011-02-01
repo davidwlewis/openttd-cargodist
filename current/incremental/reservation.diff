@@ -511,20 +511,20 @@ index 50d1fa3..59e3893 100644
  	}
  
 diff --git a/src/saveload/saveload.cpp b/src/saveload/saveload.cpp
-index ec0bec7..2318ff3 100644
+index 552b008..712bd0f 100644
 --- a/src/saveload/saveload.cpp
 +++ b/src/saveload/saveload.cpp
-@@ -223,7 +223,7 @@
-  *  156   21728
+@@ -224,7 +224,7 @@
   *  157   21862
+  *  158   21933
   */
--extern const uint16 SAVEGAME_VERSION = 157; ///< Current savegame version of OpenTTD.
+-extern const uint16 SAVEGAME_VERSION = 158; ///< Current savegame version of OpenTTD.
 +extern const uint16 SAVEGAME_VERSION = SL_RESERVATION; ///< Current savegame version of OpenTTD.
  
  SavegameType _savegame_type; ///< type of savegame we are loading
  
 diff --git a/src/saveload/saveload.h b/src/saveload/saveload.h
-index f9d1914..337160f 100644
+index f9d1914..f590ef5 100644
 --- a/src/saveload/saveload.h
 +++ b/src/saveload/saveload.h
 @@ -88,9 +88,6 @@ enum SLRefType {
@@ -546,7 +546,7 @@ index f9d1914..337160f 100644
 + * SL_TRUNK is always the current trunk version.
 + */
 +enum SaveLoadVersions {
-+	SL_TRUNK = 157,
++	SL_TRUNK = 158,
 +	SL_RESERVATION = SL_TRUNK + 10,
 +
 +	/** Highest possible savegame version. */
@@ -555,7 +555,7 @@ index f9d1914..337160f 100644
 +
  #endif /* SAVELOAD_H */
 diff --git a/src/saveload/vehicle_sl.cpp b/src/saveload/vehicle_sl.cpp
-index 61dece3..08c767c 100644
+index d1558d9..a6405d7 100644
 --- a/src/saveload/vehicle_sl.cpp
 +++ b/src/saveload/vehicle_sl.cpp
 @@ -482,6 +482,7 @@ const SaveLoad *GetVehicleDescription(VehicleType vt)
@@ -567,7 +567,7 @@ index 61dece3..08c767c 100644
  		     SLE_VAR(Vehicle, day_counter,           SLE_UINT8),
  		     SLE_VAR(Vehicle, tick_counter,          SLE_UINT8),
 diff --git a/src/vehicle.cpp b/src/vehicle.cpp
-index d2e4556..0d1ce4c 100644
+index ada4948..b441ca9 100644
 --- a/src/vehicle.cpp
 +++ b/src/vehicle.cpp
 @@ -673,10 +673,11 @@ void Vehicle::PreDestructor()
@@ -593,11 +593,10 @@ index d2e4556..0d1ce4c 100644
  		max += v->cargo_cap;
  		if (v->cargo_cap != 0 && colour != NULL) {
  			unloading += HasBit(v->vehicle_flags, VF_CARGO_UNLOADING) ? 1 : 0;
-@@ -1854,6 +1855,22 @@ void Vehicle::BeginLoading()
- 	this->MarkDirty();
+@@ -1873,6 +1874,21 @@ void Vehicle::BeginLoading()
  }
  
-+/**
+ /**
 + * Return all reserved cargo packets to the station.
 + * @param st the station where the reserved packets should go.
 + */
@@ -612,23 +611,23 @@ index d2e4556..0d1ce4c 100644
 +	}
 +}
 +
-+
- void Vehicle::LeaveStation()
- {
- 	assert(current_order.IsType(OT_LOADING));
-@@ -1865,6 +1882,7 @@ void Vehicle::LeaveStation()
++/**
+  * Perform all actions when leaving a station.
+  * @pre this->current_order.IsType(OT_LOADING)
+  */
+@@ -1887,6 +1903,7 @@ void Vehicle::LeaveStation()
  
- 	current_order.MakeLeaveStation();
+ 	this->current_order.MakeLeaveStation();
  	Station *st = Station::Get(this->last_station_visited);
 +	this->CancelReservation(st);
  	st->loading_vehicles.remove(this);
  
  	HideFillingPercent(&this->fill_percent_te_id);
 diff --git a/src/vehicle_base.h b/src/vehicle_base.h
-index c5290e7..4ba415b 100644
+index a838edc..2ead88a 100644
 --- a/src/vehicle_base.h
 +++ b/src/vehicle_base.h
-@@ -249,6 +249,7 @@ public:
+@@ -246,6 +246,7 @@ public:
  	virtual ~Vehicle();
  
  	void BeginLoading();
