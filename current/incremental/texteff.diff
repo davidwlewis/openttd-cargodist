@@ -1,8 +1,8 @@
 diff --git a/src/economy.cpp b/src/economy.cpp
-index 50d1fa3..3b40f81 100644
+index 2b09a8d..1c172d2 100644
 --- a/src/economy.cpp
 +++ b/src/economy.cpp
-@@ -1018,21 +1018,23 @@ CargoPayment::~CargoPayment()
+@@ -1013,21 +1013,23 @@ CargoPayment::~CargoPayment()
  
  	this->front->cargo_payment = NULL;
  
@@ -35,7 +35,7 @@ index 50d1fa3..3b40f81 100644
  	}
  
  	cur_company.Restore();
-@@ -1074,7 +1076,7 @@ Money CargoPayment::PayTransfer(const CargoPacket *cp, uint count)
+@@ -1069,7 +1071,7 @@ Money CargoPayment::PayTransfer(const CargoPacket *cp, uint count)
  
  	profit = profit * _settings_game.economy.feeder_payment_share / 100;
  
@@ -76,10 +76,10 @@ index b8cbdd1..08b9806 100644
  void AskExitGame();
  void AskExitToGameMenu();
 diff --git a/src/lang/english.txt b/src/lang/english.txt
-index 1ddf73d..cc327d9 100644
+index 5ed071e..dfca35a 100644
 --- a/src/lang/english.txt
 +++ b/src/lang/english.txt
-@@ -3411,6 +3411,10 @@ STR_INCOME_FLOAT_INCOME_SMALL                                   :{TINYFONT}{GREE
+@@ -3401,6 +3401,10 @@ STR_INCOME_FLOAT_INCOME_SMALL                                   :{TINYFONT}{GREE
  STR_INCOME_FLOAT_INCOME                                         :{GREEN}Income: {CURRENCY}
  STR_FEEDER_TINY                                                 :{TINYFONT}{YELLOW}Transfer: {CURRENCY}
  STR_FEEDER                                                      :{YELLOW}Transfer: {CURRENCY}
