@@ -1,5 +1,5 @@
 diff --git a/projects/openttd_vs100.vcxproj b/projects/openttd_vs100.vcxproj
-index 69360a6..23e1964 100644
+index edfda19..9fe31d3 100644
 --- a/projects/openttd_vs100.vcxproj
 +++ b/projects/openttd_vs100.vcxproj
 @@ -618,6 +618,7 @@
@@ -11,7 +11,7 @@ index 69360a6..23e1964 100644
      <ClInclude Include="..\src\core\pool_func.hpp" />
      <ClInclude Include="..\src\core\pool_type.hpp" />
 diff --git a/projects/openttd_vs100.vcxproj.filters b/projects/openttd_vs100.vcxproj.filters
-index fd904c1..3c29f94 100644
+index 5e009c2..79ff5f9 100644
 --- a/projects/openttd_vs100.vcxproj.filters
 +++ b/projects/openttd_vs100.vcxproj.filters
 @@ -1074,6 +1074,9 @@
@@ -25,7 +25,7 @@ index fd904c1..3c29f94 100644
        <Filter>Core Source Code</Filter>
      </ClInclude>
 diff --git a/projects/openttd_vs80.vcproj b/projects/openttd_vs80.vcproj
-index 92813de..355ffe4 100644
+index 8b53114..56c1b56 100644
 --- a/projects/openttd_vs80.vcproj
 +++ b/projects/openttd_vs80.vcproj
 @@ -1751,6 +1751,10 @@
@@ -40,7 +40,7 @@ index 92813de..355ffe4 100644
  				>
  			</File>
 diff --git a/projects/openttd_vs90.vcproj b/projects/openttd_vs90.vcproj
-index f04386b..2e25a1d 100644
+index 4df272e..50e7597 100644
 --- a/projects/openttd_vs90.vcproj
 +++ b/projects/openttd_vs90.vcproj
 @@ -1748,6 +1748,10 @@
@@ -55,7 +55,7 @@ index f04386b..2e25a1d 100644
  				>
  			</File>
 diff --git a/source.list b/source.list
-index efcf338..13570e1 100644
+index 3370af3..3e4adf2 100644
 --- a/source.list
 +++ b/source.list
 @@ -368,6 +368,7 @@ core/geometry_type.hpp

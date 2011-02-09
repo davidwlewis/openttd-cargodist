@@ -1,8 +1,8 @@
 diff --git a/src/cargopacket.cpp b/src/cargopacket.cpp
-index 676e408..6d7c6b7 100644
+index f7d4348..880e446 100644
 --- a/src/cargopacket.cpp
 +++ b/src/cargopacket.cpp
-@@ -389,6 +389,20 @@ void VehicleCargoList::InvalidateCache()
+@@ -394,6 +394,20 @@ void VehicleCargoList::InvalidateCache()
  	this->Parent::InvalidateCache();
  }
  
@@ -58,7 +58,7 @@ index 72465d9..f6943b1 100644
  
  #endif /* CARGOPACKET_H */
 diff --git a/src/station.cpp b/src/station.cpp
-index cafdf51..cb63bc7 100644
+index 9f59d72..ff69a89 100644
 --- a/src/station.cpp
 +++ b/src/station.cpp
 @@ -60,6 +60,11 @@ Station::Station(TileIndex tile) :

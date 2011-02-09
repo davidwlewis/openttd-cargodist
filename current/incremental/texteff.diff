@@ -1,8 +1,8 @@
 diff --git a/src/economy.cpp b/src/economy.cpp
-index 2b09a8d..1c172d2 100644
+index 3d2a419..4bfbe40 100644
 --- a/src/economy.cpp
 +++ b/src/economy.cpp
-@@ -1013,21 +1013,23 @@ CargoPayment::~CargoPayment()
+@@ -1012,21 +1012,23 @@ CargoPayment::~CargoPayment()
  
  	this->front->cargo_payment = NULL;
  
@@ -35,7 +35,7 @@ index 2b09a8d..1c172d2 100644
  	}
  
  	cur_company.Restore();
-@@ -1069,7 +1071,7 @@ Money CargoPayment::PayTransfer(const CargoPacket *cp, uint count)
+@@ -1068,7 +1070,7 @@ Money CargoPayment::PayTransfer(const CargoPacket *cp, uint count)
  
  	profit = profit * _settings_game.economy.feeder_payment_share / 100;
  
@@ -45,7 +45,7 @@ index 2b09a8d..1c172d2 100644
  }
  
 diff --git a/src/economy_base.h b/src/economy_base.h
-index 5d7124c..c6b9241 100644
+index edad76e..acbcff8 100644
 --- a/src/economy_base.h
 +++ b/src/economy_base.h
 @@ -24,9 +24,10 @@ extern CargoPaymentPool _cargo_payment_pool;
@@ -62,24 +62,11 @@ index 5d7124c..c6b9241 100644
  
  	/* Unsaved variables */
  	Company *owner;            ///< The owner of the vehicle
-diff --git a/src/functions.h b/src/functions.h
-index b8cbdd1..08b9806 100644
---- a/src/functions.h
-+++ b/src/functions.h
-@@ -31,7 +31,7 @@ CommandCost CheckTileOwnership(TileIndex tile);
- void MarkTileDirtyByTile(TileIndex tile);
- 
- void ShowCostOrIncomeAnimation(int x, int y, int z, Money cost);
--void ShowFeederIncomeAnimation(int x, int y, int z, Money cost);
-+void ShowFeederIncomeAnimation(int x, int y, int z, Money transfer, Money income);
- 
- void AskExitGame();
- void AskExitToGameMenu();
 diff --git a/src/lang/english.txt b/src/lang/english.txt
-index 5ed071e..dfca35a 100644
+index 2429704..1d4c769 100644
 --- a/src/lang/english.txt
 +++ b/src/lang/english.txt
-@@ -3401,6 +3401,10 @@ STR_INCOME_FLOAT_INCOME_SMALL                                   :{TINYFONT}{GREE
+@@ -3402,6 +3402,10 @@ STR_INCOME_FLOAT_INCOME_SMALL                                   :{TINYFONT}{GREE
  STR_INCOME_FLOAT_INCOME                                         :{GREEN}Income: {CURRENCY}
  STR_FEEDER_TINY                                                 :{TINYFONT}{YELLOW}Transfer: {CURRENCY}
  STR_FEEDER                                                      :{YELLOW}Transfer: {CURRENCY}
@@ -170,3 +157,15 @@ index 0feb522..644b281 100644
  		}
  	}
  }
+diff --git a/src/texteff.hpp b/src/texteff.hpp
+index b9762c3..9ef74c1 100644
+--- a/src/texteff.hpp
++++ b/src/texteff.hpp
+@@ -41,6 +41,6 @@ void UpdateFillingPercent(TextEffectID te_id, uint8 percent, StringID colour);
+ void HideFillingPercent(TextEffectID *te_id);
+ 
+ void ShowCostOrIncomeAnimation(int x, int y, int z, Money cost);
+-void ShowFeederIncomeAnimation(int x, int y, int z, Money cost);
++void ShowFeederIncomeAnimation(int x, int y, int z, Money transfer, Money income);
+ 
+ #endif /* TEXTEFF_HPP */
