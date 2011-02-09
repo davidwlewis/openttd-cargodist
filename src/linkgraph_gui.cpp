@@ -28,16 +28,6 @@ void LinkGraphOverlay<Twindow, Twidget_id>::GetWidgetDpi(DrawPixelInfo *dpi) con
 
 
 template<class Twindow, uint Twidget_id>
-void LinkGraphOverlay<Twindow, Twidget_id>::GetWidgetDpi(DrawPixelInfo *dpi) const
-{
-	const NWidgetBase *wi = static_cast<const Window *>(this->window)->GetWidget<NWidgetBase>(Twidget_id);
-	dpi->left = dpi->top = 0;
-	dpi->width = wi->current_x;
-	dpi->height = wi->current_y;
-}
-
-
-template<class Twindow, uint Twidget_id>
 void LinkGraphOverlay<Twindow, Twidget_id>::RebuildCache()
 {
 	this->cached_links.clear();
