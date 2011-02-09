@@ -1,5 +1,5 @@
 diff --git a/src/cargopacket.cpp b/src/cargopacket.cpp
-index 85fe91c..eaf2f20 100644
+index f8620fb..26f2491 100644
 --- a/src/cargopacket.cpp
 +++ b/src/cargopacket.cpp
 @@ -820,31 +820,42 @@ void StationCargoList::RerouteStalePackets(StationID to)

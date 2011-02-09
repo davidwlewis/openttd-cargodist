@@ -12,7 +12,7 @@ index fccab0c..3fd42a4 100644
  	}
  
 diff --git a/src/cargopacket.cpp b/src/cargopacket.cpp
-index 00b5def..85fe91c 100644
+index c8cdc5c..f8620fb 100644
 --- a/src/cargopacket.cpp
 +++ b/src/cargopacket.cpp
 @@ -10,7 +10,9 @@

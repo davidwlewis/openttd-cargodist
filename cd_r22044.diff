@@ -418,7 +418,7 @@ index fccab0c..3fd42a4 100644
  	}
  
 diff --git a/src/cargopacket.cpp b/src/cargopacket.cpp
-index f7d4348..eaf2f20 100644
+index f7d4348..26f2491 100644
 --- a/src/cargopacket.cpp
 +++ b/src/cargopacket.cpp
 @@ -10,7 +10,9 @@
@@ -600,7 +600,7 @@ index f7d4348..eaf2f20 100644
 +			this->reserved.erase(it++);
 +			this->reserved_count -= cp->count;
 +			this->Append(cp, false);
-+		} else {
++		} else if (CargoPacket::CanAllocateItem()) {
 +			cp->count -= max_move;
 +			CargoPacket *cp_new = new CargoPacket(max_move, cp->days_in_transit, cp->source, cp->source_xy, cp->loaded_at_xy, 0, cp->source_type, cp->source_id);
 +			this->Append(cp_new, false);
@@ -707,9 +707,7 @@ index f7d4348..eaf2f20 100644
 +	}
 +	return packet;
 +}
- 
--			/* We could not allocate a CargoPacket? Is the map that full? */
--			if (cp_new == NULL) return false;
++
 +/**
 + * Invalidates the cached data and rebuilds it.
 + */
@@ -719,18 +717,13 @@ index f7d4348..eaf2f20 100644
 +	this->count = 0;
 +	this->cargo_days_in_transit = 0;
  
--			static_cast<Tinst *>(this)->RemoveFromCache(cp_new); // this reflects the changes in cp.
+-			/* We could not allocate a CargoPacket? Is the map that full? */
+-			if (cp_new == NULL) return false;
 +	for (ConstIterator it(this->packets.begin()); it != this->packets.end(); it++) {
 +		static_cast<Tinst *>(this)->AddToCache(*it);
 +	}
 +}
- 
--			if (mta == MTA_TRANSFER) {
--				/* Add the feeder share before inserting in dest. */
--				cp_new->feeder_share += payment->PayTransfer(cp_new, max_move);
--			} else if (mta == MTA_CARGO_LOAD) {
--				cp_new->loaded_at_xy = data;
--			}
++
 +/**
 + * Delete a vehicle cargo list and clear its reservation list.
 + */
@@ -740,7 +733,8 @@ index f7d4348..eaf2f20 100644
 +		delete *it;
 +	}
 +}
-+
+ 
+-			static_cast<Tinst *>(this)->RemoveFromCache(cp_new); // this reflects the changes in cp.
 +/**
 + * Deliver a specific packet or part of it to a station and handle payment. The
 + * given iterator is incremented in the process.
@@ -771,7 +765,13 @@ index f7d4348..eaf2f20 100644
 +	}
 +	return unloaded;
 +}
-+
+ 
+-			if (mta == MTA_TRANSFER) {
+-				/* Add the feeder share before inserting in dest. */
+-				cp_new->feeder_share += payment->PayTransfer(cp_new, max_move);
+-			} else if (mta == MTA_CARGO_LOAD) {
+-				cp_new->loaded_at_xy = data;
+-			}
 +/**
 + * Keep a packet in the vehicle while unloading by temporarily moving it to the
 + * reservation list. The given iterator is incremented in the process.
