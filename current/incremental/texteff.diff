@@ -78,10 +78,10 @@ index 2429704..1d4c769 100644
  STR_MESSAGE_ESTIMATED_INCOME                                    :{WHITE}Estimated Income: {CURRENCY}
  
 diff --git a/src/misc_gui.cpp b/src/misc_gui.cpp
-index 80ea503..dfc1fc5 100644
+index e30d9c2..e80e158 100644
 --- a/src/misc_gui.cpp
 +++ b/src/misc_gui.cpp
-@@ -758,12 +758,22 @@ void ShowCostOrIncomeAnimation(int x, int y, int z, Money cost)
+@@ -761,12 +761,22 @@ void ShowCostOrIncomeAnimation(int x, int y, int z, Money cost)
  	AddTextEffect(msg, pt.x, pt.y, DAY_TICKS, TE_RISING);
  }
  
