@@ -1,8 +1,8 @@
 diff --git a/src/cargopacket.cpp b/src/cargopacket.cpp
-index f7d4348..daabec8 100644
+index 55c62cd..bad4d32 100644
 --- a/src/cargopacket.cpp
 +++ b/src/cargopacket.cpp
-@@ -184,14 +184,15 @@ void CargoList<Tinst>::AddToCache(const CargoPacket *cp)
+@@ -186,14 +186,15 @@ void CargoList<Tinst>::AddToCache(const CargoPacket *cp)
   * @warning After appending this packet may not exist anymore!
   * @note Do not use the cargo packet anymore after it has been appended to this CargoList!
   * @param cp Cargo packet to add.
@@ -21,7 +21,7 @@ index f7d4348..daabec8 100644
  	for (List::reverse_iterator it(this->packets.rbegin()); it != this->packets.rend(); it++) {
  		CargoPacket *icp = *it;
  		if (Tinst::AreMergable(icp, cp) && icp->count + cp->count <= CargoPacket::MAX_COUNT) {
-@@ -237,6 +238,61 @@ void CargoList<Tinst>::Truncate(uint max_remaining)
+@@ -239,6 +240,61 @@ void CargoList<Tinst>::Truncate(uint max_remaining)
  }
  
  /**
@@ -83,7 +83,7 @@ index f7d4348..daabec8 100644
   * Moves the given amount of cargo to another list.
   * Depending on the value of mta the side effects of this function differ:
   *  - MTA_FINAL_DELIVERY: Destroys the packets that do not originate from a specific station.
-@@ -262,7 +318,7 @@ template <class Tother_inst>
+@@ -264,7 +320,7 @@ template <class Tother_inst>
  bool CargoList<Tinst>::MoveTo(Tother_inst *dest, uint max_move, MoveToAction mta, CargoPayment *payment, uint data)
  {
  	assert(mta == MTA_FINAL_DELIVERY || dest != NULL);
@@ -92,7 +92,7 @@ index f7d4348..daabec8 100644
  
  	Iterator it(this->packets.begin());
  	while (it != this->packets.end() && max_move > 0) {
-@@ -284,6 +340,20 @@ bool CargoList<Tinst>::MoveTo(Tother_inst *dest, uint max_move, MoveToAction mta
+@@ -286,6 +342,20 @@ bool CargoList<Tinst>::MoveTo(Tother_inst *dest, uint max_move, MoveToAction mta
  					delete cp;
  					continue; // of the loop
  
@@ -113,7 +113,7 @@ index f7d4348..daabec8 100644
  				case MTA_CARGO_LOAD:
  					cp->loaded_at_xy = data;
  					break;
-@@ -329,7 +399,12 @@ bool CargoList<Tinst>::MoveTo(Tother_inst *dest, uint max_move, MoveToAction mta
+@@ -331,7 +401,12 @@ bool CargoList<Tinst>::MoveTo(Tother_inst *dest, uint max_move, MoveToAction mta
  				cp_new->loaded_at_xy = data;
  			}
  
@@ -127,7 +127,7 @@ index f7d4348..daabec8 100644
  		}
  
  		max_move = 0;
-@@ -391,7 +466,12 @@ void VehicleCargoList::AgeCargo()
+@@ -393,7 +468,12 @@ void VehicleCargoList::AgeCargo()
  void VehicleCargoList::InvalidateCache()
  {
  	this->feeder_share = 0;
@@ -141,10 +141,10 @@ index f7d4348..daabec8 100644
  
  /*
 diff --git a/src/cargopacket.h b/src/cargopacket.h
-index 72465d9..7ec758d 100644
+index 0f2e461..a6a6f05 100644
 --- a/src/cargopacket.h
 +++ b/src/cargopacket.h
-@@ -29,6 +29,7 @@ typedef Pool<CargoPacket, CargoPacketID, 1024, 0xFFF000, true, false> CargoPacke
+@@ -29,6 +29,7 @@ typedef Pool<CargoPacket, CargoPacketID, 1024, 0xFFF000, PT_NORMAL, true, false>
  extern CargoPacketPool _cargopacket_pool;
  
  template <class Tinst> class CargoList;
@@ -160,7 +160,7 @@ index 72465d9..7ec758d 100644
  		MTA_TRANSFER,       ///< The cargo is moved as part of a transfer.
  		MTA_UNLOAD,         ///< The cargo is moved as part of a forced unload.
  	};
-@@ -225,15 +227,6 @@ public:
+@@ -227,15 +229,6 @@ public:
  	}
  
  	/**
@@ -176,7 +176,7 @@ index 72465d9..7ec758d 100644
  	 * Returns average number of days in transit for a cargo entity.
  	 * @return The before mentioned number.
  	 */
-@@ -243,7 +236,7 @@ public:
+@@ -245,7 +238,7 @@ public:
  	}
  
  
@@ -185,7 +185,7 @@ index 72465d9..7ec758d 100644
  	void Truncate(uint max_remaining);
  
  	template <class Tother_inst>
-@@ -260,7 +253,9 @@ protected:
+@@ -262,7 +255,9 @@ protected:
  	/** The (direct) parent of this class. */
  	typedef CargoList<VehicleCargoList> Parent;
  
@@ -196,7 +196,7 @@ index 72465d9..7ec758d 100644
  
  	void AddToCache(const CargoPacket *cp);
  	void RemoveFromCache(const CargoPacket *cp);
-@@ -280,6 +275,58 @@ public:
+@@ -282,6 +277,58 @@ public:
  		return this->feeder_share;
  	}
  
@@ -255,7 +255,7 @@ index 72465d9..7ec758d 100644
  	void AgeCargo();
  
  	void InvalidateCache();
-@@ -325,6 +372,15 @@ public:
+@@ -327,6 +374,15 @@ public:
  				cp1->source_type     == cp2->source_type &&
  				cp1->source_id       == cp2->source_id;
  	}
@@ -272,10 +272,10 @@ index 72465d9..7ec758d 100644
  
  #endif /* CARGOPACKET_H */
 diff --git a/src/economy.cpp b/src/economy.cpp
-index 3d2a419..60c25c3 100644
+index 584eea7..1d121ef 100644
 --- a/src/economy.cpp
 +++ b/src/economy.cpp
-@@ -1101,38 +1101,53 @@ void PrepareUnload(Vehicle *front_v)
+@@ -1102,38 +1102,53 @@ void PrepareUnload(Vehicle *front_v)
  }
  
  /**
@@ -346,7 +346,7 @@ index 3d2a419..60c25c3 100644
  	}
  
  	int unloading_time = 0;
-@@ -1168,7 +1183,7 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
+@@ -1169,7 +1184,7 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
  		GoodsEntry *ge = &st->goods[v->cargo_type];
  
  		if (HasBit(v->vehicle_flags, VF_CARGO_UNLOADING) && (u->current_order.GetUnloadType() & OUFB_NO_UNLOAD) == 0) {
@@ -355,7 +355,7 @@ index 3d2a419..60c25c3 100644
  			uint amount_unloaded = _settings_game.order.gradual_loading ? min(cargo_count, load_amount) : cargo_count;
  			bool remaining = false; // Are there cargo entities in this vehicle that can still be unloaded here?
  			bool accepted  = false; // Is the cargo accepted by the station?
-@@ -1188,7 +1203,7 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
+@@ -1189,7 +1204,7 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
  			 * they were loaded, but to not force unload the vehicle when the
  			 * station is still accepting the cargo in the vehicle. It doesn't
  			 * accept cargo that was loaded at the same station. */
@@ -364,7 +364,7 @@ index 3d2a419..60c25c3 100644
  				remaining = v->cargo.MoveTo(&ge->cargo, amount_unloaded, u->current_order.GetUnloadType() & OUFB_TRANSFER ? VehicleCargoList::MTA_TRANSFER : VehicleCargoList::MTA_UNLOAD, payment);
  				if (!HasBit(ge->acceptance_pickup, GoodsEntry::PICKUP)) {
  					InvalidateWindowData(WC_STATION_LIST, last_visited);
-@@ -1254,39 +1269,30 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
+@@ -1255,39 +1270,30 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
  
  		/* If there's goods waiting at the station, and the vehicle
  		 * has capacity for it, load it on the vehicle. */
@@ -418,7 +418,7 @@ index 3d2a419..60c25c3 100644
  			/* TODO: Regarding this, when we do gradual loading, we
  			 * should first unload all vehicles and then start
  			 * loading them. Since this will cause
-@@ -1294,23 +1300,28 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
+@@ -1295,23 +1301,28 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
  			 * the whole vehicle chain is really totally empty, the
  			 * completely_emptied assignment can then be safely
  			 * removed; that's how TTDPatch behaves too. --pasky */
@@ -458,7 +458,7 @@ index 3d2a419..60c25c3 100644
  			SetBit(cargo_full, v->cargo_type);
  		} else {
  			SetBit(cargo_not_full, v->cargo_type);
-@@ -1320,18 +1331,6 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
+@@ -1321,18 +1332,6 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
  	/* Only set completely_emptied, if we just unloaded all remaining cargo */
  	completely_emptied &= anything_unloaded;
  
@@ -477,7 +477,7 @@ index 3d2a419..60c25c3 100644
  	v = u;
  
  	if (!anything_unloaded) delete payment;
-@@ -1357,7 +1356,7 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
+@@ -1358,7 +1357,7 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
  			if (v->current_order.GetLoadType() == OLF_FULL_LOAD_ANY) {
  				/* if the aircraft carries passengers and is NOT full, then
  				 * continue loading, no matter how much mail is in */
@@ -486,7 +486,7 @@ index 3d2a419..60c25c3 100644
  						(cargo_not_full && (cargo_full & ~cargo_not_full) == 0)) { // There are still non-full cargoes
  					finished_loading = false;
  				}
-@@ -1411,6 +1410,7 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
+@@ -1412,6 +1411,7 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
  		st->MarkTilesDirty(true);
  		SetWindowDirty(WC_STATION_VIEW, last_visited);
  	}
@@ -494,7 +494,7 @@ index 3d2a419..60c25c3 100644
  }
  
  /**
-@@ -1445,13 +1445,11 @@ void LoadUnloadStation(Station *st)
+@@ -1446,13 +1446,11 @@ void LoadUnloadStation(Station *st)
  	 */
  	if (last_loading == NULL) return;
  
@@ -524,10 +524,10 @@ index bff6b05..f23eb99 100644
  SavegameType _savegame_type; ///< type of savegame we are loading
  
 diff --git a/src/saveload/saveload.h b/src/saveload/saveload.h
-index ff18615..db27c23 100644
+index 7c85965..ecb9162 100644
 --- a/src/saveload/saveload.h
 +++ b/src/saveload/saveload.h
-@@ -89,9 +89,6 @@ enum SLRefType {
+@@ -90,9 +90,6 @@ enum SLRefType {
  	REF_ORDERLIST     = 8, ///< Load/save a reference to an orderlist.
  };
  
@@ -537,7 +537,7 @@ index ff18615..db27c23 100644
  /** Flags of a chunk. */
  enum ChunkType {
  	CH_RIFF         =  0,
-@@ -548,4 +545,16 @@ bool SaveloadCrashWithMissingNewGRFs();
+@@ -549,4 +546,16 @@ bool SaveloadCrashWithMissingNewGRFs();
  extern char _savegame_format[8];
  extern bool _do_autosave;
  
@@ -567,10 +567,10 @@ index 4529dc5..19a757e 100644
  		     SLE_VAR(Vehicle, day_counter,           SLE_UINT8),
  		     SLE_VAR(Vehicle, tick_counter,          SLE_UINT8),
 diff --git a/src/vehicle.cpp b/src/vehicle.cpp
-index ec78d8f..d4f0063 100644
+index e3ffbbc..0b151ca 100644
 --- a/src/vehicle.cpp
 +++ b/src/vehicle.cpp
-@@ -673,10 +673,11 @@ void Vehicle::PreDestructor()
+@@ -670,10 +670,11 @@ void Vehicle::PreDestructor()
  	if (CleaningPool()) return;
  
  	if (Station::IsValidID(this->last_station_visited)) {

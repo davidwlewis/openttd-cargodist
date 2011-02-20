@@ -1,8 +1,8 @@
 diff --git a/src/economy.cpp b/src/economy.cpp
-index 3d2a419..4bfbe40 100644
+index 584eea7..d1b8fad 100644
 --- a/src/economy.cpp
 +++ b/src/economy.cpp
-@@ -1012,21 +1012,23 @@ CargoPayment::~CargoPayment()
+@@ -1013,21 +1013,23 @@ CargoPayment::~CargoPayment()
  
  	this->front->cargo_payment = NULL;
  
@@ -35,7 +35,7 @@ index 3d2a419..4bfbe40 100644
  	}
  
  	cur_company.Restore();
-@@ -1068,7 +1070,7 @@ Money CargoPayment::PayTransfer(const CargoPacket *cp, uint count)
+@@ -1069,7 +1071,7 @@ Money CargoPayment::PayTransfer(const CargoPacket *cp, uint count)
  
  	profit = profit * _settings_game.economy.feeder_payment_share / 100;
  
@@ -78,13 +78,23 @@ index 2429704..1d4c769 100644
  STR_MESSAGE_ESTIMATED_INCOME                                    :{WHITE}Estimated Income: {CURRENCY}
  
 diff --git a/src/misc_gui.cpp b/src/misc_gui.cpp
-index e30d9c2..e80e158 100644
+index 33c22ed..1c814ad 100644
 --- a/src/misc_gui.cpp
 +++ b/src/misc_gui.cpp
-@@ -761,12 +761,22 @@ void ShowCostOrIncomeAnimation(int x, int y, int z, Money cost)
- 	AddTextEffect(msg, pt.x, pt.y, DAY_TICKS, TE_RISING);
- }
+@@ -780,17 +780,28 @@ void ShowCostOrIncomeAnimation(int x, int y, int z, Money cost)
  
+ /**
+  * Display animated feeder income.
+- * @param x    World X position of the animation location.
+- * @param y    World Y position of the animation location.
+- * @param z    World Z position of the animation location.
+- * @param cost Estimated feeder income.
++ * @param x        World X position of the animation location.
++ * @param y        World Y position of the animation location.
++ * @param z        World Z position of the animation location.
++ * @param transfer Estimated feeder income.
++ * @param income   Real income from goods being delivered to their final destination.
+  */
 -void ShowFeederIncomeAnimation(int x, int y, int z, Money cost)
 +void ShowFeederIncomeAnimation(int x, int y, int z, Money transfer, Money income)
  {
@@ -106,7 +116,7 @@ index e30d9c2..e80e158 100644
 +	}
  }
  
- TextEffectID ShowFillingPercent(int x, int y, int z, uint8 percent, StringID string)
+ /**
 diff --git a/src/saveload/economy_sl.cpp b/src/saveload/economy_sl.cpp
 index 9bdad61..be66e70 100644
 --- a/src/saveload/economy_sl.cpp
