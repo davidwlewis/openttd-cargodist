@@ -12,7 +12,7 @@ index 19a740d..e6307a1 100644
  	}
  
 diff --git a/src/cargopacket.cpp b/src/cargopacket.cpp
-index 7bb3fb8..6ede95a 100644
+index 55fd797..21717f8 100644
 --- a/src/cargopacket.cpp
 +++ b/src/cargopacket.cpp
 @@ -10,7 +10,9 @@
@@ -36,6 +36,17 @@ index 7bb3fb8..6ede95a 100644
  {
  	for (Iterator it(this->packets.begin()); it != this->packets.end(); ++it) {
  		delete *it;
+@@ -150,8 +152,8 @@ CargoList<Tinst>::~CargoList()
+  * Empty the cargo list, but don't free the cargo packets;
+  * the cargo packets are cleaned by CargoPacket's CleanPool.
+  */
+-template <class Tinst>
+-void CargoList<Tinst>::OnCleanPool()
++template <class Tinst, class Tcont>
++void CargoList<Tinst, Tcont>::OnCleanPool()
+ {
+ 	this->packets.clear();
+ }
 @@ -161,8 +163,8 @@ void CargoList<Tinst>::OnCleanPool()
   * Decreases count and days_in_transit.
   * @param cp Packet to be removed from cache.
@@ -123,7 +134,7 @@ index 7bb3fb8..6ede95a 100644
  	Iterator it(this->reserved.begin());
  	while (it != this->reserved.end() && max_move > 0) {
  		CargoPacket *cp = *it;
-@@ -291,140 +294,362 @@ bool VehicleCargoList::LoadReserved(uint max_move)
+@@ -291,150 +294,371 @@ bool VehicleCargoList::LoadReserved(uint max_move)
  			max_move = 0;
  		}
  	}
@@ -357,7 +368,8 @@ index 7bb3fb8..6ede95a 100644
 +	}
 +	return unloaded;
 +}
-+
+ 
+-			static_cast<Tinst *>(this)->RemoveFromCache(cp_new); // this reflects the changes in cp.
 +/**
 + * Keep a packet in the vehicle while unloading by temporarily moving it to the
 + * reservation list. The given iterator is incremented in the process.
@@ -373,7 +385,12 @@ index 7bb3fb8..6ede95a 100644
 +	return cp->count;
 +}
  
--			static_cast<Tinst *>(this)->RemoveFromCache(cp_new); // this reflects the changes in cp.
+-			if (mta == MTA_TRANSFER) {
+-				/* Add the feeder share before inserting in dest. */
+-				cp_new->feeder_share += payment->PayTransfer(cp_new, max_move);
+-			} else if (mta == MTA_CARGO_LOAD) {
+-				cp_new->loaded_at_xy = data;
+-			}
 +/**
 + * Transfer a packet to a station, but don't deliver it. Increment the given
 + * iterator in the process.
@@ -394,12 +411,9 @@ index 7bb3fb8..6ede95a 100644
 +	return ret;
 +}
  
--			if (mta == MTA_TRANSFER) {
--				/* Add the feeder share before inserting in dest. */
--				cp_new->feeder_share += payment->PayTransfer(cp_new, max_move);
--			} else if (mta == MTA_CARGO_LOAD) {
--				cp_new->loaded_at_xy = data;
--			}
+-			if (mta == MTA_RESERVE) {
+-				/* nasty reinterpret cast, see above */
+-				reinterpret_cast<VehicleCargoList *>(dest)->Reserve(cp_new);
 +/**
 + * Determine what a cargo packet arriving at the station this list belongs to
 + * will do, using the "old", non-cargodist algorithm.
@@ -432,10 +446,7 @@ index 7bb3fb8..6ede95a 100644
 +		return UL_KEEP;
 +	}
 +}
- 
--			if (mta == MTA_RESERVE) {
--				/* nasty reinterpret cast, see above */
--				reinterpret_cast<VehicleCargoList *>(dest)->Reserve(cp_new);
++
 +/**
 + * Determine what a cargo packet arriving at the station this list belongs to
 + * will do, using the Cargodist algorithm.
@@ -491,22 +502,28 @@ index 7bb3fb8..6ede95a 100644
 -
 -		max_move = 0;
  	}
-+}
- 
+-
 -	return it != packets.end();
-+/**
+ }
+ 
+ /**
+- * Additionally empty the reservation list for vehicle cargo lists.
 + * Swap the reserved and packets lists when starting to load cargo. Pull in the
 + * "kept" packets which were stored in the reservation list so that we don't
 + * have to iterate over them all the time.
 + * @pre this->packets.empty()
-+ */
+  */
+-void VehicleCargoList::OnCleanPool()
 +void VehicleCargoList::SwapReserved()
-+{
+ {
+-	this->reserved.clear();
+-	this->Parent::OnCleanPool();
 +	assert(this->packets.empty());
 +	this->packets.swap(this->reserved);
 +	this->reserved_count = 0;
  }
  
+-
 -/** Invalidates the cached data and rebuilds it. */
 -template <class Tinst>
 -void CargoList<Tinst>::InvalidateCache()
@@ -594,10 +611,19 @@ index 7bb3fb8..6ede95a 100644
 +		}
  	}
 +	return max_unload - remaining_unload;
++}
++
++/**
++ * Additionally empty the reservation list for vehicle cargo lists.
++ */
++void VehicleCargoList::OnCleanPool()
++{
++	this->reserved.clear();
++	this->Parent::OnCleanPool();
  }
  
  /**
-@@ -450,6 +675,22 @@ void VehicleCargoList::AddToCache(const CargoPacket *cp)
+@@ -460,6 +684,22 @@ void VehicleCargoList::AddToCache(const CargoPacket *cp)
  }
  
  /**
@@ -620,7 +646,7 @@ index 7bb3fb8..6ede95a 100644
   * Ages the all cargo in this list.
   */
  void VehicleCargoList::AgeCargo()
-@@ -464,7 +705,154 @@ void VehicleCargoList::AgeCargo()
+@@ -474,7 +714,154 @@ void VehicleCargoList::AgeCargo()
  	}
  }
  
@@ -776,7 +802,7 @@ index 7bb3fb8..6ede95a 100644
  void VehicleCargoList::InvalidateCache()
  {
  	this->feeder_share = 0;
-@@ -493,12 +881,5 @@ void StationCargoList::AssignTo(Station *station, CargoID cargo)
+@@ -503,12 +890,5 @@ void StationCargoList::AssignTo(Station *station, CargoID cargo)
  /*
   * We have to instantiate everything we want to be usable.
   */
@@ -792,7 +818,7 @@ index 7bb3fb8..6ede95a 100644
 +template class CargoList<VehicleCargoList, CargoPacketList>;
 +template class CargoList<StationCargoList, StationCargoPacketMap>;
 diff --git a/src/cargopacket.h b/src/cargopacket.h
-index b84b85d..96add16 100644
+index 1c061da..75b648f 100644
 --- a/src/cargopacket.h
 +++ b/src/cargopacket.h
 @@ -15,9 +15,11 @@
@@ -959,10 +985,10 @@ index b84b85d..96add16 100644
  
 +	~VehicleCargoList();
 +
+ 	void OnCleanPool();
+ 
  	/**
- 	 * Returns total sum of the feeder share for all packets.
- 	 * @return The before mentioned number.
-@@ -278,6 +293,8 @@ public:
+@@ -280,6 +295,8 @@ public:
  		return this->feeder_share;
  	}
  
@@ -971,7 +997,7 @@ index b84b85d..96add16 100644
  	/**
  	 * Returns sum of cargo on board the vehicle (ie not only
  	 * reserved).
-@@ -301,7 +318,7 @@ public:
+@@ -303,7 +320,7 @@ public:
  	 * Returns a pointer to the reserved cargo list.
  	 * @return Pointer to the reserved list.
  	 */
@@ -980,7 +1006,7 @@ index b84b85d..96add16 100644
  	{
  		return &this->reserved;
  	}
-@@ -326,14 +343,18 @@ public:
+@@ -328,14 +345,18 @@ public:
  
  	void Reserve(CargoPacket *cp);
  
@@ -1001,7 +1027,7 @@ index b84b85d..96add16 100644
  	/**
  	 * Are two the two CargoPackets mergeable in the context of
  	 * a list of CargoPackets for a Vehicle?
-@@ -351,13 +372,15 @@ public:
+@@ -353,13 +374,15 @@ public:
  	}
  };
  
@@ -1019,7 +1045,7 @@ index b84b85d..96add16 100644
  	/** The stations, via GoodsEntry, have a CargoList. */
  	friend const struct SaveLoad *GetGoodsDesc();
  
-@@ -378,20 +401,39 @@ public:
+@@ -380,20 +403,39 @@ public:
  				cp1->source_id       == cp2->source_id;
  	}
  

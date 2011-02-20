@@ -418,7 +418,7 @@ index 19a740d..e6307a1 100644
  	}
  
 diff --git a/src/cargopacket.cpp b/src/cargopacket.cpp
-index 55c62cd..3817eb7 100644
+index 55c62cd..6e3b2ed 100644
 --- a/src/cargopacket.cpp
 +++ b/src/cargopacket.cpp
 @@ -10,7 +10,9 @@
@@ -442,6 +442,17 @@ index 55c62cd..3817eb7 100644
  {
  	for (Iterator it(this->packets.begin()); it != this->packets.end(); ++it) {
  		delete *it;
+@@ -150,8 +152,8 @@ CargoList<Tinst>::~CargoList()
+  * Empty the cargo list, but don't free the cargo packets;
+  * the cargo packets are cleaned by CargoPacket's CleanPool.
+  */
+-template <class Tinst>
+-void CargoList<Tinst>::OnCleanPool()
++template <class Tinst, class Tcont>
++void CargoList<Tinst, Tcont>::OnCleanPool()
+ {
+ 	this->packets.clear();
+ }
 @@ -161,8 +163,8 @@ void CargoList<Tinst>::OnCleanPool()
   * Decreases count and days_in_transit.
   * @param cp Packet to be removed from cache.
@@ -499,7 +510,7 @@ index 55c62cd..3817eb7 100644
  {
  	for (Iterator it(packets.begin()); it != packets.end(); /* done during loop*/) {
  		CargoPacket *cp = *it;
-@@ -239,117 +241,415 @@ void CargoList<Tinst>::Truncate(uint max_remaining)
+@@ -239,117 +241,424 @@ void CargoList<Tinst>::Truncate(uint max_remaining)
  }
  
  /**
@@ -997,10 +1008,19 @@ index 55c62cd..3817eb7 100644
 +		}
  	}
 +	return max_unload - remaining_unload;
++}
++
++/**
++ * Additionally empty the reservation list for vehicle cargo lists.
++ */
++void VehicleCargoList::OnCleanPool()
++{
++	this->reserved.clear();
++	this->Parent::OnCleanPool();
  }
  
  /**
-@@ -375,6 +675,22 @@ void VehicleCargoList::AddToCache(const CargoPacket *cp)
+@@ -375,6 +684,22 @@ void VehicleCargoList::AddToCache(const CargoPacket *cp)
  }
  
  /**
@@ -1023,7 +1043,7 @@ index 55c62cd..3817eb7 100644
   * Ages the all cargo in this list.
   */
  void VehicleCargoList::AgeCargo()
-@@ -389,22 +705,192 @@ void VehicleCargoList::AgeCargo()
+@@ -389,22 +714,192 @@ void VehicleCargoList::AgeCargo()
  	}
  }
  
@@ -1227,7 +1247,7 @@ index 55c62cd..3817eb7 100644
 +template class CargoList<VehicleCargoList, CargoPacketList>;
 +template class CargoList<StationCargoList, StationCargoPacketMap>;
 diff --git a/src/cargopacket.h b/src/cargopacket.h
-index 0f2e461..79b3be5 100644
+index 0f2e461..9cf8d70 100644
 --- a/src/cargopacket.h
 +++ b/src/cargopacket.h
 @@ -15,8 +15,11 @@
@@ -1358,7 +1378,7 @@ index 0f2e461..79b3be5 100644
  	 * Returns average number of days in transit for a cargo entity.
  	 * @return The before mentioned number.
  	 */
-@@ -244,35 +247,43 @@ public:
+@@ -244,35 +247,45 @@ public:
  		return this->count == 0 ? 0 : this->cargo_days_in_transit / this->count;
  	}
  
@@ -1408,10 +1428,12 @@ index 0f2e461..79b3be5 100644
  
 +	~VehicleCargoList();
 +
++	void OnCleanPool();
++
  	/**
  	 * Returns total sum of the feeder share for all packets.
  	 * @return The before mentioned number.
-@@ -282,10 +293,68 @@ public:
+@@ -282,10 +295,68 @@ public:
  		return this->feeder_share;
  	}
  
@@ -1480,7 +1502,7 @@ index 0f2e461..79b3be5 100644
  	/**
  	 * Are two the two CargoPackets mergeable in the context of
  	 * a list of CargoPackets for a Vehicle?
-@@ -303,16 +372,21 @@ public:
+@@ -303,16 +374,21 @@ public:
  	}
  };
  
@@ -1504,7 +1526,7 @@ index 0f2e461..79b3be5 100644
  	/**
  	 * Are two the two CargoPackets mergeable in the context of
  	 * a list of CargoPackets for a Vehicle?
-@@ -327,6 +401,40 @@ public:
+@@ -327,6 +403,40 @@ public:
  				cp1->source_type     == cp2->source_type &&
  				cp1->source_id       == cp2->source_id;
  	}

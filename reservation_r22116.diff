@@ -1,5 +1,5 @@
 diff --git a/src/cargopacket.cpp b/src/cargopacket.cpp
-index 55c62cd..bad4d32 100644
+index 55c62cd..f604b66 100644
 --- a/src/cargopacket.cpp
 +++ b/src/cargopacket.cpp
 @@ -186,14 +186,15 @@ void CargoList<Tinst>::AddToCache(const CargoPacket *cp)
@@ -127,7 +127,24 @@ index 55c62cd..bad4d32 100644
  		}
  
  		max_move = 0;
-@@ -393,7 +468,12 @@ void VehicleCargoList::AgeCargo()
+@@ -340,6 +415,16 @@ bool CargoList<Tinst>::MoveTo(Tother_inst *dest, uint max_move, MoveToAction mta
+ 	return it != packets.end();
+ }
+ 
++/**
++ * Additionally empty the reservation list for vehicle cargo lists.
++ */
++void VehicleCargoList::OnCleanPool()
++{
++	this->reserved.clear();
++	this->Parent::OnCleanPool();
++}
++
++
+ /** Invalidates the cached data and rebuilds it. */
+ template <class Tinst>
+ void CargoList<Tinst>::InvalidateCache()
+@@ -393,7 +478,12 @@ void VehicleCargoList::AgeCargo()
  void VehicleCargoList::InvalidateCache()
  {
  	this->feeder_share = 0;
@@ -141,7 +158,7 @@ index 55c62cd..bad4d32 100644
  
  /*
 diff --git a/src/cargopacket.h b/src/cargopacket.h
-index 0f2e461..a6a6f05 100644
+index 0f2e461..36b0f28 100644
 --- a/src/cargopacket.h
 +++ b/src/cargopacket.h
 @@ -29,6 +29,7 @@ typedef Pool<CargoPacket, CargoPacketID, 1024, 0xFFF000, PT_NORMAL, true, false>
@@ -196,7 +213,16 @@ index 0f2e461..a6a6f05 100644
  
  	void AddToCache(const CargoPacket *cp);
  	void RemoveFromCache(const CargoPacket *cp);
-@@ -282,6 +277,58 @@ public:
+@@ -273,6 +268,8 @@ public:
+ 	/** The vehicles have a cargo list (and we want that saved). */
+ 	friend const struct SaveLoad *GetVehicleDescription(VehicleType vt);
+ 
++	void OnCleanPool();
++
+ 	/**
+ 	 * Returns total sum of the feeder share for all packets.
+ 	 * @return The before mentioned number.
+@@ -282,6 +279,58 @@ public:
  		return this->feeder_share;
  	}
  
@@ -255,7 +281,7 @@ index 0f2e461..a6a6f05 100644
  	void AgeCargo();
  
  	void InvalidateCache();
-@@ -327,6 +374,15 @@ public:
+@@ -327,6 +376,15 @@ public:
  				cp1->source_type     == cp2->source_type &&
  				cp1->source_id       == cp2->source_id;
  	}
