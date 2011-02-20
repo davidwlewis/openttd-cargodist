@@ -1534,19 +1534,6 @@ Point SmallMapWindow::GetStationMiddle(const Station *st) const
 	int y = (st->rect.bottom + st->rect.top + 1) / 2;
 	Point ret = this->RemapTile(x, y);
 	ret.x -= 3 + this->subscroll;
-	if (this->zoom < 0) {
-		/* add half a tile if width or height is odd */
-		if (((st->rect.bottom - st->rect.top) & 1) == 0) {
-			Point offset = RemapCoords(0, -this->zoom / 2, 0);
-			ret.x += offset.x;
-			ret.y += offset.y;
-		}
-		if (((st->rect.right - st->rect.left) & 1) == 0) {
-			Point offset = RemapCoords(-this->zoom / 2, 0, 0);
-			ret.x += offset.x;
-			ret.y += offset.y;
-		}
-	}
 	return ret;
 }
 
