@@ -76,4 +76,6 @@ extern Point _tile_fract_coords;
 
 void MarkTileDirtyByTile(TileIndex tile);
 
+Point GetViewportStationMiddle(const Viewport *vp);
+
 #endif /* VIEWPORT_FUNC_H */

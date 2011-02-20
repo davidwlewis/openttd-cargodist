@@ -2890,3 +2890,15 @@ void ResetObjectToPlace()
 {
 	SetObjectToPlace(SPR_CURSOR_MOUSE, PAL_NONE, HT_NONE, WC_MAIN_WINDOW, 0);
 }
+
+Point GetViewportStationMiddle(const Viewport *vp, const Station *st)
+{
+	int x = (st->rect.right + st->rect.left + 1) * TILE_SIZE / 2;
+	int y = (st->rect.bottom + st->rect.top + 1) * TILE_SIZE / 2;
+	int z = GetSlopeZ(Clamp(x, 0, MapSizeX() * TILE_SIZE - 1), Clamp(y, 0, MapSizeY() * TILE_SIZE - 1));
+
+	Point p = RemapCoords(x, y, z);
+	p.x = UnScaleByZoom(p.x - vp->virtual_left, vp->zoom) + vp->left;
+	p.y = UnScaleByZoom(p.y - vp->virtual_top, vp->zoom) + vp->top;
+	return p;
+}

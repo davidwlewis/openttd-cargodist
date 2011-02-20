@@ -10,25 +10,23 @@
 /** @file linkgraph_gui.cpp Implementation of linkgraph overlay GUI. */
 
 #include "stdafx.h"
-#include "widget_type.h"
 #include "window_gui.h"
 #include "company_base.h"
 #include "date_func.h"
 #include "linkgraph_gui.h"
 #include "main_gui.h"
 
-template<class Twindow, uint Twidget_id>
-void LinkGraphOverlay<Twindow, Twidget_id>::GetWidgetDpi(DrawPixelInfo *dpi) const
+template<class Twindow>
+void LinkGraphOverlay<Twindow>::GetWidgetDpi(DrawPixelInfo *dpi) const
 {
-	const NWidgetBase *wi = static_cast<const Window *>(this->window)->GetWidget<NWidgetBase>(Twidget_id);
 	dpi->left = dpi->top = 0;
-	dpi->width = wi->current_x;
-	dpi->height = wi->current_y;
+	dpi->width = this->widget->current_x;
+	dpi->height = this->widget->current_y;
 }
 
 
-template<class Twindow, uint Twidget_id>
-void LinkGraphOverlay<Twindow, Twidget_id>::RebuildCache()
+template<class Twindow>
+void LinkGraphOverlay<Twindow>::RebuildCache()
 {
 	this->cached_links.clear();
 	this->cached_stations.clear();
@@ -76,16 +74,16 @@ void LinkGraphOverlay<Twindow, Twidget_id>::RebuildCache()
 	}
 }
 
-template<class Twindow, uint Twidget_id>
-FORCEINLINE bool LinkGraphOverlay<Twindow, Twidget_id>::IsPointVisible(Point pt, const DrawPixelInfo *dpi, int padding) const
+template<class Twindow>
+FORCEINLINE bool LinkGraphOverlay<Twindow>::IsPointVisible(Point pt, const DrawPixelInfo *dpi, int padding) const
 {
 	return pt.x > dpi->left - padding && pt.y > dpi->top - padding &&
 			pt.x < dpi->left + dpi->width + padding &&
 			pt.y < dpi->top + dpi->height + padding;
 }
 
-template<class Twindow, uint Twidget_id>
-FORCEINLINE bool LinkGraphOverlay<Twindow, Twidget_id>::IsLinkVisible(Point pta, Point ptb, const DrawPixelInfo *dpi, int padding) const
+template<class Twindow>
+FORCEINLINE bool LinkGraphOverlay<Twindow>::IsLinkVisible(Point pta, Point ptb, const DrawPixelInfo *dpi, int padding) const
 {
 	return !((pta.x < dpi->left - padding && ptb.x < dpi->left - padding) ||
 			(pta.y < dpi->top - padding && ptb.y < dpi->top - padding) ||
@@ -95,8 +93,8 @@ FORCEINLINE bool LinkGraphOverlay<Twindow, Twidget_id>::IsLinkVisible(Point pta,
 					ptb.y > dpi->top + dpi->height + padding));
 }
 
-template<class Twindow, uint Twidget_id>
-void LinkGraphOverlay<Twindow, Twidget_id>::AddLinks(const Station *from, const Station *to)
+template<class Twindow>
+void LinkGraphOverlay<Twindow>::AddLinks(const Station *from, const Station *to)
 {
 	CargoID c;
 	FOR_EACH_SET_CARGO_ID(c, this->cargo_mask) {
@@ -112,8 +110,8 @@ void LinkGraphOverlay<Twindow, Twidget_id>::AddLinks(const Station *from, const 
 	}
 }
 
-template<class Twindow, uint Twidget_id>
-/* static */ void LinkGraphOverlay<Twindow, Twidget_id>::AddStats(const LinkStat &orig_link, const FlowStat &orig_flow, LinkProperties &cargo)
+template<class Twindow>
+/* static */ void LinkGraphOverlay<Twindow>::AddStats(const LinkStat &orig_link, const FlowStat &orig_flow, LinkProperties &cargo)
 {
 	uint new_cap = orig_link.Capacity();
 	uint new_usg = orig_link.Usage();
@@ -128,8 +126,8 @@ template<class Twindow, uint Twidget_id>
 	}
 }
 
-template<class Twindow, uint Twidget_id>
-void LinkGraphOverlay<Twindow, Twidget_id>::Draw(const DrawPixelInfo *dpi) const
+template<class Twindow>
+void LinkGraphOverlay<Twindow>::Draw(const DrawPixelInfo *dpi) const
 {
 	if (dpi == NULL) {
 		DrawPixelInfo new_dpi;
@@ -141,8 +139,8 @@ void LinkGraphOverlay<Twindow, Twidget_id>::Draw(const DrawPixelInfo *dpi) const
 }
 
 
-template<class Twindow, uint Twidget_id>
-void LinkGraphOverlay<Twindow, Twidget_id>::DrawLinks(const DrawPixelInfo *dpi) const
+template<class Twindow>
+void LinkGraphOverlay<Twindow>::DrawLinks(const DrawPixelInfo *dpi) const
 {
 	for (LinkMap::const_iterator i(this->cached_links.begin()); i != this->cached_links.end(); ++i) {
 		if (!Station::IsValidID(i->first)) continue;
@@ -159,8 +157,8 @@ void LinkGraphOverlay<Twindow, Twidget_id>::DrawLinks(const DrawPixelInfo *dpi) 
 	}
 }
 
-template<class Twindow, uint Twidget_id>
-/* static */ void LinkGraphOverlay<Twindow, Twidget_id>::DrawContent(Point pta, Point ptb, const LinkProperties &cargo)
+template<class Twindow>
+/* static */ void LinkGraphOverlay<Twindow>::DrawContent(Point pta, Point ptb, const LinkProperties &cargo)
 {
 	if (cargo.capacity <= 0) return;
 	int direction_y = (pta.x < ptb.x ? 1 : -1);
@@ -176,8 +174,8 @@ template<class Twindow, uint Twidget_id>
  * Draw dots for stations into the smallmap. The dots' sizes are determined by the amount of
  * cargo produced there, their colours by the type of cargo produced.
  */
-template<class Twindow, uint Twidget_id>
-void LinkGraphOverlay<Twindow, Twidget_id>::DrawStationDots(const DrawPixelInfo *dpi) const
+template<class Twindow>
+void LinkGraphOverlay<Twindow>::DrawStationDots(const DrawPixelInfo *dpi) const
 {
 	for (StationSupplyList::const_iterator i(this->cached_stations.begin()); i != this->cached_stations.end(); ++i) {
 		const Station *st = Station::GetIfValid(i->first);
@@ -202,8 +200,8 @@ void LinkGraphOverlay<Twindow, Twidget_id>::DrawStationDots(const DrawPixelInfo 
  * @param colour the colour with which the vertex will be filled
  * @param border_colour the colour for the border of the vertex
  */
-template<class Twindow, uint Twidget_id>
-/* static */ void LinkGraphOverlay<Twindow, Twidget_id>::DrawVertex(int x, int y, int size, int colour, int border_colour)
+template<class Twindow>
+/* static */ void LinkGraphOverlay<Twindow>::DrawVertex(int x, int y, int size, int colour, int border_colour)
 {
 	size--;
 	int w1 = size / 2;
@@ -217,6 +215,15 @@ template<class Twindow, uint Twidget_id>
 	GfxDrawLine(x - w1, y + w2, x + w2, y + w2, border_colour);
 	GfxDrawLine(x - w1, y - w1, x - w1, y + w2, border_colour);
 	GfxDrawLine(x + w2, y - w1, x + w2, y + w2, border_colour);
+}
+
+Point LinkGraphOverlay::GetStationMiddle(const Station *st) const {
+	if (this->window->viewport) {
+		return GetViewPortStationMiddle(this->window->viewport, st);
+	} else {
+		/* assume this is a smallmap */
+		return GetSmallmapStationMiddle(this->window, st);
+	}
 }
 
 template class LinkGraphOverlay<MainWindow, MW_VIEWPORT>;
