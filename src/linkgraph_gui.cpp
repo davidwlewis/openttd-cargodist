@@ -86,22 +86,22 @@ void LinkGraphOverlay::RebuildCache()
 }
 
 
-FORCEINLINE bool LinkGraphOverlay::IsPointVisible(Point pt, const DrawPixelInfo *dpi) const
+FORCEINLINE bool LinkGraphOverlay::IsPointVisible(Point pt, const DrawPixelInfo *dpi, uint padding) const
 {
-	return pt.x > dpi->left && pt.y > dpi->top &&
-			pt.x < dpi->left + dpi->width &&
-			pt.y < dpi->top + dpi->height;
+	return pt.x > dpi->left - padding && pt.y > dpi->top - padding &&
+			pt.x < dpi->left + dpi->width + padding &&
+			pt.y < dpi->top + dpi->height + padding;
 }
 
 
-FORCEINLINE bool LinkGraphOverlay::IsLinkVisible(Point pta, Point ptb, const DrawPixelInfo *dpi) const
+FORCEINLINE bool LinkGraphOverlay::IsLinkVisible(Point pta, Point ptb, const DrawPixelInfo *dpi, uint padding) const
 {
-	return !((pta.x < dpi->left && ptb.x < dpi->left) ||
-			(pta.y < dpi->top && ptb.y < dpi->top) ||
-			(pta.x > dpi->left + dpi->width &&
-					ptb.x > dpi->left + dpi->width) ||
-			(pta.y > dpi->top + dpi->height &&
-					ptb.y > dpi->top + dpi->height));
+	return !((pta.x < dpi->left - padding && ptb.x < dpi->left - padding) ||
+			(pta.y < dpi->top - padding && ptb.y < dpi->top - padding) ||
+			(pta.x > dpi->left + dpi->width + padding &&
+					ptb.x > dpi->left + dpi->width + padding) ||
+			(pta.y > dpi->top + dpi->height + padding &&
+					ptb.y > dpi->top + dpi->height + padding));
 }
 
 
