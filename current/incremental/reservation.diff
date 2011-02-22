@@ -537,7 +537,7 @@ index 584eea7..1d121ef 100644
  	}
  
 diff --git a/src/saveload/saveload.cpp b/src/saveload/saveload.cpp
-index bff6b05..f23eb99 100644
+index 76f5215..7ee1d3b 100644
 --- a/src/saveload/saveload.cpp
 +++ b/src/saveload/saveload.cpp
 @@ -226,7 +226,7 @@
@@ -581,7 +581,7 @@ index 7c85965..ecb9162 100644
 +
  #endif /* SAVELOAD_H */
 diff --git a/src/saveload/vehicle_sl.cpp b/src/saveload/vehicle_sl.cpp
-index 4529dc5..19a757e 100644
+index 2cfc704..7dd5cfe 100644
 --- a/src/saveload/vehicle_sl.cpp
 +++ b/src/saveload/vehicle_sl.cpp
 @@ -497,6 +497,7 @@ const SaveLoad *GetVehicleDescription(VehicleType vt)
