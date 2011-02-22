@@ -1356,22 +1356,8 @@ static void ViewportDrawBoundingBoxes(const ParentSpriteToSortVector *psd)
 	}
 }
 
-static void ViewportDrawStrings(DrawPixelInfo *dpi, const StringSpriteToDrawVector *sstdv)
+static void ViewportDrawStrings(ZoomLevel zoom, const StringSpriteToDrawVector *sstdv)
 {
-	DrawPixelInfo dp;
-	ZoomLevel zoom;
-
-	_cur_dpi = &dp;
-	dp = *dpi;
-
-	zoom = dp.zoom;
-	dp.zoom = ZOOM_LVL_NORMAL;
-
-	dp.left   = UnScaleByZoom(dp.left,   zoom);
-	dp.top    = UnScaleByZoom(dp.top,    zoom);
-	dp.width  = UnScaleByZoom(dp.width,  zoom);
-	dp.height = UnScaleByZoom(dp.height, zoom);
-
 	const StringSpriteToDraw *ssend = sstdv->End();
 	for (const StringSpriteToDraw *ss = sstdv->Begin(); ss != ssend; ++ss) {
 		TextColour colour = TC_BLACK;
@@ -1453,10 +1439,24 @@ void ViewportDoDraw(const ViewPort *vp, int left, int top, int right, int bottom
 
 	if (_draw_bounding_boxes) ViewportDrawBoundingBoxes(&_vd.parent_sprites_to_sort);
 
-	_cur_dpi = old_dpi;
-	if (vp->overlay != NULL) vp->overlay->Draw(old_dpi);
+	DrawPixelInfo dp = _vd.dpi;
+	ZoomLevel zoom = _vd.dpi.zoom;
+	dp.zoom   = ZOOM_LVL_NORMAL;
+	dp.width  = UnScaleByZoom(dp.width, zoom);
+	dp.height = UnScaleByZoom(dp.height, zoom);
+	_cur_dpi = &dp;
 
-	if (_vd.string_sprites_to_draw.Length() != 0) ViewportDrawStrings(&_vd.dpi, &_vd.string_sprites_to_draw);
+	/* translate to window coordinates */
+	dp.left   = x;
+	dp.top    = y;
+
+	if (vp->overlay != NULL) vp->overlay->Draw(&dp);
+
+	/* translate back to world coordinates */
+	dp.left   = UnScaleByZoom(_vd.dpi.left, zoom);
+	dp.top    = UnScaleByZoom(_vd.dpi.top, zoom);
+
+	if (_vd.string_sprites_to_draw.Length() != 0) ViewportDrawStrings(zoom, &_vd.string_sprites_to_draw);
 
 	_cur_dpi = old_dpi;
 
