@@ -23,9 +23,8 @@ enum MainWindowWidgets {
 
 struct MainWindow : Window
 {
-	LinkGraphOverlay<MainWindow, MW_VIEWPORT> overlay;
-
 	MainWindow();
+	virtual ~MainWindow() {delete this->viewport->overlay;}
 
 	virtual void OnPaint();
 	virtual EventState OnKeyPress(uint16 key, uint16 keycode);
@@ -33,8 +32,6 @@ struct MainWindow : Window
 	virtual void OnMouseWheel(int wheel);
 	virtual void OnResize();
 	virtual void OnInvalidateData(int data);
-
-	Point GetStationMiddle(const Station *st) const;
 
 	static Hotkey<MainWindow> global_hotkeys[];
 };

@@ -54,6 +54,7 @@ public:
 	void Draw(const DrawPixelInfo *dpi = NULL) const;
 	void SetCargoMask(uint32 cargo_mask) {this->cargo_mask = cargo_mask;}
 	void SetCompanyMask(uint32 company_mask) {this->company_mask = company_mask;}
+	bool IsValid() const {return widget_id != UINT_MAX;}
 
 protected:
 	const Window *window;              ///< Window to be drawn into.
@@ -69,8 +70,8 @@ protected:
 	void AddLinks(const Station *sta, const Station *stb);
 	void DrawLinks(const DrawPixelInfo *dpi) const;
 	void DrawStationDots(const DrawPixelInfo *dpi) const;
-	bool IsLinkVisible(Point pta, Point ptb, const DrawPixelInfo *dpi, int padding = 0) const;
-	bool IsPointVisible(Point pt, const DrawPixelInfo *dpi, int padding = 0) const;
+	bool IsLinkVisible(Point pta, Point ptb, const DrawPixelInfo *dpi) const;
+	bool IsPointVisible(Point pt, const DrawPixelInfo *dpi) const;
 	void GetWidgetDpi(DrawPixelInfo *dpi) const;
 
 	static void AddStats(const LinkStat &orig_link, const FlowStat &orig_flow, LinkProperties &cargo);

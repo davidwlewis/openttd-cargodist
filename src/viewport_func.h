@@ -16,6 +16,7 @@
 #include "viewport_type.h"
 #include "window_type.h"
 #include "tile_type.h"
+#include "station_type.h"
 
 static const int TILE_HEIGHT_STEP = 50; ///< One Z unit tile height difference is displayed as 50m.
 
@@ -76,6 +77,6 @@ extern Point _tile_fract_coords;
 
 void MarkTileDirtyByTile(TileIndex tile);
 
-Point GetViewportStationMiddle(const Viewport *vp);
+Point GetViewportStationMiddle(const ViewPort *vp, const Station *st);
 
 #endif /* VIEWPORT_FUNC_H */

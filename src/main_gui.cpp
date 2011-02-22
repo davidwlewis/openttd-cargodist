@@ -235,7 +235,7 @@ enum {
 	GHK_CHAT_SERVER,
 };
 
-MainWindow::MainWindow() : Window(), overlay(this)
+MainWindow::MainWindow() : Window()
 {
 	this->InitNested(&_main_window_desc, 0);
 	ResizeWindow(this, _screen.width, _screen.height);
@@ -243,25 +243,13 @@ MainWindow::MainWindow() : Window(), overlay(this)
 	NWidgetViewport *nvp = this->GetWidget<NWidgetViewport>(MW_VIEWPORT);
 	nvp->InitializeViewport(this, TileXY(32, 32), ZOOM_LVL_VIEWPORT);
 
-	this->overlay.RebuildCache();
-}
-
-Point MainWindow::GetStationMiddle(const Station *st) const
-{
-	int x = (st->rect.right + st->rect.left + 1) * TILE_SIZE / 2;
-	int y = (st->rect.bottom + st->rect.top + 1) * TILE_SIZE / 2;
-	int z = GetSlopeZ(Clamp(x, 0, MapSizeX() * TILE_SIZE - 1), Clamp(y, 0, MapSizeY() * TILE_SIZE - 1));
-
-	Point p = RemapCoords(x, y, z);
-	p.x = UnScaleByZoom(p.x - this->viewport->virtual_left, this->viewport->zoom) + this->viewport->left;
-	p.y = UnScaleByZoom(p.y - this->viewport->virtual_top, this->viewport->zoom) + this->viewport->top;
-	return p;
+	this->viewport->overlay = new LinkGraphOverlay(this, MW_VIEWPORT);
+	this->viewport->overlay->RebuildCache();
 }
 
 void MainWindow::OnPaint()
 {
 	this->DrawWidgets();
-	this->overlay.Draw();
 	if (_game_mode == GM_MENU) {
 		static const SpriteID title_sprites[] = {SPR_OTTD_O, SPR_OTTD_P, SPR_OTTD_E, SPR_OTTD_N, SPR_OTTD_T, SPR_OTTD_T, SPR_OTTD_D};
 		static const uint LETTER_SPACING = 10;
@@ -424,14 +412,14 @@ void MainWindow::OnScroll(Point delta)
 	this->viewport->scrollpos_y += ScaleByZoom(delta.y, this->viewport->zoom);
 	this->viewport->dest_scrollpos_x = this->viewport->scrollpos_x;
 	this->viewport->dest_scrollpos_y = this->viewport->scrollpos_y;
-	this->overlay.RebuildCache();
+	this->viewport->overlay->RebuildCache();
 }
 
 void MainWindow::OnMouseWheel(int wheel)
 {
 	if (_settings_client.gui.scrollwheel_scrolling == 0) {
 		ZoomInOrOutToCursorWindow(wheel < 0, this);
-		this->overlay.RebuildCache();
+		this->viewport->overlay->RebuildCache();
 	}
 }
 
@@ -440,7 +428,7 @@ void MainWindow::OnResize()
 	if (this->viewport != NULL) {
 		NWidgetViewport *nvp = this->GetWidget<NWidgetViewport>(MW_VIEWPORT);
 		nvp->UpdateViewportCoordinates(this);
-		this->overlay.RebuildCache();
+		this->viewport->overlay->RebuildCache();
 	}
 }
 

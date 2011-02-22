@@ -45,6 +45,7 @@
 #include "window_func.h"
 #include "tilehighlight_func.h"
 #include "window_gui.h"
+#include "linkgraph_gui.h"
 
 #include "table/strings.h"
 
@@ -212,6 +213,8 @@ void InitializeWindowViewport(Window *w, int x, int y,
 	vp->scrollpos_y = pt.y;
 	vp->dest_scrollpos_x = pt.x;
 	vp->dest_scrollpos_y = pt.y;
+
+	vp->overlay = NULL;
 
 	w->viewport = vp;
 	vp->virtual_left = 0;//pt.x;
@@ -1449,6 +1452,9 @@ void ViewportDoDraw(const ViewPort *vp, int left, int top, int right, int bottom
 	ViewportDrawParentSprites(&_vd.parent_sprites_to_sort, &_vd.child_screen_sprites_to_draw);
 
 	if (_draw_bounding_boxes) ViewportDrawBoundingBoxes(&_vd.parent_sprites_to_sort);
+
+	_cur_dpi = old_dpi;
+	if (vp->overlay != NULL) vp->overlay->Draw(old_dpi);
 
 	if (_vd.string_sprites_to_draw.Length() != 0) ViewportDrawStrings(&_vd.dpi, &_vd.string_sprites_to_draw);
 
@@ -2891,10 +2897,10 @@ void ResetObjectToPlace()
 	SetObjectToPlace(SPR_CURSOR_MOUSE, PAL_NONE, HT_NONE, WC_MAIN_WINDOW, 0);
 }
 
-Point GetViewportStationMiddle(const Viewport *vp, const Station *st)
+Point GetViewportStationMiddle(const ViewPort *vp, const Station *st)
 {
-	int x = (st->rect.right + st->rect.left + 1) * TILE_SIZE / 2;
-	int y = (st->rect.bottom + st->rect.top + 1) * TILE_SIZE / 2;
+	int x = TileX(st->xy) * TILE_SIZE;
+	int y = TileY(st->xy) * TILE_SIZE;
 	int z = GetSlopeZ(Clamp(x, 0, MapSizeX() * TILE_SIZE - 1), Clamp(y, 0, MapSizeY() * TILE_SIZE - 1));
 
 	Point p = RemapCoords(x, y, z);
