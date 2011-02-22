@@ -70,8 +70,8 @@ protected:
 	void AddLinks(const Station *sta, const Station *stb);
 	void DrawLinks(const DrawPixelInfo *dpi) const;
 	void DrawStationDots(const DrawPixelInfo *dpi) const;
-	bool IsLinkVisible(Point pta, Point ptb, const DrawPixelInfo *dpi, uint padding) const;
-	bool IsPointVisible(Point pt, const DrawPixelInfo *dpi, uint padding) const;
+	bool IsLinkVisible(Point pta, Point ptb, const DrawPixelInfo *dpi, int padding = 0) const;
+	bool IsPointVisible(Point pt, const DrawPixelInfo *dpi, int padding = 0) const;
 	void GetWidgetDpi(DrawPixelInfo *dpi) const;
 
 	static void AddStats(const LinkStat &orig_link, const FlowStat &orig_flow, LinkProperties &cargo);

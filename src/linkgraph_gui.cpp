@@ -14,7 +14,6 @@
 #include "company_base.h"
 #include "date_func.h"
 #include "linkgraph_gui.h"
-#include "main_gui.h"
 #include "viewport_func.h"
 
 /**
@@ -86,7 +85,7 @@ void LinkGraphOverlay::RebuildCache()
 }
 
 
-FORCEINLINE bool LinkGraphOverlay::IsPointVisible(Point pt, const DrawPixelInfo *dpi, uint padding) const
+FORCEINLINE bool LinkGraphOverlay::IsPointVisible(Point pt, const DrawPixelInfo *dpi, int padding) const
 {
 	return pt.x > dpi->left - padding && pt.y > dpi->top - padding &&
 			pt.x < dpi->left + dpi->width + padding &&
@@ -94,7 +93,7 @@ FORCEINLINE bool LinkGraphOverlay::IsPointVisible(Point pt, const DrawPixelInfo 
 }
 
 
-FORCEINLINE bool LinkGraphOverlay::IsLinkVisible(Point pta, Point ptb, const DrawPixelInfo *dpi, uint padding) const
+FORCEINLINE bool LinkGraphOverlay::IsLinkVisible(Point pta, Point ptb, const DrawPixelInfo *dpi, int padding) const
 {
 	return !((pta.x < dpi->left - padding && ptb.x < dpi->left - padding) ||
 			(pta.y < dpi->top - padding && ptb.y < dpi->top - padding) ||
@@ -191,7 +190,7 @@ void LinkGraphOverlay::DrawStationDots(const DrawPixelInfo *dpi) const
 		const Station *st = Station::GetIfValid(i->first);
 		if (st == NULL) continue;
 		Point pt = this->GetStationMiddle(st);
-		if (!this->IsPointVisible(pt, dpi)) continue;
+		if (!this->IsPointVisible(pt, dpi, 10)) continue;
 
 		uint r = 1;
 		if (i->second >= 20) r++;

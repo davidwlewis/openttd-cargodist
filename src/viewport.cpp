@@ -1441,20 +1441,20 @@ void ViewportDoDraw(const ViewPort *vp, int left, int top, int right, int bottom
 
 	DrawPixelInfo dp = _vd.dpi;
 	ZoomLevel zoom = _vd.dpi.zoom;
-	dp.zoom   = ZOOM_LVL_NORMAL;
-	dp.width  = UnScaleByZoom(dp.width, zoom);
+	dp.zoom = ZOOM_LVL_NORMAL;
+	dp.width = UnScaleByZoom(dp.width, zoom);
 	dp.height = UnScaleByZoom(dp.height, zoom);
 	_cur_dpi = &dp;
 
 	/* translate to window coordinates */
-	dp.left   = x;
-	dp.top    = y;
+	dp.left = x;
+	dp.top = y;
 
 	if (vp->overlay != NULL) vp->overlay->Draw(&dp);
 
 	/* translate back to world coordinates */
-	dp.left   = UnScaleByZoom(_vd.dpi.left, zoom);
-	dp.top    = UnScaleByZoom(_vd.dpi.top, zoom);
+	dp.left = UnScaleByZoom(_vd.dpi.left, zoom);
+	dp.top = UnScaleByZoom(_vd.dpi.top, zoom);
 
 	if (_vd.string_sprites_to_draw.Length() != 0) ViewportDrawStrings(zoom, &_vd.string_sprites_to_draw);
 

@@ -29,9 +29,9 @@
 #include "company_func.h"
 #include "toolbar_gui.h"
 #include "statusbar_gui.h"
+#include "linkgraph_gui.h"
 #include "tilehighlight_func.h"
-#include "landscape.h"
-#include "main_gui.h"
+#include "hotkeys.h"
 
 #include "saveload/saveload.h"
 
@@ -200,6 +200,11 @@ void ZoomInOrOutToCursorWindow(bool in, Window *w)
 	}
 }
 
+/** Widgets of the main window. */
+enum MainWindowWidgets {
+	MW_VIEWPORT, ///< Main window viewport.
+};
+
 static const struct NWidgetPart _nested_main_window_widgets[] = {
 	NWidget(NWID_VIEWPORT, INVALID_COLOUR, MW_VIEWPORT), SetResize(1, 1),
 };
@@ -235,208 +240,213 @@ enum {
 	GHK_CHAT_SERVER,
 };
 
-MainWindow::MainWindow() : Window()
+struct MainWindow : Window
 {
-	this->InitNested(&_main_window_desc, 0);
-	ResizeWindow(this, _screen.width, _screen.height);
+	MainWindow() : Window()
+	{
+		this->InitNested(&_main_window_desc, 0);
+		ResizeWindow(this, _screen.width, _screen.height);
 
-	NWidgetViewport *nvp = this->GetWidget<NWidgetViewport>(MW_VIEWPORT);
-	nvp->InitializeViewport(this, TileXY(32, 32), ZOOM_LVL_VIEWPORT);
+		NWidgetViewport *nvp = this->GetWidget<NWidgetViewport>(MW_VIEWPORT);
+		nvp->InitializeViewport(this, TileXY(32, 32), ZOOM_LVL_VIEWPORT);
 
-	this->viewport->overlay = new LinkGraphOverlay(this, MW_VIEWPORT);
-	this->viewport->overlay->RebuildCache();
-}
+		this->viewport->overlay = new LinkGraphOverlay(this, MW_VIEWPORT);
+		this->viewport->overlay->RebuildCache();
+	}
 
-void MainWindow::OnPaint()
-{
-	this->DrawWidgets();
-	if (_game_mode == GM_MENU) {
-		static const SpriteID title_sprites[] = {SPR_OTTD_O, SPR_OTTD_P, SPR_OTTD_E, SPR_OTTD_N, SPR_OTTD_T, SPR_OTTD_T, SPR_OTTD_D};
-		static const uint LETTER_SPACING = 10;
-		int name_width = (lengthof(title_sprites) - 1) * LETTER_SPACING;
+	virtual void OnPaint()
+	{
+		this->DrawWidgets();
+		if (_game_mode == GM_MENU) {
+			static const SpriteID title_sprites[] = {SPR_OTTD_O, SPR_OTTD_P, SPR_OTTD_E, SPR_OTTD_N, SPR_OTTD_T, SPR_OTTD_T, SPR_OTTD_D};
+			static const uint LETTER_SPACING = 10;
+			int name_width = (lengthof(title_sprites) - 1) * LETTER_SPACING;
 
-		for (uint i = 0; i < lengthof(title_sprites); i++) {
-			name_width += GetSpriteSize(title_sprites[i]).width;
-		}
-		int off_x = (this->width - name_width) / 2;
+			for (uint i = 0; i < lengthof(title_sprites); i++) {
+				name_width += GetSpriteSize(title_sprites[i]).width;
+			}
+			int off_x = (this->width - name_width) / 2;
 
-		for (uint i = 0; i < lengthof(title_sprites); i++) {
-			DrawSprite(title_sprites[i], PAL_NONE, off_x, 50);
-			off_x += GetSpriteSize(title_sprites[i]).width + LETTER_SPACING;
+			for (uint i = 0; i < lengthof(title_sprites); i++) {
+				DrawSprite(title_sprites[i], PAL_NONE, off_x, 50);
+				off_x += GetSpriteSize(title_sprites[i]).width + LETTER_SPACING;
+			}
 		}
 	}
-}
 
-EventState MainWindow::OnKeyPress(uint16 key, uint16 keycode)
-{
-	int num = CheckHotkeyMatch(global_hotkeys, keycode, this);
-	if (num == GHK_QUIT) {
-		HandleExitGameRequest();
+	virtual EventState OnKeyPress(uint16 key, uint16 keycode)
+	{
+		int num = CheckHotkeyMatch(global_hotkeys, keycode, this);
+		if (num == GHK_QUIT) {
+			HandleExitGameRequest();
+			return ES_HANDLED;
+		}
+
+		/* Disable all key shortcuts, except quit shortcuts when
+		 * generating the world, otherwise they create threading
+		 * problem during the generating, resulting in random
+		 * assertions that are hard to trigger and debug */
+		if (IsGeneratingWorld()) return ES_NOT_HANDLED;
+
+		switch (num) {
+			case GHK_ABANDON:
+				/* No point returning from the main menu to itself */
+				if (_game_mode == GM_MENU) return ES_HANDLED;
+				if (_settings_client.gui.autosave_on_exit) {
+					DoExitSave();
+					_switch_mode = SM_MENU;
+				} else {
+					AskExitToGameMenu();
+				}
+				return ES_HANDLED;
+
+			case GHK_CONSOLE:
+				IConsoleSwitch();
+				return ES_HANDLED;
+
+			case GHK_BOUNDING_BOXES:
+				extern bool _draw_bounding_boxes;
+				_draw_bounding_boxes = !_draw_bounding_boxes;
+				MarkWholeScreenDirty();
+				return ES_HANDLED;
+		}
+
+		if (_game_mode == GM_MENU) return ES_NOT_HANDLED;
+
+		switch (num) {
+			case GHK_CENTER:
+			case GHK_CENTER_ZOOM: {
+				Point pt = GetTileBelowCursor();
+				if (pt.x != -1) {
+					bool instant = (num == GHK_CENTER_ZOOM && this->viewport->zoom != ZOOM_LVL_MIN);
+					if (num == GHK_CENTER_ZOOM) MaxZoomInOut(ZOOM_IN, this);
+					ScrollMainWindowTo(pt.x, pt.y, -1, instant);
+				}
+				break;
+			}
+
+			case GHK_RESET_OBJECT_TO_PLACE: ResetObjectToPlace(); break;
+			case GHK_DELETE_WINDOWS: DeleteNonVitalWindows(); break;
+			case GHK_DELETE_NONVITAL_WINDOWS: DeleteAllNonVitalWindows(); break;
+			case GHK_REFRESH_SCREEN: MarkWholeScreenDirty(); break;
+
+			case GHK_CRASH: // Crash the game
+				*(volatile byte *)0 = 0;
+				break;
+
+			case GHK_MONEY: // Gimme money
+				/* You can only cheat for money in single player. */
+				if (!_networking) DoCommandP(0, 10000000, 0, CMD_MONEY_CHEAT);
+				break;
+
+			case GHK_UPDATE_COORDS: // Update the coordinates of all station signs
+				UpdateAllVirtCoords();
+				break;
+
+			case GHK_TOGGLE_TRANSPARENCY:
+			case GHK_TOGGLE_TRANSPARENCY + 1:
+			case GHK_TOGGLE_TRANSPARENCY + 2:
+			case GHK_TOGGLE_TRANSPARENCY + 3:
+			case GHK_TOGGLE_TRANSPARENCY + 4:
+			case GHK_TOGGLE_TRANSPARENCY + 5:
+			case GHK_TOGGLE_TRANSPARENCY + 6:
+			case GHK_TOGGLE_TRANSPARENCY + 7:
+			case GHK_TOGGLE_TRANSPARENCY + 8:
+				/* Transparency toggle hot keys */
+				ToggleTransparency((TransparencyOption)(num - GHK_TOGGLE_TRANSPARENCY));
+				MarkWholeScreenDirty();
+				break;
+
+			case GHK_TOGGLE_INVISIBILITY:
+			case GHK_TOGGLE_INVISIBILITY + 1:
+			case GHK_TOGGLE_INVISIBILITY + 2:
+			case GHK_TOGGLE_INVISIBILITY + 3:
+			case GHK_TOGGLE_INVISIBILITY + 4:
+			case GHK_TOGGLE_INVISIBILITY + 5:
+			case GHK_TOGGLE_INVISIBILITY + 6:
+			case GHK_TOGGLE_INVISIBILITY + 7:
+				/* Invisibility toggle hot keys */
+				ToggleInvisibilityWithTransparency((TransparencyOption)(num - GHK_TOGGLE_INVISIBILITY));
+				MarkWholeScreenDirty();
+				break;
+
+			case GHK_TRANSPARENCY_TOOLBAR:
+				ShowTransparencyToolbar();
+				break;
+
+			case GHK_TRANSPARANCY:
+				ResetRestoreAllTransparency();
+				break;
+
+#ifdef ENABLE_NETWORK
+			case GHK_CHAT: // smart chat; send to team if any, otherwise to all
+				if (_networking) {
+					const NetworkClientInfo *cio = NetworkFindClientInfoFromClientID(_network_own_client_id);
+					if (cio == NULL) break;
+
+					ShowNetworkChatQueryWindow(NetworkClientPreferTeamChat(cio) ? DESTTYPE_TEAM : DESTTYPE_BROADCAST, cio->client_playas);
+				}
+				break;
+
+			case GHK_CHAT_ALL: // send text message to all clients
+				if (_networking) ShowNetworkChatQueryWindow(DESTTYPE_BROADCAST, 0);
+				break;
+
+			case GHK_CHAT_COMPANY: // send text to all team mates
+				if (_networking) {
+					const NetworkClientInfo *cio = NetworkFindClientInfoFromClientID(_network_own_client_id);
+					if (cio == NULL) break;
+
+					ShowNetworkChatQueryWindow(DESTTYPE_TEAM, cio->client_playas);
+				}
+				break;
+
+			case GHK_CHAT_SERVER: // send text to the server
+				if (_networking && !_network_server) {
+					ShowNetworkChatQueryWindow(DESTTYPE_CLIENT, CLIENT_ID_SERVER);
+				}
+				break;
+#endif
+
+			default: return ES_NOT_HANDLED;
+		}
 		return ES_HANDLED;
 	}
 
-	/* Disable all key shortcuts, except quit shortcuts when
-	 * generating the world, otherwise they create threading
-	 * problem during the generating, resulting in random
-	 * assertions that are hard to trigger and debug */
-	if (IsGeneratingWorld()) return ES_NOT_HANDLED;
-
-	switch (num) {
-		case GHK_ABANDON:
-			/* No point returning from the main menu to itself */
-			if (_game_mode == GM_MENU) return ES_HANDLED;
-			if (_settings_client.gui.autosave_on_exit) {
-				DoExitSave();
-				_switch_mode = SM_MENU;
-			} else {
-				AskExitToGameMenu();
-			}
-			return ES_HANDLED;
-
-		case GHK_CONSOLE:
-			IConsoleSwitch();
-			return ES_HANDLED;
-
-		case GHK_BOUNDING_BOXES:
-			extern bool _draw_bounding_boxes;
-			_draw_bounding_boxes = !_draw_bounding_boxes;
-			MarkWholeScreenDirty();
-			return ES_HANDLED;
+	virtual void OnScroll(Point delta)
+	{
+		this->viewport->scrollpos_x += ScaleByZoom(delta.x, this->viewport->zoom);
+		this->viewport->scrollpos_y += ScaleByZoom(delta.y, this->viewport->zoom);
+		this->viewport->dest_scrollpos_x = this->viewport->scrollpos_x;
+		this->viewport->dest_scrollpos_y = this->viewport->scrollpos_y;
+		this->viewport->overlay->RebuildCache();
 	}
 
-	if (_game_mode == GM_MENU) return ES_NOT_HANDLED;
-
-	switch (num) {
-		case GHK_CENTER:
-		case GHK_CENTER_ZOOM: {
-			Point pt = GetTileBelowCursor();
-			if (pt.x != -1) {
-				bool instant = (num == GHK_CENTER_ZOOM && this->viewport->zoom != ZOOM_LVL_MIN);
-				if (num == GHK_CENTER_ZOOM) MaxZoomInOut(ZOOM_IN, this);
-				ScrollMainWindowTo(pt.x, pt.y, -1, instant);
-			}
-			break;
+	virtual void OnMouseWheel(int wheel)
+	{
+		if (_settings_client.gui.scrollwheel_scrolling == 0) {
+			ZoomInOrOutToCursorWindow(wheel < 0, this);
+			this->viewport->overlay->RebuildCache();
 		}
-
-		case GHK_RESET_OBJECT_TO_PLACE: ResetObjectToPlace(); break;
-		case GHK_DELETE_WINDOWS: DeleteNonVitalWindows(); break;
-		case GHK_DELETE_NONVITAL_WINDOWS: DeleteAllNonVitalWindows(); break;
-		case GHK_REFRESH_SCREEN: MarkWholeScreenDirty(); break;
-
-		case GHK_CRASH: // Crash the game
-			*(volatile byte *)0 = 0;
-			break;
-
-		case GHK_MONEY: // Gimme money
-			/* You can only cheat for money in single player. */
-			if (!_networking) DoCommandP(0, 10000000, 0, CMD_MONEY_CHEAT);
-			break;
-
-		case GHK_UPDATE_COORDS: // Update the coordinates of all station signs
-			UpdateAllVirtCoords();
-			break;
-
-		case GHK_TOGGLE_TRANSPARENCY:
-		case GHK_TOGGLE_TRANSPARENCY + 1:
-		case GHK_TOGGLE_TRANSPARENCY + 2:
-		case GHK_TOGGLE_TRANSPARENCY + 3:
-		case GHK_TOGGLE_TRANSPARENCY + 4:
-		case GHK_TOGGLE_TRANSPARENCY + 5:
-		case GHK_TOGGLE_TRANSPARENCY + 6:
-		case GHK_TOGGLE_TRANSPARENCY + 7:
-		case GHK_TOGGLE_TRANSPARENCY + 8:
-			/* Transparency toggle hot keys */
-			ToggleTransparency((TransparencyOption)(num - GHK_TOGGLE_TRANSPARENCY));
-			MarkWholeScreenDirty();
-			break;
-
-		case GHK_TOGGLE_INVISIBILITY:
-		case GHK_TOGGLE_INVISIBILITY + 1:
-		case GHK_TOGGLE_INVISIBILITY + 2:
-		case GHK_TOGGLE_INVISIBILITY + 3:
-		case GHK_TOGGLE_INVISIBILITY + 4:
-		case GHK_TOGGLE_INVISIBILITY + 5:
-		case GHK_TOGGLE_INVISIBILITY + 6:
-		case GHK_TOGGLE_INVISIBILITY + 7:
-			/* Invisibility toggle hot keys */
-			ToggleInvisibilityWithTransparency((TransparencyOption)(num - GHK_TOGGLE_INVISIBILITY));
-			MarkWholeScreenDirty();
-			break;
-
-		case GHK_TRANSPARENCY_TOOLBAR:
-			ShowTransparencyToolbar();
-			break;
-
-		case GHK_TRANSPARANCY:
-			ResetRestoreAllTransparency();
-			break;
-
-#ifdef ENABLE_NETWORK
-		case GHK_CHAT: // smart chat; send to team if any, otherwise to all
-			if (_networking) {
-				const NetworkClientInfo *cio = NetworkFindClientInfoFromClientID(_network_own_client_id);
-				if (cio == NULL) break;
-
-				ShowNetworkChatQueryWindow(NetworkClientPreferTeamChat(cio) ? DESTTYPE_TEAM : DESTTYPE_BROADCAST, cio->client_playas);
-			}
-			break;
-
-		case GHK_CHAT_ALL: // send text message to all clients
-			if (_networking) ShowNetworkChatQueryWindow(DESTTYPE_BROADCAST, 0);
-			break;
-
-		case GHK_CHAT_COMPANY: // send text to all team mates
-			if (_networking) {
-				const NetworkClientInfo *cio = NetworkFindClientInfoFromClientID(_network_own_client_id);
-				if (cio == NULL) break;
-
-				ShowNetworkChatQueryWindow(DESTTYPE_TEAM, cio->client_playas);
-			}
-			break;
-
-		case GHK_CHAT_SERVER: // send text to the server
-			if (_networking && !_network_server) {
-				ShowNetworkChatQueryWindow(DESTTYPE_CLIENT, CLIENT_ID_SERVER);
-			}
-			break;
-#endif
-
-		default: return ES_NOT_HANDLED;
 	}
-	return ES_HANDLED;
-}
 
-void MainWindow::OnScroll(Point delta)
-{
-	this->viewport->scrollpos_x += ScaleByZoom(delta.x, this->viewport->zoom);
-	this->viewport->scrollpos_y += ScaleByZoom(delta.y, this->viewport->zoom);
-	this->viewport->dest_scrollpos_x = this->viewport->scrollpos_x;
-	this->viewport->dest_scrollpos_y = this->viewport->scrollpos_y;
-	this->viewport->overlay->RebuildCache();
-}
-
-void MainWindow::OnMouseWheel(int wheel)
-{
-	if (_settings_client.gui.scrollwheel_scrolling == 0) {
-		ZoomInOrOutToCursorWindow(wheel < 0, this);
-		this->viewport->overlay->RebuildCache();
+	virtual void OnResize()
+	{
+		if (this->viewport != NULL) {
+			NWidgetViewport *nvp = this->GetWidget<NWidgetViewport>(MW_VIEWPORT);
+			nvp->UpdateViewportCoordinates(this);
+			this->viewport->overlay->RebuildCache();
+		}
 	}
-}
 
-void MainWindow::OnResize()
-{
-	if (this->viewport != NULL) {
-		NWidgetViewport *nvp = this->GetWidget<NWidgetViewport>(MW_VIEWPORT);
-		nvp->UpdateViewportCoordinates(this);
-		this->viewport->overlay->RebuildCache();
+	virtual void OnInvalidateData(int data)
+	{
+		/* Forward the message to the appropiate toolbar (ingame or scenario editor) */
+		InvalidateWindowData(WC_MAIN_TOOLBAR, 0, data);
 	}
-}
 
-void MainWindow::OnInvalidateData(int data)
-{
-	/* Forward the message to the appropiate toolbar (ingame or scenario editor) */
-	InvalidateWindowData(WC_MAIN_TOOLBAR, 0, data);
-}
+	static Hotkey<MainWindow> global_hotkeys[];
+};
 
 const uint16 _ghk_quit_keys[] = {'Q' | WKC_CTRL, 'Q' | WKC_META, 0};
 const uint16 _ghk_abandon_keys[] = {'W' | WKC_CTRL, 'W' | WKC_META, 0};
