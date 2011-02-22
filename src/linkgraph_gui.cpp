@@ -10,25 +10,32 @@
 /** @file linkgraph_gui.cpp Implementation of linkgraph overlay GUI. */
 
 #include "stdafx.h"
-#include "widget_type.h"
 #include "window_gui.h"
 #include "company_base.h"
 #include "date_func.h"
+#include "viewport_func.h"
 #include "linkgraph_gui.h"
 #include "smallmap_gui.h"
 
-template<class Twindow, uint Twidget_id>
-void LinkGraphOverlay<Twindow, Twidget_id>::GetWidgetDpi(DrawPixelInfo *dpi) const
+/**
+ * Colours for the various "load" states of links. Ordered from "empty" to
+ * "overcrowded".
+ */
+const uint8 LinkGraphOverlay::LINK_COLOURS[] = {
+	0x0f, 0xd1, 0xd0, 0x57,
+	0x55, 0x53, 0xbf, 0xbd,
+	0xba, 0xb9, 0xb7, 0xb5
+};
+
+void LinkGraphOverlay::GetWidgetDpi(DrawPixelInfo *dpi) const
 {
-	const NWidgetBase *wi = static_cast<const Window *>(this->window)->GetWidget<NWidgetBase>(Twidget_id);
+	const NWidgetBase *wi = this->window->GetWidget<NWidgetBase>(this->widget_id);
 	dpi->left = dpi->top = 0;
 	dpi->width = wi->current_x;
 	dpi->height = wi->current_y;
 }
 
-
-template<class Twindow, uint Twidget_id>
-void LinkGraphOverlay<Twindow, Twidget_id>::RebuildCache()
+void LinkGraphOverlay::RebuildCache()
 {
 	this->cached_links.clear();
 	this->cached_stations.clear();
@@ -42,7 +49,7 @@ void LinkGraphOverlay<Twindow, Twidget_id>::RebuildCache()
 		if (sta->owner != INVALID_COMPANY && !HasBit(this->company_mask, sta->owner)) continue;
 		if (sta->rect.IsEmpty()) continue;
 
-		Point pta = this->window->GetStationMiddle(sta);
+		Point pta = this->GetStationMiddle(sta);
 
 		StationID from = sta->index;
 		StationLinkMap &seen_links = this->cached_links[from];
@@ -63,7 +70,7 @@ void LinkGraphOverlay<Twindow, Twidget_id>::RebuildCache()
 				if (stb->owner != INVALID_COMPANY && !HasBit(this->company_mask, stb->owner)) continue;
 				if (stb->rect.IsEmpty()) continue;
 
-				if (!this->IsLinkVisible(pta, this->window->GetStationMiddle(stb), &dpi)) continue;
+				if (!this->IsLinkVisible(pta, this->GetStationMiddle(stb), &dpi)) continue;
 
 				this->AddLinks(sta, stb);
 				this->AddLinks(stb, sta);
@@ -76,16 +83,14 @@ void LinkGraphOverlay<Twindow, Twidget_id>::RebuildCache()
 	}
 }
 
-template<class Twindow, uint Twidget_id>
-FORCEINLINE bool LinkGraphOverlay<Twindow, Twidget_id>::IsPointVisible(Point pt, const DrawPixelInfo *dpi, int padding) const
+FORCEINLINE bool LinkGraphOverlay::IsPointVisible(Point pt, const DrawPixelInfo *dpi, int padding) const
 {
 	return pt.x > dpi->left - padding && pt.y > dpi->top - padding &&
 			pt.x < dpi->left + dpi->width + padding &&
 			pt.y < dpi->top + dpi->height + padding;
 }
 
-template<class Twindow, uint Twidget_id>
-FORCEINLINE bool LinkGraphOverlay<Twindow, Twidget_id>::IsLinkVisible(Point pta, Point ptb, const DrawPixelInfo *dpi, int padding) const
+FORCEINLINE bool LinkGraphOverlay::IsLinkVisible(Point pta, Point ptb, const DrawPixelInfo *dpi, int padding) const
 {
 	return !((pta.x < dpi->left - padding && ptb.x < dpi->left - padding) ||
 			(pta.y < dpi->top - padding && ptb.y < dpi->top - padding) ||
@@ -95,8 +100,7 @@ FORCEINLINE bool LinkGraphOverlay<Twindow, Twidget_id>::IsLinkVisible(Point pta,
 					ptb.y > dpi->top + dpi->height + padding));
 }
 
-template<class Twindow, uint Twidget_id>
-void LinkGraphOverlay<Twindow, Twidget_id>::AddLinks(const Station *from, const Station *to)
+void LinkGraphOverlay::AddLinks(const Station *from, const Station *to)
 {
 	CargoID c;
 	FOR_EACH_SET_CARGO_ID(c, this->cargo_mask) {
@@ -112,8 +116,8 @@ void LinkGraphOverlay<Twindow, Twidget_id>::AddLinks(const Station *from, const 
 	}
 }
 
-template<class Twindow, uint Twidget_id>
-/* static */ void LinkGraphOverlay<Twindow, Twidget_id>::AddStats(const LinkStat &orig_link, const FlowStat &orig_flow, LinkProperties &cargo)
+
+/* static */ void LinkGraphOverlay::AddStats(const LinkStat &orig_link, const FlowStat &orig_flow, LinkProperties &cargo)
 {
 	uint new_cap = orig_link.Capacity();
 	uint new_usg = orig_link.Usage();
@@ -128,11 +132,11 @@ template<class Twindow, uint Twidget_id>
 	}
 }
 
-template<class Twindow, uint Twidget_id>
-void LinkGraphOverlay<Twindow, Twidget_id>::Draw(const DrawPixelInfo *dpi) const
+
+void LinkGraphOverlay::Draw(const DrawPixelInfo *dpi) const
 {
+	DrawPixelInfo new_dpi;
 	if (dpi == NULL) {
-		DrawPixelInfo new_dpi;
 		this->GetWidgetDpi(&new_dpi);
 		dpi = &new_dpi;
 	}
@@ -140,34 +144,31 @@ void LinkGraphOverlay<Twindow, Twidget_id>::Draw(const DrawPixelInfo *dpi) const
 	this->DrawStationDots(dpi);
 }
 
-
-template<class Twindow, uint Twidget_id>
-void LinkGraphOverlay<Twindow, Twidget_id>::DrawLinks(const DrawPixelInfo *dpi) const
+void LinkGraphOverlay::DrawLinks(const DrawPixelInfo *dpi) const
 {
 	for (LinkMap::const_iterator i(this->cached_links.begin()); i != this->cached_links.end(); ++i) {
 		if (!Station::IsValidID(i->first)) continue;
-		Point pta = this->window->GetStationMiddle(Station::Get(i->first));
+		Point pta = this->GetStationMiddle(Station::Get(i->first));
 		for (StationLinkMap::const_iterator j(i->second.begin()); j != i->second.end(); ++j) {
 			if (!Station::IsValidID(j->first)) continue;
-			Point ptb = this->window->GetStationMiddle(Station::Get(j->first));
+			Point ptb = this->GetStationMiddle(Station::Get(j->first));
 			if (!this->IsLinkVisible(pta, ptb, dpi)) continue;
 			if (pta.x > ptb.x || (pta.x == ptb.x && pta.y > ptb.y)) {
 				GfxDrawLine(pta.x, pta.y, ptb.x, ptb.y, _colour_gradient[COLOUR_GREY][1]);
 			}
-			Self::DrawContent(pta, ptb, j->second);
+			LinkGraphOverlay::DrawContent(pta, ptb, j->second);
 		}
 	}
 }
 
-template<class Twindow, uint Twidget_id>
-/* static */ void LinkGraphOverlay<Twindow, Twidget_id>::DrawContent(Point pta, Point ptb, const LinkProperties &cargo)
+/* static */ void LinkGraphOverlay::DrawContent(Point pta, Point ptb, const LinkProperties &cargo)
 {
 	if (cargo.capacity <= 0) return;
 	int direction_y = (pta.x < ptb.x ? 1 : -1);
 	int direction_x = (pta.y > ptb.y ? 1 : -1);;
 
 	uint usage_or_plan = min(cargo.capacity * 2, max(cargo.usage, cargo.planned));
-	int colour = Self::LINK_COLOURS[usage_or_plan * lengthof(Self::LINK_COLOURS) / (cargo.capacity * 2 + 1)];
+	int colour = LinkGraphOverlay::LINK_COLOURS[usage_or_plan * lengthof(LinkGraphOverlay::LINK_COLOURS) / (cargo.capacity * 2 + 1)];
 	GfxDrawLine(pta.x + direction_x, pta.y, ptb.x + direction_x, ptb.y, colour);
 	GfxDrawLine(pta.x, pta.y + direction_y, ptb.x, ptb.y + direction_y, colour);
 }
@@ -176,13 +177,12 @@ template<class Twindow, uint Twidget_id>
  * Draw dots for stations into the smallmap. The dots' sizes are determined by the amount of
  * cargo produced there, their colours by the type of cargo produced.
  */
-template<class Twindow, uint Twidget_id>
-void LinkGraphOverlay<Twindow, Twidget_id>::DrawStationDots(const DrawPixelInfo *dpi) const
+void LinkGraphOverlay::DrawStationDots(const DrawPixelInfo *dpi) const
 {
 	for (StationSupplyList::const_iterator i(this->cached_stations.begin()); i != this->cached_stations.end(); ++i) {
 		const Station *st = Station::GetIfValid(i->first);
 		if (st == NULL) continue;
-		Point pt = this->window->GetStationMiddle(st);
+		Point pt = this->GetStationMiddle(st);
 		if (!this->IsPointVisible(pt, dpi, 10)) continue;
 
 		uint r = 1;
@@ -190,7 +190,9 @@ void LinkGraphOverlay<Twindow, Twidget_id>::DrawStationDots(const DrawPixelInfo 
 		if (i->second >= 90) r++;
 		if (i->second >= 160) r++;
 
-		Self::DrawVertex(pt.x, pt.y, r, _colour_gradient[Company::Get(st->owner)->colour][5], _colour_gradient[COLOUR_GREY][1]);
+		LinkGraphOverlay::DrawVertex(pt.x, pt.y, r,
+				_colour_gradient[Company::Get(st->owner)->colour][5],
+				_colour_gradient[COLOUR_GREY][1]);
 	}
 }
 
@@ -202,8 +204,7 @@ void LinkGraphOverlay<Twindow, Twidget_id>::DrawStationDots(const DrawPixelInfo 
  * @param colour the colour with which the vertex will be filled
  * @param border_colour the colour for the border of the vertex
  */
-template<class Twindow, uint Twidget_id>
-/* static */ void LinkGraphOverlay<Twindow, Twidget_id>::DrawVertex(int x, int y, int size, int colour, int border_colour)
+/* static */ void LinkGraphOverlay::DrawVertex(int x, int y, int size, int colour, int border_colour)
 {
 	size--;
 	int w1 = size / 2;
@@ -219,13 +220,14 @@ template<class Twindow, uint Twidget_id>
 	GfxDrawLine(x + w2, y - w1, x + w2, y + w2, border_colour);
 }
 
-template class LinkGraphOverlay<SmallMapWindow, SM_WIDGET_MAP>;
-/**
- * Colours for the various "load" states of links. Ordered from "empty" to
- * "overcrowded".
- */
-template<> const uint8 LinkGraphOverlay<SmallMapWindow, SM_WIDGET_MAP>::LINK_COLOURS[] = {
-	0x0f, 0xd1, 0xd0, 0x57,
-	0x55, 0x53, 0xbf, 0xbd,
-	0xba, 0xb9, 0xb7, 0xb5
-};
+Point LinkGraphOverlay::GetStationMiddle(const Station *st) const {
+	//if (this->window->viewport != NULL) {
+	//	return GetViewportStationMiddle(this->window->viewport, st);
+	//} else {
+		/* assume this is a smallmap */
+		//return GetSmallmapStationMiddle(this->window, st);
+		Point dummy;
+		dummy.x = dummy.y = 0;
+		return dummy;
+	//}
+}
