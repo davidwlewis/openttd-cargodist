@@ -34,8 +34,6 @@ void LinkGraphOverlay::GetWidgetDpi(DrawPixelInfo *dpi) const
 	dpi->height = wi->current_y;
 }
 
-
-
 void LinkGraphOverlay::RebuildCache()
 {
 	this->cached_links.clear();
@@ -84,14 +82,12 @@ void LinkGraphOverlay::RebuildCache()
 	}
 }
 
-
 FORCEINLINE bool LinkGraphOverlay::IsPointVisible(Point pt, const DrawPixelInfo *dpi, int padding) const
 {
 	return pt.x > dpi->left - padding && pt.y > dpi->top - padding &&
 			pt.x < dpi->left + dpi->width + padding &&
 			pt.y < dpi->top + dpi->height + padding;
 }
-
 
 FORCEINLINE bool LinkGraphOverlay::IsLinkVisible(Point pta, Point ptb, const DrawPixelInfo *dpi, int padding) const
 {
@@ -102,7 +98,6 @@ FORCEINLINE bool LinkGraphOverlay::IsLinkVisible(Point pta, Point ptb, const Dra
 			(pta.y > dpi->top + dpi->height + padding &&
 					ptb.y > dpi->top + dpi->height + padding));
 }
-
 
 void LinkGraphOverlay::AddLinks(const Station *from, const Station *to)
 {
@@ -148,8 +143,6 @@ void LinkGraphOverlay::Draw(const DrawPixelInfo *dpi) const
 	this->DrawStationDots(dpi);
 }
 
-
-
 void LinkGraphOverlay::DrawLinks(const DrawPixelInfo *dpi) const
 {
 	for (LinkMap::const_iterator i(this->cached_links.begin()); i != this->cached_links.end(); ++i) {
@@ -166,7 +159,6 @@ void LinkGraphOverlay::DrawLinks(const DrawPixelInfo *dpi) const
 		}
 	}
 }
-
 
 /* static */ void LinkGraphOverlay::DrawContent(Point pta, Point ptb, const LinkProperties &cargo)
 {
@@ -228,7 +220,7 @@ void LinkGraphOverlay::DrawStationDots(const DrawPixelInfo *dpi) const
 }
 
 Point LinkGraphOverlay::GetStationMiddle(const Station *st) const {
-	if (this->window->viewport) {
+	if (this->window->viewport != NULL) {
 		return GetViewportStationMiddle(this->window->viewport, st);
 	} else {
 		/* assume this is a smallmap */
