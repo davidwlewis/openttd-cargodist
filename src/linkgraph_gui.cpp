@@ -221,13 +221,13 @@ void LinkGraphOverlay::DrawStationDots(const DrawPixelInfo *dpi) const
 }
 
 Point LinkGraphOverlay::GetStationMiddle(const Station *st) const {
-	//if (this->window->viewport != NULL) {
-	//	return GetViewportStationMiddle(this->window->viewport, st);
-	//} else {
-		/* assume this is a smallmap */
-		//return GetSmallmapStationMiddle(this->window, st);
+	if (this->window->viewport != NULL) {
+		//	return GetViewportStationMiddle(this->window->viewport, st);
 		Point dummy;
 		dummy.x = dummy.y = 0;
 		return dummy;
-	//}
+	} else {
+		/* assume this is a smallmap */
+		return static_cast<const SmallMapWindow *>(this->window)->GetStationMiddle(st);
+	}
 }

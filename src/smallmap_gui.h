@@ -64,7 +64,6 @@ enum SmallMapWindowWidgets {
 
 /** Class managing the smallmap window. */
 class SmallMapWindow : public Window {
-	typedef LinkGraphOverlay<SmallMapWindow, SM_WIDGET_MAP> SmallMapLinkGraphOverlay;
 protected:
 	/** Types of legends in the #SM_WIDGET_LEGEND widget. */
 	enum SmallMapType {
@@ -100,7 +99,7 @@ protected:
 	int zoom;        ///< Zoom level. Bigger number means more zoom-out (further away).
 
 	uint8 refresh;   ///< Refresh counter, zeroed every FORCE_REFRESH_PERIOD ticks.
-	LinkGraphOverlay<SmallMapWindow, SM_WIDGET_MAP> overlay;
+	LinkGraphOverlay overlay;
 
 	/**
 	 * Draws vertical part of map indicator
