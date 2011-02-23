@@ -49,8 +49,8 @@ public:
 	 * @param w Window to be drawn into.
 	 */
 	LinkGraphOverlay(const Window *w, uint wid, uint32 cargo_mask = 0xFFFF,
-			uint32 company_mask = 1 << _local_company) :
-			window(w), widget_id(wid), cargo_mask(cargo_mask), company_mask(company_mask)
+			uint32 company_mask = 1 << _local_company, uint scale = 1) :
+			window(w), widget_id(wid), cargo_mask(cargo_mask), company_mask(company_mask), scale(scale)
 	{}
 
 	void RebuildCache();
@@ -67,6 +67,7 @@ protected:
 	uint32 company_mask;               ///< Bitmask of companies to be displayed.
 	LinkMap cached_links;              ///< Cache for links to reduce recalculation.
 	StationSupplyList cached_stations; ///< Cache for stations to be drawn.
+	uint scale;
 
 	Point GetStationMiddle(const Station *st) const;
 
@@ -74,12 +75,12 @@ protected:
 	void AddLinks(const Station *sta, const Station *stb);
 	void DrawLinks(const DrawPixelInfo *dpi) const;
 	void DrawStationDots(const DrawPixelInfo *dpi) const;
+	void DrawContent(Point pta, Point ptb, const LinkProperties &cargo) const;
 	bool IsLinkVisible(Point pta, Point ptb, const DrawPixelInfo *dpi, int padding = 0) const;
 	bool IsPointVisible(Point pt, const DrawPixelInfo *dpi, int padding = 0) const;
 	void GetWidgetDpi(DrawPixelInfo *dpi) const;
 
 	static void AddStats(const LinkStat &orig_link, const FlowStat &orig_flow, LinkProperties &cargo);
-	static void DrawContent(Point pta, Point ptb, const LinkProperties &cargo);
 	static void DrawVertex(int x, int y, int size, int colour, int border_colour);
 };
 
