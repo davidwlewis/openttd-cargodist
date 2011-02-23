@@ -1,5 +1,5 @@
 diff --git a/src/linkgraph_gui.cpp b/src/linkgraph_gui.cpp
-index c0942f6..5283cb5 100644
+index c0942f6..9f2d41f 100644
 --- a/src/linkgraph_gui.cpp
 +++ b/src/linkgraph_gui.cpp
 @@ -217,15 +217,15 @@ void LinkGraphOverlay::DrawStationDots(const DrawPixelInfo *dpi) const
@@ -22,8 +22,17 @@ index c0942f6..5283cb5 100644
  }
  
  void LinkGraphOverlay::SetCargoMask(uint32 cargo_mask)
+@@ -353,7 +353,7 @@ LinkGraphLegendWindow::LinkGraphLegendWindow(const WindowDesc *desc, int window_
+ {
+ 	this->InitNested(desc, window_number);
+ 	this->InvalidateData(0);
+-	//this->SetOverlay(FindWindowById(WC_MAIN_WINDOW, 0)->viewport->overlay);
++	this->SetOverlay(FindWindowById(WC_MAIN_WINDOW, 0)->viewport->overlay);
+ }
+ 
+ void LinkGraphLegendWindow::SetOverlay(LinkGraphOverlay *overlay) {
 diff --git a/src/main_gui.cpp b/src/main_gui.cpp
-index 3f43dcd..a15908f 100644
+index 3f43dcd..0eb5758 100644
 --- a/src/main_gui.cpp
 +++ b/src/main_gui.cpp
 @@ -29,6 +29,7 @@
@@ -51,7 +60,7 @@ index 3f43dcd..a15908f 100644
  		NWidgetViewport *nvp = this->GetWidget<NWidgetViewport>(MW_VIEWPORT);
  		nvp->InitializeViewport(this, TileXY(32, 32), ZOOM_LVL_VIEWPORT);
 +
-+		this->viewport->overlay = new LinkGraphOverlay(this, MW_VIEWPORT);
++		this->viewport->overlay = new LinkGraphOverlay(this, MW_VIEWPORT, 0, 0);
 +		this->refresh = LINKGRAPH_DELAY;
 +	}
 +
@@ -65,7 +74,7 @@ index 3f43dcd..a15908f 100644
  	}
  
  	virtual void OnPaint()
-@@ -415,12 +433,14 @@ struct MainWindow : Window
+@@ -415,6 +433,7 @@ struct MainWindow : Window
  		this->viewport->scrollpos_y += ScaleByZoom(delta.y, this->viewport->zoom);
  		this->viewport->dest_scrollpos_x = this->viewport->scrollpos_x;
  		this->viewport->dest_scrollpos_y = this->viewport->scrollpos_y;
@@ -73,14 +82,7 @@ index 3f43dcd..a15908f 100644
  	}
  
  	virtual void OnMouseWheel(int wheel)
- 	{
- 		if (_settings_client.gui.scrollwheel_scrolling == 0) {
- 			ZoomInOrOutToCursorWindow(wheel < 0, this);
-+			this->refresh = LINKGRAPH_DELAY;
- 		}
- 	}
- 
-@@ -429,6 +449,7 @@ struct MainWindow : Window
+@@ -429,6 +448,7 @@ struct MainWindow : Window
  		if (this->viewport != NULL) {
  			NWidgetViewport *nvp = this->GetWidget<NWidgetViewport>(MW_VIEWPORT);
  			nvp->UpdateViewportCoordinates(this);
@@ -89,7 +91,7 @@ index 3f43dcd..a15908f 100644
  	}
  
 diff --git a/src/viewport.cpp b/src/viewport.cpp
-index 352fe8e..687d92d 100644
+index 352fe8e..cf475aa 100644
 --- a/src/viewport.cpp
 +++ b/src/viewport.cpp
 @@ -45,6 +45,7 @@
@@ -159,7 +161,54 @@ index 352fe8e..687d92d 100644
  
  	_cur_dpi = old_dpi;
  
-@@ -2890,3 +2896,15 @@ void ResetObjectToPlace()
+@@ -1566,6 +1572,7 @@ void UpdateViewportPosition(Window *w)
+ 		int delta_x = w->viewport->dest_scrollpos_x - w->viewport->scrollpos_x;
+ 		int delta_y = w->viewport->dest_scrollpos_y - w->viewport->scrollpos_y;
+ 
++		bool update_overlay = false;
+ 		if (delta_x != 0 || delta_y != 0) {
+ 			if (_settings_client.gui.smooth_scroll) {
+ 				int max_scroll = ScaleByMapSize1D(512);
+@@ -1576,11 +1583,14 @@ void UpdateViewportPosition(Window *w)
+ 				w->viewport->scrollpos_x = w->viewport->dest_scrollpos_x;
+ 				w->viewport->scrollpos_y = w->viewport->dest_scrollpos_y;
+ 			}
++			update_overlay = (w->viewport->scrollpos_x == w->viewport->dest_scrollpos_x &&
++								w->viewport->scrollpos_y == w->viewport->dest_scrollpos_y);
+ 		}
+ 
+ 		ClampViewportToMap(vp, w->viewport->scrollpos_x, w->viewport->scrollpos_y);
+ 
+ 		SetViewportPosition(w, w->viewport->scrollpos_x, w->viewport->scrollpos_y);
++		if (update_overlay) RebuildViewportOverlay(w);
+ 	}
+ }
+ 
+@@ -1914,6 +1924,15 @@ bool HandleViewportClicked(const ViewPort *vp, int x, int y)
+ 	return result;
+ }
+ 
++void RebuildViewportOverlay(Window *w)
++{
++	if (w->viewport->overlay != NULL &&
++			w->viewport->overlay->GetCompanyMask() != 0 &&
++			w->viewport->overlay->GetCargoMask() != 0) {
++		w->viewport->overlay->RebuildCache();
++		w->SetDirty();
++	}
++}
+ 
+ /**
+  * Scrolls the viewport in a window to a given location.
+@@ -1937,6 +1956,7 @@ bool ScrollWindowTo(int x, int y, int z, Window *w, bool instant)
+ 	if (instant) {
+ 		w->viewport->scrollpos_x = pt.x;
+ 		w->viewport->scrollpos_y = pt.y;
++		RebuildViewportOverlay(w);
+ 	}
+ 
+ 	w->viewport->dest_scrollpos_x = pt.x;
+@@ -2890,3 +2910,15 @@ void ResetObjectToPlace()
  {
  	SetObjectToPlace(SPR_CURSOR_MOUSE, PAL_NONE, HT_NONE, WC_MAIN_WINDOW, 0);
  }
@@ -176,7 +225,7 @@ index 352fe8e..687d92d 100644
 +	return p;
 +}
 diff --git a/src/viewport_func.h b/src/viewport_func.h
-index 7faa173..78a4fd4 100644
+index 7faa173..213138d 100644
 --- a/src/viewport_func.h
 +++ b/src/viewport_func.h
 @@ -16,6 +16,7 @@
@@ -187,7 +236,16 @@ index 7faa173..78a4fd4 100644
  
  static const int TILE_HEIGHT_STEP = 50; ///< One Z unit tile height difference is displayed as 50m.
  
-@@ -76,4 +77,6 @@ extern Point _tile_fract_coords;
+@@ -67,6 +68,8 @@ void ViewportDoDraw(const ViewPort *vp, int left, int top, int right, int bottom
+ bool ScrollWindowToTile(TileIndex tile, Window *w, bool instant = false);
+ bool ScrollWindowTo(int x, int y, int z, Window *w, bool instant = false);
+ 
++void RebuildViewportOverlay(Window *w);
++
+ bool ScrollMainWindowToTile(TileIndex tile, bool instant = false);
+ bool ScrollMainWindowTo(int x, int y, int z = -1, bool instant = false);
+ 
+@@ -76,4 +79,6 @@ extern Point _tile_fract_coords;
  
  void MarkTileDirtyByTile(TileIndex tile);
  
