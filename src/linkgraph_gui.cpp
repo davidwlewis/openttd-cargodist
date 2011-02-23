@@ -353,7 +353,7 @@ LinkGraphLegendWindow::LinkGraphLegendWindow(const WindowDesc *desc, int window_
 {
 	this->InitNested(desc, window_number);
 	this->InvalidateData(0);
-	//this->SetOverlay(FindWindowById(WC_MAIN_WINDOW, 0)->viewport->overlay);
+	this->SetOverlay(FindWindowById(WC_MAIN_WINDOW, 0)->viewport->overlay);
 }
 
 void LinkGraphLegendWindow::SetOverlay(LinkGraphOverlay *overlay) {
