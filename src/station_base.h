@@ -312,7 +312,8 @@ struct GoodsEntry {
 		last_age(255),
 		supply(0),
 		supply_new(0),
-		last_component(INVALID_LINKGRAPH_COMPONENT)
+		last_component(INVALID_LINKGRAPH_COMPONENT),
+		max_waiting_cargo(0)
 	{}
 
 	byte acceptance_pickup;
@@ -327,6 +328,7 @@ struct GoodsEntry {
 	FlowStatMap flows;                   ///< Planned flows through this station.
 	LinkStatMap link_stats;              ///< Capacities and usage statistics for outgoing links.
 	LinkGraphComponentID last_component; ///< Component this station was last part of in this cargo's link graph.
+	uint max_waiting_cargo;              ///< Max cargo from this station waiting at any station.
 	FlowStat GetSumFlowVia(StationID via) const;
 
 	void UpdateFlowStats(StationID source, uint count, StationID next);
