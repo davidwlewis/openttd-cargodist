@@ -135,11 +135,6 @@ void LinkGraphOverlay::AddLinks(const Station *from, const Station *to)
 
 void LinkGraphOverlay::Draw(const DrawPixelInfo *dpi) const
 {
-	DrawPixelInfo new_dpi;
-	if (dpi == NULL) {
-		this->GetWidgetDpi(&new_dpi);
-		dpi = &new_dpi;
-	}
 	this->DrawLinks(dpi);
 	this->DrawStationDots(dpi);
 }
