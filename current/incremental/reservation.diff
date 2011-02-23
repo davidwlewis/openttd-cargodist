@@ -581,10 +581,10 @@ index 7c85965..ecb9162 100644
 +
  #endif /* SAVELOAD_H */
 diff --git a/src/saveload/vehicle_sl.cpp b/src/saveload/vehicle_sl.cpp
-index 2cfc704..7dd5cfe 100644
+index f3af881..c365dda 100644
 --- a/src/saveload/vehicle_sl.cpp
 +++ b/src/saveload/vehicle_sl.cpp
-@@ -497,6 +497,7 @@ const SaveLoad *GetVehicleDescription(VehicleType vt)
+@@ -499,6 +499,7 @@ const SaveLoad *GetVehicleDescription(VehicleType vt)
  		     SLE_VAR(Vehicle, cargo_cap,             SLE_UINT16),
  		SLEG_CONDVAR(         _cargo_count,          SLE_UINT16,                   0,  67),
  		 SLE_CONDLST(Vehicle, cargo.packets,         REF_CARGO_PACKET,            68, SL_MAX_VERSION),
