@@ -78,10 +78,10 @@ index 2429704..1d4c769 100644
  STR_MESSAGE_ESTIMATED_INCOME                                    :{WHITE}Estimated Income: {CURRENCY}
  
 diff --git a/src/misc_gui.cpp b/src/misc_gui.cpp
-index 33c22ed..1c814ad 100644
+index c86f6c6..58a9411 100644
 --- a/src/misc_gui.cpp
 +++ b/src/misc_gui.cpp
-@@ -780,17 +780,28 @@ void ShowCostOrIncomeAnimation(int x, int y, int z, Money cost)
+@@ -792,17 +792,28 @@ void ShowCostOrIncomeAnimation(int x, int y, int z, Money cost)
  
  /**
   * Display animated feeder income.
