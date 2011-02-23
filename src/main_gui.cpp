@@ -242,6 +242,11 @@ enum {
 
 struct MainWindow : Window
 {
+	uint refresh;
+
+	static const uint LINKGRAPH_REFRESH_PERIOD = 0xff;
+	static const uint LINKGRAPH_DELAY = 0xf;
+
 	MainWindow() : Window()
 	{
 		this->InitNested(&_main_window_desc, 0);
@@ -251,7 +256,16 @@ struct MainWindow : Window
 		nvp->InitializeViewport(this, TileXY(32, 32), ZOOM_LVL_VIEWPORT);
 
 		this->viewport->overlay = new LinkGraphOverlay(this, MW_VIEWPORT);
-		this->viewport->overlay->RebuildCache();
+		this->refresh = LINKGRAPH_DELAY;
+	}
+
+	virtual void OnTick()
+	{
+		if (--refresh == 0) {
+			this->viewport->overlay->RebuildCache();
+			this->GetWidget<NWidgetBase>(MW_VIEWPORT)->SetDirty(this);
+			this->refresh = LINKGRAPH_REFRESH_PERIOD;
+		}
 	}
 
 	virtual void OnPaint()
@@ -419,14 +433,14 @@ struct MainWindow : Window
 		this->viewport->scrollpos_y += ScaleByZoom(delta.y, this->viewport->zoom);
 		this->viewport->dest_scrollpos_x = this->viewport->scrollpos_x;
 		this->viewport->dest_scrollpos_y = this->viewport->scrollpos_y;
-		this->viewport->overlay->RebuildCache();
+		this->refresh = LINKGRAPH_DELAY;
 	}
 
 	virtual void OnMouseWheel(int wheel)
 	{
 		if (_settings_client.gui.scrollwheel_scrolling == 0) {
 			ZoomInOrOutToCursorWindow(wheel < 0, this);
-			this->viewport->overlay->RebuildCache();
+			this->refresh = LINKGRAPH_DELAY;
 		}
 	}
 
@@ -435,7 +449,7 @@ struct MainWindow : Window
 		if (this->viewport != NULL) {
 			NWidgetViewport *nvp = this->GetWidget<NWidgetViewport>(MW_VIEWPORT);
 			nvp->UpdateViewportCoordinates(this);
-			this->viewport->overlay->RebuildCache();
+			this->refresh = LINKGRAPH_DELAY;
 		}
 	}
 
