@@ -364,8 +364,8 @@ void LinkGraphLegendWindow::DrawWidget(const Rect &r, int widget) const
 	if (IsInsideMM(widget, LGL_CARGO_FIRST, LGL_CARGO_LAST + 1)) {
 		if (this->IsWidgetDisabled(widget)) return;
 		CargoSpec *cargo = CargoSpec::Get(widget - LGL_CARGO_FIRST);
-		GfxFillRect(r.left + 3, r.top + 3, r.right - 3, r.bottom - 3, cargo->legend_colour);
-		DrawString(wid->pos_x, wid->current_x + wid->pos_x, wid->pos_y + 3, cargo->abbrev, TC_BLACK, SA_HOR_CENTER);
+		GfxFillRect(r.left + 2, r.top + 2, r.right - 2, r.bottom - 2, cargo->legend_colour);
+		DrawString(wid->pos_x, wid->current_x + wid->pos_x, wid->pos_y + 2, cargo->abbrev, TC_BLACK, SA_HOR_CENTER);
 	}
 }
 
