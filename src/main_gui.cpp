@@ -255,7 +255,7 @@ struct MainWindow : Window
 		NWidgetViewport *nvp = this->GetWidget<NWidgetViewport>(MW_VIEWPORT);
 		nvp->InitializeViewport(this, TileXY(32, 32), ZOOM_LVL_VIEWPORT);
 
-		this->viewport->overlay = new LinkGraphOverlay(this, MW_VIEWPORT);
+		this->viewport->overlay = new LinkGraphOverlay(this, MW_VIEWPORT, 0, 0);
 		this->refresh = LINKGRAPH_DELAY;
 	}
 
@@ -440,7 +440,6 @@ struct MainWindow : Window
 	{
 		if (_settings_client.gui.scrollwheel_scrolling == 0) {
 			ZoomInOrOutToCursorWindow(wheel < 0, this);
-			this->refresh = LINKGRAPH_DELAY;
 		}
 	}
 
