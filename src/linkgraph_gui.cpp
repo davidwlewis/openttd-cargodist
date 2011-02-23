@@ -12,6 +12,7 @@
 #include "stdafx.h"
 #include "window_gui.h"
 #include "company_base.h"
+#include "company_gui.h"
 #include "date_func.h"
 #include "linkgraph_gui.h"
 #include "viewport_func.h"
@@ -224,4 +225,161 @@ Point LinkGraphOverlay::GetStationMiddle(const Station *st) const {
 		dummy.x = dummy.y = 0;
 		return dummy;
 	//}
+}
+
+enum LinkGraphLegendWindowWidgets {
+	LGL_CAPTION,           ///< Caption widget.
+	LGL_SATURATION,        ///< Saturation legend.
+	LGL_SATURATION_FIRST,
+	LGL_SATURATION_LAST = LGL_SATURATION_FIRST + lengthof(LinkGraphOverlay::LINK_COLOURS) - 1,
+	LGL_COMPANIES,         ///< Company selection widget.
+	LGL_COMPANY_FIRST,
+	LGL_COMPANY_LAST = LGL_COMPANY_FIRST + MAX_COMPANIES - 1,
+	LGL_COMPANIES_ALL,
+	LGL_COMPANIES_NONE,
+	LGL_CARGOES,            ///< Cargo selection widget.
+	LGL_CARGO_FIRST,
+	LGL_CARGO_LAST = LGL_CARGO_FIRST + NUM_CARGO - 1,
+	LGL_CARGOES_ALL,
+	LGL_CARGOES_NONE,s
+};
+
+/** Make a number of rows with buttons for each company for the linkgraph legend window. */
+NWidgetBase *MakeCompanyButtonRowsLinkGraphGUI(int *biggest_index)
+{
+	return MakeCompanyButtonRows(biggest_index, LGL_COMPANY_FIRST, LGL_COMPANY_LAST, 3, STR_LINKGRAPH_LEGEND_SELECT_COMPANIES);
+}
+
+NWidgetBase *MakeSaturationLegendLinkGraphGUI(int *biggest_index)
+{
+	NWidgetVertical *panel = new NWidgetVertical();
+	for (uint i = 0; i < lengthof(LinkGraphOverlay::LINK_COLOURS); ++i) {
+		NWidgetBackground * wid = new NWidgetBackground(WWT_PANEL, COLOUR_DARK_GREEN, i + LGL_SATURATION_FIRST);
+		wid->SetMinimalSize(50, FONT_HEIGHT_SMALL);
+		wid->SetFill(0, 1);
+		wid->SetResize(0, 1);
+		panel->Add(wid);
+	}
+	*biggest_index = LGL_SATURATION_LAST;
+	return panel;
+}
+
+NWidgetBase *MakeCargoesLegendLinkGraphGUI(int *biggest_index)
+{
+	static const uint ENTRIES_PER_ROW = CeilDiv(NUM_CARGO, 5);
+	NWidgetVertical *panel = new NWidgetVertical();
+	NWidgetHorizontal *row = NULL;
+	for (uint i = 0; i < NUM_CARGO; ++i) {
+		if (i % ENTRIES_PER_ROW == 0) {
+			if (row) panel->Add(row);
+			row = new NWidgetHorizontal();
+		}
+		NWidgetBackground * wid = new NWidgetBackground(WWT_PANEL, COLOUR_GREY, i + LGL_CARGO_FIRST);
+		wid->SetMinimalSize(25, FONT_HEIGHT_SMALL);
+		wid->SetFill(0, 1);
+		wid->SetResize(0, 1);
+		row->Add(wid);
+	}
+	panel->Add(row);
+	*biggest_index = LGL_CARGO_LAST;
+	return panel;
+}
+
+
+static const NWidgetPart _nested_linkgraph_legend_widgets[] = {
+	NWidget(NWID_HORIZONTAL),
+		NWidget(WWT_CLOSEBOX, COLOUR_DARK_GREEN),
+		NWidget(WWT_CAPTION, COLOUR_DARK_GREEN, LGL_CAPTION), SetDataTip(STR_LINKGRAPH_LEGEND_CAPTION, STR_TOOLTIP_WINDOW_TITLE_DRAG_THIS),
+		NWidget(WWT_SHADEBOX, COLOUR_DARK_GREEN),
+		NWidget(WWT_STICKYBOX, COLOUR_DARK_GREEN),
+	EndContainer(),
+	NWidget(WWT_PANEL, COLOUR_DARK_GREEN),
+		NWidget(NWID_HORIZONTAL),
+			NWidget(WWT_PANEL, COLOUR_DARK_GREEN, LGL_SATURATION),
+				SetPadding(WD_FRAMERECT_TOP, 0, WD_FRAMERECT_BOTTOM, WD_CAPTIONTEXT_LEFT),
+				SetMinimalSize(50, 100),
+				NWidgetFunction(MakeSaturationLegendLinkGraphGUI),
+			EndContainer(),
+			NWidget(WWT_PANEL, COLOUR_DARK_GREEN, LGL_COMPANIES),
+				SetPadding(WD_FRAMERECT_TOP, 0, WD_FRAMERECT_BOTTOM, WD_CAPTIONTEXT_LEFT),
+				NWidget(NWID_VERTICAL, NC_EQUALSIZE),
+					SetMinimalSize(100, 100),
+					NWidgetFunction(MakeCompanyButtonRowsLinkGraphGUI),
+					NWidget(WWT_PUSHTXTBTN, COLOUR_GREY, LGL_COMPANIES_ALL), SetDataTip(STR_LINKGRAPH_LEGEND_ALL, STR_NULL),
+					NWidget(WWT_PUSHTXTBTN, COLOUR_GREY, LGL_COMPANIES_NONE), SetDataTip(STR_LINKGRAPH_LEGEND_NONE, STR_NULL),
+				EndContainer(),
+			EndContainer(),
+			NWidget(WWT_PANEL, COLOUR_DARK_GREEN, LGL_CARGOES),
+				SetPadding(WD_FRAMERECT_TOP, WD_FRAMERECT_RIGHT, WD_FRAMERECT_BOTTOM, WD_CAPTIONTEXT_LEFT),
+				NWidget(NWID_VERTICAL, NC_EQUALSIZE),
+					SetMinimalSize(150, 100),
+					NWidgetFunction(MakeCargoesLegendLinkGraphGUI),
+					NWidget(WWT_PUSHTXTBTN, COLOUR_GREY, LGL_CARGOES_ALL), SetDataTip(STR_LINKGRAPH_LEGEND_ALL, STR_NULL),
+					NWidget(WWT_PUSHTXTBTN, COLOUR_GREY, LGL_CARGOES_NONE), SetDataTip(STR_LINKGRAPH_LEGEND_NONE, STR_NULL),
+				EndContainer(),
+			EndContainer(),
+		EndContainer(),
+	EndContainer()
+};
+
+static const WindowDesc _linkgraph_legend_desc(
+	WDP_MANUAL, 300, 314,
+	WC_LINKGRAPH_LEGEND, WC_NONE,
+	0,
+	_nested_linkgraph_legend_widgets, lengthof(_nested_linkgraph_legend_widgets)
+);
+
+void ShowLinkGraphLegend()
+{
+	AllocateWindowDescFront<LinkGraphLegendWindow>(&_linkgraph_legend_desc, 0);
+}
+
+LinkGraphLegendWindow::LinkGraphLegendWindow(const WindowDesc *desc, int window_number)
+{
+	this->InitNested(desc, window_number);
+	this->InvalidateData(0);
+}
+
+
+void LinkGraphLegendWindow::DrawWidget(const Rect &r, int widget) const
+{
+	const NWidgetBase *wid = this->GetWidget<NWidgetBase>(widget);
+	if (IsInsideMM(widget, LGL_COMPANY_FIRST, LGL_COMPANY_LAST + 1)) {
+		if (this->IsWidgetDisabled(widget)) return;
+		CompanyID cid = (CompanyID)(widget - LGL_COMPANY_FIRST);
+		Dimension sprite_size = GetSpriteSize(SPR_COMPANY_ICON);
+		DrawCompanyIcon(cid, (r.left + r.right - sprite_size.width) / 2, (r.top + r.bottom - sprite_size.height) / 2);
+		return;
+	}
+	if (IsInsideMM(widget, LGL_SATURATION_FIRST, LGL_SATURATION_LAST + 1)) {
+		GfxFillRect(r.left + 1, r.top + 1, r.right - 1, r.bottom - 1, LinkGraphOverlay::LINK_COLOURS[widget - LGL_SATURATION_FIRST]);
+		if (widget == LGL_SATURATION_FIRST) {
+			DrawString(wid->pos_x, wid->current_x + wid->pos_x, wid->pos_y, STR_LINKGRAPH_LEGEND_UNUSED, TC_FROMSTRING, SA_HOR_CENTER);
+		} else if (widget == LGL_SATURATION_LAST) {
+			DrawString(wid->pos_x, wid->current_x + wid->pos_x, wid->pos_y, STR_LINKGRAPH_LEGEND_OVERLOADED, TC_FROMSTRING, SA_HOR_CENTER);
+		} else if (widget == (LGL_SATURATION_LAST + LGL_SATURATION_FIRST) / 2) {
+			DrawString(wid->pos_x, wid->current_x + wid->pos_x, wid->pos_y, STR_LINKGRAPH_LEGEND_SATURATED, TC_FROMSTRING, SA_HOR_CENTER);
+		}
+	}
+	if (IsInsideMM(widget, LGL_CARGO_FIRST, LGL_CARGO_LAST + 1)) {
+		if (this->IsWidgetDisabled(widget)) return;
+		CargoSpec *cargo = CargoSpec::Get(widget - LGL_CARGO_FIRST);
+		GfxFillRect(r.left + 3, r.top + 3, r.right - 3, r.bottom - 3, cargo->legend_colour);
+		DrawString(wid->pos_x, wid->current_x + wid->pos_x, wid->pos_y + 3, cargo->abbrev, TC_BLACK, SA_HOR_CENTER);
+	}
+}
+
+/**
+ * Invalidate the data of this window.
+ * @param data ignored
+ */
+void LinkGraphLegendWindow::OnInvalidateData(int data)
+{
+	/* Disable the companies who are not active */
+	for (CompanyID i = COMPANY_FIRST; i < MAX_COMPANIES; i++) {
+		this->SetWidgetDisabledState(i + LGL_COMPANY_FIRST, !Company::IsValidID(i));
+	}
+	for (CargoID i = 0; i < NUM_CARGO; i++) {
+		this->SetWidgetDisabledState(i + LGL_CARGO_FIRST, !CargoSpec::Get(i)->IsValid());
+	}
 }

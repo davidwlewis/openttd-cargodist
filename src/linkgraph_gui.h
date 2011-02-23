@@ -15,6 +15,9 @@
 #include "company_func.h"
 #include "station_base.h"
 #include "widget_type.h"
+
+#include "table/strings.h"
+
 #include <map>
 #include <list>
 
@@ -76,6 +79,20 @@ protected:
 	static void AddStats(const LinkStat &orig_link, const FlowStat &orig_flow, LinkProperties &cargo);
 	static void DrawContent(Point pta, Point ptb, const LinkProperties &cargo);
 	static void DrawVertex(int x, int y, int size, int colour, int border_colour);
+};
+
+void ShowLinkGraphLegend();
+
+struct LinkGraphLegendWindow : Window {
+public:
+	LinkGraphLegendWindow(const WindowDesc *desc, int window_number);
+
+	virtual void DrawWidget(const Rect &r, int widget) const;
+	virtual void OnInvalidateData(int data);
+
+private:
+	LinkGraphOverlay *overlay;
+
 };
 
 #endif /* LINKGRAPH_GUI_H_ */
