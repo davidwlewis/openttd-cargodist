@@ -147,25 +147,30 @@ void LinkGraphOverlay::DrawLinks(const DrawPixelInfo *dpi) const
 		for (StationLinkMap::const_iterator j(i->second.begin()); j != i->second.end(); ++j) {
 			if (!Station::IsValidID(j->first)) continue;
 			Point ptb = this->GetStationMiddle(Station::Get(j->first));
-			if (!this->IsLinkVisible(pta, ptb, dpi)) continue;
-			if (pta.x > ptb.x || (pta.x == ptb.x && pta.y > ptb.y)) {
-				GfxDrawLine(pta.x, pta.y, ptb.x, ptb.y, _colour_gradient[COLOUR_GREY][1]);
-			}
-			LinkGraphOverlay::DrawContent(pta, ptb, j->second);
+			if (!this->IsLinkVisible(pta, ptb, dpi, this->scale + 2)) continue;
+			this->DrawContent(pta, ptb, j->second);
 		}
 	}
 }
 
-/* static */ void LinkGraphOverlay::DrawContent(Point pta, Point ptb, const LinkProperties &cargo)
+void LinkGraphOverlay::DrawContent(Point pta, Point ptb, const LinkProperties &cargo) const
 {
 	if (cargo.capacity <= 0) return;
 	int direction_y = (pta.x < ptb.x ? 1 : -1);
-	int direction_x = (pta.y > ptb.y ? 1 : -1);;
+	int direction_x = (pta.y > ptb.y ? 1 : -1);
+	uint thick_middle_line = this->scale > 1 ? 1 : 0;
 
 	uint usage_or_plan = min(cargo.capacity * 2, max(cargo.usage, cargo.planned));
 	int colour = LinkGraphOverlay::LINK_COLOURS[usage_or_plan * lengthof(LinkGraphOverlay::LINK_COLOURS) / (cargo.capacity * 2 + 1)];
-	GfxDrawLine(pta.x + direction_x, pta.y, ptb.x + direction_x, ptb.y, colour);
-	GfxDrawLine(pta.x, pta.y + direction_y, ptb.x, ptb.y + direction_y, colour);
+	for (uint i = 1 + thick_middle_line; i <= this->scale + thick_middle_line; ++i) {
+		GfxDrawLine(pta.x + direction_x * i, pta.y, ptb.x + direction_x * i, ptb.y, colour);
+		GfxDrawLine(pta.x, pta.y + direction_y * i, ptb.x, ptb.y + direction_y * i, colour);
+	}
+	GfxDrawLine(pta.x, pta.y, ptb.x, ptb.y, _colour_gradient[COLOUR_GREY][1]);
+	if (thick_middle_line) {
+		GfxDrawLine(pta.x + direction_x, pta.y, ptb.x + direction_x, ptb.y, _colour_gradient[COLOUR_GREY][1]);
+		GfxDrawLine(pta.x, pta.y + direction_y, ptb.x, ptb.y + direction_y, _colour_gradient[COLOUR_GREY][1]);
+	}
 }
 
 /**
@@ -178,12 +183,9 @@ void LinkGraphOverlay::DrawStationDots(const DrawPixelInfo *dpi) const
 		const Station *st = Station::GetIfValid(i->first);
 		if (st == NULL) continue;
 		Point pt = this->GetStationMiddle(st);
-		if (!this->IsPointVisible(pt, dpi, 10)) continue;
+		if (!this->IsPointVisible(pt, dpi, 4 * this->scale)) continue;
 
-		uint r = 1;
-		if (i->second >= 20) r++;
-		if (i->second >= 90) r++;
-		if (i->second >= 160) r++;
+		uint r = this->scale * 3 + this->scale * 3 * min(200, i->second) / 200;
 
 		LinkGraphOverlay::DrawVertex(pt.x, pt.y, r,
 				_colour_gradient[Company::Get(st->owner)->colour][5],
