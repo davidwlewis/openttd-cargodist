@@ -255,7 +255,7 @@ struct MainWindow : Window
 		NWidgetViewport *nvp = this->GetWidget<NWidgetViewport>(MW_VIEWPORT);
 		nvp->InitializeViewport(this, TileXY(32, 32), ZOOM_LVL_VIEWPORT);
 
-		this->viewport->overlay = new LinkGraphOverlay(this, MW_VIEWPORT, 0, 0);
+		this->viewport->overlay = new LinkGraphOverlay(this, MW_VIEWPORT, 0, 0, 3);
 		this->refresh = LINKGRAPH_DELAY;
 	}
 
