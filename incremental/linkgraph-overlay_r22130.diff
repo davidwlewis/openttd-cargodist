@@ -116,10 +116,10 @@ index f11d17e..c0d5c05 100644
  music_gui.cpp
 diff --git a/src/linkgraph_gui.cpp b/src/linkgraph_gui.cpp
 new file mode 100644
-index 0000000..48f093f
+index 0000000..83bba01
 --- /dev/null
 +++ b/src/linkgraph_gui.cpp
-@@ -0,0 +1,227 @@
+@@ -0,0 +1,241 @@
 +/* $Id$ */
 +
 +/*
@@ -347,12 +347,26 @@ index 0000000..48f093f
 +		return dummy;
 +	//}
 +}
++
++void LinkGraphOverlay::SetCargoMask(uint32 cargo_mask)
++{
++	this->cargo_mask = cargo_mask;
++	this->RebuildCache();
++	this->window->GetWidget<NWidgetBase>(this->widget_id)->SetDirty(this->window);
++}
++
++void LinkGraphOverlay::SetCompanyMask(uint32 company_mask)
++{
++	this->company_mask = company_mask;
++	this->RebuildCache();
++	this->window->GetWidget<NWidgetBase>(this->widget_id)->SetDirty(this->window);
++}
 diff --git a/src/linkgraph_gui.h b/src/linkgraph_gui.h
 new file mode 100644
-index 0000000..b14b372
+index 0000000..8c2ac95
 --- /dev/null
 +++ b/src/linkgraph_gui.h
-@@ -0,0 +1,81 @@
+@@ -0,0 +1,83 @@
 +/* $Id$ */
 +
 +/*
@@ -407,8 +421,10 @@ index 0000000..b14b372
 +
 +	void RebuildCache();
 +	void Draw(const DrawPixelInfo *dpi) const;
-+	void SetCargoMask(uint32 cargo_mask) {this->cargo_mask = cargo_mask;}
-+	void SetCompanyMask(uint32 company_mask) {this->company_mask = company_mask;}
++	void SetCargoMask(uint32 cargo_mask);
++	void SetCompanyMask(uint32 company_mask);
++	uint32 GetCargoMask() {return this->cargo_mask;}
++	uint32 GetCompanyMask() {return this->company_mask;}
 +
 +protected:
 +	const Window *window;              ///< Window to be drawn into.
