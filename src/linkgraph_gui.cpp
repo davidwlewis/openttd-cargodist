@@ -152,12 +152,12 @@ void LinkGraphOverlay::DrawLinks(const DrawPixelInfo *dpi) const
 			if (pta.x > ptb.x || (pta.x == ptb.x && pta.y > ptb.y)) {
 				GfxDrawLine(pta.x, pta.y, ptb.x, ptb.y, _colour_gradient[COLOUR_GREY][1]);
 			}
-			LinkGraphOverlay::DrawContent(pta, ptb, j->second);
+			this->DrawContent(pta, ptb, j->second);
 		}
 	}
 }
 
-/* static */ void LinkGraphOverlay::DrawContent(Point pta, Point ptb, const LinkProperties &cargo)
+void LinkGraphOverlay::DrawContent(Point pta, Point ptb, const LinkProperties &cargo) const
 {
 	if (cargo.capacity <= 0) return;
 	int direction_y = (pta.x < ptb.x ? 1 : -1);
@@ -165,8 +165,10 @@ void LinkGraphOverlay::DrawLinks(const DrawPixelInfo *dpi) const
 
 	uint usage_or_plan = min(cargo.capacity * 2, max(cargo.usage, cargo.planned));
 	int colour = LinkGraphOverlay::LINK_COLOURS[usage_or_plan * lengthof(LinkGraphOverlay::LINK_COLOURS) / (cargo.capacity * 2 + 1)];
-	GfxDrawLine(pta.x + direction_x, pta.y, ptb.x + direction_x, ptb.y, colour);
-	GfxDrawLine(pta.x, pta.y + direction_y, ptb.x, ptb.y + direction_y, colour);
+	for (uint i = 1; i <= this->scale; ++i) {
+		GfxDrawLine(pta.x + direction_x * i, pta.y, ptb.x + direction_x * i, ptb.y, colour);
+		GfxDrawLine(pta.x, pta.y + direction_y * i, ptb.x, ptb.y + direction_y * i, colour);
+	}
 }
 
 /**
@@ -182,9 +184,9 @@ void LinkGraphOverlay::DrawStationDots(const DrawPixelInfo *dpi) const
 		if (!this->IsPointVisible(pt, dpi, 10)) continue;
 
 		uint r = 1;
-		if (i->second >= 20) r++;
-		if (i->second >= 90) r++;
-		if (i->second >= 160) r++;
+		if (i->second >= 20) r += this->scale;
+		if (i->second >= 90) r += this->scale;
+		if (i->second >= 160) r += this->scale;
 
 		LinkGraphOverlay::DrawVertex(pt.x, pt.y, r,
 				_colour_gradient[Company::Get(st->owner)->colour][5],
