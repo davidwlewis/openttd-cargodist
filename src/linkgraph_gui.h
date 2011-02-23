@@ -55,8 +55,10 @@ public:
 
 	void RebuildCache();
 	void Draw(const DrawPixelInfo *dpi) const;
-	void SetCargoMask(uint32 cargo_mask) {this->cargo_mask = cargo_mask;}
-	void SetCompanyMask(uint32 company_mask) {this->company_mask = company_mask;}
+	void SetCargoMask(uint32 cargo_mask);
+	void SetCompanyMask(uint32 company_mask);
+	uint32 GetCargoMask() {return this->cargo_mask;}
+	uint32 GetCompanyMask() {return this->company_mask;}
 
 protected:
 	const Window *window;              ///< Window to be drawn into.
