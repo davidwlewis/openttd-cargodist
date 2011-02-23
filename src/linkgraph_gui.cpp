@@ -225,3 +225,17 @@ Point LinkGraphOverlay::GetStationMiddle(const Station *st) const {
 		return dummy;
 	//}
 }
+
+void LinkGraphOverlay::SetCargoMask(uint32 cargo_mask)
+{
+	this->cargo_mask = cargo_mask;
+	this->RebuildCache();
+	this->window->GetWidget<NWidgetBase>(this->widget_id)->SetDirty(this->window);
+}
+
+void LinkGraphOverlay::SetCompanyMask(uint32 company_mask)
+{
+	this->company_mask = company_mask;
+	this->RebuildCache();
+	this->window->GetWidget<NWidgetBase>(this->widget_id)->SetDirty(this->window);
+}
