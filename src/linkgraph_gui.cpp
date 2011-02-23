@@ -10,6 +10,7 @@
 /** @file linkgraph_gui.cpp Implementation of linkgraph overlay GUI. */
 
 #include "stdafx.h"
+#include "window_func.h"
 #include "window_gui.h"
 #include "company_base.h"
 #include "company_gui.h"
@@ -339,7 +340,7 @@ static const NWidgetPart _nested_linkgraph_legend_widgets[] = {
 static const WindowDesc _linkgraph_legend_desc(
 	WDP_MANUAL, 300, 314,
 	WC_LINKGRAPH_LEGEND, WC_NONE,
-	0,
+	WDF_UNCLICK_BUTTONS,
 	_nested_linkgraph_legend_widgets, lengthof(_nested_linkgraph_legend_widgets)
 );
 
@@ -352,8 +353,24 @@ LinkGraphLegendWindow::LinkGraphLegendWindow(const WindowDesc *desc, int window_
 {
 	this->InitNested(desc, window_number);
 	this->InvalidateData(0);
+	//this->SetOverlay(FindWindowById(WC_MAIN_WINDOW, 0)->viewport->overlay);
 }
 
+void LinkGraphLegendWindow::SetOverlay(LinkGraphOverlay *overlay) {
+	this->overlay = overlay;
+	uint32 companies = this->overlay->GetCompanyMask();
+	for (uint c = 0; c < MAX_COMPANIES; c++) {
+		if (!this->IsWidgetDisabled(LGL_COMPANY_FIRST + c)) {
+			this->SetWidgetLoweredState(LGL_COMPANY_FIRST + c, HasBit(companies, c));
+		}
+	}
+	uint32 cargoes = this->overlay->GetCargoMask();
+	for (uint c = 0; c < NUM_CARGO; c++) {
+		if (!this->IsWidgetDisabled(LGL_CARGO_FIRST + c)) {
+			this->SetWidgetLoweredState(LGL_CARGO_FIRST + c, HasBit(cargoes, c));
+		}
+	}
+}
 
 void LinkGraphLegendWindow::DrawWidget(const Rect &r, int widget) const
 {
@@ -381,6 +398,62 @@ void LinkGraphLegendWindow::DrawWidget(const Rect &r, int widget) const
 		GfxFillRect(r.left + 2, r.top + 2, r.right - 2, r.bottom - 2, cargo->legend_colour);
 		DrawString(wid->pos_x, wid->current_x + wid->pos_x, wid->pos_y + 2, cargo->abbrev, TC_BLACK, SA_HOR_CENTER);
 	}
+}
+
+void LinkGraphLegendWindow::UpdateOverlayCompanies()
+{
+	uint32 mask = 0;
+	for (uint c = 0; c < MAX_COMPANIES; c++) {
+		if (this->IsWidgetDisabled(c + LGL_COMPANY_FIRST)) continue;
+		if (!this->IsWidgetLowered(c + LGL_COMPANY_FIRST)) continue;
+		SetBit(mask, c);
+	}
+	this->overlay->SetCompanyMask(mask);
+}
+
+void LinkGraphLegendWindow::UpdateOverlayCargoes()
+{
+	uint32 mask = 0;
+	for (uint c = 0; c < NUM_CARGO; c++) {
+		if (this->IsWidgetDisabled(c + LGL_CARGO_FIRST)) continue;
+		if (!this->IsWidgetLowered(c + LGL_CARGO_FIRST)) continue;
+		SetBit(mask, c);
+	}
+	this->overlay->SetCargoMask(mask);
+}
+
+
+void LinkGraphLegendWindow::OnClick(Point pt, int widget, int click_count)
+{
+	/* Check which button is clicked */
+	if (IsInsideMM(widget, LGL_COMPANY_FIRST, LGL_COMPANY_LAST + 1)) {
+		/* Is it no on disable? */
+		if (!this->IsWidgetDisabled(widget)) {
+			this->ToggleWidgetLoweredState(widget);
+			this->UpdateOverlayCompanies();
+		}
+	} else if (widget == LGL_COMPANIES_ALL || widget == LGL_COMPANIES_NONE) {
+		for (uint c = 0; c < MAX_COMPANIES; c++) {
+			if (this->IsWidgetDisabled(c + LGL_COMPANY_FIRST)) continue;
+			this->SetWidgetLoweredState(LGL_COMPANY_FIRST + c, widget == LGL_COMPANIES_ALL);
+		}
+		this->UpdateOverlayCompanies();
+		this->SetDirty();
+	} else if (IsInsideMM(widget, LGL_CARGO_FIRST, LGL_CARGO_LAST + 1)) {
+		/* Is it no on disable? */
+		if (!this->IsWidgetDisabled(widget)) {
+			this->ToggleWidgetLoweredState(widget);
+			this->UpdateOverlayCargoes();
+
+		}
+	} else if (widget == LGL_CARGOES_ALL || widget == LGL_CARGOES_NONE) {
+		for (uint c = 0; c < NUM_CARGO; c++) {
+			if (this->IsWidgetDisabled(c + LGL_CARGO_FIRST)) continue;
+			this->SetWidgetLoweredState(LGL_CARGO_FIRST + c, widget == LGL_CARGOES_ALL);
+		}
+		this->UpdateOverlayCargoes();
+	}
+	this->SetDirty();
 }
 
 /**

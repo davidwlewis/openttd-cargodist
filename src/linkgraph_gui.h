@@ -88,13 +88,17 @@ void ShowLinkGraphLegend();
 struct LinkGraphLegendWindow : Window {
 public:
 	LinkGraphLegendWindow(const WindowDesc *desc, int window_number);
+	void SetOverlay(LinkGraphOverlay *overlay);
 
 	virtual void DrawWidget(const Rect &r, int widget) const;
+	virtual void OnClick(Point pt, int widget, int click_count);
 	virtual void OnInvalidateData(int data);
 
 private:
 	LinkGraphOverlay *overlay;
 
+	void UpdateOverlayCompanies();
+	void UpdateOverlayCargoes();
 };
 
 #endif /* LINKGRAPH_GUI_H_ */
