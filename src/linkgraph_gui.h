@@ -15,6 +15,9 @@
 #include "company_func.h"
 #include "station_base.h"
 #include "widget_type.h"
+
+#include "table/strings.h"
+
 #include <map>
 #include <list>
 
@@ -52,8 +55,10 @@ public:
 
 	void RebuildCache();
 	void Draw(const DrawPixelInfo *dpi) const;
-	void SetCargoMask(uint32 cargo_mask) {this->cargo_mask = cargo_mask;}
-	void SetCompanyMask(uint32 company_mask) {this->company_mask = company_mask;}
+	void SetCargoMask(uint32 cargo_mask);
+	void SetCompanyMask(uint32 company_mask);
+	uint32 GetCargoMask() {return this->cargo_mask;}
+	uint32 GetCompanyMask() {return this->company_mask;}
 
 protected:
 	const Window *window;              ///< Window to be drawn into.
@@ -76,6 +81,24 @@ protected:
 	static void AddStats(const LinkStat &orig_link, const FlowStat &orig_flow, LinkProperties &cargo);
 	static void DrawContent(Point pta, Point ptb, const LinkProperties &cargo);
 	static void DrawVertex(int x, int y, int size, int colour, int border_colour);
+};
+
+void ShowLinkGraphLegend();
+
+struct LinkGraphLegendWindow : Window {
+public:
+	LinkGraphLegendWindow(const WindowDesc *desc, int window_number);
+	void SetOverlay(LinkGraphOverlay *overlay);
+
+	virtual void DrawWidget(const Rect &r, int widget) const;
+	virtual void OnClick(Point pt, int widget, int click_count);
+	virtual void OnInvalidateData(int data);
+
+private:
+	LinkGraphOverlay *overlay;
+
+	void UpdateOverlayCompanies();
+	void UpdateOverlayCargoes();
 };
 
 #endif /* LINKGRAPH_GUI_H_ */
