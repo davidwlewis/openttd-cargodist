@@ -440,7 +440,6 @@ struct MainWindow : Window
 	{
 		if (_settings_client.gui.scrollwheel_scrolling == 0) {
 			ZoomInOrOutToCursorWindow(wheel < 0, this);
-			this->refresh = LINKGRAPH_DELAY;
 		}
 	}
 
