@@ -48,7 +48,7 @@ index 8bed712..71e37e5 100644
  # Status bar messages
  STR_STATUSBAR_TOOLTIP_SHOW_LAST_NEWS                            :{BLACK}Show last message or news report
 diff --git a/src/linkgraph_gui.cpp b/src/linkgraph_gui.cpp
-index 30aa35e..e306ee8 100644
+index 48f093f..bcd0de2 100644
 --- a/src/linkgraph_gui.cpp
 +++ b/src/linkgraph_gui.cpp
 @@ -13,8 +13,9 @@
@@ -62,7 +62,7 @@ index 30aa35e..e306ee8 100644
  
  /**
   * Colours for the various "load" states of links. Ordered from "empty" to
-@@ -220,13 +221,13 @@ void LinkGraphOverlay::DrawStationDots(const DrawPixelInfo *dpi) const
+@@ -215,13 +216,13 @@ void LinkGraphOverlay::DrawStationDots(const DrawPixelInfo *dpi) const
  }
  
  Point LinkGraphOverlay::GetStationMiddle(const Station *st) const {

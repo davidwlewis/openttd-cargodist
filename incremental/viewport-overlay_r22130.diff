@@ -1,8 +1,8 @@
 diff --git a/src/linkgraph_gui.cpp b/src/linkgraph_gui.cpp
-index 30aa35e..5c78519 100644
+index 48f093f..1dd19f5 100644
 --- a/src/linkgraph_gui.cpp
 +++ b/src/linkgraph_gui.cpp
-@@ -220,13 +220,13 @@ void LinkGraphOverlay::DrawStationDots(const DrawPixelInfo *dpi) const
+@@ -215,13 +215,13 @@ void LinkGraphOverlay::DrawStationDots(const DrawPixelInfo *dpi) const
  }
  
  Point LinkGraphOverlay::GetStationMiddle(const Station *st) const {

@@ -116,10 +116,10 @@ index f11d17e..c0d5c05 100644
  music_gui.cpp
 diff --git a/src/linkgraph_gui.cpp b/src/linkgraph_gui.cpp
 new file mode 100644
-index 0000000..30aa35e
+index 0000000..48f093f
 --- /dev/null
 +++ b/src/linkgraph_gui.cpp
-@@ -0,0 +1,232 @@
+@@ -0,0 +1,227 @@
 +/* $Id$ */
 +
 +/*
@@ -256,11 +256,6 @@ index 0000000..30aa35e
 +
 +void LinkGraphOverlay::Draw(const DrawPixelInfo *dpi) const
 +{
-+	DrawPixelInfo new_dpi;
-+	if (dpi == NULL) {
-+		this->GetWidgetDpi(&new_dpi);
-+		dpi = &new_dpi;
-+	}
 +	this->DrawLinks(dpi);
 +	this->DrawStationDots(dpi);
 +}
@@ -354,10 +349,10 @@ index 0000000..30aa35e
 +}
 diff --git a/src/linkgraph_gui.h b/src/linkgraph_gui.h
 new file mode 100644
-index 0000000..884eb67
+index 0000000..b14b372
 --- /dev/null
 +++ b/src/linkgraph_gui.h
-@@ -0,0 +1,82 @@
+@@ -0,0 +1,81 @@
 +/* $Id$ */
 +
 +/*
@@ -411,10 +406,9 @@ index 0000000..884eb67
 +	{}
 +
 +	void RebuildCache();
-+	void Draw(const DrawPixelInfo *dpi = NULL) const;
++	void Draw(const DrawPixelInfo *dpi) const;
 +	void SetCargoMask(uint32 cargo_mask) {this->cargo_mask = cargo_mask;}
 +	void SetCompanyMask(uint32 company_mask) {this->company_mask = company_mask;}
-+	bool IsValid() const {return widget_id != UINT_MAX;}
 +
 +protected:
 +	const Window *window;              ///< Window to be drawn into.
