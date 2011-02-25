@@ -1,5 +1,5 @@
 diff --git a/src/economy.cpp b/src/economy.cpp
-index 584eea7..d1b8fad 100644
+index 584eea7..5dce7ed 100644
 --- a/src/economy.cpp
 +++ b/src/economy.cpp
 @@ -1013,21 +1013,23 @@ CargoPayment::~CargoPayment()
@@ -26,10 +26,10 @@ index 584eea7..d1b8fad 100644
 -		ShowCostOrIncomeAnimation(this->front->x_pos, this->front->y_pos, this->front->z_pos, -this->visual_profit);
 -	} else {
 -		ShowFeederIncomeAnimation(this->front->x_pos, this->front->y_pos, this->front->z_pos, this->visual_profit);
-+	if (this->visual_transfer != 0){
++	if (this->visual_transfer != 0) {
 +		ShowFeederIncomeAnimation(this->front->x_pos, this->front->y_pos,
 +				this->front->z_pos, this->visual_transfer, -this->visual_profit);
-+	} else if (this->visual_profit) {
++	} else if (this->visual_profit != 0) {
 +		ShowCostOrIncomeAnimation(this->front->x_pos, this->front->y_pos,
 +				this->front->z_pos, -this->visual_profit);
  	}
