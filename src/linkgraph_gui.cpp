@@ -404,6 +404,9 @@ static const WindowDesc _linkgraph_legend_desc(
 	_nested_linkgraph_legend_widgets, lengthof(_nested_linkgraph_legend_widgets)
 );
 
+/**
+ * Open a link graph legend window.
+*/
 void ShowLinkGraphLegend()
 {
 	AllocateWindowDescFront<LinkGraphLegendWindow>(&_linkgraph_legend_desc, 0);
@@ -416,6 +419,10 @@ LinkGraphLegendWindow::LinkGraphLegendWindow(const WindowDesc *desc, int window_
 	//this->SetOverlay(FindWindowById(WC_MAIN_WINDOW, 0)->viewport->overlay);
 }
 
+/**
+ * Set the overlay belonging to this menu and import its company/cargo settings.
+ * @params overlay New overlay for this menu.
+ */
 void LinkGraphLegendWindow::SetOverlay(LinkGraphOverlay *overlay) {
 	this->overlay = overlay;
 	uint32 companies = this->overlay->GetCompanyMask();
@@ -460,6 +467,9 @@ void LinkGraphLegendWindow::DrawWidget(const Rect &r, int widget) const
 	}
 }
 
+/**
+ * Update the overlay with the new company selection.
+ */
 void LinkGraphLegendWindow::UpdateOverlayCompanies()
 {
 	uint32 mask = 0;
@@ -471,6 +481,9 @@ void LinkGraphLegendWindow::UpdateOverlayCompanies()
 	this->overlay->SetCompanyMask(mask);
 }
 
+/**
+ * Update the overlay with the new cargo selection.
+ */
 void LinkGraphLegendWindow::UpdateOverlayCargoes()
 {
 	uint32 mask = 0;
@@ -481,7 +494,6 @@ void LinkGraphLegendWindow::UpdateOverlayCargoes()
 	}
 	this->overlay->SetCargoMask(mask);
 }
-
 
 void LinkGraphLegendWindow::OnClick(Point pt, int widget, int click_count)
 {
@@ -517,7 +529,7 @@ void LinkGraphLegendWindow::OnClick(Point pt, int widget, int click_count)
 }
 
 /**
- * Invalidate the data of this window.
+ * Invalidate the data of this window if the cargoes or companies have changed.
  * @param data ignored
  */
 void LinkGraphLegendWindow::OnInvalidateData(int data)

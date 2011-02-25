@@ -94,6 +94,9 @@ protected:
 
 void ShowLinkGraphLegend();
 
+/**
+ * Menu window to select cargoes and companies to show in a link graph overlay.
+ */
 struct LinkGraphLegendWindow : Window {
 public:
 	LinkGraphLegendWindow(const WindowDesc *desc, int window_number);
