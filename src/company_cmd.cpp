@@ -84,6 +84,7 @@ void Company::PostDestructor(size_t index)
 	InvalidateWindowData(WC_GRAPH_LEGEND, 0, (int)index);
 	InvalidateWindowData(WC_PERFORMANCE_DETAIL, 0, (int)index);
 	InvalidateWindowData(WC_COMPANY_LEAGUE, 0, 0);
+	InvalidateWindowData(WC_LINKGRAPH_LEGEND, 0);
 	/* If the currently shown error message has this company in it, then close it. */
 	InvalidateWindowData(WC_ERRMSG, 0);
 }
@@ -558,6 +559,7 @@ Company *DoStartupNewCompany(bool is_ai, CompanyID company = INVALID_COMPANY)
 	SetWindowDirty(WC_GRAPH_LEGEND, 0);
 	SetWindowDirty(WC_TOOLBAR_MENU, 0);
 	SetWindowDirty(WC_CLIENT_LIST, 0);
+	InvalidateWindowData(WC_LINKGRAPH_LEGEND, 0);
 	BuildOwnerLegend();
 	InvalidateWindowData(WC_SMALLMAP, 0, 1);
 
@@ -1030,6 +1032,7 @@ CommandCost CmdSetCompanyColour(TileIndex tile, DoCommandFlag flags, uint32 p1, 
 		InvalidateWindowData(WC_DELIVERED_CARGO, 0);
 		InvalidateWindowData(WC_PERFORMANCE_HISTORY, 0);
 		InvalidateWindowData(WC_COMPANY_VALUE, 0);
+		InvalidateWindowData(WC_LINKGRAPH_LEGEND, 0);
 		/* The smallmap owner view also stores the company colours. */
 		BuildOwnerLegend();
 		InvalidateWindowData(WC_SMALLMAP, 0, 1);
