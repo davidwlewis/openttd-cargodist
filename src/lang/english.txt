@@ -699,10 +699,6 @@ STR_SMALLMAP_LEGENDA_INDUSTRIES                                 :{TINYFONT}{BLAC
 STR_SMALLMAP_LEGENDA_DESERT                                     :{TINYFONT}{BLACK}Desert
 STR_SMALLMAP_LEGENDA_SNOW                                       :{TINYFONT}{BLACK}Snow
 
-STR_SMALLMAP_LEGENDA_LINK_UNUSED                                :{TINYFONT}{BLACK}unused
-STR_SMALLMAP_LEGENDA_LINK_SATURATED                             :{TINYFONT}{BLACK}saturated
-STR_SMALLMAP_LEGENDA_LINK_OVERLOADED                            :{TINYFONT}{BLACK}overloaded
-
 STR_SMALLMAP_TOOLTIP_TOGGLE_TOWN_NAMES_ON_OFF                   :{BLACK}Toggle town names on/off on map
 STR_SMALLMAP_CENTER                                             :{BLACK}Centre the smallmap on the current position
 STR_SMALLMAP_INDUSTRY                                           :{TINYFONT}{STRING} ({NUM})
@@ -1925,6 +1921,11 @@ STR_TRANSPARENT_STRUCTURES_TOOLTIP                              :{BLACK}Toggle t
 STR_TRANSPARENT_CATENARY_TOOLTIP                                :{BLACK}Toggle transparency for catenary. Ctrl+Click to lock
 STR_TRANSPARENT_LOADING_TOOLTIP                                 :{BLACK}Toggle transparency for loading indicators. Ctrl+Click to lock
 STR_TRANSPARENT_INVISIBLE_TOOLTIP                               :{BLACK}Set objects invisible instead of transparent
+
+# Linkgraph legend window
+STR_LINKGRAPH_LEGEND_UNUSED                                     :{TINYFONT}{BLACK}unused
+STR_LINKGRAPH_LEGEND_SATURATED                                  :{TINYFONT}{BLACK}saturated
+STR_LINKGRAPH_LEGEND_OVERLOADED                                 :{TINYFONT}{BLACK}overloaded
 
 # Base for station construction window(s)
 STR_STATION_BUILD_COVERAGE_AREA_TITLE                           :{BLACK}Coverage area highlight
