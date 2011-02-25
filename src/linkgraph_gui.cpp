@@ -51,7 +51,7 @@ void LinkGraphOverlay::RebuildCache()
 
 	const Station *sta;
 	FOR_ALL_STATIONS(sta) {
-		/* Show links between own stations or "neutral" ones like oilrigs.*/
+		/* Show links between stations of selected companies or "neutral" ones like oilrigs. */
 		if (sta->owner != INVALID_COMPANY && !HasBit(this->company_mask, sta->owner)) continue;
 		if (sta->rect.IsEmpty()) continue;
 
