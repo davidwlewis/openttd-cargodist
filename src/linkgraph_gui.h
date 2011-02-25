@@ -27,14 +27,14 @@
 struct LinkProperties {
 	LinkProperties() : capacity(0), usage(0), planned(0) {}
 
-	uint capacity;
-	uint usage;
-	uint planned;
+	uint capacity; ///< Capacity of the link.
+	uint usage;    ///< Actual usage of the link.
+	uint planned;  ///< Planned usage of the link.
 };
 
 /**
  * Handles drawing of links into some window.
- * @tparam Twindow window type to be drawn into. Must provide "Point GetStationMiddle(const Station *st) const"
+ * The window must either be a smallmap or have a valid viewport.
  */
 class LinkGraphOverlay {
 public:
@@ -47,6 +47,10 @@ public:
 	/**
 	 * Create a link graph overlay for the specified window.
 	 * @param w Window to be drawn into.
+	 * @param wid ID of the widget to draw into.
+	 * @param cargo_mask Bitmask of cargoes to be shown.
+	 * @param company_mask Bitmask of companies to be shown.
+	 * @param scale Desired thickness of lines and size of station dots.
 	 */
 	LinkGraphOverlay(const Window *w, uint wid, uint32 cargo_mask = 0xFFFF,
 			uint32 company_mask = 1 << _local_company, uint scale = 1) :
@@ -57,7 +61,11 @@ public:
 	void Draw(const DrawPixelInfo *dpi) const;
 	void SetCargoMask(uint32 cargo_mask);
 	void SetCompanyMask(uint32 company_mask);
+
+	/** Get a bitmask of the currently shown cargoes. */
 	uint32 GetCargoMask() {return this->cargo_mask;}
+
+	/** Get a bitmask of the currently shown companies. */
 	uint32 GetCompanyMask() {return this->company_mask;}
 
 protected:
@@ -67,7 +75,7 @@ protected:
 	uint32 company_mask;               ///< Bitmask of companies to be displayed.
 	LinkMap cached_links;              ///< Cache for links to reduce recalculation.
 	StationSupplyList cached_stations; ///< Cache for stations to be drawn.
-	uint scale;
+	uint scale;                        ///< Number of parallel lines to be drawn for each link.
 
 	Point GetStationMiddle(const Station *st) const;
 
