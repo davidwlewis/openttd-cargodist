@@ -202,9 +202,9 @@ void BuildLinkStatsLegend()
 		_legend_linkstats[i].show_on_map = true;
 	}
 
-	_legend_linkstats[_smallmap_cargo_count].legend = STR_SMALLMAP_LEGENDA_LINK_UNUSED;
-	_legend_linkstats[i - 1].legend = STR_SMALLMAP_LEGENDA_LINK_OVERLOADED;
-	_legend_linkstats[(_smallmap_cargo_count + i - 1) / 2].legend = STR_SMALLMAP_LEGENDA_LINK_SATURATED;
+	_legend_linkstats[_smallmap_cargo_count].legend = STR_LINKGRAPH_LEGEND_UNUSED;
+	_legend_linkstats[i - 1].legend = STR_LINKGRAPH_LEGEND_OVERLOADED;
+	_legend_linkstats[(_smallmap_cargo_count + i - 1) / 2].legend = STR_LINKGRAPH_LEGEND_SATURATED;
 	_legend_linkstats[i].end = true;
 }
 
@@ -1391,7 +1391,7 @@ void SmallMapWindow::OnClick(Point pt, int widget, int click_count)
 				default:
 					NOT_REACHED();
 			}
-			for (;!tbl->end && tbl->legend != STR_SMALLMAP_LEGENDA_LINK_UNUSED; ++tbl) {
+			for (;!tbl->end && tbl->legend != STR_LINKGRAPH_LEGEND_UNUSED; ++tbl) {
 				tbl->show_on_map = (widget == SM_WIDGET_ENABLE_ALL);
 			}
 			this->SetOverlayCargoMask();
@@ -1527,11 +1527,20 @@ void SmallMapWindow::SmallMapCenterOnCurrentPos()
 	this->SetDirty();
 }
 
+/**
+ * Get the center of the given station as point on the screen in the smallmap window.
+ * @param st Station to find in the smallmap.
+ * @return Point with coordinates of the station.
+ */
 Point SmallMapWindow::GetStationMiddle(const Station *st) const
 {
 	int x = (st->rect.right + st->rect.left + 1) / 2;
 	int y = (st->rect.bottom + st->rect.top + 1) / 2;
 	Point ret = this->RemapTile(x, y);
+
+	/* Same magic 3 as in DrawVehicles; that's where I got it from.
+	 * No idea what it is, but without it the result looks bad.
+	 */
 	ret.x -= 3 + this->subscroll;
 	return ret;
 }
