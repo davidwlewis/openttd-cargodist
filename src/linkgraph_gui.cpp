@@ -17,8 +17,8 @@
 #include "viewport_func.h"
 
 /**
- * Colours for the various "load" states of links. Ordered from "empty" to
- * "overcrowded".
+ * Colours for the various "load" states of links. Ordered from "unused" to
+ * "overloaded".
  */
 const uint8 LinkGraphOverlay::LINK_COLOURS[] = {
 	0x0f, 0xd1, 0xd0, 0x57,
@@ -26,6 +26,10 @@ const uint8 LinkGraphOverlay::LINK_COLOURS[] = {
 	0xba, 0xb9, 0xb7, 0xb5
 };
 
+/**
+ * Get a DPI for the widget we will be drawing to.
+ * @param dpi DrawPixelInfo to fill with the desired dimensions.
+ */ 
 void LinkGraphOverlay::GetWidgetDpi(DrawPixelInfo *dpi) const
 {
 	const NWidgetBase *wi = this->window->GetWidget<NWidgetBase>(this->widget_id);
@@ -34,6 +38,9 @@ void LinkGraphOverlay::GetWidgetDpi(DrawPixelInfo *dpi) const
 	dpi->height = wi->current_y;
 }
 
+/**
+ * Rebuild the cache and recalculate which links and stations to be shown.
+ */
 void LinkGraphOverlay::RebuildCache()
 {
 	this->cached_links.clear();
@@ -82,6 +89,13 @@ void LinkGraphOverlay::RebuildCache()
 	}
 }
 
+/**
+ * Determine if a certain point is inside the given DPI, with some lee way.
+ * @param pt Point we are looking for.
+ * @param dpi Visible area.
+ * @param padding Extent of the point.
+ * @return If the point or any of its 'extent' is inside the dpi.
+ */
 FORCEINLINE bool LinkGraphOverlay::IsPointVisible(Point pt, const DrawPixelInfo *dpi, int padding) const
 {
 	return pt.x > dpi->left - padding && pt.y > dpi->top - padding &&
@@ -89,6 +103,14 @@ FORCEINLINE bool LinkGraphOverlay::IsPointVisible(Point pt, const DrawPixelInfo 
 			pt.y < dpi->top + dpi->height + padding;
 }
 
+/**
+ * Determine if a certain link crosses through the area given by the dpi with some lee way.
+ * @param pta First end of the link.
+ * @param ptb Second end of the link.
+ * @param dpi Visible area.
+ * @param padding Width or thickness of the link.
+ * @return If the link or any of its "thickness" is visible. This may return false positives.
+ */
 FORCEINLINE bool LinkGraphOverlay::IsLinkVisible(Point pta, Point ptb, const DrawPixelInfo *dpi, int padding) const
 {
 	return !((pta.x < dpi->left - padding && ptb.x < dpi->left - padding) ||
@@ -99,6 +121,11 @@ FORCEINLINE bool LinkGraphOverlay::IsLinkVisible(Point pta, Point ptb, const Dra
 					ptb.y > dpi->top + dpi->height + padding));
 }
 
+/**
+ * Add all "interesting" links between the given stations to the cache.
+ * @param from The source station.
+ * @param to The destination station.
+ */
 void LinkGraphOverlay::AddLinks(const Station *from, const Station *to)
 {
 	CargoID c;
@@ -115,7 +142,12 @@ void LinkGraphOverlay::AddLinks(const Station *from, const Station *to)
 	}
 }
 
-
+/**
+ * Add information from a given pair of link stat and flow stat to the given link properties.
+ * @param orig_link Link stat to read the information from.
+ * @param orig_flow Flow stat to read the information from.
+ * @param cargo LinkProperties to write the information to.
+ */
 /* static */ void LinkGraphOverlay::AddStats(const LinkStat &orig_link, const FlowStat &orig_flow, LinkProperties &cargo)
 {
 	uint new_cap = orig_link.Capacity();
@@ -131,13 +163,20 @@ void LinkGraphOverlay::AddLinks(const Station *from, const Station *to)
 	}
 }
 
-
+/**
+ * Draw the linkgraph overlay or some part of it, in the area given.
+ * @param dpi Area to be drawn to.
+ */
 void LinkGraphOverlay::Draw(const DrawPixelInfo *dpi) const
 {
 	this->DrawLinks(dpi);
 	this->DrawStationDots(dpi);
 }
 
+/**
+ * Draw the cached links or part of them into the given area.
+ * @param dpi Area to be drawn to.
+ */
 void LinkGraphOverlay::DrawLinks(const DrawPixelInfo *dpi) const
 {
 	for (LinkMap::const_iterator i(this->cached_links.begin()); i != this->cached_links.end(); ++i) {
@@ -152,6 +191,12 @@ void LinkGraphOverlay::DrawLinks(const DrawPixelInfo *dpi) const
 	}
 }
 
+/**
+ * Draw one specific link.
+ * @param pta Source of the link.
+ * @param ptb Destination of the link.
+ * @param cargo Properties of the link.
+ */
 void LinkGraphOverlay::DrawContent(Point pta, Point ptb, const LinkProperties &cargo) const
 {
 	if (cargo.capacity <= 0) return;
@@ -194,11 +239,11 @@ void LinkGraphOverlay::DrawStationDots(const DrawPixelInfo *dpi) const
 
 /**
  * Draw a square symbolizing a producer of cargo.
- * @param x the x coordinate of the middle of the vertex
- * @param y the y coordinate of the middle of the vertex
- * @param size the x and y extend of the vertex
- * @param colour the colour with which the vertex will be filled
- * @param border_colour the colour for the border of the vertex
+ * @param x X coordinate of the middle of the vertex.
+ * @param y Y coordinate of the middle of the vertex.
+ * @param size Y and y extend of the vertex.
+ * @param colour Colour with which the vertex will be filled.
+ * @param border_colour Colour for the border of the vertex.
  */
 /* static */ void LinkGraphOverlay::DrawVertex(int x, int y, int size, int colour, int border_colour)
 {
@@ -216,6 +261,11 @@ void LinkGraphOverlay::DrawStationDots(const DrawPixelInfo *dpi) const
 	GfxDrawLine(x + w2, y - w1, x + w2, y + w2, border_colour);
 }
 
+/**
+ * Determine the middle of a station in the current window.
+ * @param st The station we're looking for.
+ * @return Middle point of the station in the current window.
+ */
 Point LinkGraphOverlay::GetStationMiddle(const Station *st) const {
 	//if (this->window->viewport != NULL) {
 	//	return GetViewportStationMiddle(this->window->viewport, st);
@@ -228,6 +278,10 @@ Point LinkGraphOverlay::GetStationMiddle(const Station *st) const {
 	//}
 }
 
+/**
+ * Set a new cargo mask and rebuild the cache.
+ * @param cargo_mask New cargo mask.
+ */
 void LinkGraphOverlay::SetCargoMask(uint32 cargo_mask)
 {
 	this->cargo_mask = cargo_mask;
@@ -235,6 +289,10 @@ void LinkGraphOverlay::SetCargoMask(uint32 cargo_mask)
 	this->window->GetWidget<NWidgetBase>(this->widget_id)->SetDirty(this->window);
 }
 
+/**
+ * Set a new company mask and rebuild the cache.
+ * @param company_mask New company mask.
+ */
 void LinkGraphOverlay::SetCompanyMask(uint32 company_mask)
 {
 	this->company_mask = company_mask;
