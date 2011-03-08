@@ -537,7 +537,7 @@ index 584eea7..1d121ef 100644
  	}
  
 diff --git a/src/saveload/saveload.cpp b/src/saveload/saveload.cpp
-index 25c1fe9..0c332c6 100644
+index 3c7700e..274ac80 100644
 --- a/src/saveload/saveload.cpp
 +++ b/src/saveload/saveload.cpp
 @@ -226,7 +226,7 @@
@@ -550,7 +550,7 @@ index 25c1fe9..0c332c6 100644
  SavegameType _savegame_type; ///< type of savegame we are loading
  
 diff --git a/src/saveload/saveload.h b/src/saveload/saveload.h
-index 7c85965..ecb9162 100644
+index b5fb001..dc4ed16 100644
 --- a/src/saveload/saveload.h
 +++ b/src/saveload/saveload.h
 @@ -90,9 +90,6 @@ enum SLRefType {

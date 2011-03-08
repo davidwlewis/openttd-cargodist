@@ -1,8 +1,8 @@
 diff --git a/projects/openttd_vs100.vcxproj b/projects/openttd_vs100.vcxproj
-index c1bb317..365d271 100644
+index 228c502..ee7b12f 100644
 --- a/projects/openttd_vs100.vcxproj
 +++ b/projects/openttd_vs100.vcxproj
-@@ -618,6 +618,7 @@
+@@ -619,6 +619,7 @@
      <ClCompile Include="..\src\core\math_func.cpp" />
      <ClInclude Include="..\src\core\math_func.hpp" />
      <ClInclude Include="..\src\core\mem_func.hpp" />
@@ -11,10 +11,10 @@ index c1bb317..365d271 100644
      <ClCompile Include="..\src\core\pool_func.cpp" />
      <ClInclude Include="..\src\core\pool_func.hpp" />
 diff --git a/projects/openttd_vs100.vcxproj.filters b/projects/openttd_vs100.vcxproj.filters
-index 16031fa..574e38d 100644
+index e7c9a30..4fa27c8 100644
 --- a/projects/openttd_vs100.vcxproj.filters
 +++ b/projects/openttd_vs100.vcxproj.filters
-@@ -1074,6 +1074,9 @@
+@@ -1077,6 +1077,9 @@
      <ClInclude Include="..\src\core\mem_func.hpp">
        <Filter>Core Source Code</Filter>
      </ClInclude>
@@ -25,10 +25,10 @@ index 16031fa..574e38d 100644
        <Filter>Core Source Code</Filter>
      </ClInclude>
 diff --git a/projects/openttd_vs80.vcproj b/projects/openttd_vs80.vcproj
-index 3370179..c6f7bc5 100644
+index 49ffc4d..308b467 100644
 --- a/projects/openttd_vs80.vcproj
 +++ b/projects/openttd_vs80.vcproj
-@@ -1751,6 +1751,10 @@
+@@ -1755,6 +1755,10 @@
  				>
  			</File>
  			<File
@@ -40,10 +40,10 @@ index 3370179..c6f7bc5 100644
  				>
  			</File>
 diff --git a/projects/openttd_vs90.vcproj b/projects/openttd_vs90.vcproj
-index 4d6671c..87864da 100644
+index 3c47608..2291c30 100644
 --- a/projects/openttd_vs90.vcproj
 +++ b/projects/openttd_vs90.vcproj
-@@ -1748,6 +1748,10 @@
+@@ -1752,6 +1752,10 @@
  				>
  			</File>
  			<File
@@ -55,10 +55,10 @@ index 4d6671c..87864da 100644
  				>
  			</File>
 diff --git a/source.list b/source.list
-index 5dfb06a..fbf6cf2 100644
+index 062356e..9624ca9 100644
 --- a/source.list
 +++ b/source.list
-@@ -368,6 +368,7 @@ core/geometry_type.hpp
+@@ -369,6 +369,7 @@ core/geometry_type.hpp
  core/math_func.cpp
  core/math_func.hpp
  core/mem_func.hpp
