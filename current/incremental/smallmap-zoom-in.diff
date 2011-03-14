@@ -1,5 +1,5 @@
 diff --git a/src/smallmap_gui.cpp b/src/smallmap_gui.cpp
-index b7bcd9c..d3e07f3 100644
+index 2fd8662..a131201 100644
 --- a/src/smallmap_gui.cpp
 +++ b/src/smallmap_gui.cpp
 @@ -571,6 +571,27 @@ class SmallMapWindow : public Window {
@@ -376,7 +376,7 @@ index b7bcd9c..d3e07f3 100644
  
  				w->viewport->follow_vehicle = INVALID_VEHICLE;
  				w->viewport->dest_scrollpos_x = pt.x - (w->viewport->virtual_width  >> 1);
-@@ -1476,6 +1548,8 @@ public:
+@@ -1479,6 +1551,8 @@ public:
  		/* Update the window every now and then */
  		if (--this->refresh != 0) return;
  
@@ -385,7 +385,7 @@ index b7bcd9c..d3e07f3 100644
  		this->refresh = FORCE_REFRESH_PERIOD;
  		this->SetDirty();
  	}
-@@ -1491,8 +1565,13 @@ public:
+@@ -1494,8 +1568,13 @@ public:
  	{
  		const NWidgetBase *wi = this->GetWidget<NWidgetBase>(SM_WIDGET_MAP);
  		Point hv = InverseRemapCoords(wi->current_x * TILE_SIZE / 2, wi->current_y * TILE_SIZE / 2);
@@ -401,7 +401,7 @@ index b7bcd9c..d3e07f3 100644
  
  		if (sx < -hv.x) {
  			sx = -hv.x;
-@@ -1522,8 +1601,8 @@ public:
+@@ -1525,8 +1604,8 @@ public:
  
  		/* While tile is at (delta.x, delta.y)? */
  		int sub;
@@ -412,7 +412,7 @@ index b7bcd9c..d3e07f3 100644
  
  		this->SetDirty();
  	}
-@@ -1535,7 +1614,7 @@ public:
+@@ -1538,7 +1617,7 @@ public:
  
  		int sub;
  		const NWidgetBase *wid = this->GetWidget<NWidgetBase>(SM_WIDGET_MAP);

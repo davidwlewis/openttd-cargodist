@@ -1,5 +1,5 @@
 diff --git a/src/smallmap_gui.cpp b/src/smallmap_gui.cpp
-index b7bcd9c..0ca9ec4 100644
+index 2fd8662..832616f 100644
 --- a/src/smallmap_gui.cpp
 +++ b/src/smallmap_gui.cpp
 @@ -14,43 +14,19 @@
@@ -66,7 +66,7 @@ index b7bcd9c..0ca9ec4 100644
  /** Legend text giving the colours to look for on the minimap */
  static LegendAndColour _legend_land_contours[] = {
  	/* The colours for the following values are set at BuildLandLegend() based on each colour scheme. */
-@@ -558,988 +522,902 @@ static const byte _vehicle_type_colours[6] = {
+@@ -558,991 +522,906 @@ static const byte _vehicle_type_colours[6] = {
  	184, 191, 152, 15, 215, 184
  };
  
@@ -1186,7 +1186,7 @@ index b7bcd9c..0ca9ec4 100644
 +					case SMT_INDUSTRY:
  						/* Industry name must be formatted, since it's not in tiny font in the specs.
  						 * So, draw with a parameter and use the STR_SMALLMAP_INDUSTRY string, which is tiny font */
--						SetDParam(0, tbl->legend);
+ 						SetDParam(0, tbl->legend);
  						SetDParam(1, Industry::GetIndustryTypeCount(tbl->type));
 -						if (!tbl->show_on_map) {
 -							/* Simply draw the string, not the black border of the legend colour.
@@ -1595,12 +1595,15 @@ index b7bcd9c..0ca9ec4 100644
 -	}
  
 -	/**
--	 * Notifications for the smallmap window.
+-	 * Some data on this window has become invalid.
+-	 * @param data Information about the changed data.
 -	 * - data = 0: Displayed industries at the industry chain window have changed.
 -	 * - data = 1: Companies have changed.
+-	 * @param gui_scope Whether the call is done from GUI scope. You may not do everything when not in GUI scope. See #InvalidateWindowData() for details.
 -	 */
--	virtual void OnInvalidateData(int data)
+-	virtual void OnInvalidateData(int data = 0, bool gui_scope = true)
 -	{
+-		if (!gui_scope) return;
 -		switch (data) {
 -			case 1:
 -				/* The owner legend has already been rebuilt. */
@@ -1623,12 +1626,15 @@ index b7bcd9c..0ca9ec4 100644
 -				}
 -				break;
 +/**
-+ * Notifications for the smallmap window.
++ * Some data on this window has become invalid.
++ * @param data Information about the changed data.
 + * - data = 0: Displayed industries at the industry chain window have changed.
 + * - data = 1: Companies have changed.
++ * @param gui_scope Whether the call is done from GUI scope. You may not do everything when not in GUI scope. See #InvalidateWindowData() for details.
 + */
-+void SmallMapWindow::OnInvalidateData(int data)
++void SmallMapWindow::OnInvalidateData(int data, bool gui_scope)
 +{
++	if (!gui_scope) return;
 +	switch (data) {
 +		case 1:
 +			/* The owner legend has already been rebuilt. */
@@ -1824,7 +1830,7 @@ index b7bcd9c..0ca9ec4 100644
  SmallMapWindow::SmallMapType SmallMapWindow::map_type = SMT_CONTOUR;
  bool SmallMapWindow::show_towns = true;
 diff --git a/src/smallmap_gui.h b/src/smallmap_gui.h
-index 572a175..61593ac 100644
+index 572a175..4cf7168 100644
 --- a/src/smallmap_gui.h
 +++ b/src/smallmap_gui.h
 @@ -12,9 +12,174 @@
@@ -1994,7 +2000,7 @@ index 572a175..61593ac 100644
 +	virtual void OnPaint();
 +	virtual void DrawWidget(const Rect &r, int widget) const;
 +	virtual void OnClick(Point pt, int widget, int click_count);
-+	virtual void OnInvalidateData(int data);
++	virtual void OnInvalidateData(int data = 0, bool gui_scope = true);
 +	virtual bool OnRightClick(Point pt, int widget);
 +	virtual void OnMouseWheel(int wheel);
 +	virtual void OnTick();
