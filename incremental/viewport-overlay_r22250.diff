@@ -1,5 +1,5 @@
 diff --git a/src/linkgraph_gui.cpp b/src/linkgraph_gui.cpp
-index 2e160f6..14d0d08 100644
+index 3613d5a..1afdc7e 100644
 --- a/src/linkgraph_gui.cpp
 +++ b/src/linkgraph_gui.cpp
 @@ -269,15 +269,15 @@ void LinkGraphOverlay::DrawStationDots(const DrawPixelInfo *dpi) const

@@ -4562,10 +4562,10 @@ index 0000000..f1a6349
 +#endif /* MCF_H_ */
 diff --git a/src/linkgraph_gui.cpp b/src/linkgraph_gui.cpp
 new file mode 100644
-index 0000000..2e160f6
+index 0000000..3613d5a
 --- /dev/null
 +++ b/src/linkgraph_gui.cpp
-@@ -0,0 +1,544 @@
+@@ -0,0 +1,545 @@
 +/* $Id$ */
 +
 +/*
@@ -5099,8 +5099,9 @@ index 0000000..2e160f6
 +/**
 + * Invalidate the data of this window if the cargoes or companies have changed.
 + * @param data ignored
++ * @param gui_scope ignored
 + */
-+void LinkGraphLegendWindow::OnInvalidateData(int data)
++void LinkGraphLegendWindow::OnInvalidateData(int data, bool gui_scope)
 +{
 +	/* Disable the companies who are not active */
 +	for (CompanyID i = COMPANY_FIRST; i < MAX_COMPANIES; i++) {
@@ -5112,7 +5113,7 @@ index 0000000..2e160f6
 +}
 diff --git a/src/linkgraph_gui.h b/src/linkgraph_gui.h
 new file mode 100644
-index 0000000..c7affb2
+index 0000000..de62441
 --- /dev/null
 +++ b/src/linkgraph_gui.h
 @@ -0,0 +1,116 @@
@@ -5222,7 +5223,7 @@ index 0000000..c7affb2
 +
 +	virtual void DrawWidget(const Rect &r, int widget) const;
 +	virtual void OnClick(Point pt, int widget, int click_count);
-+	virtual void OnInvalidateData(int data);
++	virtual void OnInvalidateData(int data = 0, bool gui_scope = true);
 +
 +private:
 +	LinkGraphOverlay *overlay;

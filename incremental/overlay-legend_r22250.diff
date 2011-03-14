@@ -55,7 +55,7 @@ index 2c9b0fe..8cbf0a9 100644
  STR_STATION_BUILD_COVERAGE_AREA_TITLE                           :{BLACK}Coverage area highlight
  STR_STATION_BUILD_COVERAGE_OFF                                  :{BLACK}Off
 diff --git a/src/linkgraph_gui.cpp b/src/linkgraph_gui.cpp
-index 52b934d..2e160f6 100644
+index 52b934d..3613d5a 100644
 --- a/src/linkgraph_gui.cpp
 +++ b/src/linkgraph_gui.cpp
 @@ -10,8 +10,10 @@
@@ -69,7 +69,7 @@ index 52b934d..2e160f6 100644
  #include "date_func.h"
  #include "linkgraph_gui.h"
  #include "viewport_func.h"
-@@ -299,3 +301,244 @@ void LinkGraphOverlay::SetCompanyMask(uint32 company_mask)
+@@ -299,3 +301,245 @@ void LinkGraphOverlay::SetCompanyMask(uint32 company_mask)
  	this->RebuildCache();
  	this->window->GetWidget<NWidgetBase>(this->widget_id)->SetDirty(this->window);
  }
@@ -303,8 +303,9 @@ index 52b934d..2e160f6 100644
 +/**
 + * Invalidate the data of this window if the cargoes or companies have changed.
 + * @param data ignored
++ * @param gui_scope ignored
 + */
-+void LinkGraphLegendWindow::OnInvalidateData(int data)
++void LinkGraphLegendWindow::OnInvalidateData(int data, bool gui_scope)
 +{
 +	/* Disable the companies who are not active */
 +	for (CompanyID i = COMPANY_FIRST; i < MAX_COMPANIES; i++) {
@@ -315,7 +316,7 @@ index 52b934d..2e160f6 100644
 +	}
 +}
 diff --git a/src/linkgraph_gui.h b/src/linkgraph_gui.h
-index 481be36..c7affb2 100644
+index 481be36..de62441 100644
 --- a/src/linkgraph_gui.h
 +++ b/src/linkgraph_gui.h
 @@ -15,6 +15,9 @@
@@ -344,7 +345,7 @@ index 481be36..c7affb2 100644
 +
 +	virtual void DrawWidget(const Rect &r, int widget) const;
 +	virtual void OnClick(Point pt, int widget, int click_count);
-+	virtual void OnInvalidateData(int data);
++	virtual void OnInvalidateData(int data = 0, bool gui_scope = true);
 +
 +private:
 +	LinkGraphOverlay *overlay;
