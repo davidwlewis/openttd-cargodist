@@ -1083,6 +1083,7 @@ void SmallMapWindow::DrawWidget(const Rect &r, int widget) const
 					case SMT_INDUSTRY:
 						/* Industry name must be formatted, since it's not in tiny font in the specs.
 						 * So, draw with a parameter and use the STR_SMALLMAP_INDUSTRY string, which is tiny font */
+						SetDParam(0, tbl->legend);
 						SetDParam(1, Industry::GetIndustryTypeCount(tbl->type));
 						/* FALL THROUGH */
 					case SMT_OWNER:
@@ -1301,12 +1302,15 @@ void SmallMapWindow::OnClick(Point pt, int widget, int click_count)
 }
 
 /**
- * Notifications for the smallmap window.
+ * Some data on this window has become invalid.
+ * @param data Information about the changed data.
  * - data = 0: Displayed industries at the industry chain window have changed.
  * - data = 1: Companies have changed.
+ * @param gui_scope Whether the call is done from GUI scope. You may not do everything when not in GUI scope. See #InvalidateWindowData() for details.
  */
-void SmallMapWindow::OnInvalidateData(int data)
+void SmallMapWindow::OnInvalidateData(int data, bool gui_scope)
 {
+	if (!gui_scope) return;
 	switch (data) {
 		case 1:
 			/* The owner legend has already been rebuilt. */
