@@ -175,7 +175,7 @@ public:
 	virtual void OnPaint();
 	virtual void DrawWidget(const Rect &r, int widget) const;
 	virtual void OnClick(Point pt, int widget, int click_count);
-	virtual void OnInvalidateData(int data);
+	virtual void OnInvalidateData(int data = 0, bool gui_scope = true);
 	virtual bool OnRightClick(Point pt, int widget);
 	virtual void OnMouseWheel(int wheel);
 	virtual void OnTick();
