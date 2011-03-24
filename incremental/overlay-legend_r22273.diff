@@ -1,0 +1,403 @@
+diff --git a/src/company_cmd.cpp b/src/company_cmd.cpp
+index c4f6611..3a9a0c5 100644
+--- a/src/company_cmd.cpp
++++ b/src/company_cmd.cpp
+@@ -84,6 +84,7 @@ void Company::PostDestructor(size_t index)
+ 	InvalidateWindowData(WC_GRAPH_LEGEND, 0, (int)index);
+ 	InvalidateWindowData(WC_PERFORMANCE_DETAIL, 0, (int)index);
+ 	InvalidateWindowData(WC_COMPANY_LEAGUE, 0, 0);
++	InvalidateWindowData(WC_LINKGRAPH_LEGEND, 0);
+ 	/* If the currently shown error message has this company in it, then close it. */
+ 	InvalidateWindowData(WC_ERRMSG, 0);
+ }
+@@ -558,6 +559,7 @@ Company *DoStartupNewCompany(bool is_ai, CompanyID company = INVALID_COMPANY)
+ 	SetWindowDirty(WC_GRAPH_LEGEND, 0);
+ 	SetWindowDirty(WC_TOOLBAR_MENU, 0);
+ 	SetWindowDirty(WC_CLIENT_LIST, 0);
++	InvalidateWindowData(WC_LINKGRAPH_LEGEND, 0);
+ 	BuildOwnerLegend();
+ 	InvalidateWindowData(WC_SMALLMAP, 0, 1);
+ 
+@@ -1030,6 +1032,7 @@ CommandCost CmdSetCompanyColour(TileIndex tile, DoCommandFlag flags, uint32 p1,
+ 		InvalidateWindowData(WC_DELIVERED_CARGO, 0);
+ 		InvalidateWindowData(WC_PERFORMANCE_HISTORY, 0);
+ 		InvalidateWindowData(WC_COMPANY_VALUE, 0);
++		InvalidateWindowData(WC_LINKGRAPH_LEGEND, 0);
+ 		/* The smallmap owner view also stores the company colours. */
+ 		BuildOwnerLegend();
+ 		InvalidateWindowData(WC_SMALLMAP, 0, 1);
+diff --git a/src/lang/english.txt b/src/lang/english.txt
+index 2c9b0fe..8cbf0a9 100644
+--- a/src/lang/english.txt
++++ b/src/lang/english.txt
+@@ -371,6 +371,7 @@ STR_FILE_MENU_EXIT                                              :Exit
+ ############ range for map menu starts
+ STR_MAP_MENU_MAP_OF_WORLD                                       :Map of world
+ STR_MAP_MENU_EXTRA_VIEW_PORT                                    :Extra viewport
++STR_MAP_MENU_LINGRAPH_LEGEND                                    :Link graph legend
+ STR_MAP_MENU_SIGN_LIST                                          :Sign list
+ ############ range for town menu starts, yet the town directory is shown in the map menu in the scenario editor
+ STR_TOWN_MENU_TOWN_DIRECTORY                                    :Town directory
+@@ -1893,6 +1894,15 @@ STR_TRANSPARENT_CATENARY_TOOLTIP                                :{BLACK}Toggle t
+ STR_TRANSPARENT_LOADING_TOOLTIP                                 :{BLACK}Toggle transparency for loading indicators. Ctrl+Click to lock
+ STR_TRANSPARENT_INVISIBLE_TOOLTIP                               :{BLACK}Set objects invisible instead of transparent
+ 
++# Linkgraph legend window
++STR_LINKGRAPH_LEGEND_CAPTION                                    :{BLACK}Link graph legend
++STR_LINKGRAPH_LEGEND_ALL                                        :{BLACK}All
++STR_LINKGRAPH_LEGEND_NONE                                       :{BLACK}None
++STR_LINKGRAPH_LEGEND_SELECT_COMPANIES                           :{BLACK}Select companies to be displayed
++STR_LINKGRAPH_LEGEND_UNUSED                                     :{TINYFONT}{BLACK}unused
++STR_LINKGRAPH_LEGEND_SATURATED                                  :{TINYFONT}{BLACK}saturated
++STR_LINKGRAPH_LEGEND_OVERLOADED                                 :{TINYFONT}{BLACK}overloaded
++
+ # Base for station construction window(s)
+ STR_STATION_BUILD_COVERAGE_AREA_TITLE                           :{BLACK}Coverage area highlight
+ STR_STATION_BUILD_COVERAGE_OFF                                  :{BLACK}Off
+diff --git a/src/linkgraph_gui.cpp b/src/linkgraph_gui.cpp
+index 52b934d..3613d5a 100644
+--- a/src/linkgraph_gui.cpp
++++ b/src/linkgraph_gui.cpp
+@@ -10,8 +10,10 @@
+ /** @file linkgraph_gui.cpp Implementation of linkgraph overlay GUI. */
+ 
+ #include "stdafx.h"
++#include "window_func.h"
+ #include "window_gui.h"
+ #include "company_base.h"
++#include "company_gui.h"
+ #include "date_func.h"
+ #include "linkgraph_gui.h"
+ #include "viewport_func.h"
+@@ -299,3 +301,245 @@ void LinkGraphOverlay::SetCompanyMask(uint32 company_mask)
+ 	this->RebuildCache();
+ 	this->window->GetWidget<NWidgetBase>(this->widget_id)->SetDirty(this->window);
+ }
++
++enum LinkGraphLegendWindowWidgets {
++	LGL_CAPTION,           ///< Caption widget.
++	LGL_SATURATION,        ///< Saturation legend.
++	LGL_SATURATION_FIRST,
++	LGL_SATURATION_LAST = LGL_SATURATION_FIRST + lengthof(LinkGraphOverlay::LINK_COLOURS) - 1,
++	LGL_COMPANIES,         ///< Company selection widget.
++	LGL_COMPANY_FIRST,
++	LGL_COMPANY_LAST = LGL_COMPANY_FIRST + MAX_COMPANIES - 1,
++	LGL_COMPANIES_ALL,
++	LGL_COMPANIES_NONE,
++	LGL_CARGOES,            ///< Cargo selection widget.
++	LGL_CARGO_FIRST,
++	LGL_CARGO_LAST = LGL_CARGO_FIRST + NUM_CARGO - 1,
++	LGL_CARGOES_ALL,
++	LGL_CARGOES_NONE,s
++};
++
++/** Make a number of rows with buttons for each company for the linkgraph legend window. */
++NWidgetBase *MakeCompanyButtonRowsLinkGraphGUI(int *biggest_index)
++{
++	return MakeCompanyButtonRows(biggest_index, LGL_COMPANY_FIRST, LGL_COMPANY_LAST, 3, STR_LINKGRAPH_LEGEND_SELECT_COMPANIES);
++}
++
++NWidgetBase *MakeSaturationLegendLinkGraphGUI(int *biggest_index)
++{
++	NWidgetVertical *panel = new NWidgetVertical();
++	for (uint i = 0; i < lengthof(LinkGraphOverlay::LINK_COLOURS); ++i) {
++		NWidgetBackground * wid = new NWidgetBackground(WWT_PANEL, COLOUR_DARK_GREEN, i + LGL_SATURATION_FIRST);
++		wid->SetMinimalSize(50, FONT_HEIGHT_SMALL);
++		wid->SetFill(0, 1);
++		wid->SetResize(0, 1);
++		panel->Add(wid);
++	}
++	*biggest_index = LGL_SATURATION_LAST;
++	return panel;
++}
++
++NWidgetBase *MakeCargoesLegendLinkGraphGUI(int *biggest_index)
++{
++	static const uint ENTRIES_PER_ROW = CeilDiv(NUM_CARGO, 5);
++	NWidgetVertical *panel = new NWidgetVertical();
++	NWidgetHorizontal *row = NULL;
++	for (uint i = 0; i < NUM_CARGO; ++i) {
++		if (i % ENTRIES_PER_ROW == 0) {
++			if (row) panel->Add(row);
++			row = new NWidgetHorizontal();
++		}
++		NWidgetBackground * wid = new NWidgetBackground(WWT_PANEL, COLOUR_GREY, i + LGL_CARGO_FIRST);
++		wid->SetMinimalSize(25, FONT_HEIGHT_SMALL);
++		wid->SetFill(0, 1);
++		wid->SetResize(0, 1);
++		row->Add(wid);
++	}
++	panel->Add(row);
++	*biggest_index = LGL_CARGO_LAST;
++	return panel;
++}
++
++
++static const NWidgetPart _nested_linkgraph_legend_widgets[] = {
++	NWidget(NWID_HORIZONTAL),
++		NWidget(WWT_CLOSEBOX, COLOUR_DARK_GREEN),
++		NWidget(WWT_CAPTION, COLOUR_DARK_GREEN, LGL_CAPTION), SetDataTip(STR_LINKGRAPH_LEGEND_CAPTION, STR_TOOLTIP_WINDOW_TITLE_DRAG_THIS),
++		NWidget(WWT_SHADEBOX, COLOUR_DARK_GREEN),
++		NWidget(WWT_STICKYBOX, COLOUR_DARK_GREEN),
++	EndContainer(),
++	NWidget(WWT_PANEL, COLOUR_DARK_GREEN),
++		NWidget(NWID_HORIZONTAL),
++			NWidget(WWT_PANEL, COLOUR_DARK_GREEN, LGL_SATURATION),
++				SetPadding(WD_FRAMERECT_TOP, 0, WD_FRAMERECT_BOTTOM, WD_CAPTIONTEXT_LEFT),
++				SetMinimalSize(50, 100),
++				NWidgetFunction(MakeSaturationLegendLinkGraphGUI),
++			EndContainer(),
++			NWidget(WWT_PANEL, COLOUR_DARK_GREEN, LGL_COMPANIES),
++				SetPadding(WD_FRAMERECT_TOP, 0, WD_FRAMERECT_BOTTOM, WD_CAPTIONTEXT_LEFT),
++				NWidget(NWID_VERTICAL, NC_EQUALSIZE),
++					SetMinimalSize(100, 100),
++					NWidgetFunction(MakeCompanyButtonRowsLinkGraphGUI),
++					NWidget(WWT_PUSHTXTBTN, COLOUR_GREY, LGL_COMPANIES_ALL), SetDataTip(STR_LINKGRAPH_LEGEND_ALL, STR_NULL),
++					NWidget(WWT_PUSHTXTBTN, COLOUR_GREY, LGL_COMPANIES_NONE), SetDataTip(STR_LINKGRAPH_LEGEND_NONE, STR_NULL),
++				EndContainer(),
++			EndContainer(),
++			NWidget(WWT_PANEL, COLOUR_DARK_GREEN, LGL_CARGOES),
++				SetPadding(WD_FRAMERECT_TOP, WD_FRAMERECT_RIGHT, WD_FRAMERECT_BOTTOM, WD_CAPTIONTEXT_LEFT),
++				NWidget(NWID_VERTICAL, NC_EQUALSIZE),
++					SetMinimalSize(150, 100),
++					NWidgetFunction(MakeCargoesLegendLinkGraphGUI),
++					NWidget(WWT_PUSHTXTBTN, COLOUR_GREY, LGL_CARGOES_ALL), SetDataTip(STR_LINKGRAPH_LEGEND_ALL, STR_NULL),
++					NWidget(WWT_PUSHTXTBTN, COLOUR_GREY, LGL_CARGOES_NONE), SetDataTip(STR_LINKGRAPH_LEGEND_NONE, STR_NULL),
++				EndContainer(),
++			EndContainer(),
++		EndContainer(),
++	EndContainer()
++};
++
++static const WindowDesc _linkgraph_legend_desc(
++	WDP_MANUAL, 300, 314,
++	WC_LINKGRAPH_LEGEND, WC_NONE,
++	WDF_UNCLICK_BUTTONS,
++	_nested_linkgraph_legend_widgets, lengthof(_nested_linkgraph_legend_widgets)
++);
++
++/**
++ * Open a link graph legend window.
++*/
++void ShowLinkGraphLegend()
++{
++	AllocateWindowDescFront<LinkGraphLegendWindow>(&_linkgraph_legend_desc, 0);
++}
++
++LinkGraphLegendWindow::LinkGraphLegendWindow(const WindowDesc *desc, int window_number)
++{
++	this->InitNested(desc, window_number);
++	this->InvalidateData(0);
++	//this->SetOverlay(FindWindowById(WC_MAIN_WINDOW, 0)->viewport->overlay);
++}
++
++/**
++ * Set the overlay belonging to this menu and import its company/cargo settings.
++ * @params overlay New overlay for this menu.
++ */
++void LinkGraphLegendWindow::SetOverlay(LinkGraphOverlay *overlay) {
++	this->overlay = overlay;
++	uint32 companies = this->overlay->GetCompanyMask();
++	for (uint c = 0; c < MAX_COMPANIES; c++) {
++		if (!this->IsWidgetDisabled(LGL_COMPANY_FIRST + c)) {
++			this->SetWidgetLoweredState(LGL_COMPANY_FIRST + c, HasBit(companies, c));
++		}
++	}
++	uint32 cargoes = this->overlay->GetCargoMask();
++	for (uint c = 0; c < NUM_CARGO; c++) {
++		if (!this->IsWidgetDisabled(LGL_CARGO_FIRST + c)) {
++			this->SetWidgetLoweredState(LGL_CARGO_FIRST + c, HasBit(cargoes, c));
++		}
++	}
++}
++
++void LinkGraphLegendWindow::DrawWidget(const Rect &r, int widget) const
++{
++	const NWidgetBase *wid = this->GetWidget<NWidgetBase>(widget);
++	if (IsInsideMM(widget, LGL_COMPANY_FIRST, LGL_COMPANY_LAST + 1)) {
++		if (this->IsWidgetDisabled(widget)) return;
++		CompanyID cid = (CompanyID)(widget - LGL_COMPANY_FIRST);
++		Dimension sprite_size = GetSpriteSize(SPR_COMPANY_ICON);
++		DrawCompanyIcon(cid, (r.left + r.right - sprite_size.width) / 2, (r.top + r.bottom - sprite_size.height) / 2);
++		return;
++	}
++	if (IsInsideMM(widget, LGL_SATURATION_FIRST, LGL_SATURATION_LAST + 1)) {
++		GfxFillRect(r.left + 1, r.top + 1, r.right - 1, r.bottom - 1, LinkGraphOverlay::LINK_COLOURS[widget - LGL_SATURATION_FIRST]);
++		if (widget == LGL_SATURATION_FIRST) {
++			DrawString(wid->pos_x, wid->current_x + wid->pos_x, wid->pos_y, STR_LINKGRAPH_LEGEND_UNUSED, TC_FROMSTRING, SA_HOR_CENTER);
++		} else if (widget == LGL_SATURATION_LAST) {
++			DrawString(wid->pos_x, wid->current_x + wid->pos_x, wid->pos_y, STR_LINKGRAPH_LEGEND_OVERLOADED, TC_FROMSTRING, SA_HOR_CENTER);
++		} else if (widget == (LGL_SATURATION_LAST + LGL_SATURATION_FIRST) / 2) {
++			DrawString(wid->pos_x, wid->current_x + wid->pos_x, wid->pos_y, STR_LINKGRAPH_LEGEND_SATURATED, TC_FROMSTRING, SA_HOR_CENTER);
++		}
++	}
++	if (IsInsideMM(widget, LGL_CARGO_FIRST, LGL_CARGO_LAST + 1)) {
++		if (this->IsWidgetDisabled(widget)) return;
++		CargoSpec *cargo = CargoSpec::Get(widget - LGL_CARGO_FIRST);
++		GfxFillRect(r.left + 2, r.top + 2, r.right - 2, r.bottom - 2, cargo->legend_colour);
++		DrawString(wid->pos_x, wid->current_x + wid->pos_x, wid->pos_y + 2, cargo->abbrev, TC_BLACK, SA_HOR_CENTER);
++	}
++}
++
++/**
++ * Update the overlay with the new company selection.
++ */
++void LinkGraphLegendWindow::UpdateOverlayCompanies()
++{
++	uint32 mask = 0;
++	for (uint c = 0; c < MAX_COMPANIES; c++) {
++		if (this->IsWidgetDisabled(c + LGL_COMPANY_FIRST)) continue;
++		if (!this->IsWidgetLowered(c + LGL_COMPANY_FIRST)) continue;
++		SetBit(mask, c);
++	}
++	this->overlay->SetCompanyMask(mask);
++}
++
++/**
++ * Update the overlay with the new cargo selection.
++ */
++void LinkGraphLegendWindow::UpdateOverlayCargoes()
++{
++	uint32 mask = 0;
++	for (uint c = 0; c < NUM_CARGO; c++) {
++		if (this->IsWidgetDisabled(c + LGL_CARGO_FIRST)) continue;
++		if (!this->IsWidgetLowered(c + LGL_CARGO_FIRST)) continue;
++		SetBit(mask, c);
++	}
++	this->overlay->SetCargoMask(mask);
++}
++
++void LinkGraphLegendWindow::OnClick(Point pt, int widget, int click_count)
++{
++	/* Check which button is clicked */
++	if (IsInsideMM(widget, LGL_COMPANY_FIRST, LGL_COMPANY_LAST + 1)) {
++		/* Is it no on disable? */
++		if (!this->IsWidgetDisabled(widget)) {
++			this->ToggleWidgetLoweredState(widget);
++			this->UpdateOverlayCompanies();
++		}
++	} else if (widget == LGL_COMPANIES_ALL || widget == LGL_COMPANIES_NONE) {
++		for (uint c = 0; c < MAX_COMPANIES; c++) {
++			if (this->IsWidgetDisabled(c + LGL_COMPANY_FIRST)) continue;
++			this->SetWidgetLoweredState(LGL_COMPANY_FIRST + c, widget == LGL_COMPANIES_ALL);
++		}
++		this->UpdateOverlayCompanies();
++		this->SetDirty();
++	} else if (IsInsideMM(widget, LGL_CARGO_FIRST, LGL_CARGO_LAST + 1)) {
++		/* Is it no on disable? */
++		if (!this->IsWidgetDisabled(widget)) {
++			this->ToggleWidgetLoweredState(widget);
++			this->UpdateOverlayCargoes();
++
++		}
++	} else if (widget == LGL_CARGOES_ALL || widget == LGL_CARGOES_NONE) {
++		for (uint c = 0; c < NUM_CARGO; c++) {
++			if (this->IsWidgetDisabled(c + LGL_CARGO_FIRST)) continue;
++			this->SetWidgetLoweredState(LGL_CARGO_FIRST + c, widget == LGL_CARGOES_ALL);
++		}
++		this->UpdateOverlayCargoes();
++	}
++	this->SetDirty();
++}
++
++/**
++ * Invalidate the data of this window if the cargoes or companies have changed.
++ * @param data ignored
++ * @param gui_scope ignored
++ */
++void LinkGraphLegendWindow::OnInvalidateData(int data, bool gui_scope)
++{
++	/* Disable the companies who are not active */
++	for (CompanyID i = COMPANY_FIRST; i < MAX_COMPANIES; i++) {
++		this->SetWidgetDisabledState(i + LGL_COMPANY_FIRST, !Company::IsValidID(i));
++	}
++	for (CargoID i = 0; i < NUM_CARGO; i++) {
++		this->SetWidgetDisabledState(i + LGL_CARGO_FIRST, !CargoSpec::Get(i)->IsValid());
++	}
++}
+diff --git a/src/linkgraph_gui.h b/src/linkgraph_gui.h
+index 481be36..de62441 100644
+--- a/src/linkgraph_gui.h
++++ b/src/linkgraph_gui.h
+@@ -15,6 +15,9 @@
+ #include "company_func.h"
+ #include "station_base.h"
+ #include "widget_type.h"
++
++#include "table/strings.h"
++
+ #include <map>
+ #include <list>
+ 
+@@ -89,4 +92,25 @@ protected:
+ 	static void DrawVertex(int x, int y, int size, int colour, int border_colour);
+ };
+ 
++void ShowLinkGraphLegend();
++
++/**
++ * Menu window to select cargoes and companies to show in a link graph overlay.
++ */
++struct LinkGraphLegendWindow : Window {
++public:
++	LinkGraphLegendWindow(const WindowDesc *desc, int window_number);
++	void SetOverlay(LinkGraphOverlay *overlay);
++
++	virtual void DrawWidget(const Rect &r, int widget) const;
++	virtual void OnClick(Point pt, int widget, int click_count);
++	virtual void OnInvalidateData(int data = 0, bool gui_scope = true);
++
++private:
++	LinkGraphOverlay *overlay;
++
++	void UpdateOverlayCompanies();
++	void UpdateOverlayCargoes();
++};
++
+ #endif /* LINKGRAPH_GUI_H_ */
+diff --git a/src/toolbar_gui.cpp b/src/toolbar_gui.cpp
+index 711b738..3008af2 100644
+--- a/src/toolbar_gui.cpp
++++ b/src/toolbar_gui.cpp
+@@ -39,6 +39,7 @@
+ #include "smallmap_gui.h"
+ #include "graph_gui.h"
+ #include "textbuf_gui.h"
++#include "linkgraph_gui.h"
+ #include "newgrf_debug.h"
+ #include "hotkeys.h"
+ #include "engine_base.h"
+@@ -407,10 +408,11 @@ static CallBackFunction MenuClickSaveLoad(int index = 0)
+ enum MapMenuEntries {
+ 	MME_SHOW_SMALLMAP        = 0,
+ 	MME_SHOW_EXTRAVIEWPORTS,
++	MME_SHOW_LINKGRAPH,
+ 	MME_SHOW_SIGNLISTS,
+ 	MME_SHOW_TOWNDIRECTORY,    ///< This entry is only used in Editor mode
+-	MME_MENUCOUNT_NORMAL     = 3,
+-	MME_MENUCOUNT_EDITOR     = 4,
++	MME_MENUCOUNT_NORMAL     = 4,
++	MME_MENUCOUNT_EDITOR     = 5,
+ };
+ 
+ static CallBackFunction ToolbarMapClick(Window *w)
+@@ -430,6 +432,7 @@ static CallBackFunction MenuClickMap(int index)
+ 	switch (index) {
+ 		case MME_SHOW_SMALLMAP:       ShowSmallMap();            break;
+ 		case MME_SHOW_EXTRAVIEWPORTS: ShowExtraViewPortWindow(); break;
++		case MME_SHOW_LINKGRAPH:      ShowLinkGraphLegend();     break;
+ 		case MME_SHOW_SIGNLISTS:      ShowSignList();            break;
+ 		case MME_SHOW_TOWNDIRECTORY:  if (_game_mode == GM_EDITOR) ShowTownDirectory(); break;
+ 	}
+diff --git a/src/window_type.h b/src/window_type.h
+index 458ba70..2102bf7 100644
+--- a/src/window_type.h
++++ b/src/window_type.h
+@@ -111,6 +111,7 @@ enum WindowClass {
+ 	WC_INDUSTRY_CARGOES,
+ 	WC_GRF_PARAMETERS,
+ 	WC_BUILD_OBJECT,
++	WC_LINKGRAPH_LEGEND,
+ 
+ 	WC_INVALID = 0xFFFF
+ };
