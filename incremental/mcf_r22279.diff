@@ -1,0 +1,1085 @@
+diff --git a/projects/openttd_vs100.vcxproj b/projects/openttd_vs100.vcxproj
+index 5eb7dd6..8fc721f 100644
+--- a/projects/openttd_vs100.vcxproj
++++ b/projects/openttd_vs100.vcxproj
+@@ -329,6 +329,7 @@
+     <ClCompile Include="..\src\landscape.cpp" />
+     <ClCompile Include="..\src\linkgraph\demands.cpp" />
+     <ClCompile Include="..\src\linkgraph\linkgraph.cpp" />
++    <ClCompile Include="..\src\linkgraph\mcf.cpp" />
+     <ClCompile Include="..\src\map.cpp" />
+     <ClCompile Include="..\src\misc.cpp" />
+     <ClCompile Include="..\src\mixer.cpp" />
+@@ -460,6 +461,7 @@
+     <ClInclude Include="..\src\linkgraph\demands.h" />
+     <ClInclude Include="..\src\linkgraph\linkgraph.h" />
+     <ClInclude Include="..\src\linkgraph\linkgraph_type.h" />
++    <ClInclude Include="..\src\linkgraph\mcf.h" />
+     <ClInclude Include="..\src\livery.h" />
+     <ClInclude Include="..\src\map_func.h" />
+     <ClInclude Include="..\src\map_type.h" />
+diff --git a/projects/openttd_vs100.vcxproj.filters b/projects/openttd_vs100.vcxproj.filters
+index d2deea3..e004d1f 100644
+--- a/projects/openttd_vs100.vcxproj.filters
++++ b/projects/openttd_vs100.vcxproj.filters
+@@ -207,6 +207,9 @@
+     <ClCompile Include="..\src\linkgraph\linkgraph.cpp">
+       <Filter>Source Files</Filter>
+     </ClCompile>
++    <ClCompile Include="..\src\linkgraph\mcf.cpp">
++      <Filter>Source Files</Filter>
++    </ClCompile>
+     <ClCompile Include="..\src\map.cpp">
+       <Filter>Source Files</Filter>
+     </ClCompile>
+@@ -600,6 +603,9 @@
+     <ClInclude Include="..\src\linkgraph\linkgraph_type.h">
+       <Filter>Header Files</Filter>
+     </ClInclude>
++    <ClInclude Include="..\src\linkgraph\mcf.h">
++      <Filter>Header Files</Filter>
++    </ClInclude>
+     <ClInclude Include="..\src\livery.h">
+       <Filter>Header Files</Filter>
+     </ClInclude>
+diff --git a/projects/openttd_vs80.vcproj b/projects/openttd_vs80.vcproj
+index af904ff..32847b8 100644
+--- a/projects/openttd_vs80.vcproj
++++ b/projects/openttd_vs80.vcproj
+@@ -587,6 +587,10 @@
+ 				>
+ 			</File>
+ 			<File
++				RelativePath=".\..\src\linkgraph\mcf.cpp"
++				>
++			</File>
++			<File
+ 				RelativePath=".\..\src\map.cpp"
+ 				>
+ 			</File>
+@@ -1115,6 +1119,10 @@
+ 				>
+ 			</File>
+ 			<File
++				RelativePath=".\..\src\linkgraph\mcf.h"
++				>
++			</File>
++			<File
+ 				RelativePath=".\..\src\livery.h"
+ 				>
+ 			</File>
+diff --git a/projects/openttd_vs90.vcproj b/projects/openttd_vs90.vcproj
+index c181637..e556125 100644
+--- a/projects/openttd_vs90.vcproj
++++ b/projects/openttd_vs90.vcproj
+@@ -584,6 +584,10 @@
+ 				>
+ 			</File>
+ 			<File
++				RelativePath=".\..\src\linkgraph\mcf.cpp"
++				>
++			</File>
++			<File
+ 				RelativePath=".\..\src\map.cpp"
+ 				>
+ 			</File>
+@@ -1112,6 +1116,10 @@
+ 				>
+ 			</File>
+ 			<File
++				RelativePath=".\..\src\linkgraph\mcf.h"
++				>
++			</File>
++			<File
+ 				RelativePath=".\..\src\livery.h"
+ 				>
+ 			</File>
+diff --git a/source.list b/source.list
+index 62a7725..7ed3469 100644
+--- a/source.list
++++ b/source.list
+@@ -37,6 +37,7 @@ ini_load.cpp
+ landscape.cpp
+ linkgraph/demands.cpp
+ linkgraph/linkgraph.cpp
++linkgraph/mcf.cpp
+ map.cpp
+ misc.cpp
+ mixer.cpp
+@@ -193,6 +194,7 @@ language.h
+ linkgraph/demands.h
+ linkgraph/linkgraph.h
+ linkgraph/linkgraph_type.h
++linkgraph/mcf.h
+ livery.h
+ map_func.h
+ map_type.h
+diff --git a/src/lang/english.txt b/src/lang/english.txt
+index 09fdad0..81e1770 100644
+--- a/src/lang/english.txt
++++ b/src/lang/english.txt
+@@ -1333,6 +1333,7 @@ STR_CONFIG_SETTING_DISTRIBUTION_DEFAULT                         :{LTBLUE}Distrib
+ STR_CONFIG_SETTING_LINKGRAPH_ACCURACY                           :{LTBLUE}Accuracy when calculating things on the link graph: {ORANGE}{STRING1}
+ STR_CONFIG_SETTING_DEMAND_DISTANCE                              :{LTBLUE}Effect of distance on demands: {ORANGE}{STRING1}%
+ STR_CONFIG_SETTING_DEMAND_SIZE                                  :{LTBLUE}Effect of remote station's popularity on symmetric demands: {ORANGE}{STRING1}%
++STR_CONFIG_SETTING_SHORT_PATH_SATURATION                        :{LTBLUE}Saturation of short paths before using capacious paths: {ORANGE}{STRING1}%
+ 
+ STR_CONFIG_SETTING_GUI                                          :{ORANGE}Interface
+ STR_CONFIG_SETTING_CONSTRUCTION                                 :{ORANGE}Construction
+diff --git a/src/linkgraph/demands.cpp b/src/linkgraph/demands.cpp
+index 6124cf1..93f6941 100644
+--- a/src/linkgraph/demands.cpp
++++ b/src/linkgraph/demands.cpp
+@@ -46,6 +46,7 @@ FORCEINLINE void Scaler::SetDemands(LinkGraphComponent *graph, NodeID from_id, N
+ {
+ 	Edge &forward = graph->GetEdge(from_id, to_id);
+ 	forward.demand += demand_forw;
++	forward.unsatisfied_demand += demand_forw;
+ 	graph->GetNode(from_id).undelivered_supply -= demand_forw;
+ }
+ 
+diff --git a/src/linkgraph/linkgraph.cpp b/src/linkgraph/linkgraph.cpp
+index a132843..5bc9bf9 100644
+--- a/src/linkgraph/linkgraph.cpp
++++ b/src/linkgraph/linkgraph.cpp
+@@ -16,6 +16,7 @@
+ #include "../moving_average.h"
+ #include "linkgraph.h"
+ #include "demands.h"
++#include "mcf.h"
+ #include <queue>
+ 
+ /**
+@@ -29,17 +30,23 @@ LinkGraph _link_graphs[NUM_CARGO];
+ LinkGraphJob::HandlerList LinkGraphJob::_handlers;
+ 
+ /**
+- * Create a node.
++ * Create a node or clear it.
+  * @param st ID of the associated station.
+  * @param sup Supply of cargo at the station last month.
+  * @param dem Acceptance for cargo at the station.
+  */
+-FORCEINLINE void Node::Init(StationID st, uint sup, uint dem)
++void Node::Init(StationID st, uint sup, uint dem)
+ {
+ 	this->supply = sup;
+ 	this->undelivered_supply = sup;
+ 	this->demand = dem;
+ 	this->station = st;
++
++	for (PathSet::iterator i = this->paths.begin(); i != this->paths.end(); ++i) {
++		delete *i;
++	}
++	this->paths.clear();
++	this->flows.clear();
+ }
+ 
+ /**
+@@ -52,6 +59,9 @@ FORCEINLINE void Edge::Init(uint distance, uint capacity)
+ 	this->distance = distance;
+ 	this->capacity = capacity;
+ 	this->demand = 0;
++	this->unsatisfied_demand = 0;
++	this->flow = 0;
++	this->next_edge = INVALID_NODE;
+ }
+ 
+ 
+@@ -202,13 +212,16 @@ NodeID LinkGraphComponent::AddNode(Station *st)
+ 			HasBit(good.acceptance_pickup, GoodsEntry::ACCEPTANCE));
+ 
+ 	std::vector<Edge> &new_edges = this->edges[this->num_nodes];
++
++	/* reset the first edge starting at the new node */
++	new_edges[this->num_nodes].next_edge = INVALID_NODE;
++
+ 	for (NodeID i = 0; i < this->num_nodes; ++i) {
+ 		uint distance = DistanceManhattan(st->xy, Station::Get(this->nodes[i].station)->xy);
+ 		if (do_resize) this->edges[i].push_back(Edge());
+ 		new_edges[i].Init(distance);
+ 		this->edges[i][this->num_nodes].Init(distance);
+ 	}
+-
+ 	return this->num_nodes++;
+ }
+ 
+@@ -221,7 +234,11 @@ NodeID LinkGraphComponent::AddNode(Station *st)
+ FORCEINLINE void LinkGraphComponent::AddEdge(NodeID from, NodeID to, uint capacity)
+ {
+ 	assert(from != to);
+-	this->edges[from][to].capacity = capacity;
++	Edge &edge = this->edges[from][to];
++	Edge &first = this->edges[from][from];
++	edge.capacity = capacity;
++	edge.next_edge = first.next_edge;
++	first.next_edge = to;
+ }
+ 
+ /**
+@@ -305,6 +322,70 @@ void LinkGraph::Join()
+ }
+ 
+ /**
++ * Add this path as a new child to the given base path, thus making this path
++ * a "fork" of the base path.
++ * @param base the path to fork from
++ * @param cap maximum capacity of the new path
++ * @param dist distance of the new leg
++ */
++void Path::Fork(Path *base, uint cap, int free_cap, uint dist)
++{
++	this->capacity = min(base->capacity, cap);
++	this->free_capacity = min(base->free_capacity, free_cap);
++	this->distance = base->distance + dist;
++	assert(this->distance > 0);
++	if (this->parent != base) {
++		this->Detach();
++		this->parent = base;
++		this->parent->num_children++;
++	}
++	this->origin = base->origin;
++}
++
++/**
++ * Push some flow along a path and register the path in the nodes it passes if
++ * successful.
++ * @param new_flow amount of flow to push
++ * @param graph the link graph component this node belongs to
++ * @param only_positive if true, don't push more flow than there is capacity
++ * @return the amount of flow actually pushed
++ */
++uint Path::AddFlow(uint new_flow, LinkGraphComponent *graph, bool only_positive)
++{
++	if (this->parent != NULL) {
++		Edge &edge = graph->GetEdge(this->parent->node, this->node);
++		if (only_positive) {
++			uint usable_cap = edge.capacity * graph->GetSettings().short_path_saturation / 100;
++			if (usable_cap > edge.flow) {
++				new_flow = min(new_flow, usable_cap - edge.flow);
++			} else {
++				return 0;
++			}
++		}
++		new_flow = this->parent->AddFlow(new_flow, graph, only_positive);
++		if (new_flow > 0) {
++			graph->GetNode(this->parent->node).paths.insert(this);
++		}
++		edge.flow += new_flow;
++	}
++	this->flow += new_flow;
++	return new_flow;
++}
++
++/**
++ * create a leg of a path in the link graph.
++ * @param n id of the link graph node this path passes
++ * @param source if true, this is the first leg of the path
++ */
++Path::Path(NodeID n, bool source) :
++	distance(source ? 0 : UINT_MAX),
++	capacity(0),
++	free_capacity(source ? INT_MAX : INT_MIN),
++	flow(0), node(n), origin(source ? n : INVALID_NODE),
++	num_children(0), parent(NULL)
++{}
++
++/**
+  * Join the calling thread with this job's thread if threading is enabled.
+  */
+ FORCEINLINE void LinkGraphJob::Join()
+@@ -359,4 +440,6 @@ void InitializeLinkGraphs()
+ 
+ 	LinkGraphJob::ClearHandlers();
+ 	LinkGraphJob::AddHandler(new DemandHandler);
++	LinkGraphJob::AddHandler(new MCFHandler<MCF1stPass>);
++	LinkGraphJob::AddHandler(new MCFHandler<MCF2ndPass>);
+ }
+diff --git a/src/linkgraph/linkgraph.h b/src/linkgraph/linkgraph.h
+index c496276..65dcfda 100644
+--- a/src/linkgraph/linkgraph.h
++++ b/src/linkgraph/linkgraph.h
+@@ -20,8 +20,15 @@
+ #include "linkgraph_type.h"
+ #include <list>
+ #include <vector>
++#include <set>
+ 
+ struct SaveLoad;
++class Path;
++
++typedef std::set<Path *> PathSet;
++typedef std::map<NodeID, Path *> PathViaMap;
++typedef std::map<StationID, int> FlowViaMap;
++typedef std::map<StationID, FlowViaMap> FlowMap;
+ 
+ /**
+  * Node of the link graph. contains all relevant information from the associated
+@@ -34,18 +41,31 @@ public:
+ 	uint undelivered_supply; ///< Amount of supply that hasn't been distributed yet.
+ 	uint demand;             ///< Acceptance at the station.
+ 	StationID station;       ///< Station ID.
++	PathSet paths;           ///< Paths through this node.
++	FlowMap flows;           ///< Planned flows to other nodes.
++
++	/**
++	 * Clear a node on destruction to delete paths that might remain.
++	 */
++	~Node() {this->Init();}
+ 
+ 	void Init(StationID st = INVALID_STATION, uint sup = 0, uint dem = 0);
+ };
+ 
+ /**
+- * An edge in the link graph. Corresponds to a link between two stations.
++ * An edge in the link graph. Corresponds to a link between two stations or at
++ * least the distance between them. Edges from one node to itself contain the
++ * ID of the opposite Node of the first active edge (i.e. not just distance) in
++ * the column as next_edge.
+  */
+ class Edge {
+ public:
+-	uint distance; ///< Length of the link.
+-	uint capacity; ///< Capacity of the link.
+-	uint demand;   ///< Transport demand between the nodes.
++	uint distance;           ///< Length of the link.
++	uint capacity;           ///< Capacity of the link.
++	uint demand;             ///< Transport demand between the nodes.
++	uint unsatisfied_demand; ///< Demand over this edge that hasn't been satisfied yet.
++	uint flow;               ///< Planned flow over this edge.
++	NodeID next_edge;        ///< Destination of next valid edge starting at the same source node.
+ 
+ 	void Init(uint distance = 0, uint capacity = 0);
+ };
+@@ -130,7 +150,14 @@ public:
+ 	}
+ 
+ 	/**
+-	 * Mark this component as empty.
++	 * Get the first valid edge starting at the specified node.
++	 * @param from ID of the source node
++	 * @return ID of the destination node
++	 */
++	FORCEINLINE NodeID GetFirstEdge(NodeID from) {return edges[from][from].next_edge;}
++
++	/**
++	 * Set the number of nodes to 0 to mark this component as done.
+ 	 */
+ 	FORCEINLINE void Clear()
+ 	{
+@@ -243,6 +270,74 @@ private:
+ 	void CreateComponent(Station *first);
+ };
+ 
++/**
++ * A leg of a path in the link graph. Paths can form trees by being "forked".
++ */
++class Path {
++public:
++	Path(NodeID n, bool source = false);
++
++	/** Get the node this leg passes. */
++	FORCEINLINE NodeID GetNode() const {return this->node;}
++
++	/** Get the overall origin of the path. */
++	FORCEINLINE NodeID GetOrigin() const {return this->origin;}
++
++	/** Get the parent leg of this one. */
++	FORCEINLINE Path *GetParent() {return this->parent;}
++
++	/** Get the overall capacity of the path. */
++	FORCEINLINE uint GetCapacity() const {return this->capacity;}
++
++	/** Get the free capacity of the path. */
++	FORCEINLINE int GetFreeCapacity() const {return this->free_capacity;}
++
++	/**
++	 * Get ratio of free * 16 (so that we get fewer 0) /
++	 * overall capacity + 1 (so that we don't divide by 0).
++	 */
++	FORCEINLINE int GetCapacityRatio() const {return (this->free_capacity << 4) / (this->capacity + 1);}
++
++	/** Get the overall distance of the path. */
++	FORCEINLINE uint GetDistance() const {return this->distance;}
++
++	/** Reduce the flow on this leg only by the specified amount. */
++	FORCEINLINE void ReduceFlow(uint f) {this->flow -= f;}
++
++	/** Increase the flow on this leg only by the specified amount. */
++	FORCEINLINE void AddFlow(uint f) {this->flow += f;}
++
++	/** Get the flow on this leg. */
++	FORCEINLINE uint GetFlow() const {return this->flow;}
++
++	/** Get the number of "forked off" child legs of this one. */
++	FORCEINLINE uint GetNumChildren() const {return this->num_children;}
++
++	/**
++	 * Detach this path from its parent.
++	 */
++	FORCEINLINE void Detach()
++	{
++		if (this->parent != NULL) {
++			this->parent->num_children--;
++			this->parent = NULL;
++		}
++	}
++
++	uint AddFlow(uint f, LinkGraphComponent *graph, bool only_positive);
++	void Fork(Path *base, uint cap, int free_cap, uint dist);
++
++protected:
++	uint distance;     ///< Sum(distance of all legs up to this one).
++	uint capacity;     ///< This capacity is min(capacity) fom all edges.
++	int free_capacity; ///< This capacity is min(edge.capacity - edge.flow) for the current run of Dijkstra.
++	uint flow;         ///< Flow the current run of the mcf solver assigns.
++	NodeID node;       ///< Link graph node this leg passes.
++	NodeID origin;     ///< Link graph node this path originates from.
++	uint num_children; ///< Number of child legs that have been forked from this path.
++	Path *parent;      ///< Parent leg of this one.
++};
++
+ void InitializeLinkGraphs();
+ extern LinkGraph _link_graphs[NUM_CARGO];
+ 
+diff --git a/src/linkgraph/mcf.cpp b/src/linkgraph/mcf.cpp
+new file mode 100644
+index 0000000..a4481d3
+--- /dev/null
++++ b/src/linkgraph/mcf.cpp
+@@ -0,0 +1,417 @@
++/** @file mcf.cpp Definition of Multi-Commodity-Flow solver. */
++
++#include "../stdafx.h"
++#include "../core/math_func.hpp"
++#include "mcf.h"
++
++/**
++ * Determines if an extension to the given Path with the given parameters is
++ * better than this path.
++ * @param base Other path.
++ * @param cap Capacity of the new edge to be added to base.
++ * @param dist Distance of the new edge.
++ * @return True if base + the new edge would be better than the path associated
++ * with this annotation.
++ */
++bool DistanceAnnotation::IsBetter(const DistanceAnnotation *base, uint cap,
++		int free_cap, uint dist) const
++{
++	/* If any of the paths is disconnected, the other one is better. If both
++	 * are disconnected, this path is better.
++	 */
++	if (base->distance == UINT_MAX) {
++		return false;
++	} else if (this->distance == UINT_MAX) {
++		return true;
++	}
++
++	if (free_cap > 0 && base->free_capacity > 0) {
++		/* If both paths have capacity left, compare their distances.
++		 * If the other path has capacity left and this one hasn't, the
++		 * other one's better.
++		 */
++		return this->free_capacity > 0 ? (base->distance + dist < this->distance) : true;
++	} else {
++		/* If the other path doesn't have capacity left, but this one has,
++		 * this one is better.
++		 * If both paths are out of capacity, do the regular distance
++		 * comparison.
++		 */
++		return this->free_capacity > 0 ? false : (base->distance + dist < this->distance);
++	}
++}
++
++/**
++ * Determines if an extension to the given Path with the given parameters is
++ * better than this path.
++ * @param base Other path.
++ * @param cap Capacity of the new edge to be added to base.
++ * @param dist Distance of the new edge.
++ * @return True if base + the new edge would be better than the path associated
++ * with this annotation.
++ */
++bool CapacityAnnotation::IsBetter(const CapacityAnnotation *base, uint cap,
++		int free_cap, uint dist) const
++{
++	int min_cap = (min(base->free_capacity, free_cap) << 4) / (min(base->capacity, cap) + 1);
++	int this_cap = this->GetCapacityRatio();
++	if (min_cap == this_cap) {
++		/* If the capacities are the same and the other path isn't disconnected
++		 * choose the shorter path.
++		 */
++		return base->distance == UINT_MAX ? false : (base->distance + dist < this->distance);
++	} else {
++		return min_cap > this_cap;
++	}
++}
++
++/**
++ * A slightly modified Dijkstra algorithm. Grades the paths not necessarily by
++ * distance, but by the value Tannotation computes. It can also be configured
++ * to only use paths already created before and not create new ones. If this is
++ * not done it uses the short_path_saturation setting to artificially decrease
++ * capacities. If a path has already been created is determined by checking the
++ * flows associated with its nodes.
++ * @tparam Tannotation Annotation to be used.
++ * @param source_node Node where the algorithm starts.
++ * @param paths Container for the paths to be calculated.
++ * @param create_new_paths If false, only use paths already seen before,
++ *                         otherwise artificially limit the capacity.
++ */
++template<class Tannotation>
++void MultiCommodityFlow::Dijkstra(NodeID source_node, PathVector &paths,
++		bool create_new_paths)
++{
++	typedef std::set<Tannotation *, typename Tannotation::Comparator> AnnoSet;
++	uint size = this->graph->GetSize();
++	StationID source_station = this->graph->GetNode(source_node).station;
++	AnnoSet annos;
++	paths.resize(size, NULL);
++	for (NodeID node = 0; node < size; ++node) {
++		Tannotation *anno = new Tannotation(node, node == source_node);
++		annos.insert(anno);
++		paths[node] = anno;
++	}
++	while (!annos.empty()) {
++		typename AnnoSet::iterator i = annos.begin();
++		Tannotation *source = *i;
++		annos.erase(i);
++		NodeID from = source->GetNode();
++		NodeID to = this->graph->GetFirstEdge(from);
++		while (to != INVALID_NODE) {
++			Edge &edge = this->graph->GetEdge(from, to);
++			assert(edge.distance < UINT_MAX);
++			if (create_new_paths || this->graph->GetNode(from)
++					.flows[source_station][this->graph->GetNode(to).station] > 0) {
++				uint capacity = edge.capacity;
++				if (create_new_paths) {
++					capacity *= this->graph->GetSettings().short_path_saturation;
++					capacity /= 100;
++					if (capacity == 0) capacity = 1;
++				}
++				/* punish in-between stops a little */
++				uint distance = edge.distance + 1;
++				Tannotation *dest = static_cast<Tannotation *>(paths[to]);
++				if (dest->IsBetter(source, capacity, capacity - edge.flow, distance)) {
++					annos.erase(dest);
++					dest->Fork(source, capacity, capacity - edge.flow, distance);
++					annos.insert(dest);
++				}
++			}
++			to = edge.next_edge;
++		}
++	}
++}
++
++/**
++ * Clean up paths that lead nowhere and the root path.
++ * @param source_id ID of the root node.
++ * @param paths Paths to be cleaned up.
++ */
++void MultiCommodityFlow::CleanupPaths(NodeID source_id, PathVector &paths)
++{
++	Path *source = paths[source_id];
++	paths[source_id] = NULL;
++	for (PathVector::iterator i = paths.begin(); i != paths.end(); ++i) {
++		Path *path = *i;
++		if (path == NULL) continue;
++		if (path->GetParent() == source) path->Detach();
++		while (path != source && path != NULL && path->GetFlow() == 0) {
++			Path *parent = path->GetParent();
++			path->Detach();
++			if (path->GetNumChildren() == 0) {
++				paths[path->GetNode()] = NULL;
++				delete path;
++			}
++			path = parent;
++		}
++	}
++	delete source;
++	paths.clear();
++}
++
++/**
++ * Push flow along a path and update the unsatisfied_demand of the associated
++ * edge.
++ * @param edge Edge whose ends the path connects.
++ * @param path End of the path the flow should be pushed on.
++ * @param accuracy Accuracy of the calculation.
++ * @param positive_cap If true only push flow up to the paths capacity,
++ *                     otherwise the path can be "overloaded".
++ */
++uint MultiCommodityFlow::PushFlow(Edge &edge, Path *path, uint accuracy,
++		bool positive_cap)
++{
++	assert(edge.unsatisfied_demand > 0);
++	uint flow = Clamp(edge.demand / accuracy, 1, edge.unsatisfied_demand);
++	flow = path->AddFlow(flow, this->graph, positive_cap);
++	edge.unsatisfied_demand -= flow;
++	return flow;
++}
++
++/**
++ * Find the flow along a cycle including cycle_begin in path.
++ * @param path Set of paths that form the cycle.
++ * @param cycle_begin Path to start at.
++ * @return Flow along the cycle.
++ */
++uint MCF1stPass::FindCycleFlow(const PathVector &path, const Path *cycle_begin)
++{
++	uint flow = UINT_MAX;
++	const Path *cycle_end = cycle_begin;
++	do {
++		flow = min(flow, cycle_begin->GetFlow());
++		cycle_begin = path[cycle_begin->GetNode()];
++	} while (cycle_begin != cycle_end);
++	return flow;
++}
++
++/**
++ * Eliminate a cycle of the given flow in the given set of paths.
++ * @param path Set of paths containing the cycle.
++ * @param cycle_begin Part of the cycle to start at.
++ * @param flow Flow along the cycle.
++ */
++void MCF1stPass::EliminateCycle(PathVector &path, Path *cycle_begin, uint flow)
++{
++	Path *cycle_end = cycle_begin;
++	do {
++		NodeID prev = cycle_begin->GetNode();
++		cycle_begin->ReduceFlow(flow);
++		cycle_begin = path[cycle_begin->GetNode()];
++		Edge &edge = this->graph->GetEdge(prev, cycle_begin->GetNode());
++		edge.flow -= flow;
++	} while (cycle_begin != cycle_end);
++}
++
++/**
++ * Eliminate cycles for origin_id in the graph. Start searching at next_id and
++ * work recursively. Also "summarize" paths: Add up the flows along parallel
++ * paths in one.
++ * @param path Paths checked in parent calls to this method.
++ * @param origin_id Origin of the paths to be checked.
++ * @param next_id Next node to be checked.
++ * @return If any cycles have been found and eliminated.
++ */
++bool MCF1stPass::EliminateCycles(PathVector &path, NodeID origin_id, NodeID next_id)
++{
++	static Path *invalid_path = new Path(INVALID_NODE, true);
++	Path *at_next_pos = path[next_id];
++	if (at_next_pos == invalid_path) {
++		/* this node has already been searched */
++		return false;
++	} else if (at_next_pos == NULL) {
++		/* summarize paths; add up the paths with the same source and next hop
++		 * in one path each
++		 */
++		PathSet &paths = this->graph->GetNode(next_id).paths;
++		PathViaMap next_hops;
++		for (PathSet::iterator i = paths.begin(); i != paths.end(); ++i) {
++			Path *new_child = *i;
++			if (new_child->GetOrigin() == origin_id) {
++				PathViaMap::iterator via_it = next_hops.find(new_child->GetNode());
++				if (via_it == next_hops.end()) {
++					next_hops[new_child->GetNode()] = new_child;
++				} else {
++					Path *child = via_it->second;
++					uint new_flow = new_child->GetFlow();
++					child->AddFlow(new_flow);
++					new_child->ReduceFlow(new_flow);
++				}
++			}
++		}
++		bool found = false;
++		/* search the next hops for nodes we have already visited */
++		for (PathViaMap::iterator via_it = next_hops.begin();
++				via_it != next_hops.end(); ++via_it) {
++			Path *child = via_it->second;
++			if (child->GetFlow() > 0) {
++				/* push one child into the path vector and search this child's
++				 * children
++				 */
++				path[next_id] = child;
++				found = this->EliminateCycles(path, origin_id, child->GetNode()) || found;
++			}
++		}
++		/* All paths departing from this node have been searched. Mark as
++		 * resolved if no cycles found. If cycles were found further cycles
++		 * could be found in this branch, thus it has to be searched again next
++		 * time we spot it.
++		 */
++		path[next_id] = found ? NULL : invalid_path;
++		return found;
++	} else {
++		/* this node has already been visited => we have a cycle
++		 * backtrack to find the exact flow
++		 */
++		uint flow = this->FindCycleFlow(path, at_next_pos);
++		if (flow > 0) {
++			this->EliminateCycle(path, at_next_pos, flow);
++			return true;
++		} else {
++			return false;
++		}
++	}
++}
++
++/**
++ * Eliminate all cycles in the graph. Check paths starting at each node for
++ * potential cycles.
++ * @return If any cycles have been found and eliminated.
++ */
++bool MCF1stPass::EliminateCycles()
++{
++	bool cycles_found = false;
++	uint size = this->graph->GetSize();
++	PathVector path(size, NULL);
++	for (NodeID node = 0; node < size; ++node) {
++		/* starting at each node in the graph find all cycles involving this
++		 * node
++		 */
++		std::fill(path.begin(), path.end(), (Path *)NULL);
++		cycles_found = this->EliminateCycles(path, node, node) || cycles_found;
++	}
++	return cycles_found;
++}
++
++/**
++ * Run the first pass of the MCF calculation.
++ * @param graph Component to calculate.
++ */
++MCF1stPass::MCF1stPass(LinkGraphComponent *graph) : MultiCommodityFlow(graph)
++{
++	PathVector paths;
++	uint size = this->graph->GetSize();
++	uint accuracy = this->graph->GetSettings().accuracy;
++	bool more_loops = true;
++
++	while (more_loops) {
++		more_loops = false;
++
++		for (NodeID source = 0; source < size; ++source) {
++			/* first saturate the shortest paths */
++			this->Dijkstra<DistanceAnnotation>(source, paths, true);
++
++			for (NodeID dest = 0; dest < size; ++dest) {
++				Edge &edge = this->graph->GetEdge(source, dest);
++				if (edge.unsatisfied_demand > 0) {
++					Path *path = paths[dest];
++					assert(path != NULL);
++					/* generally only allow paths that don't exceed the
++					 * available capacity. But if no demand has been assigned
++					 * yet, make an exception and allow any valid path *once*.
++					 */
++					if (path->GetFreeCapacity() > 0 && this->PushFlow(edge, path,
++							accuracy, true) > 0) {
++						/* if a path has been found there is a chance we can
++						 * find more
++						 */
++						more_loops = (edge.unsatisfied_demand > 0);
++					} else if (edge.unsatisfied_demand == edge.demand &&
++							path->GetFreeCapacity() > INT_MIN) {
++						this->PushFlow(edge, path, accuracy, false);
++					}
++				}
++			}
++			CleanupPaths(source, paths);
++		}
++		if (!more_loops) more_loops = EliminateCycles();
++	}
++}
++
++/**
++ * Run the second pass of the MCF calculation which assigns all remaining
++ * demands to existing paths.
++ * @param graph Component to calculate.
++ */
++MCF2ndPass::MCF2ndPass(LinkGraphComponent *graph) : MultiCommodityFlow(graph)
++{
++	PathVector paths;
++	uint size = this->graph->GetSize();
++	uint accuracy = this->graph->GetSettings().accuracy;
++	bool demand_left = true;
++	while (demand_left) {
++		demand_left = false;
++		for (NodeID source = 0; source < size; ++source) {
++			this->Dijkstra<CapacityAnnotation>(source, paths, false);
++			for (NodeID dest = 0; dest < size; ++dest) {
++				Edge &edge = this->graph->GetEdge(source, dest);
++				Path *path = paths[dest];
++				if (edge.unsatisfied_demand > 0 && path->GetFreeCapacity() > INT_MIN) {
++					this->PushFlow(edge, path, accuracy, false);
++					if (edge.unsatisfied_demand > 0) demand_left = true;
++				}
++			}
++			CleanupPaths(source, paths);
++		}
++	}
++}
++
++/**
++ * Relation that creates a weak order without duplicates.
++ * Avoid accidentally deleting different paths of the same capacity/distance in
++ * a set. When the annotation is the same node IDs are compared, so there are
++ * no equal ranges.
++ * @tparam T Type to be compared on.
++ * @param x_anno First value.
++ * @param y_anno Second value.
++ * @param x Node id associated with the first value.
++ * @param y Node id associated with the second value.
++ */
++template <typename T>
++bool greater(T x_anno, T y_anno, NodeID x, NodeID y)
++{
++	if (x_anno > y_anno) {
++		return true;
++	} else if (x_anno < y_anno) {
++		return false;
++	} else {
++		return x > y;
++	}
++}
++
++/**
++ * Compare two capacity annotations.
++ * @param x First capacity annotation.
++ * @param y Second capacity annotation.
++ * @return If x is better than y.
++ */
++bool CapacityAnnotation::Comparator::operator()(const CapacityAnnotation *x,
++		const CapacityAnnotation *y) const
++{
++	return x != y && greater<int>(x->GetAnnotation(), y->GetAnnotation(),
++			x->GetNode(), y->GetNode());
++}
++
++/**
++ * Compare two distance annotations.
++ * @param x First distance annotation.
++ * @param y Second distance annotation.
++ * @return If x is better than y.
++ */
++bool DistanceAnnotation::Comparator::operator()(const DistanceAnnotation *x,
++		const DistanceAnnotation *y) const
++{
++	return x != y && !greater<uint>(x->GetAnnotation(), y->GetAnnotation(),
++			x->GetNode(), y->GetNode());
++}
+diff --git a/src/linkgraph/mcf.h b/src/linkgraph/mcf.h
+new file mode 100644
+index 0000000..f1a6349
+--- /dev/null
++++ b/src/linkgraph/mcf.h
+@@ -0,0 +1,129 @@
++/** @file mcf.h Declaration of Multi-Commodity-Flow solver */
++
++#ifndef MCF_H_
++#define MCF_H_
++
++#include "linkgraph.h"
++#include <vector>
++
++/**
++ * Distance-based annotation for use in the Dijkstra algorithm. This is close
++ * to the original meaning of "annotation" in this context. Paths are rated
++ * according to the sum of distances of their edges.
++ */
++class DistanceAnnotation : public Path {
++public:
++
++	DistanceAnnotation(NodeID n, bool source = false) : Path(n, source) {}
++
++	bool IsBetter(const DistanceAnnotation *base, uint cap, int free_cap, uint dist) const;
++
++	/**
++	 * Return the actual value of the annotation, in this case the distance.
++	 * @return Distance.
++	 */
++	FORCEINLINE  uint GetAnnotation() const {return this->distance;}
++
++	struct Comparator {
++		bool operator()(const DistanceAnnotation *x, const DistanceAnnotation *y) const;
++	};
++};
++
++/**
++ * Capacity-based annotation for use in the Dijkstra algorithm. This annotation
++ * rates paths according to the maximum capacity of their edges. The Dijkstra
++ * algorithm still gives meaningful results like this as the capacity of a path
++ * can only decrease or stay the same if you add more edges.
++ */
++class CapacityAnnotation : public Path {
++public:
++
++	CapacityAnnotation(NodeID n, bool source = false) : Path(n, source) {}
++
++	bool IsBetter(const CapacityAnnotation *base, uint cap, int free_cap, uint dist) const;
++
++	/**
++	 * Return the actual value of the annotation, in this case the capacity.
++	 * @return Capacity.
++	 */
++	FORCEINLINE int GetAnnotation() const {return this->GetCapacityRatio();}
++
++	struct Comparator {
++		bool operator()(const CapacityAnnotation *x, const CapacityAnnotation *y) const;
++	};
++};
++
++
++typedef std::vector<Path *> PathVector;
++
++/**
++ * Multi-commodity flow calculating base class.
++ */
++class MultiCommodityFlow {
++protected:
++	MultiCommodityFlow(LinkGraphComponent *graph) : graph(graph) {}
++
++	template<class ANNOTATION> void Dijkstra(NodeID from, PathVector &paths, bool create_new_paths);
++
++	uint PushFlow(Edge &edge, Path *path, uint accuracy, bool positive_cap);
++
++	void CleanupPaths(NodeID source, PathVector &paths);
++
++	LinkGraphComponent *graph; ///< Component we're working with.
++};
++
++/**
++ * First pass of the MCF calculation. Saturates shortest paths first, creates
++ * new paths if needed, eliminates cycles. This calculation is of exponential
++ * complexity in the number of nodes but the constant factors are sufficiently
++ * small to make it usable for most real-life link graph components. You can
++ * deal with performance problems that might occur here in multiple ways:
++ * - The overall accuracy is used here to determine how much flow is assigned
++ *   in each loop. The lower the accuracy, the more flow is assigned, the less
++ *   loops it takes to assign all flow.
++ * - The short_path_saturation setting determines when this pass stops. The
++ *   lower you set it, the less flow will be assigned in this pass, the less
++ *   time it will take.
++ * - You can increase the recalculation interval to allow for longer running
++ *   times without creating lags.
++ */
++class MCF1stPass : public MultiCommodityFlow {
++private:
++	bool EliminateCycles();
++	bool EliminateCycles(PathVector &path, NodeID origin_id, NodeID next_id);
++	void EliminateCycle(PathVector &path, Path *cycle_begin, uint flow);
++	uint FindCycleFlow(const PathVector &path, const Path *cycle_begin);
++public:
++	MCF1stPass(LinkGraphComponent *graph);
++};
++
++/**
++ * Second pass of the MCF calculation. Saturates paths with most capacity left
++ * first and doesn't create any paths along edges that haven't been visited in
++ * the first pass. This is why it doesn't have to do any cycle detection and
++ * elimination. As cycle detection is the most intense problem in the first
++ * pass this pass is cheaper. The accuracy is used here, too.
++ */
++class MCF2ndPass : public MultiCommodityFlow {
++public:
++	MCF2ndPass(LinkGraphComponent *graph);
++};
++
++/**
++ * Link graph handler for MCF. Creates MultiCommodityFlow instance according to
++ * the template parameter.
++ */
++template<class Tpass>
++class MCFHandler : public ComponentHandler {
++public:
++
++	/**
++	 * Run the calculation.
++	 * @param graph Component to be calculated.
++	 */
++	virtual void Run(LinkGraphComponent *graph) {Tpass pass(graph);}
++
++	virtual ~MCFHandler() {}
++};
++
++#endif /* MCF_H_ */
+diff --git a/src/saveload/linkgraph_sl.cpp b/src/saveload/linkgraph_sl.cpp
+index 9f06b62..97702b0 100644
+--- a/src/saveload/linkgraph_sl.cpp
++++ b/src/saveload/linkgraph_sl.cpp
+@@ -87,6 +87,7 @@ static const SaveLoad _node_desc[] = {
+ static const SaveLoad _edge_desc[] = {
+ 	 SLE_CONDVAR(Edge, distance,  SLE_UINT32, SL_COMPONENTS, SL_MAX_VERSION),
+ 	 SLE_CONDVAR(Edge, capacity,  SLE_UINT32, SL_COMPONENTS, SL_MAX_VERSION),
++	 SLE_CONDVAR(Edge, next_edge, SLE_UINT32,        SL_MCF, SL_MAX_VERSION),
+ 	 SLE_END()
+ };
+ 
+diff --git a/src/saveload/saveload.cpp b/src/saveload/saveload.cpp
+index f43c7b6..3a7babc 100644
+--- a/src/saveload/saveload.cpp
++++ b/src/saveload/saveload.cpp
+@@ -226,7 +226,7 @@
+  *  159   21962
+  *  160   21974
+  */
+-extern const uint16 SAVEGAME_VERSION = SL_DEMANDS; ///< Current savegame version of OpenTTD.
++extern const uint16 SAVEGAME_VERSION = SL_MCF; ///< Current savegame version of OpenTTD.
+ 
+ SavegameType _savegame_type; ///< type of savegame we are loading
+ 
+diff --git a/src/saveload/saveload.h b/src/saveload/saveload.h
+index 29d281a..b910d54 100644
+--- a/src/saveload/saveload.h
++++ b/src/saveload/saveload.h
+@@ -555,6 +555,7 @@ enum SaveLoadVersions {
+ 	SL_CAPACITIES = SL_TRUNK + 20,
+ 	SL_COMPONENTS,
+ 	SL_DEMANDS = SL_COMPONENTS + 20,
++	SL_MCF,
+ 
+ 	/** Highest possible savegame version. */
+ 	SL_MAX_VERSION = 255
+diff --git a/src/settings_gui.cpp b/src/settings_gui.cpp
+index 3d585a4..1e93d9b 100644
+--- a/src/settings_gui.cpp
++++ b/src/settings_gui.cpp
+@@ -1422,6 +1422,7 @@ static SettingEntry _settings_linkgraph[] = {
+ 	SettingEntry("linkgraph.accuracy"),
+ 	SettingEntry("linkgraph.demand_distance"),
+ 	SettingEntry("linkgraph.demand_size"),
++	SettingEntry("linkgraph.short_path_saturation"),
+ };
+ /** Linkgraph sub-page */
+ static SettingsPage _settings_linkgraph_page = {_settings_linkgraph, lengthof(_settings_linkgraph)};
+diff --git a/src/settings_type.h b/src/settings_type.h
+index 6ac10f9..914b0ec 100644
+--- a/src/settings_type.h
++++ b/src/settings_type.h
+@@ -416,6 +416,7 @@ struct LinkGraphSettings {
+ 	uint8 accuracy;                             ///< accuracy when calculating things on the link graph. low accuracy => low running time
+ 	uint8 demand_size;                          ///< influence of supply ("station size") on the demand function
+ 	uint8 demand_distance;                      ///< influence of distance between stations on the demand function
++	uint8 short_path_saturation;                ///< percentage up to which short paths are saturated before saturating most capacious paths
+ 
+ 	FORCEINLINE DistributionType GetDistributionType(CargoID cargo) const {
+ 		if (IsCargoInClass(cargo, CC_PASSENGERS)) {
+diff --git a/src/table/settings.ini b/src/table/settings.ini
+index 4b94ef5..c0092ac 100644
+--- a/src/table/settings.ini
++++ b/src/table/settings.ini
+@@ -612,6 +612,17 @@ max      = 100
+ interval = 5
+ str      = STR_CONFIG_SETTING_DEMAND_SIZE
+ 
++[SDT_VAR]
++base     = GameSettings
++var      = linkgraph.short_path_saturation
++type     = SLE_UINT8
++from     = SL_MCF
++def      = 80
++min      = 0
++max      = 250
++interval = 5
++str      = STR_CONFIG_SETTING_SHORT_PATH_SATURATION
++
+ ; Vehicles
+ 
+ [SDT_VAR]
