@@ -1186,7 +1186,7 @@ index b400861..4bf5646 100644
  
  void UpdateOldAircraft();
 diff --git a/src/saveload/station_sl.cpp b/src/saveload/station_sl.cpp
-index 254833d..3229339 100644
+index 16af945..cd0dfcb 100644
 --- a/src/saveload/station_sl.cpp
 +++ b/src/saveload/station_sl.cpp
 @@ -284,6 +284,7 @@ const SaveLoad *GetGoodsDesc()
@@ -1288,7 +1288,7 @@ index 3b8b324..b6fa377 100644
  	LocaleSettings       locale;             ///< settings related to used currency/unit system in the current game
  };
 diff --git a/src/station_base.h b/src/station_base.h
-index feac2b0..9f4e65c 100644
+index 7fb56d8..a97680b 100644
 --- a/src/station_base.h
 +++ b/src/station_base.h
 @@ -16,6 +16,7 @@
@@ -1299,7 +1299,7 @@ index feac2b0..9f4e65c 100644
  #include "newgrf_storage.h"
  #include "moving_average.h"
  #include <map>
-@@ -176,7 +177,8 @@ struct GoodsEntry {
+@@ -148,7 +149,8 @@ struct GoodsEntry {
  		last_speed(0),
  		last_age(255),
  		supply(0),
@@ -1309,7 +1309,7 @@ index feac2b0..9f4e65c 100644
  	{}
  
  	byte acceptance_pickup;
-@@ -184,11 +186,12 @@ struct GoodsEntry {
+@@ -156,11 +158,12 @@ struct GoodsEntry {
  	byte rating;
  	byte last_speed;
  	byte last_age;
