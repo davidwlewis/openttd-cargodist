@@ -7264,7 +7264,7 @@ index 100b467..5c4330b 100644
  		v->engine_type = e->index;
  		v->gcache.first_engine = INVALID_ENGINE; // needs to be set before first callback
 diff --git a/src/vehicle.cpp b/src/vehicle.cpp
-index e3ffbbc..b79c67b 100644
+index e3ffbbc..81444c9 100644
 --- a/src/vehicle.cpp
 +++ b/src/vehicle.cpp
 @@ -670,10 +670,11 @@ void Vehicle::PreDestructor()
@@ -7290,18 +7290,21 @@ index e3ffbbc..b79c67b 100644
  		max += v->cargo_cap;
  		if (v->cargo_cap != 0 && colour != NULL) {
  			unloading += HasBit(v->vehicle_flags, VF_CARGO_UNLOADING) ? 1 : 0;
-@@ -1859,7 +1860,9 @@ void Vehicle::BeginLoading()
+@@ -1859,7 +1860,12 @@ void Vehicle::BeginLoading()
  		this->current_order.MakeLoading(false);
  	}
  
 -	Station::Get(this->last_station_visited)->loading_vehicles.push_back(this);
-+	if (this->last_loading_station != INVALID_STATION && this->last_loading_station != this->last_station_visited) {
++	if (this->last_loading_station != INVALID_STATION &&
++			this->last_loading_station != this->last_station_visited &&
++			((this->current_order.GetLoadType() & OLFB_NO_LOAD) == 0 ||
++			(this->current_order.GetUnloadType() & OUFB_NO_UNLOAD) == 0)) {
 +		IncreaseStats(Station::Get(this->last_loading_station), this, this->last_station_visited);
 +	}
  
  	PrepareUnload(this);
  
-@@ -1874,6 +1877,23 @@ void Vehicle::BeginLoading()
+@@ -1874,6 +1880,23 @@ void Vehicle::BeginLoading()
  }
  
  /**
@@ -7325,12 +7328,10 @@ index e3ffbbc..b79c67b 100644
   * Perform all actions when leaving a station.
   * @pre this->current_order.IsType(OT_LOADING)
   */
-@@ -1890,6 +1910,21 @@ void Vehicle::LeaveStation()
- 	Station *st = Station::Get(this->last_station_visited);
- 	st->loading_vehicles.remove(this);
+@@ -1886,8 +1909,22 @@ void Vehicle::LeaveStation()
+ 	/* Only update the timetable if the vehicle was supposed to stop here. */
+ 	if (this->current_order.GetNonStopType() != ONSF_STOP_EVERYWHERE) UpdateVehicleTimetable(this, false);
  
-+	this->CancelReservation(INVALID_STATION, st);
-+
 +	if ((this->current_order.GetLoadType() & OLFB_NO_LOAD) == 0 ||
 +			(this->current_order.GetUnloadType() & OUFB_NO_UNLOAD) == 0) {
 +		if (this->current_order.CanLeaveWithCargo(this->last_loading_station != INVALID_STATION)) {
@@ -7344,9 +7345,12 @@ index e3ffbbc..b79c67b 100644
 +		}
 +	}
 +
- 	HideFillingPercent(&this->fill_percent_te_id);
+ 	this->current_order.MakeLeaveStation();
+ 	Station *st = Station::Get(this->last_station_visited);
++	this->CancelReservation(INVALID_STATION, st);
+ 	st->loading_vehicles.remove(this);
  
- 	if (this->type == VEH_TRAIN && !(this->vehstatus & VS_CRASHED)) {
+ 	HideFillingPercent(&this->fill_percent_te_id);
 diff --git a/src/vehicle_base.h b/src/vehicle_base.h
 index baf99d3..58e9648 100644
 --- a/src/vehicle_base.h

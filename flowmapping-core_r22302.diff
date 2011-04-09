@@ -4026,26 +4026,26 @@ index 100b467..5c4330b 100644
  		v->engine_type = e->index;
  		v->gcache.first_engine = INVALID_ENGINE; // needs to be set before first callback
 diff --git a/src/vehicle.cpp b/src/vehicle.cpp
-index e3ffbbc..1427a0e 100644
+index e3ffbbc..cab76f1 100644
 --- a/src/vehicle.cpp
 +++ b/src/vehicle.cpp
-@@ -1859,7 +1859,12 @@ void Vehicle::BeginLoading()
- 		this->current_order.MakeLoading(false);
- 	}
+@@ -1861,6 +1861,13 @@ void Vehicle::BeginLoading()
  
--	Station::Get(this->last_station_visited)->loading_vehicles.push_back(this);
-+	Station *curr_station = Station::Get(this->last_station_visited);
-+	curr_station->loading_vehicles.push_back(this);
-+
-+	if (this->last_loading_station != INVALID_STATION && this->last_loading_station != this->last_station_visited) {
+ 	Station::Get(this->last_station_visited)->loading_vehicles.push_back(this);
+ 
++	if (this->last_loading_station != INVALID_STATION &&
++			this->last_loading_station != this->last_station_visited &&
++			((this->current_order.GetLoadType() & OLFB_NO_LOAD) == 0 ||
++			(this->current_order.GetUnloadType() & OUFB_NO_UNLOAD) == 0)) {
 +		IncreaseStats(Station::Get(this->last_loading_station), this, this->last_station_visited);
 +	}
- 
++
  	PrepareUnload(this);
  
-@@ -1890,6 +1895,19 @@ void Vehicle::LeaveStation()
- 	Station *st = Station::Get(this->last_station_visited);
- 	st->loading_vehicles.remove(this);
+ 	SetWindowDirty(GetWindowClassForVehicleType(this->type), this->owner);
+@@ -1886,6 +1893,19 @@ void Vehicle::LeaveStation()
+ 	/* Only update the timetable if the vehicle was supposed to stop here. */
+ 	if (this->current_order.GetNonStopType() != ONSF_STOP_EVERYWHERE) UpdateVehicleTimetable(this, false);
  
 +	if ((this->current_order.GetLoadType() & OLFB_NO_LOAD) == 0 ||
 +			(this->current_order.GetUnloadType() & OUFB_NO_UNLOAD) == 0) {
@@ -4060,9 +4060,9 @@ index e3ffbbc..1427a0e 100644
 +		}
 +	}
 +
- 	HideFillingPercent(&this->fill_percent_te_id);
- 
- 	if (this->type == VEH_TRAIN && !(this->vehstatus & VS_CRASHED)) {
+ 	this->current_order.MakeLeaveStation();
+ 	Station *st = Station::Get(this->last_station_visited);
+ 	st->loading_vehicles.remove(this);
 diff --git a/src/vehicle_base.h b/src/vehicle_base.h
 index baf99d3..d0da95c 100644
 --- a/src/vehicle_base.h
