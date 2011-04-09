@@ -72,7 +72,7 @@ protected:
 	uint32 company_mask;               ///< Bitmask of companies to be displayed.
 	LinkMap cached_links;              ///< Cache for links to reduce recalculation.
 	StationSupplyList cached_stations; ///< Cache for stations to be drawn.
-	uint scale;                        ///< Number of parallel lines to be drawn for each link.
+	uint scale;                        ///< Width of link lines.
 
 	Point GetStationMiddle(const Station *st) const;
 
