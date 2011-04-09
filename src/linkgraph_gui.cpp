@@ -200,9 +200,8 @@ void LinkGraphOverlay::DrawLinks(const DrawPixelInfo *dpi) const
 void LinkGraphOverlay::DrawContent(Point pta, Point ptb, const LinkProperties &cargo) const
 {
 	if (cargo.capacity <= 0) return;
-	int offset = CeilDiv(this->scale, 2);
-	int offset_y = (pta.x < ptb.x ? 1 : -1) * offset;
-	int offset_x = (pta.y > ptb.y ? 1 : -1) * offset;
+	int offset_y = (pta.x < ptb.x ? 1 : -1) * this->scale;
+	int offset_x = (pta.y > ptb.y ? 1 : -1) * this->scale;
 
 	uint usage_or_plan = min(cargo.capacity * 2, max(cargo.usage, cargo.planned));
 	int colour = LinkGraphOverlay::LINK_COLOURS[usage_or_plan * lengthof(LinkGraphOverlay::LINK_COLOURS) / (cargo.capacity * 2 + 1)];
@@ -210,7 +209,7 @@ void LinkGraphOverlay::DrawContent(Point pta, Point ptb, const LinkProperties &c
 	GfxDrawLine(pta.x + offset_x, pta.y, ptb.x + offset_x, ptb.y, colour, scale);
 	GfxDrawLine(pta.x, pta.y + offset_y, ptb.x, ptb.y + offset_y, colour, scale);
 
-	GfxDrawLine(pta.x, pta.y, ptb.x, ptb.y, _colour_gradient[COLOUR_GREY][1], this->scale > 1 ? 3 : 1);
+	GfxDrawLine(pta.x, pta.y, ptb.x, ptb.y, _colour_gradient[COLOUR_GREY][1], this->scale);
 }
 
 /**
@@ -223,9 +222,9 @@ void LinkGraphOverlay::DrawStationDots(const DrawPixelInfo *dpi) const
 		const Station *st = Station::GetIfValid(i->first);
 		if (st == NULL) continue;
 		Point pt = this->GetStationMiddle(st);
-		if (!this->IsPointVisible(pt, dpi, 4 * this->scale)) continue;
+		if (!this->IsPointVisible(pt, dpi, 3 * this->scale)) continue;
 
-		uint r = this->scale * 3 + this->scale * 3 * min(200, i->second) / 200;
+		uint r = this->scale * 2 + this->scale * 2 * min(200, i->second) / 200;
 
 		LinkGraphOverlay::DrawVertex(pt.x, pt.y, r,
 				_colour_gradient[Company::Get(st->owner)->colour][5],
