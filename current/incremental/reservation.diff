@@ -593,7 +593,7 @@ index f3af881..c365dda 100644
  		     SLE_VAR(Vehicle, day_counter,           SLE_UINT8),
  		     SLE_VAR(Vehicle, tick_counter,          SLE_UINT8),
 diff --git a/src/vehicle.cpp b/src/vehicle.cpp
-index 66e8581..2d4f8de 100644
+index 5b0b885..54ffdfb 100644
 --- a/src/vehicle.cpp
 +++ b/src/vehicle.cpp
 @@ -670,10 +670,11 @@ void Vehicle::PreDestructor()
@@ -619,7 +619,7 @@ index 66e8581..2d4f8de 100644
  		max += v->cargo_cap;
  		if (v->cargo_cap != 0 && colour != NULL) {
  			unloading += HasBit(v->vehicle_flags, VF_CARGO_UNLOADING) ? 1 : 0;
-@@ -1889,6 +1890,21 @@ void Vehicle::BeginLoading()
+@@ -1944,6 +1945,21 @@ void Vehicle::BeginLoading()
  }
  
  /**
@@ -641,7 +641,7 @@ index 66e8581..2d4f8de 100644
   * Perform all actions when leaving a station.
   * @pre this->current_order.IsType(OT_LOADING)
   */
-@@ -1903,6 +1919,7 @@ void Vehicle::LeaveStation()
+@@ -1958,6 +1974,7 @@ void Vehicle::LeaveStation()
  
  	this->current_order.MakeLeaveStation();
  	Station *st = Station::Get(this->last_station_visited);
