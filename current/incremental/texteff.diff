@@ -63,7 +63,7 @@ index edad76e..acbcff8 100644
  	/* Unsaved variables */
  	Company *owner;            ///< The owner of the vehicle
 diff --git a/src/lang/english.txt b/src/lang/english.txt
-index cd72e03..d692976 100644
+index ca6d0fa..1d10956 100644
 --- a/src/lang/english.txt
 +++ b/src/lang/english.txt
 @@ -3392,6 +3392,10 @@ STR_INCOME_FLOAT_INCOME_SMALL                                   :{TINYFONT}{GREE
