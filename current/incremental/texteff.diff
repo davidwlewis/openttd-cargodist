@@ -63,7 +63,7 @@ index edad76e..acbcff8 100644
  	/* Unsaved variables */
  	Company *owner;            ///< The owner of the vehicle
 diff --git a/src/lang/english.txt b/src/lang/english.txt
-index ca6d0fa..1d10956 100644
+index b31bfae..683a8b2 100644
 --- a/src/lang/english.txt
 +++ b/src/lang/english.txt
 @@ -3392,6 +3392,10 @@ STR_INCOME_FLOAT_INCOME_SMALL                                   :{TINYFONT}{GREE
@@ -78,7 +78,7 @@ index ca6d0fa..1d10956 100644
  STR_MESSAGE_ESTIMATED_INCOME                                    :{WHITE}Estimated Income: {CURRENCY}
  
 diff --git a/src/misc_gui.cpp b/src/misc_gui.cpp
-index 137d533..f9ea6ad 100644
+index e0e29c0..1245e68 100644
 --- a/src/misc_gui.cpp
 +++ b/src/misc_gui.cpp
 @@ -803,17 +803,28 @@ void ShowCostOrIncomeAnimation(int x, int y, int z, Money cost)
