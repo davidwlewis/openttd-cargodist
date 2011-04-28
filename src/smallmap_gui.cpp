@@ -698,7 +698,7 @@ void SmallMapWindow::SetZoomLevel(ZoomLevelChange change, const Point *zoom_pt)
 			this->SetNewScroll(this->scroll_x + (tile.x - new_tile.x) * TILE_SIZE,
 					this->scroll_y + (tile.y - new_tile.y) * TILE_SIZE, sub);
 		} else if (this->map_type == SMT_LINKSTATS) {
-			this->overlay.RebuildCache();
+			this->overlay->RebuildCache();
 		}
 		this->SetWidgetDisabledState(SM_WIDGET_ZOOM_IN,  this->zoom == zoomlevels[MIN_ZOOM_INDEX]);
 		this->SetWidgetDisabledState(SM_WIDGET_ZOOM_OUT, this->zoom == zoomlevels[MAX_ZOOM_INDEX]);
@@ -950,7 +950,7 @@ void SmallMapWindow::DrawSmallMap(DrawPixelInfo *dpi) const
 	if (this->map_type == SMT_CONTOUR || this->map_type == SMT_VEHICLES) this->DrawVehicles(dpi, blitter);
 
 	/* Draw link stat overlay */
-	if (this->map_type == SMT_LINKSTATS) this->overlay.Draw(dpi);
+	if (this->map_type == SMT_LINKSTATS) this->overlay->Draw(dpi);
 
 	/* Draw town names */
 	if (this->show_towns) this->DrawTowns(dpi);
@@ -1008,9 +1008,9 @@ void SmallMapWindow::SetupWidgetData()
 
 SmallMapWindow::SmallMapWindow(const WindowDesc *desc, int window_number) :
 		Window(),
-		refresh(FORCE_REFRESH_PERIOD),
-		overlay(this, SM_WIDGET_MAP)
+		refresh(FORCE_REFRESH_PERIOD)
 {
+	this->overlay = new LinkGraphOverlay(this, SM_WIDGET_MAP);
 	this->InitNested(desc, window_number);
 	this->LowerWidget(this->map_type + SM_WIDGET_CONTOUR);
 
@@ -1255,8 +1255,8 @@ void SmallMapWindow::SetOverlayCargoMask()
 		for (int i = 0; i != _smallmap_cargo_count; ++i) {
 			if (_legend_linkstats[i].show_on_map) SetBit(cargo_mask, _legend_linkstats[i].type);
 		}
-		this->overlay.SetCargoMask(cargo_mask);
-		this->overlay.RebuildCache();
+		this->overlay->SetCargoMask(cargo_mask);
+		this->overlay->RebuildCache();
 	}
 }
 
@@ -1272,7 +1272,7 @@ void SmallMapWindow::SwitchMapType(SmallMapType map_type)
 
 	this->SetupWidgetData();
 
-	if (map_type == SMT_LINKSTATS) this->overlay.RebuildCache();
+	if (map_type == SMT_LINKSTATS) this->overlay->RebuildCache();
 	this->SetDirty();
 }
 
@@ -1465,7 +1465,7 @@ void SmallMapWindow::OnTick()
 	/* Update the window every now and then */
 	if (--this->refresh != 0) return;
 
-	if (this->map_type == SMT_LINKSTATS) this->overlay.RebuildCache();
+	if (this->map_type == SMT_LINKSTATS) this->overlay->RebuildCache();
 	this->refresh = FORCE_REFRESH_PERIOD;
 	this->SetDirty();
 }
@@ -1504,7 +1504,7 @@ void SmallMapWindow::SetNewScroll(int sx, int sy, int sub)
 	this->scroll_x = sx;
 	this->scroll_y = sy;
 	this->subscroll = sub;
-	if (this->map_type == SMT_LINKSTATS) this->overlay.RebuildCache();
+	if (this->map_type == SMT_LINKSTATS) this->overlay->RebuildCache();
 }
 
 void SmallMapWindow::OnScroll(Point delta)

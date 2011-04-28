@@ -99,7 +99,7 @@ protected:
 	int zoom;        ///< Zoom level. Bigger number means more zoom-out (further away).
 
 	uint8 refresh;   ///< Refresh counter, zeroed every FORCE_REFRESH_PERIOD ticks.
-	LinkGraphOverlay overlay;
+	LinkGraphOverlay *overlay;
 
 	/**
 	 * Draws vertical part of map indicator
@@ -143,6 +143,7 @@ public:
 	uint min_number_of_columns;    ///< Minimal number of columns in legends.
 
 	SmallMapWindow(const WindowDesc *desc, int window_number);
+	virtual ~SmallMapWindow() {delete this->overlay;}
 
 	/**
 	 * Compute minimal required width of the legends.
