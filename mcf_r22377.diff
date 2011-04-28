@@ -35,26 +35,24 @@ index 0000000..ddb125a
 +graph calculations. Generally the accurace is inversely correlated to the
 +CPU requirements of the MCF algorithm.
 diff --git a/projects/openttd_vs100.vcxproj b/projects/openttd_vs100.vcxproj
-index 936689b..72746a2 100644
+index 936689b..7fa0024 100644
 --- a/projects/openttd_vs100.vcxproj
 +++ b/projects/openttd_vs100.vcxproj
-@@ -327,6 +327,10 @@
+@@ -327,6 +327,9 @@
      <ClCompile Include="..\src\ini.cpp" />
      <ClCompile Include="..\src\ini_load.cpp" />
      <ClCompile Include="..\src\landscape.cpp" />
 +    <ClCompile Include="..\src\linkgraph\demands.cpp" />
-+    <ClCompile Include="..\src\linkgraph\flowmapper.cpp" />
 +    <ClCompile Include="..\src\linkgraph\linkgraph.cpp" />
 +    <ClCompile Include="..\src\linkgraph\mcf.cpp" />
      <ClCompile Include="..\src\map.cpp" />
      <ClCompile Include="..\src\misc.cpp" />
      <ClCompile Include="..\src\mixer.cpp" />
-@@ -455,10 +459,17 @@
+@@ -455,10 +458,16 @@
      <ClInclude Include="..\src\landscape.h" />
      <ClInclude Include="..\src\landscape_type.h" />
      <ClInclude Include="..\src\language.h" />
 +    <ClInclude Include="..\src\linkgraph\demands.h" />
-+    <ClInclude Include="..\src\linkgraph\flowmapper.h" />
 +    <ClInclude Include="..\src\linkgraph\linkgraph.h" />
 +    <ClInclude Include="..\src\linkgraph\linkgraph_type.h" />
 +    <ClInclude Include="..\src\linkgraph\mcf.h" />
@@ -67,15 +65,7 @@ index 936689b..72746a2 100644
      <ClInclude Include="..\src\network\network.h" />
      <ClInclude Include="..\src\network\network_admin.h" />
      <ClInclude Include="..\src\network\network_base.h" />
-@@ -619,6 +630,7 @@
-     <ClCompile Include="..\src\core\math_func.cpp" />
-     <ClInclude Include="..\src\core\math_func.hpp" />
-     <ClInclude Include="..\src\core\mem_func.hpp" />
-+    <ClInclude Include="..\src\core\multimap.hpp" />
-     <ClInclude Include="..\src\core\overflowsafe_type.hpp" />
-     <ClCompile Include="..\src\core\pool_func.cpp" />
-     <ClInclude Include="..\src\core\pool_func.hpp" />
-@@ -725,6 +737,7 @@
+@@ -725,6 +734,7 @@
      <ClCompile Include="..\src\saveload\group_sl.cpp" />
      <ClCompile Include="..\src\saveload\industry_sl.cpp" />
      <ClCompile Include="..\src\saveload\labelmaps_sl.cpp" />
@@ -84,17 +74,14 @@ index 936689b..72746a2 100644
      <ClCompile Include="..\src\saveload\misc_sl.cpp" />
      <ClCompile Include="..\src\saveload\newgrf_sl.cpp" />
 diff --git a/projects/openttd_vs100.vcxproj.filters b/projects/openttd_vs100.vcxproj.filters
-index 587e3f6..89463d5 100644
+index 587e3f6..a9829b9 100644
 --- a/projects/openttd_vs100.vcxproj.filters
 +++ b/projects/openttd_vs100.vcxproj.filters
-@@ -201,6 +201,18 @@
+@@ -201,6 +201,15 @@
      <ClCompile Include="..\src\landscape.cpp">
        <Filter>Source Files</Filter>
      </ClCompile>
 +    <ClCompile Include="..\src\linkgraph\demands.cpp">
-+      <Filter>Source Files</Filter>
-+    </ClCompile>
-+    <ClCompile Include="..\src\linkgraph\flowmapper.cpp">
 +      <Filter>Source Files</Filter>
 +    </ClCompile>
 +    <ClCompile Include="..\src\linkgraph\linkgraph.cpp">
@@ -106,14 +93,11 @@ index 587e3f6..89463d5 100644
      <ClCompile Include="..\src\map.cpp">
        <Filter>Source Files</Filter>
      </ClCompile>
-@@ -585,6 +597,21 @@
+@@ -585,6 +594,18 @@
      <ClInclude Include="..\src\language.h">
        <Filter>Header Files</Filter>
      </ClInclude>
 +    <ClInclude Include="..\src\linkgraph\demands.h">
-+      <Filter>Header Files</Filter>
-+    </ClInclude>
-+    <ClInclude Include="..\src\linkgraph\flowmapper.h">
 +      <Filter>Header Files</Filter>
 +    </ClInclude>
 +    <ClInclude Include="..\src\linkgraph\linkgraph.h">
@@ -128,7 +112,7 @@ index 587e3f6..89463d5 100644
      <ClInclude Include="..\src\livery.h">
        <Filter>Header Files</Filter>
      </ClInclude>
-@@ -597,6 +624,12 @@
+@@ -597,6 +618,12 @@
      <ClInclude Include="..\src\mixer.h">
        <Filter>Header Files</Filter>
      </ClInclude>
@@ -141,17 +125,7 @@ index 587e3f6..89463d5 100644
      <ClInclude Include="..\src\network\network.h">
        <Filter>Header Files</Filter>
      </ClInclude>
-@@ -1077,6 +1110,9 @@
-     <ClInclude Include="..\src\core\mem_func.hpp">
-       <Filter>Core Source Code</Filter>
-     </ClInclude>
-+    <ClInclude Include="..\src\core\multimap.hpp">
-+      <Filter>Core Source Code</Filter>
-+    </ClInclude>
-     <ClInclude Include="..\src\core\overflowsafe_type.hpp">
-       <Filter>Core Source Code</Filter>
-     </ClInclude>
-@@ -1395,6 +1431,9 @@
+@@ -1395,6 +1422,9 @@
      <ClCompile Include="..\src\saveload\labelmaps_sl.cpp">
        <Filter>Save/Load handlers</Filter>
      </ClCompile>
@@ -162,18 +136,14 @@ index 587e3f6..89463d5 100644
        <Filter>Save/Load handlers</Filter>
      </ClCompile>
 diff --git a/projects/openttd_vs80.vcproj b/projects/openttd_vs80.vcproj
-index 79212ee..65fba61 100644
+index 79212ee..02a9aa3 100644
 --- a/projects/openttd_vs80.vcproj
 +++ b/projects/openttd_vs80.vcproj
-@@ -579,6 +579,22 @@
+@@ -579,6 +579,18 @@
  				>
  			</File>
  			<File
 +				RelativePath=".\..\src\linkgraph\demands.cpp"
-+				>
-+			</File>
-+			<File
-+				RelativePath=".\..\src\linkgraph\flowmapper.cpp"
 +				>
 +			</File>
 +			<File
@@ -188,15 +158,11 @@ index 79212ee..65fba61 100644
  				RelativePath=".\..\src\map.cpp"
  				>
  			</File>
-@@ -1095,6 +1111,26 @@
+@@ -1095,6 +1107,22 @@
  				>
  			</File>
  			<File
 +				RelativePath=".\..\src\linkgraph\demands.h"
-+				>
-+			</File>
-+			<File
-+				RelativePath=".\..\src\linkgraph\flowmapper.h"
 +				>
 +			</File>
 +			<File
@@ -215,7 +181,7 @@ index 79212ee..65fba61 100644
  				RelativePath=".\..\src\livery.h"
  				>
  			</File>
-@@ -1111,6 +1147,14 @@
+@@ -1111,6 +1139,14 @@
  				>
  			</File>
  			<File
@@ -230,18 +196,7 @@ index 79212ee..65fba61 100644
  				RelativePath=".\..\src\network\network.h"
  				>
  			</File>
-@@ -1755,6 +1799,10 @@
- 				>
- 			</File>
- 			<File
-+				RelativePath=".\..\src\core\multimap.hpp"
-+				>
-+			</File>
-+			<File
- 				RelativePath=".\..\src\core\overflowsafe_type.hpp"
- 				>
- 			</File>
-@@ -2195,6 +2243,10 @@
+@@ -2195,6 +2231,10 @@
  				>
  			</File>
  			<File
@@ -253,18 +208,14 @@ index 79212ee..65fba61 100644
  				>
  			</File>
 diff --git a/projects/openttd_vs90.vcproj b/projects/openttd_vs90.vcproj
-index c6487d6..f0a2aa6 100644
+index c6487d6..e23d21f 100644
 --- a/projects/openttd_vs90.vcproj
 +++ b/projects/openttd_vs90.vcproj
-@@ -576,6 +576,22 @@
+@@ -576,6 +576,18 @@
  				>
  			</File>
  			<File
 +				RelativePath=".\..\src\linkgraph\demands.cpp"
-+				>
-+			</File>
-+			<File
-+				RelativePath=".\..\src\linkgraph\flowmapper.cpp"
 +				>
 +			</File>
 +			<File
@@ -279,15 +230,11 @@ index c6487d6..f0a2aa6 100644
  				RelativePath=".\..\src\map.cpp"
  				>
  			</File>
-@@ -1092,6 +1108,26 @@
+@@ -1092,6 +1104,22 @@
  				>
  			</File>
  			<File
 +				RelativePath=".\..\src\linkgraph\demands.h"
-+				>
-+			</File>
-+			<File
-+				RelativePath=".\..\src\linkgraph\flowmapper.h"
 +				>
 +			</File>
 +			<File
@@ -306,7 +253,7 @@ index c6487d6..f0a2aa6 100644
  				RelativePath=".\..\src\livery.h"
  				>
  			</File>
-@@ -1108,6 +1144,14 @@
+@@ -1108,6 +1136,14 @@
  				>
  			</File>
  			<File
@@ -321,18 +268,7 @@ index c6487d6..f0a2aa6 100644
  				RelativePath=".\..\src\network\network.h"
  				>
  			</File>
-@@ -1752,6 +1796,10 @@
- 				>
- 			</File>
- 			<File
-+				RelativePath=".\..\src\core\multimap.hpp"
-+				>
-+			</File>
-+			<File
- 				RelativePath=".\..\src\core\overflowsafe_type.hpp"
- 				>
- 			</File>
-@@ -2192,6 +2240,10 @@
+@@ -2192,6 +2228,10 @@
  				>
  			</File>
  			<File
@@ -344,26 +280,24 @@ index c6487d6..f0a2aa6 100644
  				>
  			</File>
 diff --git a/source.list b/source.list
-index cc3562e..35640ea 100644
+index cc3562e..62ec468 100644
 --- a/source.list
 +++ b/source.list
-@@ -35,6 +35,10 @@ hotkeys.cpp
+@@ -35,6 +35,9 @@ hotkeys.cpp
  ini.cpp
  ini_load.cpp
  landscape.cpp
 +linkgraph/demands.cpp
-+linkgraph/flowmapper.cpp
 +linkgraph/linkgraph.cpp
 +linkgraph/mcf.cpp
  map.cpp
  misc.cpp
  mixer.cpp
-@@ -188,10 +192,17 @@ ini_type.h
+@@ -188,10 +191,16 @@ ini_type.h
  landscape.h
  landscape_type.h
  language.h
 +linkgraph/demands.h
-+linkgraph/flowmapper.h
 +linkgraph/linkgraph.h
 +linkgraph/linkgraph_type.h
 +linkgraph/mcf.h
@@ -376,15 +310,7 @@ index cc3562e..35640ea 100644
  network/network.h
  network/network_admin.h
  network/network_base.h
-@@ -369,6 +380,7 @@ core/geometry_type.hpp
- core/math_func.cpp
- core/math_func.hpp
- core/mem_func.hpp
-+core/multimap.hpp
- core/overflowsafe_type.hpp
- core/pool_func.cpp
- core/pool_func.hpp
-@@ -483,6 +495,7 @@ saveload/gamelog_sl.cpp
+@@ -483,6 +492,7 @@ saveload/gamelog_sl.cpp
  saveload/group_sl.cpp
  saveload/industry_sl.cpp
  saveload/labelmaps_sl.cpp
@@ -404,1152 +330,6 @@ index a330280..48664d7 100644
  
  		v->acceleration = avi->acceleration;
  		v->engine_type = e->index;
-diff --git a/src/autoreplace_cmd.cpp b/src/autoreplace_cmd.cpp
-index 19a740d..e6307a1 100644
---- a/src/autoreplace_cmd.cpp
-+++ b/src/autoreplace_cmd.cpp
-@@ -119,7 +119,7 @@ static void TransferCargo(Vehicle *old_veh, Vehicle *new_head, bool part_of_chai
- 			uint amount = min(src->cargo.Count(), dest->cargo_cap - dest->cargo.Count());
- 			if (amount <= 0) continue;
- 
--			src->cargo.MoveTo(&dest->cargo, amount, VehicleCargoList::MTA_UNLOAD, NULL);
-+			src->cargo.MoveTo(&dest->cargo, amount);
- 		}
- 	}
- 
-diff --git a/src/cargopacket.cpp b/src/cargopacket.cpp
-index 55c62cd..449cf94 100644
---- a/src/cargopacket.cpp
-+++ b/src/cargopacket.cpp
-@@ -10,7 +10,9 @@
- /** @file cargopacket.cpp Implementation of the cargo packets. */
- 
- #include "stdafx.h"
-+#include "station_base.h"
- #include "core/pool_func.hpp"
-+#include "core/random_func.hpp"
- #include "economy_base.h"
- 
- /* Initialize the cargopacket-pool */
-@@ -138,8 +140,8 @@ FORCEINLINE void CargoPacket::Merge(CargoPacket *cp)
- /**
-  * Destroy the cargolist ("frees" all cargo packets).
-  */
--template <class Tinst>
--CargoList<Tinst>::~CargoList()
-+template <class Tinst, class Tcont>
-+CargoList<Tinst, Tcont>::~CargoList()
- {
- 	for (Iterator it(this->packets.begin()); it != this->packets.end(); ++it) {
- 		delete *it;
-@@ -150,8 +152,8 @@ CargoList<Tinst>::~CargoList()
-  * Empty the cargo list, but don't free the cargo packets;
-  * the cargo packets are cleaned by CargoPacket's CleanPool.
-  */
--template <class Tinst>
--void CargoList<Tinst>::OnCleanPool()
-+template <class Tinst, class Tcont>
-+void CargoList<Tinst, Tcont>::OnCleanPool()
- {
- 	this->packets.clear();
- }
-@@ -161,8 +163,8 @@ void CargoList<Tinst>::OnCleanPool()
-  * Decreases count and days_in_transit.
-  * @param cp Packet to be removed from cache.
-  */
--template <class Tinst>
--void CargoList<Tinst>::RemoveFromCache(const CargoPacket *cp)
-+template <class Tinst, class Tcont>
-+void CargoList<Tinst, Tcont>::RemoveFromCache(const CargoPacket *cp)
- {
- 	this->count                 -= cp->count;
- 	this->cargo_days_in_transit -= cp->days_in_transit * cp->count;
-@@ -173,8 +175,8 @@ void CargoList<Tinst>::RemoveFromCache(const CargoPacket *cp)
-  * Increases count and days_in_transit.
-  * @param cp New packet to be inserted.
-  */
--template <class Tinst>
--void CargoList<Tinst>::AddToCache(const CargoPacket *cp)
-+template <class Tinst, class Tcont>
-+void CargoList<Tinst, Tcont>::AddToCache(const CargoPacket *cp)
- {
- 	this->count                 += cp->count;
- 	this->cargo_days_in_transit += cp->days_in_transit * cp->count;
-@@ -186,17 +188,17 @@ void CargoList<Tinst>::AddToCache(const CargoPacket *cp)
-  * @warning After appending this packet may not exist anymore!
-  * @note Do not use the cargo packet anymore after it has been appended to this CargoList!
-  * @param cp Cargo packet to add.
-+ * @param update_cache If false, the cache is not updated; used when loading from
-+ *        the reservation list.
-  * @pre cp != NULL
-  */
--template <class Tinst>
--void CargoList<Tinst>::Append(CargoPacket *cp)
-+void VehicleCargoList::Append(CargoPacket *cp, bool update_cache)
- {
- 	assert(cp != NULL);
--	static_cast<Tinst *>(this)->AddToCache(cp);
--
--	for (List::reverse_iterator it(this->packets.rbegin()); it != this->packets.rend(); it++) {
-+	if (update_cache) this->AddToCache(cp);
-+	for (CargoPacketList::reverse_iterator it(this->packets.rbegin()); it != this->packets.rend(); it++) {
- 		CargoPacket *icp = *it;
--		if (Tinst::AreMergable(icp, cp) && icp->count + cp->count <= CargoPacket::MAX_COUNT) {
-+		if (VehicleCargoList::AreMergable(icp, cp) && icp->count + cp->count <= CargoPacket::MAX_COUNT) {
- 			icp->Merge(cp);
- 			return;
- 		}
-@@ -211,8 +213,8 @@ void CargoList<Tinst>::Append(CargoPacket *cp)
-  * first count cargo entities and removes the rest.
-  * @param max_remaining Maximum amount of entities to be in the list after the command.
-  */
--template <class Tinst>
--void CargoList<Tinst>::Truncate(uint max_remaining)
-+template <class Tinst, class Tcont>
-+void CargoList<Tinst, Tcont>::Truncate(uint max_remaining)
- {
- 	for (Iterator it(packets.begin()); it != packets.end(); /* done during loop*/) {
- 		CargoPacket *cp = *it;
-@@ -239,117 +241,424 @@ void CargoList<Tinst>::Truncate(uint max_remaining)
- }
- 
- /**
-- * Moves the given amount of cargo to another list.
-- * Depending on the value of mta the side effects of this function differ:
-- *  - MTA_FINAL_DELIVERY: Destroys the packets that do not originate from a specific station.
-- *  - MTA_CARGO_LOAD:     Sets the loaded_at_xy value of the moved packets.
-- *  - MTA_TRANSFER:       Just move without side effects.
-- *  - MTA_UNLOAD:         Just move without side effects.
-- * @param dest  Destination to move the cargo to.
-- * @param count Amount of cargo entities to move.
-- * @param mta   How to handle the moving (side effects).
-- * @param data  Depending on mta the data of this variable differs:
-- *              - MTA_FINAL_DELIVERY - Station ID of packet's origin not to remove.
-- *              - MTA_CARGO_LOAD     - Station's tile index of load.
-- *              - MTA_TRANSFER       - Unused.
-- *              - MTA_UNLOAD         - Unused.
-- * @param payment The payment helper.
-- *
-- * @pre mta == MTA_FINAL_DELIVERY || dest != NULL
-- * @pre mta == MTA_UNLOAD || mta == MTA_CARGO_LOAD || payment != NULL
-- * @return True if there are still packets that might be moved from this cargo list.
-+ * Reserves a packet for later loading and adds it to the cache.
-+ * @param cp Packet to be reserved.
-  */
--template <class Tinst>
--template <class Tother_inst>
--bool CargoList<Tinst>::MoveTo(Tother_inst *dest, uint max_move, MoveToAction mta, CargoPayment *payment, uint data)
-+void VehicleCargoList::Reserve(CargoPacket *cp)
- {
--	assert(mta == MTA_FINAL_DELIVERY || dest != NULL);
--	assert(mta == MTA_UNLOAD || mta == MTA_CARGO_LOAD || payment != NULL);
-+	assert(cp != NULL);
-+	this->AddToCache(cp);
-+	this->reserved_count += cp->count;
-+	this->reserved.push_back(cp);
-+}
- 
--	Iterator it(this->packets.begin());
--	while (it != this->packets.end() && max_move > 0) {
-+/**
-+ * Returns all reserved cargo to the station and removes it from the cache.
-+ * @param ID of next the station the cargo wants to go next.
-+ * @param dest Station the cargo is returned to.
-+ */
-+void VehicleCargoList::Unreserve(StationID next, StationCargoList *dest)
-+{
-+	Iterator it(this->reserved.begin());
-+	while (it != this->reserved.end()) {
- 		CargoPacket *cp = *it;
--		if (cp->source == data && mta == MTA_FINAL_DELIVERY) {
--			/* Skip cargo that originated from this station. */
--			++it;
--			continue;
--		}
-+		this->RemoveFromCache(cp);
-+		this->reserved_count -= cp->count;
-+		dest->Append(next, cp);
-+		this->reserved.erase(it++);
-+	}
-+}
- 
-+/**
-+ * Load packets from the reservation list.
-+ * @params max_move Number of cargo to load.
-+ * @return Amount of cargo actually loaded.
-+ */
-+uint VehicleCargoList::LoadReserved(uint max_move)
-+{
-+	uint orig_max = max_move;
-+	Iterator it(this->reserved.begin());
-+	while (it != this->reserved.end() && max_move > 0) {
-+		CargoPacket *cp = *it;
- 		if (cp->count <= max_move) {
- 			/* Can move the complete packet */
- 			max_move -= cp->count;
--			this->packets.erase(it++);
--			static_cast<Tinst *>(this)->RemoveFromCache(cp);
--			switch (mta) {
--				case MTA_FINAL_DELIVERY:
--					payment->PayFinalDelivery(cp, cp->count);
--					delete cp;
--					continue; // of the loop
--
--				case MTA_CARGO_LOAD:
--					cp->loaded_at_xy = data;
--					break;
--
--				case MTA_TRANSFER:
--					cp->feeder_share += payment->PayTransfer(cp, cp->count);
--					break;
--
--				case MTA_UNLOAD:
--					break;
--			}
--			dest->Append(cp);
--			continue;
-+			this->reserved.erase(it++);
-+			this->reserved_count -= cp->count;
-+			this->Append(cp, false);
-+		} else if (CargoPacket::CanAllocateItem()) {
-+			cp->count -= max_move;
-+			CargoPacket *cp_new = new CargoPacket(max_move, cp->days_in_transit, cp->source, cp->source_xy, cp->loaded_at_xy, 0, cp->source_type, cp->source_id);
-+			this->Append(cp_new, false);
-+			this->reserved_count -= max_move;
-+			max_move = 0;
- 		}
-+	}
-+	return orig_max - max_move;
-+}
- 
--		/* Can move only part of the packet */
--		if (mta == MTA_FINAL_DELIVERY) {
--			/* Final delivery doesn't need package splitting. */
--			payment->PayFinalDelivery(cp, max_move);
-+/**
-+ * Move a single packet or part of it from this list to a vehicle and increment
-+ * the given iterator.
-+ * @param dest       Vehicle cargo list to move to.
-+ * @param it         Iterator pointing to the packet.
-+ * @param cap        Maximum amount of cargo to be moved.
-+ * @param load_place New loaded_at for the packet.
-+ * @param reserve    If the packet should be loaded on or reserved for the vehicle.
-+ * @return           Actual amount of cargo which has been moved.
-+ */
-+template<class Tinst, class Tcont>
-+uint CargoList<Tinst, Tcont>::MovePacket(VehicleCargoList *dest, Iterator &it, uint cap, TileIndex load_place, bool reserve)
-+{
-+	CargoPacket *packet = this->RemovePacket(it, cap, load_place);
-+	uint ret = packet->count;
-+	if (reserve) {
-+		dest->Reserve(packet);
-+	} else {
-+		dest->Append(packet);
-+	}
-+	return ret;
-+}
- 
--			/* Remove the delivered data from the cache */
--			uint left = cp->count - max_move;
--			cp->count = max_move;
--			static_cast<Tinst *>(this)->RemoveFromCache(cp);
-+/**
-+ * Move a single packet or part of it from this list to a station and increment
-+ * the given iterator.
-+ * @param dest Station cargo list to move to.
-+ * @param next Next station the packet will travel to.
-+ * @param it Iterator pointing to the packet.
-+ * @param cap Maximum amount of cargo to be moved.
-+ * @return Actual amount of cargo which has been moved.
-+ */
-+template<class Tinst, class Tcont>
-+uint CargoList<Tinst, Tcont>::MovePacket(StationCargoList *dest, StationID next, Iterator &it, uint cap)
-+{
-+	CargoPacket *packet = this->RemovePacket(it, cap);
-+	uint ret = packet->count;
-+	dest->Append(next, packet);
-+	return ret;
-+}
- 
--			/* Final delivery payment pays the feeder share, so we have to
--			 * reset that so it is not 'shown' twice for partial unloads. */
--			cp->feeder_share = 0;
--			cp->count = left;
-+/**
-+ * Remove a single packet or part of it from this list and increment the given
-+ * iterator.
-+ * @param it Iterator pointing to the packet.
-+ * @param cap Maximum amount of cargo to be moved.
-+ * @param load_place New loaded_at for the packet or INVALID_TILE if the current
-+ *        one shall be kept.
-+ * @return Removed packet.
-+ */
-+template<class Tinst, class Tcont>
-+CargoPacket *CargoList<Tinst, Tcont>::RemovePacket(Iterator &it, uint cap, TileIndex load_place)
-+{
-+	CargoPacket *packet = *it;
-+	/* load the packet if possible */
-+	if (packet->count > cap) {
-+		/* packet needs to be split */
-+		packet = packet->Split(cap);
-+
-+		/* We could not allocate a CargoPacket? Is the map that full?
-+		 * Just remove the whole packet and drop some cargo then.
-+		 */
-+		if (packet == NULL) {
-+			packet = *it;
-+			uint dropped = packet->count - cap;
-+			this->count -= dropped;
-+			this->cargo_days_in_transit -= dropped * packet->days_in_transit;
-+			packet->count = cap;
-+			this->packets.erase(it++);
- 		} else {
--			/* But... the rest needs package splitting. */
--			CargoPacket *cp_new = cp->Split(max_move);
-+			assert(packet->count == cap);
-+			++it;
-+		}
-+	} else {
-+		this->packets.erase(it++);
-+	}
-+	static_cast<Tinst *>(this)->RemoveFromCache(packet);
-+	if (load_place != INVALID_TILE) {
-+		packet->loaded_at_xy = load_place;
-+	}
-+	return packet;
-+}
-+
-+/**
-+ * Invalidates the cached data and rebuilds it.
-+ */
-+template <class Tinst, class Tcont>
-+void CargoList<Tinst, Tcont>::InvalidateCache()
-+{
-+	this->count = 0;
-+	this->cargo_days_in_transit = 0;
- 
--			/* We could not allocate a CargoPacket? Is the map that full? */
--			if (cp_new == NULL) return false;
-+	for (ConstIterator it(this->packets.begin()); it != this->packets.end(); it++) {
-+		static_cast<Tinst *>(this)->AddToCache(*it);
-+	}
-+}
- 
--			static_cast<Tinst *>(this)->RemoveFromCache(cp_new); // this reflects the changes in cp.
-+/**
-+ * Delete a vehicle cargo list and clear its reservation list.
-+ */
-+VehicleCargoList::~VehicleCargoList()
-+{
-+	for (Iterator it(this->reserved.begin()); it != this->reserved.end(); ++it) {
-+		delete *it;
-+	}
-+}
- 
--			if (mta == MTA_TRANSFER) {
--				/* Add the feeder share before inserting in dest. */
--				cp_new->feeder_share += payment->PayTransfer(cp_new, max_move);
--			} else if (mta == MTA_CARGO_LOAD) {
--				cp_new->loaded_at_xy = data;
--			}
-+/**
-+ * Deliver a specific packet or part of it to a station and handle payment. The
-+ * given iterator is incremented in the process.
-+ * @param it      Iterator pointing to the packet to be delivered.
-+ * @param cap     Maximum amount of cargo to be unloaded.
-+ * @param payment Payment object to use for payment.
-+ * @return        Amount of cargo actually unloaded.
-+ */
-+uint VehicleCargoList::DeliverPacket(Iterator &it, uint cap, CargoPayment *payment)
-+{
-+	CargoPacket *p = *it;
-+	uint unloaded = 0;
-+	if (p->count <= cap) {
-+		payment->PayFinalDelivery(p, p->count);
-+		this->packets.erase(it++);
-+		this->RemoveFromCache(p);
-+		unloaded = p->count;
-+		delete p;
-+	} else {
-+		payment->PayFinalDelivery(p, cap);
-+		this->count -= cap;
-+		this->cargo_days_in_transit -= cap * p->days_in_transit;
-+		this->feeder_share -= p->feeder_share;
-+		p->feeder_share = 0;
-+		p->count -= cap;
-+		unloaded = cap;
-+		++it;
-+	}
-+	return unloaded;
-+}
- 
--			dest->Append(cp_new);
-+/**
-+ * Keep a packet in the vehicle while unloading by temporarily moving it to the
-+ * reservation list. The given iterator is incremented in the process.
-+ * @param it Iterator pointing to the packet.
-+ * @return Size of the packet.
-+ */
-+uint VehicleCargoList::KeepPacket(Iterator &it)
-+{
-+	CargoPacket *cp = *it;
-+	this->reserved.push_back(cp);
-+	this->reserved_count += cp->count;
-+	this->packets.erase(it++);
-+	return cp->count;
-+}
-+
-+/**
-+ * Transfer a packet to a station, but don't deliver it. Increment the given
-+ * iterator in the process.
-+ * @param it Iterator pointing to a packet in the list.
-+ * @param cap Maximum amount of cargo to be transferred.
-+ * @param dest Cargo list of the station the cargo should be transferred to.
-+ * @param payment Payment object to be updated with the resulting transfer
-+ *                credits.
-+ * @param next ID of the station the cargo wants to go to next.
-+ * @return Amount of cargo actually moved.
-+ */
-+uint VehicleCargoList::TransferPacket(Iterator &it, uint cap, StationCargoList *dest, CargoPayment *payment, StationID next)
-+{
-+	CargoPacket *cp = this->RemovePacket(it, cap);
-+	cp->feeder_share += payment->PayTransfer(cp, cp->count);
-+	uint ret = cp->count;
-+	dest->Append(next, cp);
-+	return ret;
-+}
-+
-+/**
-+ * Determine what a cargo packet arriving at the station this list belongs to
-+ * will do, using the "old", non-cargodist algorithm.
-+ * @param flags  Unload flags telling if the cargo is accepted and what order
-+ *               flags there are.
-+ * @param source ID of the packets source station.
-+ * @return       Unload type (deliver, transfer, keep) telling what to do with
-+ *               the packet.
-+ */
-+UnloadType StationCargoList::WillUnloadOld(byte flags, StationID source)
-+{
-+	/* try to unload cargo */
-+	bool move = (flags & (UL_DELIVER | UL_ACCEPTED | UL_TRANSFER)) != 0;
-+	/* try to deliver cargo if unloading */
-+	bool deliver = (flags & UL_ACCEPTED) && !(flags & UL_TRANSFER) && (source != this->station->index);
-+	/* transfer cargo if delivery was unsuccessful */
-+	bool transfer = (flags & (UL_TRANSFER | UL_DELIVER)) != 0;
-+	if (move) {
-+		if(deliver) {
-+			return UL_DELIVER;
-+		} else if (transfer) {
-+			return UL_TRANSFER;
-+		} else {
-+			/* this case is for (non-)delivery to the source station without special flags.
-+			 * like the code in MoveTo did, we keep the packet in this case
-+			 */
-+			return UL_KEEP;
- 		}
-+	} else {
-+		return UL_KEEP;
-+	}
-+}
- 
--		max_move = 0;
-+/**
-+ * Determine what a cargo packet arriving at the station this list belongs to
-+ * will do, using the Cargodist algorithm.
-+ * @param flags  Unload flags telling if the cargo is accepted and what order
-+ *               flags there are.
-+ * @param next   Station the vehicle the cargo is coming from will
-+ *               visit next (or INVALID_STATION if unknown).
-+ * @param via    Station the cargo wants to go to next. If that is this
-+ *               station the cargo wants to be delivered.
-+ * @param source ID of the packets source station.
-+ * @return       Unload type (deliver, transfer, keep) telling what to do with
-+ *               the packet.
-+ */
-+UnloadType StationCargoList::WillUnloadCargoDist(byte flags, StationID next, StationID via, StationID source)
-+{
-+	if (via == this->station->index) {
-+		/* this is the final destination, deliver ... */
-+		if (flags & UL_TRANSFER) {
-+			/* .. except if explicitly told not to do so ... */
-+			return UL_TRANSFER;
-+		} else if (flags & UL_ACCEPTED) {
-+			return UL_DELIVER;
-+		} else if (flags & UL_DELIVER) {
-+			/* .. or if the station suddenly doesn't accept our cargo, but we have an explicit deliver order... */
-+			return UL_TRANSFER;
-+		} else {
-+			/* .. or else if it doesn't accept. */
-+			return UL_KEEP;
-+		}
-+	} else {
-+		/* packet has to travel on, find out if it can stay on board */
-+		if (flags & UL_DELIVER) {
-+			/* order overrides cargodist:
-+			 * play by the old loading rules here as player is interfering with cargodist
-+			 * try to deliver, as move has been forced upon us */
-+			if ((flags & UL_ACCEPTED) && !(flags & UL_TRANSFER) && source != this->station->index) {
-+				return UL_DELIVER;
-+			} else {
-+				/* transfer cargo, as delivering didn't work */
-+				return UL_TRANSFER;
-+			}
-+		} else if (flags & UL_TRANSFER) {
-+			/* transfer forced */
-+			return UL_TRANSFER;
-+		} else if (next == via && next != INVALID_STATION) {
-+			/* vehicle goes to the packet's next hop or has nondeterministic order: keep the packet*/
-+			return UL_KEEP;
-+		} else {
-+			/* vehicle goes somewhere else, transfer the packet*/
-+			return UL_TRANSFER;
-+		}
- 	}
-+}
- 
--	return it != packets.end();
-+/**
-+ * Swap the reserved and packets lists when starting to load cargo. Pull in the
-+ * "kept" packets which were stored in the reservation list so that we don't
-+ * have to iterate over them all the time.
-+ * @pre this->packets.empty()
-+ */
-+void VehicleCargoList::SwapReserved()
-+{
-+	assert(this->packets.empty());
-+	this->packets.swap(this->reserved);
-+	this->reserved_count = 0;
- }
- 
--/** Invalidates the cached data and rebuilds it. */
--template <class Tinst>
--void CargoList<Tinst>::InvalidateCache()
-+/**
-+ * Moves the given amount of cargo from a vehicle to a station.
-+ * Depending on the value of flags the side effects of this function differ:
-+ *  - OUFB_UNLOAD_IF_POSSIBLE and dest->acceptance_pickup & GoodsEntry::ACCEPTANCE:
-+ *  	packets are accepted here and may be unloaded and/or delivered (=destroyed);
-+ *  	if not using cargodist: all packets are unloaded and delivered
-+ *  	if using cargodist: only packets which have this station as final destination are unloaded and delivered.
-+ *  	if using cargodist: other packets may or may not be unloaded, depending on next_station.
-+ *  	if GoodsEntry::ACCEPTANCE is not set and using cargodist: packets may still be unloaded, but not delivered.
-+ *  - OUFB_UNLOAD: unload all packets unconditionally;
-+ *  	if OUF_UNLOAD_IF_POSSIBLE set and OUFB_TRANSFER not set: also deliver packets (no matter if using cargodist).
-+ *  - OUFB_TRANSFER: don't deliver any packets;
-+ *  	overrides delivering aspect of OUFB_UNLOAD_IF_POSSIBLE.
-+ * @param source       Vehicle cargo list to take the cargo from.
-+ * @param max_unload   Maximum amount of cargo entities to move.
-+ * @param flags        How to handle the moving (side effects).
-+ * @param next         Next unloading station in the vehicle's order list.
-+ * @param has_stopped  Vehicle has stopped at this station before, so don't update the flow stats for kept cargo.
-+ * @param payment      Payment object to be updated when delivering/transferring.
-+ * @return Number of cargo entities actually moved.
-+ */
-+uint StationCargoList::TakeFrom(VehicleCargoList *source, uint max_unload, OrderUnloadFlags order_flags, StationID next, bool has_stopped, CargoPayment *payment)
- {
--	this->count = 0;
--	this->cargo_days_in_transit = 0;
-+	uint remaining_unload = max_unload;
-+	uint unloaded;
-+	byte flags = this->GetUnloadFlags(order_flags);
-+	GoodsEntry *dest = &this->station->goods[this->cargo];
-+	UnloadType action;
-+
-+	for (VehicleCargoList::Iterator c = source->packets.begin(); c != source->packets.end() && remaining_unload > 0;) {
-+		StationID cargo_source = (*c)->source;
-+		FlowStatSet &flows = dest->flows[cargo_source];
-+		FlowStatSet::iterator begin = flows.begin();
-+		StationID via = (begin != flows.end() ? begin->Via() : INVALID_STATION);
-+		if (via != INVALID_STATION) {
-+			/* use cargodist unloading*/
-+			action = this->WillUnloadCargoDist(flags, next, via, cargo_source);
-+		} else {
-+			/* there is no plan: use normal unloading */
-+			action = this->WillUnloadOld(flags, cargo_source);
-+		}
- 
--	for (ConstIterator it(this->packets.begin()); it != this->packets.end(); it++) {
--		static_cast<Tinst *>(this)->AddToCache(*it);
-+		switch (action) {
-+			case UL_DELIVER:
-+				unloaded = source->DeliverPacket(c, remaining_unload, payment);
-+				if (via != INVALID_STATION) {
-+					if (via == this->station->index) {
-+						dest->UpdateFlowStats(flows, begin, unloaded);
-+					} else {
-+						dest->UpdateFlowStats(flows, unloaded, this->station->index);
-+					}
-+				}
-+				remaining_unload -= unloaded;
-+				break;
-+			case UL_TRANSFER:
-+				/* TransferPacket may split the packet and return the transferred part */
-+				if (via == this->station->index) {
-+					via = (++begin != flows.end()) ? begin->Via() : INVALID_STATION;
-+				}
-+				unloaded = source->TransferPacket(c, remaining_unload, this, payment, via);
-+				if (via != INVALID_STATION) {
-+					dest->UpdateFlowStats(flows, begin, unloaded);
-+				}
-+				remaining_unload -= unloaded;
-+				break;
-+			case UL_KEEP:
-+				unloaded = source->KeepPacket(c);
-+				if (via != INVALID_STATION && next != INVALID_STATION && !has_stopped) {
-+					if (via == next) {
-+						dest->UpdateFlowStats(flows, begin, unloaded);
-+					} else {
-+						dest->UpdateFlowStats(flows, unloaded, next);
-+					}
-+				}
-+				break;
-+			default:
-+				NOT_REACHED();
-+		}
- 	}
-+	return max_unload - remaining_unload;
-+}
-+
-+/**
-+ * Additionally empty the reservation list for vehicle cargo lists.
-+ */
-+void VehicleCargoList::OnCleanPool()
-+{
-+	this->reserved.clear();
-+	this->Parent::OnCleanPool();
- }
- 
- /**
-@@ -375,6 +684,22 @@ void VehicleCargoList::AddToCache(const CargoPacket *cp)
- }
- 
- /**
-+ * Moves the given amount of cargo to another vehicle (during autoreplace).
-+ * @param dest         Destination to move the cargo to.
-+ * @param cap          Maximum amount of cargo entities to move.
-+ * @return             Amount of cargo actually moved.
-+ */
-+uint VehicleCargoList::MoveTo(VehicleCargoList *dest, uint cap)
-+{
-+	uint orig_cap = cap;
-+	Iterator it = packets.begin();
-+	while (it != packets.end() && cap > 0) {
-+		cap -= MovePacket(dest, it, cap);
-+	}
-+	return orig_cap - cap;
-+}
-+
-+/**
-  * Ages the all cargo in this list.
-  */
- void VehicleCargoList::AgeCargo()
-@@ -389,22 +714,177 @@ void VehicleCargoList::AgeCargo()
- 	}
- }
- 
--/** Invalidates the cached data and rebuild it. */
-+/*
-+ *
-+ * Station cargo list implementation
-+ *
-+ */
-+
-+/**
-+ * build unload flags from order flags and station acceptance.
-+ * @param order_flags order flags to check for forced transfer/deliver
-+ * @return some combination of UL_ACCEPTED, UL_DELIVER and UL_TRANSFER
-+ */
-+FORCEINLINE byte StationCargoList::GetUnloadFlags(OrderUnloadFlags order_flags)
-+{
-+	byte flags = 0;
-+	if (HasBit(this->station->goods[this->cargo].acceptance_pickup, GoodsEntry::ACCEPTANCE)) {
-+		flags |= UL_ACCEPTED;
-+	}
-+	if (order_flags & OUFB_UNLOAD) {
-+		flags |= UL_DELIVER;
-+	}
-+	if (order_flags & OUFB_TRANSFER) {
-+		flags |= UL_TRANSFER;
-+	}
-+	return flags;
-+}
-+
-+/**
-+ * Appends the given cargo packet to the range of packets with the same next station
-+ * @warning After appending this packet may not exist anymore!
-+ * @note Do not use the cargo packet anymore after it has been appended to this CargoList!
-+ * @param next the next hop
-+ * @param cp the cargo packet to add
-+ * @pre cp != NULL
-+ */
-+void StationCargoList::Append(StationID next, CargoPacket *cp)
-+{
-+	assert(cp != NULL);
-+	this->AddToCache(cp);
-+
-+	StationCargoPacketMap::List &list = this->packets[next];
-+	for (StationCargoPacketMap::List::reverse_iterator it(list.rbegin()); it != list.rend(); it++) {
-+		CargoPacket *icp = *it;
-+		if (StationCargoList::AreMergable(icp, cp) && icp->count + cp->count <= CargoPacket::MAX_COUNT) {
-+			icp->Merge(cp);
-+			return;
-+		}
-+	}
-+
-+	/* The packet could not be merged with another one */
-+	list.push_back(cp);
-+}
-+
-+/**
-+ * Move packets from a specific range in this list to a vehicle.
-+ * @param dest Cargo list the packets will be moved to.
-+ * @param cap Maximum amount of cargo to move.
-+ * @param begin Begin of the range to take packets from.
-+ * @param end End of the range to take packets from.
-+ * @param reserve If the packets should be loaded on or reserved for the vehicle.
-+ * @return Amount of cargo that has been moved.
-+ */
-+uint StationCargoList::MovePackets(VehicleCargoList *dest, uint cap, Iterator begin, Iterator end, bool reserve)
-+{
-+	uint orig_cap = cap;
-+	while (begin != end && cap > 0) {
-+		cap -= this->MovePacket(dest, begin, cap, this->station->xy, reserve);
-+	}
-+	return orig_cap - cap;
-+}
-+
-+/**
-+ * Move suitable packets from this list to a vehicle.
-+ * @param dest Vehicle cargo list to move packets to.
-+ * @param cap Maximum amount of cargo to be moved.
-+ * @param next Next station the vehicle will stop at.
-+ * @param reserve If the packets should be loaded on or reserved for the vehicle.
-+ * @return Amount of cargo that has been moved.
-+ */
-+uint StationCargoList::MoveTo(VehicleCargoList *dest, uint cap, StationID next, bool reserve)
-+{
-+	uint orig_cap = cap;
-+	std::pair<Iterator, Iterator> bounds(this->packets.equal_range(next));
-+	cap -= this->MovePackets(dest, cap, bounds.first, bounds.second, reserve);
-+	if (next != INVALID_STATION && cap > 0) {
-+		bounds = this->packets.equal_range(INVALID_STATION);
-+		cap -= this->MovePackets(dest, cap, bounds.first, bounds.second, reserve);
-+	}
-+	return orig_cap - cap;
-+}
-+
-+/**
-+ * Route all packets with station "to" as next hop to a different place.
-+ * @param to station to exclude from routing.
-+ */
-+void StationCargoList::RerouteStalePackets(StationID to)
-+{
-+	std::pair<Iterator, Iterator> range(this->packets.equal_range(to));
-+	for (Iterator it(range.first); it != range.second && it.GetKey() == to;) {
-+		CargoPacket *packet = *it;
-+		this->packets.erase(it++);
-+		StationID next = this->station->goods[this->cargo].UpdateFlowStatsTransfer(packet->source, packet->count, this->station->index);
-+		assert(next != to);
-+
-+		/* legal, as insert doesn't invalidate iterators in the MultiMap, however
-+		 * this might insert the packet between range.first and range.second (which might be end())
-+		 * This is why we check for GetKey above to avoid infinite loops
-+		 */
-+		this->packets.Insert(next, packet);
-+	}
-+}
-+
-+/**
-+ * Truncate where each destination loses roughly the same percentage of its cargo.
-+ * This is done by randomizing the selection of packets to be removed.
-+ * @param max_remaining maximum amount of cargo to keep in the list.
-+ */
-+void StationCargoList::RandomTruncate(uint max_remaining)
-+{
-+	uint prev_count = this->count;
-+	while (this->count > max_remaining) {
-+		for (Iterator it(this->packets.begin()); it != this->packets.end();) {
-+			if (RandomRange(prev_count) < max_remaining) {
-+				++it;
-+				continue;
-+			}
-+			CargoPacket *packet = *it;
-+			uint diff = this->count - max_remaining;
-+			if (packet->count > diff) {
-+				packet->count -= diff;
-+				this->count = max_remaining;
-+				this->cargo_days_in_transit -= packet->days_in_transit * diff;
-+				return;
-+			} else {
-+				this->packets.erase(it++);
-+				this->RemoveFromCache(packet);
-+				delete packet;
-+			}
-+		}
-+	}
-+}
-+
-+/**
-+ * Invalidates the cached data and rebuilds it.
-+ */
- void VehicleCargoList::InvalidateCache()
- {
- 	this->feeder_share = 0;
-+	this->reserved_count = 0;
- 	this->Parent::InvalidateCache();
-+	for (ConstIterator it(this->reserved.begin()); it != this->reserved.end(); it++) {
-+		this->AddToCache(*it);
-+		this->reserved_count += (*it)->count;
-+	}
- }
- 
-+/**
-+ * Assign the cargo list to a goods entry.
-+ * @param station the station the cargo list is assigned to
-+ * @param cargo the cargo the list is assigned to
-+ */
-+void StationCargoList::AssignTo(Station *station, CargoID cargo)
-+{
-+	assert(this->station == NULL);
-+	assert(station != NULL && cargo != INVALID_CARGO);
-+	this->station = station;
-+	this->cargo = cargo;
-+}
-+
-+
- /*
-  * We have to instantiate everything we want to be usable.
-  */
--template class CargoList<VehicleCargoList>;
--template class CargoList<StationCargoList>;
--
--/** Autoreplace Vehicle -> Vehicle 'transfer'. */
--template bool CargoList<VehicleCargoList>::MoveTo(VehicleCargoList *, uint max_move, MoveToAction mta, CargoPayment *payment, uint data);
--/** Cargo unloading at a station. */
--template bool CargoList<VehicleCargoList>::MoveTo(StationCargoList *, uint max_move, MoveToAction mta, CargoPayment *payment, uint data);
--/** Cargo loading at a station. */
--template bool CargoList<StationCargoList>::MoveTo(VehicleCargoList *, uint max_move, MoveToAction mta, CargoPayment *payment, uint data);
-+template class CargoList<VehicleCargoList, CargoPacketList>;
-+template class CargoList<StationCargoList, StationCargoPacketMap>;
-diff --git a/src/cargopacket.h b/src/cargopacket.h
-index 0f2e461..d0751b0 100644
---- a/src/cargopacket.h
-+++ b/src/cargopacket.h
-@@ -15,8 +15,11 @@
- #include "core/pool_type.hpp"
- #include "economy_type.h"
- #include "station_type.h"
-+#include "order_type.h"
- #include "cargo_type.h"
-+#include "cargotype.h"
- #include "vehicle_type.h"
-+#include "core/multimap.hpp"
- #include <list>
- 
- /** Unique identifier for a single cargo packet. */
-@@ -28,7 +31,9 @@ typedef Pool<CargoPacket, CargoPacketID, 1024, 0xFFF000, PT_NORMAL, true, false>
- /** The actual pool with cargo packets. */
- extern CargoPacketPool _cargopacket_pool;
- 
--template <class Tinst> class CargoList;
-+template <class Tinst, class Tcont> class CargoList;
-+class StationCargoList; // forward-declare, so we can use it in VehicleCargoList::Unreserve
-+class VehicleCargoList; // forward-declare, so we can use it in CargoList::MovePacket
- extern const struct SaveLoad *GetCargoPacketDesc();
- 
- /**
-@@ -46,7 +51,7 @@ private:
- 	TileIndex loaded_at_xy;     ///< Location where this cargo has been loaded into the vehicle.
- 
- 	/** The CargoList caches, thus needs to know about it. */
--	template <class Tinst> friend class CargoList;
-+	template <class Tinst, class Tcont> friend class CargoList;
- 	friend class VehicleCargoList;
- 	friend class StationCargoList;
- 	/** We want this to be saved, right? */
-@@ -140,7 +145,6 @@ public:
- 		return this->loaded_at_xy;
- 	}
- 
--
- 	static void InvalidateAllFrom(SourceType src_type, SourceID src);
- 	static void InvalidateAllFrom(StationID sid);
- 	static void AfterLoad();
-@@ -159,38 +163,46 @@ public:
-  */
- #define FOR_ALL_CARGOPACKETS(var) FOR_ALL_CARGOPACKETS_FROM(var, 0)
- 
-+/** Kind of actions that could be done with packets on unloading */
-+enum UnloadType {
-+	UL_KEEP     = 0,      ///< keep cargo on vehicle
-+	UL_DELIVER  = 1 << 0, ///< deliver cargo
-+	UL_TRANSFER = 1 << 1, ///< transfer cargo
-+	UL_ACCEPTED = 1 << 2, ///< cargo is accepted
-+};
-+
- /**
-  * Simple collection class for a list of cargo packets.
-  * @tparam Tinst Actual instantation of this cargo list.
-  */
--template <class Tinst>
-+template <class Tinst, class Tcont>
- class CargoList {
- public:
--	/** Container with cargo packets. */
--	typedef std::list<CargoPacket *> List;
--	/** The iterator for our container. */
--	typedef List::iterator Iterator;
--	/** The const iterator for our container. */
--	typedef List::const_iterator ConstIterator;
--
--	/** Kind of actions that could be done with packets on move. */
--	enum MoveToAction {
--		MTA_FINAL_DELIVERY, ///< "Deliver" the packet to the final destination, i.e. destroy the packet.
--		MTA_CARGO_LOAD,     ///< Load the packet onto a vehicle, i.e. set the last loaded station ID.
--		MTA_TRANSFER,       ///< The cargo is moved as part of a transfer.
--		MTA_UNLOAD,         ///< The cargo is moved as part of a forced unload.
--	};
-+	/** Iterator for our container. */
-+	typedef typename Tcont::iterator Iterator;
-+	/** Const iterator for our container. */
-+	typedef typename Tcont::const_iterator ConstIterator;
-+	/** Reverse iterator for our container. */
-+	typedef typename Tcont::reverse_iterator ReverseIterator;
-+	/** Const reverse iterator for our container. */
-+	typedef typename Tcont::const_reverse_iterator ConstReverseIterator;
- 
- protected:
- 	uint count;                 ///< Cache for the number of cargo entities.
- 	uint cargo_days_in_transit; ///< Cache for the sum of number of days in transit of each entity; comparable to man-hours.
- 
--	List packets;               ///< The cargo packets in this list.
-+	Tcont packets;              ///< The cargo packets in this list.
- 
- 	void AddToCache(const CargoPacket *cp);
- 
- 	void RemoveFromCache(const CargoPacket *cp);
- 
-+	CargoPacket *RemovePacket(Iterator &it, uint cap, TileIndex load_place = INVALID_TILE);
-+
-+	uint MovePacket(StationCargoList *dest, StationID next, Iterator &it, uint cap);
-+
-+	uint MovePacket(VehicleCargoList *dest, Iterator &it, uint cap, TileIndex load_place = INVALID_TILE, bool reserved = false);
-+
- public:
- 	/** Create the cargo list. */
- 	CargoList() {}
-@@ -203,7 +215,7 @@ public:
- 	 * Returns a pointer to the cargo packet list (so you can iterate over it etc).
- 	 * @return Pointer to the packet list.
- 	 */
--	FORCEINLINE const List *Packets() const
-+	FORCEINLINE const Tcont *Packets() const
- 	{
- 		return &this->packets;
- 	}
-@@ -227,15 +239,6 @@ public:
- 	}
- 
- 	/**
--	 * Returns source of the first cargo packet in this list.
--	 * @return The before mentioned source.
--	 */
--	FORCEINLINE StationID Source() const
--	{
--		return this->Empty() ? INVALID_STATION : this->packets.front()->source;
--	}
--
--	/**
- 	 * Returns average number of days in transit for a cargo entity.
- 	 * @return The before mentioned number.
- 	 */
-@@ -244,35 +247,44 @@ public:
- 		return this->count == 0 ? 0 : this->cargo_days_in_transit / this->count;
- 	}
- 
--
--	void Append(CargoPacket *cp);
- 	void Truncate(uint max_remaining);
- 
--	template <class Tother_inst>
--	bool MoveTo(Tother_inst *dest, uint count, MoveToAction mta, CargoPayment *payment, uint data = 0);
--
- 	void InvalidateCache();
- };
- 
-+typedef std::list<CargoPacket *> CargoPacketList;
-+
- /**
-  * CargoList that is used for vehicles.
-  */
--class VehicleCargoList : public CargoList<VehicleCargoList> {
-+class VehicleCargoList : public CargoList<VehicleCargoList, CargoPacketList> {
- protected:
-+	uint TransferPacket(Iterator &c, uint remaining_unload, StationCargoList *dest, CargoPayment *payment, StationID next);
-+	uint DeliverPacket(Iterator &c, uint remaining_unload, CargoPayment *payment);
-+	uint KeepPacket(Iterator &c);
-+
- 	/** The (direct) parent of this class. */
--	typedef CargoList<VehicleCargoList> Parent;
-+	typedef CargoList<VehicleCargoList, CargoPacketList> Parent;
- 
--	Money feeder_share; ///< Cache for the feeder share.
-+	CargoPacketList reserved; ///< Packets reserved for unloading in this list.
-+	Money feeder_share;       ///< Cache for the feeder share.
-+	uint reserved_count;      ///< Cache for the number of reserved cargo entities.
- 
- 	void AddToCache(const CargoPacket *cp);
- 	void RemoveFromCache(const CargoPacket *cp);
- 
- public:
-+	/** The station cargo list needs to control the unloading. */
-+	friend class StationCargoList;
- 	/** The super class ought to know what it's doing. */
--	friend class CargoList<VehicleCargoList>;
-+	friend class CargoList<VehicleCargoList, CargoPacketList>;
- 	/** The vehicles have a cargo list (and we want that saved). */
- 	friend const struct SaveLoad *GetVehicleDescription(VehicleType vt);
- 
-+	~VehicleCargoList();
-+
-+	void OnCleanPool();
-+
- 	/**
- 	 * Returns total sum of the feeder share for all packets.
- 	 * @return The before mentioned number.
-@@ -282,10 +294,68 @@ public:
- 		return this->feeder_share;
- 	}
- 
-+	void Append(CargoPacket *cp, bool update_cache = true);
-+
-+	/**
-+	 * Returns sum of cargo on board the vehicle (ie not only
-+	 * reserved).
-+	 * @return Cargo on board the vehicle.
-+	 */
-+	FORCEINLINE uint OnboardCount() const
-+	{
-+		return this->count - this->reserved_count;
-+	}
-+
-+	/**
-+	 * Returns sum of cargo reserved for the vehicle.
-+	 * @return Cargo reserved for the vehicle.
-+	 */
-+	FORCEINLINE uint ReservedCount() const
-+	{
-+		return this->reserved_count;
-+	}
-+
-+	/**
-+	 * Returns a pointer to the reserved cargo list.
-+	 * @return Pointer to the reserved list.
-+	 */
-+	FORCEINLINE const CargoPacketList *Reserved() const
-+	{
-+		return &this->reserved;
-+	}
-+
-+	/**
-+	 * Returns source of the first cargo packet in this list.
-+	 * If the regular packets list is empty but there are packets
-+	 * in the reservation list it returns the source of the first
-+	 * reserved packet.
-+	 * @return The before mentioned source.
-+	 */
-+	FORCEINLINE StationID Source() const
-+	{
-+		if (this->Empty()) {
-+			return INVALID_STATION;
-+		} else if (this->packets.empty()) {
-+			return this->reserved.front()->source;
-+		} else {
-+			return this->packets.front()->source;
-+		}
-+	}
-+
-+	void Reserve(CargoPacket *cp);
-+
-+	void Unreserve(StationID next, StationCargoList *dest);
-+
-+	uint LoadReserved(uint count);
-+
-+	void SwapReserved();
-+
- 	void AgeCargo();
- 
- 	void InvalidateCache();
- 
-+	uint MoveTo(VehicleCargoList *dest, uint cap);
-+
- 	/**
- 	 * Are two the two CargoPackets mergeable in the context of
- 	 * a list of CargoPackets for a Vehicle?
-@@ -303,16 +373,20 @@ public:
- 	}
- };
- 
-+typedef MultiMap<StationID, CargoPacket *> StationCargoPacketMap;
-+
- /**
-  * CargoList that is used for stations.
-  */
--class StationCargoList : public CargoList<StationCargoList> {
-+class StationCargoList : public CargoList<StationCargoList, StationCargoPacketMap> {
- public:
- 	/** The super class ought to know what it's doing. */
--	friend class CargoList<StationCargoList>;
-+	friend class CargoList<StationCargoList, StationCargoPacketMap>;
- 	/** The stations, via GoodsEntry, have a CargoList. */
- 	friend const struct SaveLoad *GetGoodsDesc();
- 
-+	StationCargoList() : station(NULL), cargo(INVALID_CARGO) {}
-+
- 	/**
- 	 * Are two the two CargoPackets mergeable in the context of
- 	 * a list of CargoPackets for a Vehicle?
-@@ -327,6 +401,40 @@ public:
- 				cp1->source_type     == cp2->source_type &&
- 				cp1->source_id       == cp2->source_id;
- 	}
-+
-+	uint TakeFrom(VehicleCargoList *source, uint max_unload, OrderUnloadFlags flags, StationID next_station, bool has_stopped, CargoPayment *payment);
-+
-+	uint MoveTo(VehicleCargoList *dest, uint cap, StationID next_station, bool reserve = false);
-+
-+	void Append(StationID next, CargoPacket *cp);
-+
-+	void RerouteStalePackets(StationID to);
-+
-+	void RandomTruncate(uint max_remaining);
-+
-+	/**
-+	 * Returns source of the first cargo packet in this list.
-+	 * @return The before mentioned source.
-+	 */
-+	FORCEINLINE StationID Source() const
-+	{
-+		return this->Empty() ? INVALID_STATION : this->packets.begin()->second.front()->source;
-+	}
-+
-+	void AssignTo(Station *station, CargoID cargo);
-+
-+	static void InvalidateAllFrom(SourceType src_type, SourceID src);
-+
-+protected:
-+	Station *station; ///< Station this cargo list belongs to.
-+	CargoID cargo;    ///< Cargo type this list holds.
-+
-+	byte GetUnloadFlags(OrderUnloadFlags order_flags);
-+
-+	UnloadType WillUnloadOld(byte flags, StationID source);
-+	UnloadType WillUnloadCargoDist(byte flags, StationID next_station, StationID via, StationID source);
-+
-+	uint MovePackets(VehicleCargoList *dest, uint cap, Iterator begin, Iterator end, bool reserve);
- };
- 
- #endif /* CARGOPACKET_H */
 diff --git a/src/core/math_func.cpp b/src/core/math_func.cpp
 index 7f0630a..bcddbfa 100644
 --- a/src/core/math_func.cpp
@@ -1591,596 +371,11 @@ index 19f2f53..a824af3 100644
  
  /**
   * Computes ceil(a / b) for non-negative a and b.
-diff --git a/src/core/multimap.hpp b/src/core/multimap.hpp
-new file mode 100644
-index 0000000..69772f8
---- /dev/null
-+++ b/src/core/multimap.hpp
-@@ -0,0 +1,393 @@
-+/* $Id$ */
-+
-+/*
-+ * This file is part of OpenTTD.
-+ * OpenTTD is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, version 2.
-+ * OpenTTD is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-+ * See the GNU General Public License for more details. You should have received a copy of the GNU General Public License along with OpenTTD. If not, see <http://www.gnu.org/licenses/>.
-+ */
-+
-+/** @file multimap.hpp Multimap with deterministic ordering of items with equal keys. */
-+
-+#ifndef MULTIMAP_HPP_
-+#define MULTIMAP_HPP_
-+
-+#include <map>
-+#include <list>
-+
-+template<typename Tkey, typename Tvalue, typename Tcompare>
-+class MultiMap;
-+
-+/**
-+ * STL-style iterator for MultiMap.
-+ * @tparam Tmap_iter Iterator type for the map in the MultiMap.
-+ * @tparam Tlist_iter Iterator type for the lists in the MultiMap.
-+ * @tparam Tkey Key type of the MultiMap.
-+ * @tparam Tvalue Value type of the MultMap.
-+ * @tparam Tcompare Comparator type for keys of the MultiMap.
-+ */
-+template<class Tmap_iter, class Tlist_iter, class Tkey, class Tvalue, class Tcompare>
-+class MultiMapIterator {
-+protected:
-+	friend class MultiMap<Tkey, Tvalue, Tcompare>;
-+	typedef MultiMapIterator<Tmap_iter, Tlist_iter, Tkey, Tvalue, Tcompare> Self;
-+
-+	Tlist_iter list_iter; ///< Iterator pointing to current position in the current list of items with equal keys.
-+	Tmap_iter map_iter;   ///< Iterator pointing to the position of the current list of items with equal keys in the map.
-+
-+	/**
-+	 * Flag to show that the iterator has just "walked" a step in the map.
-+	 * We cannot check the current list for that as we might have reached end() of the map. In that case we'd need to
-+	 * set list_iter to some sort of "invalid" state, but that's impossible as operator== yields undefined behaviour
-+	 * if the iterators don't belong to the same list and there is no list at end(). So if we created a static empty
-+	 * list and an "invalid" iterator in that we could not determine if the iterator is invalid while it's valid. We
-+	 * can also not determine if the map iterator is valid while we don't have the map; so in the end it's easiest to
-+	 * just introduce an extra flag.
-+	 */
-+	bool list_valid;
-+
-+public:
-+	/**
-+	 * Simple, dangerous constructor to allow later assignment with operator=.
-+	 */
-+	MultiMapIterator() : list_valid(false) {}
-+
-+	/**
-+	 * Constructor to allow possibly const iterators to be assigned from possibly
-+	 * non-const map iterators. You can assign end() like this.
-+	 * @tparam Tnon_const Iterator type assignable to Tmap_iter (which might be const).
-+	 * @param mi One such iterator.
-+	 */
-+	template<class Tnon_const>
-+	MultiMapIterator(Tnon_const mi) : map_iter(mi), list_valid(false) {}
-+
-+	/**
-+	 * Constructor to allow specifying an exact position in map and list. You cannot
-+	 * construct end() like this as the constructor will actually check li and mi->second
-+	 * for list_valid.
-+	 * @param mi Iterator in the map.
-+	 * @param li Iterator in the list.
-+	 */
-+	MultiMapIterator(Tmap_iter mi, Tlist_iter li) : list_iter(li), map_iter(mi)
-+	{
-+		this->list_valid = (this->list_iter != this->map_iter->second.begin());
-+	}
-+
-+	/**
-+	 * Assignment iterator like constructor with the same signature.
-+	 * @tparam Tnon_const Iterator type assignable to Tmap_iter (which might be const).
-+	 * @param mi One such iterator.
-+	 * @return This iterator.
-+	 */
-+	template<class Tnon_const>
-+	Self &operator=(Tnon_const mi)
-+	{
-+		this->map_iter = mi;
-+		this->list_valid = false;
-+		return *this;
-+	}
-+
-+	/**
-+	 * Dereference operator. Works just like usual STL operator*() on various containers.
-+	 * Doesn't do a lot of checks for sanity, just like STL.
-+	 * @return The value associated with the item this iterator points to.
-+	 */
-+	Tvalue &operator*() const
-+	{
-+		assert(!this->map_iter->second.empty());
-+		if (this->list_valid) {
-+			return this->list_iter.operator*();
-+		} else {
-+			return this->map_iter->second.begin().operator*();
-+		}
-+	}
-+
-+	/**
-+	 * Same as operator*(), but returns a pointer.
-+	 * @return Pointer to the value this iterator points to.
-+	 */
-+	Tvalue *operator->() const
-+	{
-+		assert(!this->map_iter->second.empty());
-+		if (this->list_valid) {
-+			return this->list_iter.operator->();
-+		} else {
-+			return this->map_iter->second.begin().operator->();
-+		}
-+	}
-+
-+	inline const Tmap_iter &GetMapIter() const {return this->map_iter;}
-+	inline const Tlist_iter &GetListIter() const {return this->list_iter;}
-+	inline bool ListValid() const {return this->list_valid;}
-+
-+	const Tkey &GetKey() const {return this->map_iter->first;}
-+
-+	/**
-+	 * Prefix increment operator. Increment the iterator and set it to the
-+	 * next item in the MultiMap. This either increments the list iterator
-+	 * or the map iterator and sets list_valid accordingly.
-+	 * @return This iterator after incrementing.
-+	 */
-+	Self &operator++()
-+	{
-+		assert(!this->map_iter->second.empty());
-+		if (this->list_valid) {
-+			if(++this->list_iter == this->map_iter->second.end()) {
-+				++this->map_iter;
-+				this->list_valid = false;
-+			}
-+		} else {
-+			this->list_iter = ++(this->map_iter->second.begin());
-+			if (this->list_iter == this->map_iter->second.end()) {
-+				++this->map_iter;
-+			} else {
-+				this->list_valid = true;
-+			}
-+		}
-+		return *this;
-+	}
-+
-+	/**
-+	 * Postfix increment operator. Same as prefix increment, but return the
-+	 * previous state.
-+	 * @param dummy param to mark postfix.
-+	 * @return This iterator before incrementing.
-+	 */
-+	Self operator++(int)
-+	{
-+		Self tmp = *this;
-+		this->operator++();
-+		return tmp;
-+	}
-+
-+	/**
-+	 * Prefix decrement operator. Decrement the iterator and set it to the
-+	 * previous item in the MultiMap.
-+	 * @return This iterator after decrementing.
-+	 */
-+	Self &operator--()
-+	{
-+		assert(!this->map_iter->second.empty());
-+		if (!this->list_valid) {
-+			--this->map_iter;
-+			this->list_iter = this->map_iter->second.end();
-+			assert(!this->map_iter->second.empty());
-+		}
-+
-+		this->list_valid = (--this->list_iter != this->map_iter->second.begin());
-+		return *this;
-+	}
-+
-+	/**
-+	 * Postfix decrement operator. Same as prefix decrement, but return the
-+	 * previous state.
-+	 * @param dummy param to mark postfix.
-+	 * @return This iterator before decrementing.
-+	 */
-+	Self operator--(int)
-+	{
-+		Self tmp = *this;
-+		this->operator--();
-+		return tmp;
-+	}
-+};
-+
-+/* generic comparison functions for const/non-const MultiMap iterators and map iterators */
-+
-+/**
-+ * Compare two MultiMap iterators. Iterators are equal if
-+ * 1. Their map iterators are equal.
-+ * 2. They agree about list_valid.
-+ * 3. If list_valid they agree about list_iter.
-+ * Lots of template parameters to make all possible const and non-const types of MultiMap iterators
-+ * (on maps with const and non-const values) comparable to each other.
-+ * @param iter1 First iterator to compare.
-+ * @param iter2 Second iterator to compare.
-+ * @return If iter1 and iter2 are equal.
-+ */
-+template<class Tmap_iter1, class Tlist_iter1, class Tmap_iter2, class Tlist_iter2, class Tkey, class Tvalue1, class Tvalue2, class Tcompare>
-+bool operator==(const MultiMapIterator<Tmap_iter1, Tlist_iter1, Tkey, Tvalue1, Tcompare> &iter1, const MultiMapIterator<Tmap_iter2, Tlist_iter2, Tkey, Tvalue2, Tcompare> &iter2)
-+{
-+	if (iter1.GetMapIter() != iter2.GetMapIter()) return false;
-+	if (iter1.ListValid()) {
-+		if (!iter2.ListValid()) {
-+			return false;
-+		} else {
-+			return iter1.GetListIter() == iter2.GetListIter();
-+		}
-+	} else {
-+		return !iter2.ListValid();
-+	}
-+}
-+
-+/**
-+ * Inverse of operator==().
-+ * Lots of template parameters to make all possible const and non-const types of MultiMap iterators
-+ * (on maps with const and non-const values) comparable to each other.
-+ * @param iter1 First iterator to compare.
-+ * @param iter2 Second iterator to compare.
-+ * @return If iter1 and iter2 are not equal.
-+ */
-+template<class Tmap_iter1, class Tlist_iter1, class Tmap_iter2, class Tlist_iter2, class Tkey, class Tvalue1, class Tvalue2, class Tcompare>
-+bool operator!=(const MultiMapIterator<Tmap_iter1, Tlist_iter1, Tkey, Tvalue1, Tcompare> &iter1, const MultiMapIterator<Tmap_iter2, Tlist_iter2, Tkey, Tvalue2, Tcompare> &iter2)
-+{
-+	return !(iter1 == iter2);
-+}
-+
-+/**
-+ * Check if a MultiMap iterator is at the begin of a list pointed to by the given map iterator.
-+ * Lots of template parameters to make all possible const and non-const types of MultiMap iterators
-+ * (on maps with const and non-const values) comparable to all possible types of map iterators.
-+ * @param iter1 MultiMap iterator.
-+ * @param iter2 Map iterator.
-+ * @return If iter1 points to the begin of the list pointed to by iter2.
-+ */
-+template<class Tmap_iter1, class Tlist_iter1, class Tmap_iter2, class Tkey, class Tvalue, class Tcompare >
-+bool operator==(const MultiMapIterator<Tmap_iter1, Tlist_iter1, Tkey, Tvalue, Tcompare> &iter1, const Tmap_iter2 &iter2)
-+{
-+	return !iter1.ListValid() && iter1.GetMapIter() == iter2;
-+}
-+
-+/**
-+ * Inverse of operator==() with same signature.
-+ * @param iter1 MultiMap iterator.
-+ * @param iter2 Map iterator.
-+ * @return If iter1 doesn't point to the begin of the list pointed to by iter2.
-+ */
-+template<class Tmap_iter1, class Tlist_iter1, class Tmap_iter2, class Tkey, class Tvalue, class Tcompare >
-+bool operator!=(const MultiMapIterator<Tmap_iter1, Tlist_iter1, Tkey, Tvalue, Tcompare> &iter1, const Tmap_iter2 &iter2)
-+{
-+	return iter1.ListValid() || iter1.GetMapIter() != iter2;
-+}
-+
-+/**
-+ * Same as operator==() with reversed order of arguments.
-+ * @param iter2 Map iterator.
-+ * @param iter1 MultiMap iterator.
-+ * @return If iter1 points to the begin of the list pointed to by iter2.
-+ */
-+template<class Tmap_iter1, class Tlist_iter1, class Tmap_iter2, class Tkey, class Tvalue, class Tcompare >
-+bool operator==(const Tmap_iter2 &iter2, const MultiMapIterator<Tmap_iter1, Tlist_iter1, Tkey, Tvalue, Tcompare> &iter1)
-+{
-+	return !iter1.ListValid() && iter1.GetMapIter() == iter2;
-+}
-+
-+/**
-+ * Same as operator!=() with reversed order of arguments.
-+ * @param iter2 Map iterator.
-+ * @param iter1 MultiMap iterator.
-+ * @return If iter1 doesn't point to the begin of the list pointed to by iter2.
-+ */
-+template<class Tmap_iter1, class Tlist_iter1, class Tmap_iter2, class Tkey, class Tvalue, class Tcompare >
-+bool operator!=(const Tmap_iter2 &iter2, const MultiMapIterator<Tmap_iter1, Tlist_iter1, Tkey, Tvalue, Tcompare> &iter1)
-+{
-+	return iter1.ListValid() || iter1.GetMapIter() != iter2;
-+}
-+
-+
-+/**
-+ * Hand-rolled multimap as map of lists. Behaves mostly like a list, but is sorted
-+ * by Tkey so that you can easily look up ranges of equal keys. Those ranges are
-+ * internally ordered in a deterministic way (contrary to STL multimap). All
-+ * STL-compatible members are named in STL style, all others are named in OpenTTD
-+ * style.
-+ */
-+template<typename Tkey, typename Tvalue, typename Tcompare = std::less<Tkey> >
-+class MultiMap : public std::map<Tkey, std::list<Tvalue>, Tcompare > {
-+public:
-+	typedef typename std::list<Tvalue> List;
-+	typedef typename List::iterator ListIterator;
-+	typedef typename List::const_iterator ConstListIterator;
-+
-+	typedef typename std::map<Tkey, List, Tcompare > Map;
-+	typedef typename Map::iterator MapIterator;
-+	typedef typename Map::const_iterator ConstMapIterator;
-+
-+	typedef MultiMapIterator<MapIterator, ListIterator, Tkey, Tvalue, Tcompare> iterator;
-+	typedef MultiMapIterator<ConstMapIterator, ConstListIterator, Tkey, const Tvalue, Tcompare> const_iterator;
-+
-+	/**
-+	 * Erase the value pointed to by an iterator. The iterator may be invalid afterwards.
-+	 * @param it Iterator pointing at some value.
-+	 */
-+	void erase(iterator it)
-+	{
-+		List &list = it.map_iter->second;
-+		assert(!list.empty());
-+		if (it.ListValid()) {
-+			list.erase(it.list_iter);
-+		} else {
-+			list.erase(list.begin());
-+		}
-+
-+		if (list.empty()) this->Map::erase(it.map_iter);
-+	}
-+
-+	/**
-+	 * Insert a value at the end of the range with the specified key.
-+	 * @param key Key to be inserted at.
-+	 * @param val Value to be inserted.
-+	 */
-+	void Insert(const Tkey &key, const Tvalue &val)
-+	{
-+		List &list = (*this)[key];
-+		list.push_back(val);
-+		assert(!list.empty());
-+	}
-+
-+	/**
-+	 * Count all items in this MultiMap. This involves iterating over the map.
-+	 * @return Number of items in the MultiMap.
-+	 */
-+	size_t size() const
-+	{
-+		size_t ret = 0;
-+		for (ConstMapIterator it = this->Map::begin(); it != this->Map::end(); ++it) {
-+			ret += it->second.size();
-+		}
-+		return ret;
-+	}
-+
-+	/**
-+	 * Count the number of ranges with equal keys in this MultiMap.
-+	 * @return Number of ranges with equal keys.
-+	 */
-+	size_t MapSize() const
-+	{
-+		return this->Map::size();
-+	}
-+
-+	/**
-+	 * Get a pair of iterators specifying a range of items with equal keys.
-+	 * @param key Key to look for.
-+	 * @return Range of items with given key.
-+	 */
-+	std::pair<iterator, iterator> equal_range(const Tkey &key)
-+	{
-+		MapIterator begin(lower_bound(key));
-+		if (begin != this->Map::end() && begin->first == key) {
-+			MapIterator end = begin;
-+			return std::make_pair(begin, ++end);
-+		} else {
-+			return std::make_pair(begin, begin);
-+		}
-+	}
-+
-+	/**
-+	 * Get a pair of constant iterators specifying a range of items with equal keys.
-+	 * @param key Key to look for.
-+	 * @return Constant range of items with given key.
-+	 */
-+	std::pair<const_iterator, const_iterator> equal_range(const Tkey &key) const
-+	{
-+		ConstMapIterator begin(lower_bound(key));
-+		if (begin != this->Map::end() && begin->first == key) {
-+			ConstMapIterator end = begin;
-+			return std::make_pair(begin, ++end);
-+		} else {
-+			return std::make_pair(begin, begin);
-+		}
-+	}
-+};
-+
-+#endif /* MULTIMAP_HPP_ */
 diff --git a/src/economy.cpp b/src/economy.cpp
-index 584eea7..c8c434f 100644
+index 584eea7..f900f81 100644
 --- a/src/economy.cpp
 +++ b/src/economy.cpp
-@@ -46,6 +46,7 @@
- #include "core/pool_func.hpp"
- #include "newgrf.h"
- #include "core/backup_type.hpp"
-+#include "cargo_type.h"
- 
- #include "table/strings.h"
- #include "table/pricebase.h"
-@@ -1013,21 +1014,23 @@ CargoPayment::~CargoPayment()
- 
- 	this->front->cargo_payment = NULL;
- 
--	if (this->visual_profit == 0) return;
-+	if (this->visual_profit == 0 && this->visual_transfer == 0) return;
- 
- 	Backup<CompanyByte> cur_company(_current_company, this->front->owner, FILE_LINE);
- 
- 	SubtractMoneyFromCompany(CommandCost(this->front->GetExpenseType(true), -this->route_profit));
--	this->front->profit_this_year += this->visual_profit << 8;
-+	this->front->profit_this_year += (this->visual_profit + this->visual_transfer) << 8;
- 
--	if (this->route_profit != 0) {
--		if (IsLocalCompany() && !PlayVehicleSound(this->front, VSE_LOAD_UNLOAD)) {
--			SndPlayVehicleFx(SND_14_CASHTILL, this->front);
--		}
-+	if (this->route_profit != 0 && IsLocalCompany() && !PlayVehicleSound(this->front, VSE_LOAD_UNLOAD)) {
-+		SndPlayVehicleFx(SND_14_CASHTILL, this->front);
-+	}
- 
--		ShowCostOrIncomeAnimation(this->front->x_pos, this->front->y_pos, this->front->z_pos, -this->visual_profit);
--	} else {
--		ShowFeederIncomeAnimation(this->front->x_pos, this->front->y_pos, this->front->z_pos, this->visual_profit);
-+	if (this->visual_transfer != 0) {
-+		ShowFeederIncomeAnimation(this->front->x_pos, this->front->y_pos,
-+				this->front->z_pos, this->visual_transfer, -this->visual_profit);
-+	} else if (this->visual_profit != 0) {
-+		ShowCostOrIncomeAnimation(this->front->x_pos, this->front->y_pos,
-+				this->front->z_pos, -this->visual_profit);
- 	}
- 
- 	cur_company.Restore();
-@@ -1069,23 +1072,43 @@ Money CargoPayment::PayTransfer(const CargoPacket *cp, uint count)
- 
- 	profit = profit * _settings_game.economy.feeder_payment_share / 100;
- 
--	this->visual_profit += profit; // accumulate transfer profits for whole vehicle
-+	this->visual_transfer += profit; // accumulate transfer profits for whole vehicle
- 	return profit; // account for the (virtual) profit already made for the cargo packet
- }
- 
- /**
-  * Prepare the vehicle to be unloaded.
-+ * @param curr_station the station where the consist is at the moment
-  * @param front_v the vehicle to be unloaded
-  */
- void PrepareUnload(Vehicle *front_v)
- {
-+	Station *curr_station = Station::Get(front_v->last_station_visited);
-+	curr_station->loading_vehicles.push_back(front_v);
-+
- 	/* At this moment loading cannot be finished */
- 	ClrBit(front_v->vehicle_flags, VF_LOADING_FINISHED);
- 
--	/* Start unloading in at the first possible moment */
-+	/* Start unloading at the first possible moment */
- 	front_v->load_unload_ticks = 1;
- 
--	if ((front_v->current_order.GetUnloadType() & OUFB_NO_UNLOAD) == 0) {
-+	if (front_v->orders.list != NULL && (front_v->current_order.GetUnloadType() & OUFB_NO_UNLOAD) != 0) {
-+		/* vehicle will keep all its cargo and LoadUnloadVehicle will never call MoveToStation,
-+		 * so we have to update the flow stats here.
-+		 */
-+		StationID next_station_id = front_v->GetNextStoppingStation();
-+		if (next_station_id == INVALID_STATION) {
-+			return;
-+		} else {
-+			for (Vehicle *v = front_v; v != NULL; v = v->Next()) {
-+				const CargoPacketList *packets = v->cargo.Packets();
-+				for (VehicleCargoList::ConstIterator i(packets->begin()); i != packets->end(); ++i) {
-+					curr_station->goods[v->cargo_type].UpdateFlowStats(
-+							(*i)->SourceStation(), (*i)->Count(), next_station_id);
-+				}
-+			}
-+		}
-+	} else {
- 		for (Vehicle *v = front_v; v != NULL; v = v->Next()) {
- 			if (v->cargo_cap > 0 && !v->cargo.Empty()) {
- 				SetBit(v->vehicle_flags, VF_CARGO_UNLOADING);
-@@ -1102,38 +1125,81 @@ void PrepareUnload(Vehicle *front_v)
- }
- 
- /**
-+ * Reserves cargo if the full load order and improved_load is set.
-+ * @param st The station where the consist is loading at the moment.
-+ * @param u The front of the loading vehicle consist.
-+ * @param next_station Station the vehicle will stop at next.
-+ * @return Bit field for the cargo classes with bits for the reserved cargos set (if anything was reserved).
-+ */
-+uint32 ReserveConsist(Station *st, Vehicle *u, StationID next_station)
-+{
-+	uint32 ret = 0;
-+	if (_settings_game.order.improved_load && (u->current_order.GetLoadType() & OLFB_FULL_LOAD)) {
-+		/* Update reserved cargo */
-+		for (Vehicle *v = u; v != NULL; v = v->Next()) {
-+			/* Only reserve if the vehicle is not unloading anymore.
-+			 *
-+			 * The packets that are kept in the vehicle because they have the
-+			 * same destination as the vehicle are stored in the reservation
-+			 * list while unloading for performance reasons. The reservation
-+			 * list is swapped with the onboard list after unloading. This
-+			 * doesn't increase the load/unload time. So if we start reserving
-+			 * cargo before unloading has stopped we'll load that cargo for free
-+			 * later. Like this there is a slightly increased probability that
-+			 * another vehicle which has arrived later loads cargo that should
-+			 * be loaded by this vehicle but as the algorithm isn't perfect in
-+			 * that regard anyway we can tolerate it.
-+			 *
-+			 * The algorithm isn't perfect as it only counts free capacity for
-+			 * reservation. If another vehicle arrives later but unloads faster
-+			 * than this one, this vehicle won't reserve all the cargo it may
-+			 * be able to take after fully unloading. So the other vehicle may
-+			 * load it even if it has arrived later.
-+			 */
-+			if (HasBit(v->vehicle_flags, VF_CARGO_UNLOADING)) continue;
-+
-+			int cap = v->cargo_cap - v->cargo.Count();
-+			if (cap > 0) {
-+				int reserved = st->goods[v->cargo_type].cargo.MoveTo(&v->cargo, cap, next_station, true);
-+				if (reserved > 0) {
-+					cap -= reserved;
-+					SetBit(ret, v->cargo_type);
-+				}
-+			}
-+		}
-+	}
-+	return ret;
-+}
-+
-+/**
-  * Loads/unload the vehicle if possible.
-  * @param v the vehicle to be (un)loaded
-- * @param cargo_left the amount of each cargo type that is
-- *                   virtually left on the platform to be
-- *                   picked up by another vehicle when all
-- *                   previous vehicles have loaded.
-+ * @param cargos_reserved bit field: the cargo classes for which cargo has been reserved in this loading cycle
-+ * @return the updated cargo_reserved
-  */
--static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
-+static uint32 LoadUnloadVehicle(Vehicle *v, uint32 cargos_reserved)
- {
- 	assert(v->current_order.IsType(OT_LOADING));
- 
-+	StationID last_visited = v->last_station_visited;
-+	Station *st = Station::Get(last_visited);
-+
-+	StationID next_station = v->GetNextStoppingStation();
-+
- 	/* We have not waited enough time till the next round of loading/unloading */
- 	if (v->load_unload_ticks != 0) {
--		if (_settings_game.order.improved_load && (v->current_order.GetLoadType() & OLFB_FULL_LOAD)) {
--			/* 'Reserve' this cargo for this vehicle, because we were first. */
--			for (; v != NULL; v = v->Next()) {
--				int cap_left = v->cargo_cap - v->cargo.Count();
--				if (cap_left > 0) cargo_left[v->cargo_type] -= cap_left;
--			}
--		}
--		return;
-+		uint32 new_reserved = ReserveConsist(st, v, next_station);
-+		return cargos_reserved | new_reserved;
- 	}
- 
--	StationID last_visited = v->last_station_visited;
--	Station *st = Station::Get(last_visited);
-+	OrderUnloadFlags unload_flags = v->current_order.GetUnloadType();
- 
- 	if (v->type == VEH_TRAIN && (!IsTileType(v->tile, MP_STATION) || GetStationIndex(v->tile) != st->index)) {
- 		/* The train reversed in the station. Take the "easy" way
- 		 * out and let the train just leave as it always did. */
- 		SetBit(v->vehicle_flags, VF_LOADING_FINISHED);
- 		v->load_unload_ticks = 1;
--		return;
-+		return cargos_reserved;
- 	}
- 
- 	int unloading_time = 0;
-@@ -1151,7 +1217,7 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
+@@ -1151,7 +1151,7 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
  	v->cur_speed = 0;
  
  	CargoPayment *payment = v->cargo_payment;
@@ -2189,177 +384,7 @@ index 584eea7..c8c434f 100644
  	for (; v != NULL; v = v->Next()) {
  		if (v->cargo_cap == 0) continue;
  
-@@ -1168,59 +1234,42 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
- 
- 		GoodsEntry *ge = &st->goods[v->cargo_type];
- 
--		if (HasBit(v->vehicle_flags, VF_CARGO_UNLOADING) && (u->current_order.GetUnloadType() & OUFB_NO_UNLOAD) == 0) {
--			uint cargo_count = v->cargo.Count();
-+		if (HasBit(v->vehicle_flags, VF_CARGO_UNLOADING)) {
-+			/* vehicle wants to unload something */
-+
-+			uint cargo_count = v->cargo.OnboardCount();
- 			uint amount_unloaded = _settings_game.order.gradual_loading ? min(cargo_count, load_amount) : cargo_count;
--			bool remaining = false; // Are there cargo entities in this vehicle that can still be unloaded here?
--			bool accepted  = false; // Is the cargo accepted by the station?
- 
-+			uint prev_count = ge->cargo.Count();
- 			payment->SetCargo(v->cargo_type);
-+			uint delivered = ge->cargo.TakeFrom(&v->cargo, amount_unloaded, unload_flags,
-+					next_station, u->last_loading_station == last_visited, payment);
- 
--			if (HasBit(ge->acceptance_pickup, GoodsEntry::ACCEPTANCE) && !(u->current_order.GetUnloadType() & OUFB_TRANSFER)) {
--				/* The cargo has reached its final destination, the packets may now be destroyed */
--				remaining = v->cargo.MoveTo<StationCargoList>(NULL, amount_unloaded, VehicleCargoList::MTA_FINAL_DELIVERY, payment, last_visited);
--
--				dirty_vehicle = true;
--				accepted = true;
--			}
-+			st->time_since_unload = 0;
-+			unloading_time += delivered;
- 
--			/* The !accepted || v->cargo.Count == cargo_count clause is there
--			 * to make it possible to force unload vehicles at the station where
--			 * they were loaded, but to not force unload the vehicle when the
--			 * station is still accepting the cargo in the vehicle. It doesn't
--			 * accept cargo that was loaded at the same station. */
--			if ((u->current_order.GetUnloadType() & (OUFB_UNLOAD | OUFB_TRANSFER)) && (!accepted || v->cargo.Count() == cargo_count)) {
--				remaining = v->cargo.MoveTo(&ge->cargo, amount_unloaded, u->current_order.GetUnloadType() & OUFB_TRANSFER ? VehicleCargoList::MTA_TRANSFER : VehicleCargoList::MTA_UNLOAD, payment);
-+			if (ge->cargo.Count() > prev_count) {
-+				/* something has been transferred. The station windows need updating. */
-+				dirty_station = true;
- 				if (!HasBit(ge->acceptance_pickup, GoodsEntry::PICKUP)) {
- 					InvalidateWindowData(WC_STATION_LIST, last_visited);
- 					SetBit(ge->acceptance_pickup, GoodsEntry::PICKUP);
- 				}
--
--				dirty_vehicle = dirty_station = true;
--			} else if (!accepted) {
--				/* The order changed while unloading (unset unload/transfer) or the
--				 * station does not accept our goods. */
--				ClrBit(v->vehicle_flags, VF_CARGO_UNLOADING);
--
--				/* Say we loaded something, otherwise we'll think we didn't unload
--				 * something and we didn't load something, so we must be finished
--				 * at this station. Setting the unloaded means that we will get a
--				 * retry for loading in the next cycle. */
--				anything_unloaded = true;
--				continue;
- 			}
- 
--			/* Deliver goods to the station */
--			st->time_since_unload = 0;
--
--			unloading_time += amount_unloaded;
--
- 			anything_unloaded = true;
--			if (_settings_game.order.gradual_loading && remaining) {
--				completely_emptied = false;
--			} else {
--				/* We have finished unloading (cargo count == 0) */
-+			dirty_vehicle = true;
-+
-+			/* load_amount might (theoretically) be 0, which would make delivered == 0 even though there is still cargo
-+			 * in the vehicle. Thus OnboardCount > 0. In that case we can't stop unloading as SwapReserved wouldn't work.
-+			 * v->cargo also contains the cargo reserved for the vehicle which is not on board at the moment, but will be
-+			 * swapped back when done unloading.
-+			 */
-+			if (v->cargo.OnboardCount() == 0) {
-+				/* done delivering */
-+				if (!v->cargo.Empty()) completely_emptied = false;
- 				ClrBit(v->vehicle_flags, VF_CARGO_UNLOADING);
-+				v->cargo.SwapReserved();
- 			}
- 
- 			continue;
-@@ -1255,39 +1304,25 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
- 
- 		/* If there's goods waiting at the station, and the vehicle
- 		 * has capacity for it, load it on the vehicle. */
--		int cap_left = v->cargo_cap - v->cargo.Count();
--		if (!ge->cargo.Empty() && cap_left > 0) {
--			uint cap = cap_left;
--			uint count = ge->cargo.Count();
--
--			/* Skip loading this vehicle if another train/vehicle is already handling
--			 * the same cargo type at this station */
--			if (_settings_game.order.improved_load && cargo_left[v->cargo_type] <= 0) {
--				SetBit(cargo_not_full, v->cargo_type);
--				continue;
--			}
-+		int cap_left = v->cargo_cap - v->cargo.OnboardCount();
-+		if (cap_left > 0) {
-+			if (_settings_game.order.gradual_loading) cap_left = min(cap_left, load_amount);
-+			if (v->cargo.Empty()) TriggerVehicle(v, VEHICLE_TRIGGER_NEW_CARGO);
- 
--			if (cap > count) cap = count;
--			if (_settings_game.order.gradual_loading) {
--				cap = min(cap, load_amount);
--				cap_left = min(cap_left, load_amount);
--			}
-+			int loaded = 0;
- 			if (_settings_game.order.improved_load) {
--				/* Don't load stuff that is already 'reserved' for other vehicles */
--				cap = min((uint)cargo_left[v->cargo_type], cap);
--				count = cargo_left[v->cargo_type];
--				cargo_left[v->cargo_type] -= cap;
-+				loaded += v->cargo.LoadReserved(cap_left);
- 			}
- 
-+			loaded += ge->cargo.MoveTo(&v->cargo, cap_left - loaded, next_station);
-+
- 			/* Store whether the maximum possible load amount was loaded or not.*/
--			if (count >= (uint)cap_left) {
-+			if (loaded == cap_left) {
- 				SetBit(full_load_amount, v->cargo_type);
- 			} else {
- 				ClrBit(full_load_amount, v->cargo_type);
- 			}
- 
--			if (v->cargo.Empty()) TriggerVehicle(v, VEHICLE_TRIGGER_NEW_CARGO);
--
- 			/* TODO: Regarding this, when we do gradual loading, we
- 			 * should first unload all vehicles and then start
- 			 * loading them. Since this will cause
-@@ -1295,44 +1330,37 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
- 			 * the whole vehicle chain is really totally empty, the
- 			 * completely_emptied assignment can then be safely
- 			 * removed; that's how TTDPatch behaves too. --pasky */
--			completely_emptied = false;
--			anything_loaded = true;
--
--			ge->cargo.MoveTo(&v->cargo, cap, StationCargoList::MTA_CARGO_LOAD, NULL, st->xy);
-+			if (loaded > 0) {
-+				completely_emptied = false;
-+				anything_loaded = true;
- 
--			st->time_since_load = 0;
--			st->last_vehicle_type = v->type;
-+				st->time_since_load = 0;
-+				st->last_vehicle_type = v->type;
- 
--			TriggerStationAnimation(st, st->xy, SAT_CARGO_TAKEN, v->cargo_type);
--			AirportAnimationTrigger(st, AAT_STATION_CARGO_TAKEN, v->cargo_type);
-+				TriggerStationAnimation(st, st->xy, SAT_CARGO_TAKEN, v->cargo_type);
-+				AirportAnimationTrigger(st, AAT_STATION_CARGO_TAKEN, v->cargo_type);
- 
--			unloading_time += cap;
-+				unloading_time += loaded;
- 
--			dirty_vehicle = dirty_station = true;
-+				dirty_vehicle = dirty_station = true;
-+			} else if (_settings_game.order.improved_load && HasBit(cargos_reserved, v->cargo_type)) {
-+				/* Skip loading this vehicle if another train/vehicle is already handling
-+				 * the same cargo type at this station */
-+				SetBit(cargo_not_full, v->cargo_type);
-+				continue;
-+			}
- 		}
- 
--		if (v->cargo.Count() >= v->cargo_cap) {
-+		if (v->cargo.OnboardCount() >= v->cargo_cap) {
- 			SetBit(cargo_full, v->cargo_type);
- 		} else {
+@@ -1317,7 +1317,7 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
  			SetBit(cargo_not_full, v->cargo_type);
  		}
  	}
@@ -2368,30 +393,7 @@ index 584eea7..c8c434f 100644
  	/* Only set completely_emptied, if we just unloaded all remaining cargo */
  	completely_emptied &= anything_unloaded;
  
--	/* We update these variables here, so gradual loading still fills
--	 * all wagons at the same time instead of using the same 'improved'
--	 * loading algorithm for the wagons (only fill wagon when there is
--	 * enough to fill the previous wagons) */
--	if (_settings_game.order.improved_load && (u->current_order.GetLoadType() & OLFB_FULL_LOAD)) {
--		/* Update left cargo */
--		for (v = u; v != NULL; v = v->Next()) {
--			int cap_left = v->cargo_cap - v->cargo.Count();
--			if (cap_left > 0) cargo_left[v->cargo_type] -= cap_left;
--		}
--	}
--
- 	v = u;
- 
- 	if (!anything_unloaded) delete payment;
-@@ -1358,13 +1386,16 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
- 			if (v->current_order.GetLoadType() == OLF_FULL_LOAD_ANY) {
- 				/* if the aircraft carries passengers and is NOT full, then
- 				 * continue loading, no matter how much mail is in */
--				if ((v->type == VEH_AIRCRAFT && IsCargoInClass(v->cargo_type, CC_PASSENGERS) && v->cargo_cap > v->cargo.Count()) ||
-+				if ((v->type == VEH_AIRCRAFT && IsCargoInClass(v->cargo_type, CC_PASSENGERS) && v->cargo_cap > v->cargo.OnboardCount()) ||
- 						(cargo_not_full && (cargo_full & ~cargo_not_full) == 0)) { // There are still non-full cargoes
- 					finished_loading = false;
- 				}
+@@ -1365,6 +1365,9 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
  			} else if (cargo_not_full != 0) {
  				finished_loading = false;
  			}
@@ -2401,48 +403,6 @@ index 584eea7..c8c434f 100644
  		}
  		unloading_time = 20;
  
-@@ -1412,6 +1443,7 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
- 		st->MarkTilesDirty(true);
- 		SetWindowDirty(WC_STATION_VIEW, last_visited);
- 	}
-+	return cargos_reserved;
- }
- 
- /**
-@@ -1446,13 +1478,11 @@ void LoadUnloadStation(Station *st)
- 	 */
- 	if (last_loading == NULL) return;
- 
--	int cargo_left[NUM_CARGO];
--
--	for (uint i = 0; i < NUM_CARGO; i++) cargo_left[i] = st->goods[i].cargo.Count();
-+	uint cargos_reserved = 0;
- 
- 	for (iter = st->loading_vehicles.begin(); iter != st->loading_vehicles.end(); ++iter) {
- 		Vehicle *v = *iter;
--		if (!(v->vehstatus & (VS_STOPPED | VS_CRASHED))) LoadUnloadVehicle(v, cargo_left);
-+		if (!(v->vehstatus & (VS_STOPPED | VS_CRASHED))) cargos_reserved = LoadUnloadVehicle(v, cargos_reserved);
- 		if (v == last_loading) break;
- 	}
- 
-diff --git a/src/economy_base.h b/src/economy_base.h
-index edad76e..acbcff8 100644
---- a/src/economy_base.h
-+++ b/src/economy_base.h
-@@ -24,9 +24,10 @@ extern CargoPaymentPool _cargo_payment_pool;
-  * Helper class to perform the cargo payment.
-  */
- struct CargoPayment : CargoPaymentPool::PoolItem<&_cargo_payment_pool> {
--	Vehicle *front;      ///< The front vehicle to do the payment of
--	Money route_profit;  ///< The amount of money to add/remove from the bank account
--	Money visual_profit; ///< The visual profit to show
-+	Vehicle *front;        ///< The front vehicle to do the payment of
-+	Money route_profit;    ///< The amount of money to add/remove from the bank account
-+	Money visual_profit;   ///< The visual profit to show
-+	Money visual_transfer; ///< The transfer credits to be shown
- 
- 	/* Unsaved variables */
- 	Company *owner;            ///< The owner of the vehicle
 diff --git a/src/landscape.cpp b/src/landscape.cpp
 index c60bf8b..421c3e4 100644
 --- a/src/landscape.cpp
@@ -2462,7 +422,7 @@ index c60bf8b..421c3e4 100644
 +	OnTick_LinkGraph();
  }
 diff --git a/src/lang/english.txt b/src/lang/english.txt
-index 6308686..1b94559 100644
+index 6308686..d0a24dd 100644
 --- a/src/lang/english.txt
 +++ b/src/lang/english.txt
 @@ -1322,11 +1322,25 @@ STR_CONFIG_SETTING_LARGER_TOWNS_DISABLED                        :{LTBLUE}Proport
@@ -2491,17 +451,6 @@ index 6308686..1b94559 100644
  STR_CONFIG_SETTING_AI                                           :{ORANGE}Competitors
  STR_CONFIG_SETTING_DISPLAY_OPTIONS                              :{ORANGE}Display options
  STR_CONFIG_SETTING_INTERACTION                                  :{ORANGE}Interaction
-@@ -3390,6 +3404,10 @@ STR_INCOME_FLOAT_INCOME_SMALL                                   :{TINYFONT}{GREE
- STR_INCOME_FLOAT_INCOME                                         :{GREEN}Income: {CURRENCY}
- STR_FEEDER_TINY                                                 :{TINYFONT}{YELLOW}Transfer: {CURRENCY}
- STR_FEEDER                                                      :{YELLOW}Transfer: {CURRENCY}
-+STR_FEEDER_INCOME_TINY                                          :{TINYFONT}{YELLOW}Transfer: {CURRENCY}{WHITE} / {GREEN}Income: {CURRENCY}
-+STR_FEEDER_INCOME                                               :{YELLOW}Transfer: {CURRENCY}{WHITE} / {GREEN}Income: {CURRENCY}
-+STR_FEEDER_COST_TINY                                            :{TINYFONT}{YELLOW}Transfer: {CURRENCY}{WHITE} / {RED}Cost: {CURRENCY}
-+STR_FEEDER_COST                                                 :{YELLOW}Transfer: {CURRENCY}{WHITE} / {RED}Cost: {CURRENCY}
- STR_MESSAGE_ESTIMATED_COST                                      :{WHITE}Estimated Cost: {CURRENCY}
- STR_MESSAGE_ESTIMATED_INCOME                                    :{WHITE}Estimated Income: {CURRENCY}
- 
 diff --git a/src/linkgraph/demands.cpp b/src/linkgraph/demands.cpp
 new file mode 100644
 index 0000000..93f6941
@@ -2857,108 +806,12 @@ index 0000000..009019c
 +};
 +
 +#endif /* DEMANDS_H_ */
-diff --git a/src/linkgraph/flowmapper.cpp b/src/linkgraph/flowmapper.cpp
-new file mode 100644
-index 0000000..8b45147
---- /dev/null
-+++ b/src/linkgraph/flowmapper.cpp
-@@ -0,0 +1,54 @@
-+/* $Id$ */
-+
-+/*
-+ * This file is part of OpenTTD.
-+ * OpenTTD is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, version 2.
-+ * OpenTTD is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-+ * See the GNU General Public License for more details. You should have received a copy of the GNU General Public License along with OpenTTD. If not, see <http://www.gnu.org/licenses/>.
-+ */
-+
-+/** @file flowmapper.cpp Definition of flowmapper. */
-+
-+#include "../stdafx.h"
-+#include "flowmapper.h"
-+
-+/**
-+ * Map the paths generated by the MCF solver into flows associated with nodes.
-+ * @param component the link graph component to be used.
-+ */
-+void FlowMapper::Run(LinkGraphComponent *component)
-+{
-+	for (NodeID node_id = 0; node_id < component->GetSize(); ++node_id) {
-+		Node &prev_node = component->GetNode(node_id);
-+		StationID prev = prev_node.station;
-+		PathSet &paths = prev_node.paths;
-+		for (PathSet::iterator i = paths.begin(); i != paths.end(); ++i) {
-+			Path *path = *i;
-+			uint flow = path->GetFlow();
-+			if (flow == 0) continue;
-+			Node &node = component->GetNode(path->GetNode());
-+			StationID via = node.station;
-+			assert(prev != via);
-+			StationID origin = component->GetNode(path->GetOrigin()).station;
-+			assert(via != origin);
-+			/* mark all of the flow for local consumption at "first" */
-+			node.flows[origin][via] += flow;
-+			/* pass some of the flow marked for local consumption at "prev" on
-+			 * to this node
-+			 */
-+			prev_node.flows[origin][via] += flow;
-+			/* find simple circular flows ... */
-+			assert(node.flows[origin][prev] == 0);
-+			if (prev != origin) {
-+				prev_node.flows[origin][prev] -= flow;
-+			}
-+		}
-+	}
-+	for (NodeID node_id = 0; node_id < component->GetSize(); ++node_id) {
-+		PathSet &paths = component->GetNode(node_id).paths;
-+		for (PathSet::iterator i = paths.begin(); i != paths.end(); ++i) {
-+			delete *i;
-+		}
-+		paths.clear();
-+	}
-+}
-diff --git a/src/linkgraph/flowmapper.h b/src/linkgraph/flowmapper.h
-new file mode 100644
-index 0000000..a2b6bc0
---- /dev/null
-+++ b/src/linkgraph/flowmapper.h
-@@ -0,0 +1,30 @@
-+/* $Id$ */
-+
-+/*
-+ * This file is part of OpenTTD.
-+ * OpenTTD is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, version 2.
-+ * OpenTTD is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-+ * See the GNU General Public License for more details. You should have received a copy of the GNU General Public License along with OpenTTD. If not, see <http://www.gnu.org/licenses/>.
-+ */
-+
-+/** @file flowmapper.h Declaration of flow mapper; maps paths into flows at nodes. */
-+
-+#ifndef FLOWMAPPER_H_
-+#define FLOWMAPPER_H_
-+
-+#include "linkgraph.h"
-+
-+/**
-+ * Map the path trees generated by the MCF solver into flows. The path tree is
-+ * useful to cache capacities and distances and allow quick disconnecting and
-+ * reconnecting to other paths. The flows show how much cargo from which nodes
-+ * is to be routed in which direction at a given node. This is what we need in
-+ * the end.
-+ */
-+class FlowMapper : public ComponentHandler {
-+public:
-+	virtual ~FlowMapper() {}
-+	virtual void Run(LinkGraphComponent *component);
-+};
-+
-+#endif /* FLOWMAPPER_H_ */
 diff --git a/src/linkgraph/linkgraph.cpp b/src/linkgraph/linkgraph.cpp
 new file mode 100644
-index 0000000..e58894d
+index 0000000..5bc9bf9
 --- /dev/null
 +++ b/src/linkgraph/linkgraph.cpp
-@@ -0,0 +1,542 @@
+@@ -0,0 +1,445 @@
 +/* $Id$ */
 +
 +/*
@@ -2978,7 +831,6 @@ index 0000000..e58894d
 +#include "linkgraph.h"
 +#include "demands.h"
 +#include "mcf.h"
-+#include "flowmapper.h"
 +#include <queue>
 +
 +/**
@@ -3250,106 +1102,12 @@ index 0000000..e58894d
 +	this->settings = _settings_game.linkgraph;
 +}
 +
-+
-+/**
-+ * Exports all entries in the FlowViaMap pointed to by "source_flows_it", erases the source
-+ * flows and increments the iterator afterwards.
-+ * @param it Iterator pointing to the flows to be exported into the main game state.
-+ * @param dest Flow stats to which the flows shall be exported.
-+ * @param cargo Cargo we're exporting flows for (used to check if the link stats for the new
-+ *        flows still exist).
-+ */
-+void Node::ExportNewFlows(FlowMap::iterator &it, FlowStatSet &dest, CargoID cargo)
-+{
-+	StationID source = it->first;
-+	FlowViaMap &source_flows = it->second;
-+	if (!Station::IsValidID(source)) {
-+		source_flows.clear();
-+	} else {
-+		Station *curr_station = Station::Get(this->station);
-+		for (FlowViaMap::iterator update = source_flows.begin(); update != source_flows.end();) {
-+			StationID next = update->first;
-+			int planned = update->second;
-+			assert(planned >= 0);
-+
-+			Station *via = Station::GetIfValid(next);
-+			if (planned > 0 && via != NULL) {
-+				uint distance = GetMovingAverageLength(curr_station, via);
-+				if (next != this->station) {
-+					const LinkStatMap &ls = curr_station->goods[cargo].link_stats;
-+					if (ls.find(next) != ls.end()) {
-+						dest.insert(FlowStat(distance, next, planned, 0));
-+					}
-+				} else {
-+					dest.insert(FlowStat(distance, next, planned, 0));
-+				}
-+			}
-+			source_flows.erase(update++);
-+		}
-+	}
-+	assert(source_flows.empty());
-+
-+	this->flows.erase(it++);
-+}
-+
-+/**
-+ * Export all flows of this node to the main game state.
-+ * @param cargo the cargo we're exporting flows for.
-+ */
-+void Node::ExportFlows(CargoID cargo)
-+{
-+	FlowStatMap &station_flows = Station::Get(this->station)->goods[cargo].flows;
-+	FlowStatSet new_flows;
-+	/* loop over all existing flows in the station and update them */
-+	for (FlowStatMap::iterator station_outer_it(station_flows.begin()); station_outer_it != station_flows.end();) {
-+		FlowMap::iterator node_outer_it(this->flows.find(station_outer_it->first));
-+		if (node_outer_it == this->flows.end()) {
-+			/* there are no flows for this source node anymore */
-+			station_flows.erase(station_outer_it++);
-+		} else {
-+			FlowViaMap &source = node_outer_it->second;
-+			FlowStatSet &dest = station_outer_it->second;
-+			/* loop over the station's flow stats for this source node and update them */
-+			for (FlowStatSet::iterator station_inner_it(dest.begin()); station_inner_it != dest.end();) {
-+				FlowViaMap::iterator node_inner_it(source.find(station_inner_it->Via()));
-+				if (node_inner_it != source.end()) {
-+					assert(node_inner_it->second >= 0);
-+					if (node_inner_it->second > 0) {
-+						new_flows.insert(FlowStat(*station_inner_it, node_inner_it->second));
-+					}
-+					source.erase(node_inner_it);
-+				}
-+				dest.erase(station_inner_it++);
-+			}
-+			/* swap takes constant time, so we swap instead of adding all entries */
-+			dest.swap(new_flows);
-+			assert(new_flows.empty());
-+			/* insert remaining flows for this source node */
-+			ExportNewFlows(node_outer_it, dest, cargo);
-+			/* careful: source_flows is dangling here */
-+			++station_outer_it;
-+		}
-+	}
-+	/* loop over remaining flows (for other sources) in the node's map and insert them into the station */
-+	for (FlowMap::iterator it(this->flows.begin()); it != this->flows.end();) {
-+		ExportNewFlows(it, station_flows[it->first], cargo);
-+	}
-+	assert(this->flows.empty());
-+}
-+
 +/**
 + * Merge the current job's results into the main game state.
 + */
 +void LinkGraph::Join()
 +{
 +	this->LinkGraphJob::Join();
-+
-+	for (NodeID node_id = 0; node_id < this->GetSize(); ++node_id) {
-+		Node &node = this->GetNode(node_id);
-+		if (Station::IsValidID(node.station)) {
-+			node.ExportFlows(this->cargo);
-+		}
-+	}
 +
 +	this->LinkGraphComponent::Clear();
 +}
@@ -3497,16 +1255,14 @@ index 0000000..e58894d
 +	LinkGraphJob::ClearHandlers();
 +	LinkGraphJob::AddHandler(new DemandHandler);
 +	LinkGraphJob::AddHandler(new MCFHandler<MCF1stPass>);
-+	LinkGraphJob::AddHandler(new FlowMapper);
 +	LinkGraphJob::AddHandler(new MCFHandler<MCF2ndPass>);
-+	LinkGraphJob::AddHandler(new FlowMapper);
 +}
 diff --git a/src/linkgraph/linkgraph.h b/src/linkgraph/linkgraph.h
 new file mode 100644
-index 0000000..acea738
+index 0000000..65dcfda
 --- /dev/null
 +++ b/src/linkgraph/linkgraph.h
-@@ -0,0 +1,348 @@
+@@ -0,0 +1,344 @@
 +/* $Id$ */
 +
 +/*
@@ -3559,10 +1315,6 @@ index 0000000..acea738
 +	~Node() {this->Init();}
 +
 +	void Init(StationID st = INVALID_STATION, uint sup = 0, uint dem = 0);
-+	void ExportFlows(CargoID cargo);
-+
-+private:
-+	void ExportNewFlows(FlowMap::iterator &it, FlowStatSet &via_set, CargoID cargo);
 +};
 +
 +/**
@@ -4475,46 +2227,6 @@ index 09ace07..d6c9b8f 100644
  	InitializeEconomy();
  
  	ResetObjectToPlace();
-diff --git a/src/misc_gui.cpp b/src/misc_gui.cpp
-index e0e29c0..1245e68 100644
---- a/src/misc_gui.cpp
-+++ b/src/misc_gui.cpp
-@@ -803,17 +803,28 @@ void ShowCostOrIncomeAnimation(int x, int y, int z, Money cost)
- 
- /**
-  * Display animated feeder income.
-- * @param x    World X position of the animation location.
-- * @param y    World Y position of the animation location.
-- * @param z    World Z position of the animation location.
-- * @param cost Estimated feeder income.
-+ * @param x        World X position of the animation location.
-+ * @param y        World Y position of the animation location.
-+ * @param z        World Z position of the animation location.
-+ * @param transfer Estimated feeder income.
-+ * @param income   Real income from goods being delivered to their final destination.
-  */
--void ShowFeederIncomeAnimation(int x, int y, int z, Money cost)
-+void ShowFeederIncomeAnimation(int x, int y, int z, Money transfer, Money income)
- {
- 	Point pt = RemapCoords(x, y, z);
- 
--	SetDParam(0, cost);
--	AddTextEffect(STR_FEEDER, pt.x, pt.y, DAY_TICKS, TE_RISING);
-+	SetDParam(0, transfer);
-+	if (income == 0) {
-+		AddTextEffect(STR_FEEDER, pt.x, pt.y, DAY_TICKS, TE_RISING);
-+	} else {
-+		StringID msg = STR_FEEDER_COST;
-+		if (income < 0) {
-+			income = -income;
-+			msg = STR_FEEDER_INCOME;
-+		}
-+		SetDParam(1, income);
-+		AddTextEffect(msg, pt.x, pt.y, DAY_TICKS, TE_RISING);
-+	}
- }
- 
- /**
 diff --git a/src/moving_average.cpp b/src/moving_average.cpp
 new file mode 100644
 index 0000000..9b840e6
@@ -4664,7 +2376,7 @@ index 816180b..0ae8004 100644
  	free(_config_file);
  #endif
 diff --git a/src/order_base.h b/src/order_base.h
-index 44ce7a3..542053d 100644
+index 44ce7a3..521b563 100644
 --- a/src/order_base.h
 +++ b/src/order_base.h
 @@ -159,6 +159,9 @@ public:
@@ -4677,16 +2389,7 @@ index 44ce7a3..542053d 100644
  	TileIndex GetLocation(const Vehicle *v) const;
  
  	/** Checks if this order has travel_time and if needed wait_time set. */
-@@ -189,6 +192,8 @@ private:
- 	friend void AfterLoadVehicles(bool part_of_load); ///< For instantiating the shared vehicle chain
- 	friend const struct SaveLoad *GetOrderListDescription(); ///< Saving and loading of order lists.
- 
-+	const Order *GetBestLoadableNext(const Vehicle *v, const Order *o1, const Order *o2) const;
-+
- 	Order *first;                     ///< First order of the order list.
- 	VehicleOrderID num_orders;        ///< NOSAVE: How many orders there are in the list.
- 	VehicleOrderID num_manual_orders; ///< NOSAVE: How many manually added orders are there in the list.
-@@ -230,6 +235,14 @@ public:
+@@ -230,6 +233,14 @@ public:
  	inline Order *GetLastOrder() const { return this->GetOrderAt(this->num_orders - 1); }
  
  	/**
@@ -4701,18 +2404,18 @@ index 44ce7a3..542053d 100644
  	 * Get number of orders in the order list.
  	 * @return number of orders in the chain.
  	 */
-@@ -241,6 +254,9 @@ public:
+@@ -241,6 +252,9 @@ public:
  	 */
  	inline VehicleOrderID GetNumManualOrders() const { return this->num_manual_orders; }
  
 +	StationID GetNextStoppingStation(const Vehicle *v) const;
-+	const Order *GetNextStoppingOrder(const Vehicle *v, const Order *next, uint hops, bool is_loading = false) const;
++	const Order *GetNextStoppingOrder(const Vehicle *v, const Order *next, uint hops) const;
 +
  	void InsertOrderAt(Order *new_order, int index);
  	void DeleteOrderAt(int index);
  	void MoveOrder(int from, int to);
 diff --git a/src/order_cmd.cpp b/src/order_cmd.cpp
-index 3adaab2..9424f13 100644
+index 3adaab2..72b4641 100644
 --- a/src/order_cmd.cpp
 +++ b/src/order_cmd.cpp
 @@ -22,6 +22,7 @@
@@ -4723,65 +2426,23 @@ index 3adaab2..9424f13 100644
  #include "aircraft.h"
  #include "roadveh.h"
  #include "station_base.h"
-@@ -341,6 +342,135 @@ Order *OrderList::GetOrderAt(int index) const
+@@ -341,6 +342,91 @@ Order *OrderList::GetOrderAt(int index) const
  }
  
  /**
-+ * Choose between the two possible next orders so that the given consist can
-+ * load most cargo.
-+ * @param v Head of the consist.
-+ * @param o1 First order to choose from.
-+ * @param o2 Second order to choose from.
-+ * @return Either o1 or o2, depending on the amounts of cargo waiting at the
-+ *	vehicle's current station for each.
-+ */
-+const Order *OrderList::GetBestLoadableNext(const Vehicle *v, const Order *o2, const Order *o1) const
-+{
-+	SmallMap<CargoID, uint> capacities;
-+	v->GetConsistFreeCapacities(capacities);
-+	uint loadable1 = 0;
-+	uint loadable2 = 0;
-+	StationID st1 = o1->GetDestination();
-+	StationID st2 = o2->GetDestination();
-+	const Station *cur_station = Station::Get(v->last_station_visited);
-+	for (SmallPair<CargoID, uint> *i = capacities.Begin(); i != capacities.End(); ++i) {
-+		const StationCargoPacketMap *loadable_packets = cur_station->goods[i->first].cargo.Packets();
-+		uint loadable_cargo = 0;
-+		std::pair<StationCargoPacketMap::const_iterator, StationCargoPacketMap::const_iterator> p =
-+			loadable_packets->equal_range(st1);
-+		for (StationCargoPacketMap::const_iterator j = p.first; j != p.second; ++j) {
-+			loadable_cargo = (*j)->Count();
-+		}
-+		loadable1 += min(i->second, loadable_cargo);
-+
-+		loadable_cargo = 0;
-+		p = loadable_packets->equal_range(st2);
-+		for (StationCargoPacketMap::const_iterator j = p.first; j != p.second; ++j) {
-+			loadable_cargo = (*j)->Count();
-+		}
-+		loadable2 += min(i->second, loadable_cargo);
-+	}
-+	if (loadable1 == loadable2) return RandomRange(2) == 0 ? o1 : o2;
-+	return loadable1 > loadable2 ? o1 : o2;
-+}
-+
-+/**
 + * Get the next order which will make the given vehicle stop at a station
 + * or refit at a depot if its state doesn't change.
 + * @param v The vehicle in question.
 + * @param next The order to start looking at.
 + * @param hops The number of orders we have already looked at.
-+ * @param is_loading If the vehicle is loading. This triggers a different
-+ * behaviour on conditional orders based on load percentage.
 + * @return Either an order or NULL if the vehicle won't stop anymore.
-+ * @see OrderList::GetBestLoadableNext
 + */
-+const Order *OrderList::GetNextStoppingOrder(const Vehicle *v, const Order *next, uint hops, bool is_loading) const
++const Order *OrderList::GetNextStoppingOrder(const Vehicle *v, const Order *next, uint hops) const
 +{
 +	if (hops > this->GetNumOrders() || next == NULL) return NULL;
 +
 +	if (next->IsType(OT_CONDITIONAL)) {
-+		if (is_loading && next->GetConditionVariable() == OCV_LOAD_PERCENTAGE) {
++		if (next->GetConditionVariable() == OCV_LOAD_PERCENTAGE) {
 +			/* If the condition is based on load percentage we can't
 +			 * tell what it will do. So we choose randomly.
 +			 */
@@ -4795,7 +2456,7 @@ index 3adaab2..9424f13 100644
 +			} else if (skip_to == NULL) {
 +				return advance;
 +			} else {
-+				return this->GetBestLoadableNext(v, skip_to, advance);
++				return RandomRange(2) == 0 ? skip_to : advance;
 +			}
 +		} else {
 +			/* Otherwise we're optimistic and expect that the
@@ -4828,8 +2489,6 @@ index 3adaab2..9424f13 100644
 + * Recursively determine the next deterministic station to stop at.
 + * @param v The vehicle we're looking at.
 + * @return Next stoppping station or INVALID_STATION.
-+ * @pre The vehicle is currently loading and v->last_station_visited is meaningful.
-+ * @note This function may draw a random number. Don't use it from the GUI.
 + */
 +StationID OrderList::GetNextStoppingStation(const Vehicle *v) const
 +{
@@ -4844,7 +2503,7 @@ index 3adaab2..9424f13 100644
 +
 +	uint hops = 0;
 +	do {
-+		next = this->GetNextStoppingOrder(v, next, ++hops, true);
++		next = this->GetNextStoppingOrder(v, next, ++hops);
 +		/* Don't return a next stop if the vehicle has to unload everything. */
 +		if (next == NULL || (next->GetDestination() == v->last_station_visited &&
 +				(next->GetUnloadType() & (OUFB_TRANSFER | OUFB_UNLOAD)) == 0)) {
@@ -4859,7 +2518,7 @@ index 3adaab2..9424f13 100644
   * Insert a new order into the order chain.
   * @param new_order is the order to insert into the chain.
   * @param index is the position where the order is supposed to be inserted.
-@@ -878,6 +1008,7 @@ static CommandCost DecloneOrder(Vehicle *dst, DoCommandFlag flags)
+@@ -878,6 +964,7 @@ static CommandCost DecloneOrder(Vehicle *dst, DoCommandFlag flags)
  	if (flags & DC_EXEC) {
  		DeleteVehicleOrders(dst);
  		InvalidateVehicleOrder(dst, -1);
@@ -4867,7 +2526,7 @@ index 3adaab2..9424f13 100644
  		InvalidateWindowClassesData(GetWindowClassForVehicleType(dst->type), 0);
  	}
  	return CommandCost();
-@@ -1011,11 +1142,11 @@ CommandCost CmdSkipToOrder(TileIndex tile, DoCommandFlag flags, uint32 p1, uint3
+@@ -1011,11 +1098,11 @@ CommandCost CmdSkipToOrder(TileIndex tile, DoCommandFlag flags, uint32 p1, uint3
  	if (ret.Failed()) return ret;
  
  	if (flags & DC_EXEC) {
@@ -4881,7 +2540,7 @@ index 3adaab2..9424f13 100644
  		InvalidateVehicleOrder(v, -2);
  	}
  
-@@ -2026,3 +2157,23 @@ bool Order::ShouldStopAtStation(const Vehicle *v, StationID station) const
+@@ -2026,3 +2113,23 @@ bool Order::ShouldStopAtStation(const Vehicle *v, StationID station) const
  			/* Finally do stop when there is no non-stop flag set for this type of station. */
  			!(this->GetNonStopType() & (is_dest_station ? ONSF_NO_STOP_AT_DESTINATION_STATION : ONSF_NO_STOP_AT_INTERMEDIATE_STATIONS));
  }
@@ -4930,49 +2589,6 @@ index 4acd05b..64a888e 100644
  	return true;
  }
  
-diff --git a/src/saveload/cargopacket_sl.cpp b/src/saveload/cargopacket_sl.cpp
-index eafe534..da920cc 100644
---- a/src/saveload/cargopacket_sl.cpp
-+++ b/src/saveload/cargopacket_sl.cpp
-@@ -26,7 +26,7 @@
- 		 * to the current tile of the vehicle to prevent excessive profits
- 		 */
- 		FOR_ALL_VEHICLES(v) {
--			const VehicleCargoList::List *packets = v->cargo.Packets();
-+			const CargoPacketList *packets = v->cargo.Packets();
- 			for (VehicleCargoList::ConstIterator it(packets->begin()); it != packets->end(); it++) {
- 				CargoPacket *cp = *it;
- 				cp->source_xy = Station::IsValidID(cp->source) ? Station::Get(cp->source)->xy : v->tile;
-@@ -44,7 +44,7 @@
- 			for (CargoID c = 0; c < NUM_CARGO; c++) {
- 				GoodsEntry *ge = &st->goods[c];
- 
--				const StationCargoList::List *packets = ge->cargo.Packets();
-+				const StationCargoPacketMap *packets = ge->cargo.Packets();
- 				for (StationCargoList::ConstIterator it(packets->begin()); it != packets->end(); it++) {
- 					CargoPacket *cp = *it;
- 					cp->source_xy = Station::IsValidID(cp->source) ? Station::Get(cp->source)->xy : st->xy;
-diff --git a/src/saveload/economy_sl.cpp b/src/saveload/economy_sl.cpp
-index 9bdad61..ccfc202 100644
---- a/src/saveload/economy_sl.cpp
-+++ b/src/saveload/economy_sl.cpp
-@@ -63,11 +63,11 @@ static void Load_ECMY()
- }
- 
- static const SaveLoad _cargopayment_desc[] = {
--	SLE_REF(CargoPayment, front,         REF_VEHICLE),
--	SLE_VAR(CargoPayment, route_profit,  SLE_INT64),
--	SLE_VAR(CargoPayment, visual_profit, SLE_INT64),
--
--	SLE_END()
-+	    SLE_REF(CargoPayment, front,           REF_VEHICLE),
-+	    SLE_VAR(CargoPayment, route_profit,    SLE_INT64),
-+	    SLE_VAR(CargoPayment, visual_profit,   SLE_INT64),
-+	SLE_CONDVAR(CargoPayment, visual_transfer, SLE_INT64, SL_CARGOMAP, SL_MAX_VERSION),
-+	    SLE_END()
- };
- 
- static void Save_CAPY()
 diff --git a/src/saveload/linkgraph_sl.cpp b/src/saveload/linkgraph_sl.cpp
 new file mode 100644
 index 0000000..97702b0
@@ -5138,21 +2754,8 @@ index 0000000..97702b0
 +extern const ChunkHandler _linkgraph_chunk_handlers[] = {
 +	{ 'LGRP', Save_LGRP, Load_LGRP, NULL, NULL, CH_LAST},
 +};
-diff --git a/src/saveload/oldloader_sl.cpp b/src/saveload/oldloader_sl.cpp
-index 362df6b..2649bc5 100644
---- a/src/saveload/oldloader_sl.cpp
-+++ b/src/saveload/oldloader_sl.cpp
-@@ -711,7 +711,7 @@ static bool LoadOldGood(LoadgameState *ls, int num)
- 	SB(ge->acceptance_pickup, GoodsEntry::ACCEPTANCE, 1, HasBit(_waiting_acceptance, 15));
- 	SB(ge->acceptance_pickup, GoodsEntry::PICKUP, 1, _cargo_source != 0xFF);
- 	if (GB(_waiting_acceptance, 0, 12) != 0 && CargoPacket::CanAllocateItem()) {
--		ge->cargo.Append(new CargoPacket(GB(_waiting_acceptance, 0, 12), _cargo_days, (_cargo_source == 0xFF) ? INVALID_STATION : _cargo_source, 0, 0));
-+		ge->cargo.Append(INVALID_STATION, new CargoPacket(GB(_waiting_acceptance, 0, 12), _cargo_days, (_cargo_source == 0xFF) ? INVALID_STATION : _cargo_source, 0, 0));
- 	}
- 
- 	return true;
 diff --git a/src/saveload/saveload.cpp b/src/saveload/saveload.cpp
-index 11d4929..490c2d9 100644
+index 11d4929..2910df5 100644
 --- a/src/saveload/saveload.cpp
 +++ b/src/saveload/saveload.cpp
 @@ -226,7 +226,7 @@
@@ -5160,7 +2763,7 @@ index 11d4929..490c2d9 100644
   *  160   21974
   */
 -extern const uint16 SAVEGAME_VERSION = 160; ///< Current savegame version of OpenTTD.
-+extern const uint16 SAVEGAME_VERSION = SL_CARGOMAP; ///< Current savegame version of OpenTTD.
++extern const uint16 SAVEGAME_VERSION = SL_MCF; ///< Current savegame version of OpenTTD.
  
  SavegameType _savegame_type; ///< type of savegame we are loading
  
@@ -5181,7 +2784,7 @@ index 11d4929..490c2d9 100644
  	_object_chunk_handlers,
  	NULL,
 diff --git a/src/saveload/saveload.h b/src/saveload/saveload.h
-index b5fb001..4611649 100644
+index b5fb001..b910d54 100644
 --- a/src/saveload/saveload.h
 +++ b/src/saveload/saveload.h
 @@ -90,9 +90,6 @@ enum SLRefType {
@@ -5194,7 +2797,7 @@ index b5fb001..4611649 100644
  /** Flags of a chunk. */
  enum ChunkType {
  	CH_RIFF         =  0,
-@@ -549,4 +546,22 @@ bool SaveloadCrashWithMissingNewGRFs();
+@@ -549,4 +546,19 @@ bool SaveloadCrashWithMissingNewGRFs();
  extern char _savegame_format[8];
  extern bool _do_autosave;
  
@@ -5204,13 +2807,10 @@ index b5fb001..4611649 100644
 + */
 +enum SaveLoadVersions {
 +	SL_TRUNK = 160,
-+	SL_RESERVATION = SL_TRUNK + 10,
 +	SL_CAPACITIES = SL_TRUNK + 20,
 +	SL_COMPONENTS,
 +	SL_DEMANDS = SL_COMPONENTS + 20,
 +	SL_MCF,
-+	SL_FLOWMAP,
-+	SL_CARGOMAP,
 +
 +	/** Highest possible savegame version. */
 +	SL_MAX_VERSION = 255
@@ -5230,23 +2830,18 @@ index b400861..4bf5646 100644
  
  void UpdateOldAircraft();
 diff --git a/src/saveload/station_sl.cpp b/src/saveload/station_sl.cpp
-index f32e476..569cbf8 100644
+index f32e476..ccf056b 100644
 --- a/src/saveload/station_sl.cpp
 +++ b/src/saveload/station_sl.cpp
-@@ -224,9 +224,11 @@ static const SaveLoad _old_station_desc[] = {
+@@ -224,6 +224,7 @@ static const SaveLoad _old_station_desc[] = {
  };
  
  static uint16 _waiting_acceptance;
 +static uint16 _num_links;
-+static uint32 _num_flows;
  static uint16 _cargo_source;
  static uint32 _cargo_source_xy;
--static uint16 _cargo_days;
-+static uint8  _cargo_days;
- static Money  _cargo_feeder_share;
- 
- static const SaveLoad _station_speclist_desc[] = {
-@@ -236,6 +238,49 @@ static const SaveLoad _station_speclist_desc[] = {
+ static uint16 _cargo_days;
+@@ -236,6 +237,27 @@ static const SaveLoad _station_speclist_desc[] = {
  	SLE_END()
  };
  
@@ -5271,145 +2866,39 @@ index f32e476..569cbf8 100644
 +	return linkstat_desc;
 +}
 +
-+/**
-+ * Wrapper function to get the FlowStats's internal structure while
-+ * some of the variables are private.
-+ * @return the saveload description for FlowStat.
-+ */
-+const SaveLoad *GetFlowStatDesc()
-+{
-+	static const SaveLoad _flowstat_desc[] = {
-+		SLEG_CONDVAR(             _station_id,         SLE_UINT16,         SL_FLOWMAP, SL_MAX_VERSION),
-+		 SLE_CONDVAR(FlowStat,    via,                 SLE_UINT16,         SL_FLOWMAP, SL_MAX_VERSION),
-+		 SLE_CONDVAR(FlowStat,    length,              SLE_UINT32,         SL_FLOWMAP, SL_MAX_VERSION),
-+		 SLE_CONDVAR(FlowStat,    planned,             SLE_UINT32,         SL_FLOWMAP, SL_MAX_VERSION),
-+		 SLE_CONDVAR(FlowStat,    sent,                SLE_UINT32,         SL_FLOWMAP, SL_MAX_VERSION),
-+		 SLE_END()
-+	};
-+
-+	return _flowstat_desc;
-+}
-+
-+std::list<CargoPacket *> _packets;
-+uint32 _num_dests;
-+
  /**
   * Wrapper function to get the GoodsEntry's internal structure while
   * some of the variables itself are private.
-@@ -258,14 +303,48 @@ const SaveLoad *GetGoodsDesc()
- 		SLEG_CONDVAR(            _cargo_feeder_share, SLE_FILE_U32 | SLE_VAR_I64, 14, 64),
+@@ -259,7 +281,10 @@ const SaveLoad *GetGoodsDesc()
  		SLEG_CONDVAR(            _cargo_feeder_share, SLE_INT64,                  65, 67),
  		 SLE_CONDVAR(GoodsEntry, amount_fract,        SLE_UINT8,                 150, SL_MAX_VERSION),
--		 SLE_CONDLST(GoodsEntry, cargo.packets,       REF_CARGO_PACKET,           68, SL_MAX_VERSION),
+ 		 SLE_CONDLST(GoodsEntry, cargo.packets,       REF_CARGO_PACKET,           68, SL_MAX_VERSION),
 -
-+		SLEG_CONDLST(            _packets,            REF_CARGO_PACKET,           68, SL_CARGOMAP - 1),
-+		SLEG_CONDVAR(            _num_dests,          SLE_UINT32,        SL_CARGOMAP, SL_MAX_VERSION),
 +		 SLE_CONDVAR(GoodsEntry, supply,              SLE_UINT32,      SL_CAPACITIES, SL_MAX_VERSION),
 +		 SLE_CONDVAR(GoodsEntry, supply_new,          SLE_UINT32,      SL_CAPACITIES, SL_MAX_VERSION),
 +		SLEG_CONDVAR(            _num_links,          SLE_UINT16,      SL_CAPACITIES, SL_MAX_VERSION),
-+		SLEG_CONDVAR(            _num_flows,          SLE_UINT32,         SL_FLOWMAP, SL_MAX_VERSION),
 +		 SLE_CONDVAR(GoodsEntry, last_component,      SLE_UINT16,      SL_COMPONENTS, SL_MAX_VERSION),
  		SLE_END()
  	};
  
- 	return goods_desc;
- }
- 
-+typedef std::pair<const StationID, std::list<CargoPacket *> > StationCargoPair;
-+
-+static const SaveLoad _cargo_list_desc[] = {
-+	SLE_VAR(StationCargoPair, first,  SLE_UINT16),
-+	SLE_LST(StationCargoPair, second, REF_CARGO_PACKET),
-+	SLE_END()
-+};
-+
-+/**
-+ * swap the temporary packets with the packets without specific destination in
-+ * the given goods entry. Assert that at least one of those is empty.
-+ * @param ge the goods entry to swap with
-+ */
-+static void SwapPackets(GoodsEntry *ge)
-+{
-+	StationCargoPacketMap &ge_packets = const_cast<StationCargoPacketMap &>(*ge->cargo.Packets());
-+
-+	if (_packets.empty()) {
-+		std::map<StationID, std::list<CargoPacket *> >::iterator it(ge_packets.find(INVALID_STATION));
-+		if (it == ge_packets.end()) {
-+			return;
-+		} else {
-+			it->second.swap(_packets);
-+		}
-+	} else {
-+		assert(ge_packets[INVALID_STATION].empty());
-+		ge_packets[INVALID_STATION].swap(_packets);
-+	}
-+}
- 
- static void Load_STNS()
- {
-@@ -281,6 +360,7 @@ static void Load_STNS()
- 		for (CargoID i = 0; i < num_cargo; i++) {
- 			GoodsEntry *ge = &st->goods[i];
- 			SlObject(ge, GetGoodsDesc());
-+			SwapPackets(ge);
- 			if (IsSavegameVersionBefore(68)) {
- 				SB(ge->acceptance_pickup, GoodsEntry::ACCEPTANCE, 1, HasBit(_waiting_acceptance, 15));
- 				if (GB(_waiting_acceptance, 0, 12) != 0) {
-@@ -292,7 +372,10 @@ static void Load_STNS()
- 					 * savegame versions. As the CargoPacketPool has more than
- 					 * 16 million entries; it fits by an order of magnitude. */
- 					assert(CargoPacket::CanAllocateItem());
--					ge->cargo.Append(new CargoPacket(GB(_waiting_acceptance, 0, 12), _cargo_days, source, _cargo_source_xy, _cargo_source_xy, _cargo_feeder_share));
-+
-+					/* Don't construct the packet with station here, because that'll fail with old savegames */
-+					CargoPacket *cp = new CargoPacket(GB(_waiting_acceptance, 0, 12), _cargo_days, source, _cargo_source_xy, _cargo_source_xy, _cargo_feeder_share);
-+					ge->cargo.Append(INVALID_STATION, cp);
- 					SB(ge->acceptance_pickup, GoodsEntry::PICKUP, 1, 1);
- 				}
- 			}
-@@ -318,7 +401,9 @@ static void Ptrs_STNS()
- 		if (!IsSavegameVersionBefore(68)) {
- 			for (CargoID i = 0; i < NUM_CARGO; i++) {
- 				GoodsEntry *ge = &st->goods[i];
-+				SwapPackets(ge);
- 				SlObject(ge, GetGoodsDesc());
-+				SwapPackets(ge);
- 			}
- 		}
- 		SlObject(st, _old_station_desc);
-@@ -405,8 +490,29 @@ static void RealSave_STNN(BaseStation *bst)
+@@ -405,8 +430,14 @@ static void RealSave_STNN(BaseStation *bst)
  
  	if (!waypoint) {
  		Station *st = Station::From(bst);
 -		for (CargoID i = 0; i < NUM_CARGO; i++) {
 -			SlObject(&st->goods[i], GetGoodsDesc());
 +		for (CargoID c = 0; c < NUM_CARGO; c++) {
-+			_num_dests = (uint32)st->goods[c].cargo.Packets()->MapSize();
 +			_num_links = (uint16)st->goods[c].link_stats.size();
-+			_num_flows = 0;
-+			for (FlowStatMap::const_iterator it(st->goods[c].flows.begin()); it != st->goods[c].flows.end(); ++it) {
-+				_num_flows += (uint32)it->second.size();
-+			}
 +			SlObject(&st->goods[c], GetGoodsDesc());
 +			for (LinkStatMap::const_iterator it(st->goods[c].link_stats.begin()); it != st->goods[c].link_stats.end(); ++it) {
 +				_station_id = it->first;
 +				LinkStat ls(it->second); // make a copy to avoid constness problems
 +				SlObject(&ls, GetLinkStatDesc());
 +			}
-+			for (FlowStatMap::const_iterator outer_it(st->goods[c].flows.begin()); outer_it != st->goods[c].flows.end(); ++outer_it) {
-+				_station_id = outer_it->first;
-+				for (FlowStatSet::const_iterator inner_it(outer_it->second.begin()); inner_it != outer_it->second.end(); ++inner_it) {
-+					FlowStat fs(*inner_it); // make a copy to avoid constness problems
-+					SlObject(&fs, GetFlowStatDesc());
-+				}
-+			}
-+			for (StationCargoPacketMap::ConstMapIterator it(st->goods[c].cargo.Packets()->begin()); it != st->goods[c].cargo.Packets()->end(); ++it) {
-+				SlObject(const_cast<StationCargoPacketMap::value_type *>(&(*it)), _cargo_list_desc);
-+			}
  		}
  	}
  
-@@ -437,8 +543,30 @@ static void Load_STNN()
+@@ -437,8 +468,15 @@ static void Load_STNN()
  
  		if (!waypoint) {
  			Station *st = Station::From(bst);
@@ -5424,44 +2913,11 @@ index f32e476..569cbf8 100644
 +					st->goods[c].link_stats.insert(
 +						std::make_pair(_station_id, ls));
 +				}
-+				FlowStat fs;
-+				for (uint32 i = 0; i < _num_flows; ++i) {
-+					SlObject(&fs, GetFlowStatDesc());
-+					st->goods[c].flows[_station_id].insert(fs);
-+				}
-+				if (IsSavegameVersionBefore(SL_CARGOMAP -1)) {
-+					SwapPackets(&st->goods[c]);
-+				} else {
-+					StationCargoPair pair;
-+					for (uint i = 0; i < _num_dests; ++i) {
-+						SlObject(&pair, _cargo_list_desc);
-+						const_cast<StationCargoPacketMap &>(*(st->goods[c].cargo.Packets()))[pair.first].swap(pair.second);
-+						assert(pair.second.empty());
-+					}
-+				}
  			}
  		}
  
-@@ -461,7 +589,16 @@ static void Ptrs_STNN()
- 	FOR_ALL_STATIONS(st) {
- 		for (CargoID i = 0; i < NUM_CARGO; i++) {
- 			GoodsEntry *ge = &st->goods[i];
--			SlObject(ge, GetGoodsDesc());
-+			if (IsSavegameVersionBefore(SL_CARGOMAP)) {
-+				SwapPackets(ge);
-+				SlObject(ge, GetGoodsDesc());
-+				SwapPackets(ge);
-+			} else {
-+				SlObject(ge, GetGoodsDesc());
-+				for (StationCargoPacketMap::ConstMapIterator it = ge->cargo.Packets()->begin(); it != ge->cargo.Packets()->end(); ++it) {
-+					SlObject(const_cast<StationCargoPair *>(&(*it)), _cargo_list_desc);
-+				}
-+			}
- 		}
- 		SlObject(st, _station_desc);
- 	}
 diff --git a/src/saveload/vehicle_sl.cpp b/src/saveload/vehicle_sl.cpp
-index f3af881..98e2409 100644
+index f3af881..d1a62cf 100644
 --- a/src/saveload/vehicle_sl.cpp
 +++ b/src/saveload/vehicle_sl.cpp
 @@ -489,6 +489,7 @@ const SaveLoad *GetVehicleDescription(VehicleType vt)
@@ -5472,18 +2928,15 @@ index f3af881..98e2409 100644
  
  		     SLE_VAR(Vehicle, cargo_type,            SLE_UINT8),
  		 SLE_CONDVAR(Vehicle, cargo_subtype,         SLE_UINT8,                   35, SL_MAX_VERSION),
-@@ -497,8 +498,10 @@ const SaveLoad *GetVehicleDescription(VehicleType vt)
+@@ -497,6 +498,7 @@ const SaveLoad *GetVehicleDescription(VehicleType vt)
  		SLEG_CONDVAR(         _cargo_source,         SLE_UINT16,                   7,  67),
  		SLEG_CONDVAR(         _cargo_source_xy,      SLE_UINT32,                  44,  67),
  		     SLE_VAR(Vehicle, cargo_cap,             SLE_UINT16),
 +		 SLE_CONDVAR(Vehicle, refit_cap,             SLE_UINT16,       SL_CAPACITIES, SL_MAX_VERSION),
  		SLEG_CONDVAR(         _cargo_count,          SLE_UINT16,                   0,  67),
  		 SLE_CONDLST(Vehicle, cargo.packets,         REF_CARGO_PACKET,            68, SL_MAX_VERSION),
-+		 SLE_CONDLST(Vehicle, cargo.reserved,        REF_CARGO_PACKET,SL_RESERVATION, SL_MAX_VERSION),
  
- 		     SLE_VAR(Vehicle, day_counter,           SLE_UINT8),
- 		     SLE_VAR(Vehicle, tick_counter,          SLE_UINT8),
-@@ -780,6 +783,8 @@ void Load_VEHS()
+@@ -780,6 +782,8 @@ void Load_VEHS()
  			v->last_station_visited = INVALID_STATION;
  		}
  
@@ -5603,18 +3056,10 @@ index ccc0c33..06e4f65 100644
  
  		v->reliability = e->reliability;
 diff --git a/src/station.cpp b/src/station.cpp
-index 0cfcf02..1ff4235 100644
+index 0cfcf02..0a335f4 100644
 --- a/src/station.cpp
 +++ b/src/station.cpp
-@@ -60,10 +60,16 @@ Station::Station(TileIndex tile) :
- 	last_vehicle_type(VEH_INVALID)
- {
- 	/* this->random_bits is set in Station::AddFacility() */
-+
-+	/* has to be done like this as we can't give arguments when constructing an array */
-+	for (CargoID i = 0; i < NUM_CARGO; ++i) {
-+		this->goods[i].cargo.AssignTo(this, i);
-+	}
+@@ -63,7 +63,8 @@ Station::Station(TileIndex tile) :
  }
  
  /**
@@ -5624,7 +3069,7 @@ index 0cfcf02..1ff4235 100644
   * Aircraft-Hangar orders need special treatment here, as the hangars are
   * actually part of a station (tiletype is STATION), but the order type
   * is OT_GOTO_DEPOT.
-@@ -87,12 +93,25 @@ Station::~Station()
+@@ -87,12 +88,23 @@ Station::~Station()
  		if (a->targetairport == this->index) a->targetairport = INVALID_STATION;
  	}
  
@@ -5633,8 +3078,6 @@ index 0cfcf02..1ff4235 100644
 +		for (CargoID c = 0; c < NUM_CARGO; ++c) {
 +			GoodsEntry &ge = st->goods[c];
 +			ge.link_stats.erase(this->index);
-+			DeleteStaleFlows(st->index, c, this->index);
-+			ge.cargo.RerouteStalePackets(this->index);
 +		}
 +	}
 +
@@ -5651,10 +3094,10 @@ index 0cfcf02..1ff4235 100644
  
  	InvalidateWindowData(WC_STATION_LIST, this->owner, 0);
 diff --git a/src/station_base.h b/src/station_base.h
-index 7d64664..71095fc 100644
+index 7d64664..00eca56 100644
 --- a/src/station_base.h
 +++ b/src/station_base.h
-@@ -16,13 +16,277 @@
+@@ -16,13 +16,143 @@
  #include "newgrf_airport.h"
  #include "cargopacket.h"
  #include "industry_type.h"
@@ -5662,7 +3105,6 @@ index 7d64664..71095fc 100644
  #include "newgrf_storage.h"
 +#include "moving_average.h"
 +#include <map>
-+#include <set>
  
  typedef Pool<BaseStation, StationID, 32, 64000> StationPool;
  extern StationPool _station_pool;
@@ -5792,147 +3234,14 @@ index 7d64664..71095fc 100644
 +	}
 +};
 +
-+/**
-+ * Flow statistics telling how much flow should be and was sent along a link.
-+ */
-+class FlowStat : private MovingAverage<uint> {
-+private:
-+	uint planned;  ///< Cargo planned to be sent along a link each "month" (30 units of time, determined by moving average).
-+	uint sent;     ///< Moving average of cargo being sent.
-+	StationID via; ///< Other end of the link. Can be this station, then it means "deliver here".
-+
-+public:
-+	friend const SaveLoad *GetFlowStatDesc();
-+
-+	/**
-+	 * Create a flow stat.
-+	 * @param distance Distance to be used as length of moving average.
-+	 * @param st Remote station.
-+	 * @param planned Cargo planned to be sent along this link.
-+	 * @param sent Cargo already sent along this link.
-+	 */
-+	FORCEINLINE FlowStat(uint distance = 1, StationID st = INVALID_STATION, uint planned = 0, uint sent = 0) :
-+		MovingAverage<uint>(distance), planned(planned), sent(sent), via(st) {}
-+
-+	/**
-+	 * Clone an existing flow stat, changing the plan.
-+	 * @param prev Flow stat to be cloned.
-+	 * @param new_plan New value for planned.
-+	 */
-+	FORCEINLINE FlowStat(const FlowStat &prev, uint new_plan) :
-+		MovingAverage<uint>(prev.length), planned(new_plan), sent(prev.sent), via(prev.via) {}
-+
-+	/**
-+	 * Prevents one copy operation when moving a flowstat from one set to another and decreasing it at the same time.
-+	 */
-+	FORCEINLINE FlowStat GetDecreasedCopy() const
-+	{
-+		FlowStat ret(this->length, this->via, this->planned, this->sent);
-+		this->MovingAverage<uint>::Decrease(ret.sent);
-+		return ret;
-+	}
-+
-+	/**
-+	 * Increase the sent value.
-+	 * @param sent Amount to be added to sent.
-+	 */
-+	FORCEINLINE void Increase(uint sent)
-+	{
-+		this->sent += sent;
-+	}
-+
-+	/**
-+	 * Get an estimate of cargo sent along this link during the last 30 time units.
-+	 * @return Cargo sent along this link.
-+	 */
-+	FORCEINLINE uint Sent() const
-+	{
-+		return this->MovingAverage<uint>::Monthly(sent);
-+	}
-+
-+	/**
-+	 * Get the amount of cargo planned to be sent along this link in 30 time units.
-+	 * @return Cargo planned to be sent.
-+	 */
-+	FORCEINLINE uint Planned() const
-+	{
-+		return this->planned;
-+	}
-+
-+	/**
-+	 * Get the station this link is connected to.
-+	 * @return Remote station.
-+	 */
-+	FORCEINLINE StationID Via() const
-+	{
-+		return this->via;
-+	}
-+
-+	/**
-+	 * Comparator for two flow stats for ordering them in a way that makes
-+	 * the next flow stat to sent cargo for show up as first element.
-+	 */
-+	struct Comparator {
-+		/**
-+		 * Comparator function. Decides by planned - sent or via, if those
-+		 * are equal.
-+		 * @param x First flow stat.
-+		 * @param y Second flow stat.
-+		 * @return True if x.planned - x.sent is greater than y.planned - y.sent.
-+		 */
-+		bool operator()(const FlowStat &x, const FlowStat &y) const
-+		{
-+			int diff_x = (int)x.Planned() - (int)x.Sent();
-+			int diff_y = (int)y.Planned() - (int)y.Sent();
-+			if (diff_x != diff_y) {
-+				return diff_x > diff_y;
-+			} else {
-+				return x.Via() > y.Via();
-+			}
-+		}
-+	};
-+
-+	/**
-+	 * Add up two flow stats' planned and sent figures and assign via from the other one to this one.
-+	 * @param other Flow stat to add to this one.
-+	 * @return This flow stat.
-+	 */
-+	FORCEINLINE FlowStat &operator+=(const FlowStat &other)
-+	{
-+		assert(this->via == INVALID_STATION || other.via == INVALID_STATION || this->via == other.via);
-+		if (other.via != INVALID_STATION) this->via = other.via;
-+		this->planned += other.planned;
-+		uint sent = this->sent + other.sent;
-+		if (sent > 0) {
-+			this->length = (this->length * this->sent + other.length * other.sent) / sent;
-+			assert(this->length > 0);
-+		}
-+		this->sent = sent;
-+		return *this;
-+	}
-+
-+	/**
-+	 * Clear this flow stat.
-+	 */
-+	FORCEINLINE void Clear()
-+	{
-+		this->planned = 0;
-+		this->sent = 0;
-+		this->via = INVALID_STATION;
-+	}
-+};
-+
-+typedef std::set<FlowStat, FlowStat::Comparator> FlowStatSet; ///< Percentage of flow to be sent via specified station (or consumed locally).
-+
 +typedef std::map<StationID, LinkStat> LinkStatMap;
-+typedef std::map<StationID, FlowStatSet> FlowStatMap; ///< Flow descriptions by origin stations.
 +
 +uint GetMovingAverageLength(const Station *from, const Station *to);
 +
  struct GoodsEntry {
  	enum AcceptancePickup {
  		ACCEPTANCE,
-@@ -34,7 +298,10 @@ struct GoodsEntry {
+@@ -34,7 +164,10 @@ struct GoodsEntry {
  		days_since_pickup(255),
  		rating(INITIAL_STATION_RATING),
  		last_speed(0),
@@ -5944,7 +3253,7 @@ index 7d64664..71095fc 100644
  	{}
  
  	byte acceptance_pickup;
-@@ -42,8 +309,20 @@ struct GoodsEntry {
+@@ -42,8 +175,12 @@ struct GoodsEntry {
  	byte rating;
  	byte last_speed;
  	byte last_age;
@@ -5954,20 +3263,12 @@ index 7d64664..71095fc 100644
 +	StationCargoList cargo;              ///< The cargo packets of cargo waiting in this station.
 +	uint supply;                         ///< Cargo supplied last month.
 +	uint supply_new;                     ///< Cargo supplied so far this month.
-+	FlowStatMap flows;                   ///< Planned flows through this station.
 +	LinkStatMap link_stats;              ///< Capacities and usage statistics for outgoing links.
 +	LinkGraphComponentID last_component; ///< Component this station was last part of in this cargo's link graph.
-+	FlowStat GetSumFlowVia(StationID via) const;
-+
-+	void UpdateFlowStats(StationID source, uint count, StationID next);
-+	void UpdateFlowStats(FlowStatSet &flow_stats, uint count, StationID next);
-+	void UpdateFlowStats(FlowStatSet &flow_stats, FlowStatSet::iterator flow_it, uint count);
-+
-+	StationID UpdateFlowStatsTransfer(StationID source, uint count, StationID curr);
  };
  
  /** All airport-related information. Only valid if tile != INVALID_TILE. */
-@@ -224,6 +503,8 @@ public:
+@@ -224,6 +361,8 @@ public:
  	/* virtual */ uint32 GetNewGRFVariable(const ResolverObject *object, byte variable, byte parameter, bool *available) const;
  
  	/* virtual */ void GetTileArea(TileArea *ta, StationType type) const;
@@ -5977,7 +3278,7 @@ index 7d64664..71095fc 100644
  
  #define FOR_ALL_STATIONS(var) FOR_ALL_BASE_STATIONS_OF_TYPE(Station, var)
 diff --git a/src/station_cmd.cpp b/src/station_cmd.cpp
-index 8597533..ac0f24e 100644
+index 8597533..cce11d4 100644
 --- a/src/station_cmd.cpp
 +++ b/src/station_cmd.cpp
 @@ -45,6 +45,7 @@
@@ -5988,46 +3289,10 @@ index 8597533..ac0f24e 100644
  #include "table/airporttile_ids.h"
  #include "newgrf_airporttiles.h"
  #include "order_backup.h"
-@@ -3095,7 +3096,7 @@ static void UpdateStationRating(Station *st)
- 					waiting_changed = true;
- 				}
- 
--				if (waiting_changed) ge->cargo.Truncate(waiting);
-+				if (waiting_changed) ge->cargo.RandomTruncate(waiting);
- 			}
- 		}
- 	}
-@@ -3108,6 +3109,140 @@ static void UpdateStationRating(Station *st)
+@@ -3108,6 +3109,87 @@ static void UpdateStationRating(Station *st)
  	}
  }
  
-+/**
-+ * Delete all flows at a station for specific cargo and destination.
-+ * @param at Station to delete flows from.
-+ * @param c_id Cargo for which flows shall be deleted.
-+ * @param to Remote station of flows to be deleted.
-+ */
-+void DeleteStaleFlows(StationID at, CargoID c_id, StationID to)
-+{
-+	FlowStatMap &flows = Station::Get(at)->goods[c_id].flows;
-+	for (FlowStatMap::iterator f_it = flows.begin(); f_it != flows.end();) {
-+		FlowStatSet &s_flows = f_it->second;
-+		for (FlowStatSet::iterator s_it = s_flows.begin(); s_it != s_flows.end();) {
-+			if (s_it->Via() == to) {
-+				s_flows.erase(s_it++);
-+				break; // There can only be one flow stat for this remote station in each set.
-+			} else {
-+				++s_it;
-+			}
-+		}
-+		if (s_flows.empty()) {
-+			flows.erase(f_it++);
-+		} else {
-+			++f_it;
-+		}
-+	}
-+}
-+
 +/**
 + * Get the length of a moving average for a link between two stations.
 + * @param from Source station.
@@ -6044,14 +3309,12 @@ index 8597533..ac0f24e 100644
 + */
 +void Station::RunAverages()
 +{
-+	FlowStatSet new_flows;
 +	for (int goods_index = 0; goods_index < NUM_CARGO; ++goods_index) {
 +		LinkStatMap &links = this->goods[goods_index].link_stats;
 +		for (LinkStatMap::iterator i = links.begin(); i != links.end();) {
 +			StationID id = i->first;
 +			Station *other = Station::GetIfValid(id);
 +			if (other == NULL) {
-+				this->goods[goods_index].cargo.RerouteStalePackets(id);
 +				links.erase(i++);
 +			} else {
 +				LinkStat &ls = i->second;
@@ -6059,32 +3322,8 @@ index 8597533..ac0f24e 100644
 +				if (ls.IsValid()) {
 +					++i;
 +				} else {
-+					DeleteStaleFlows(this->index, goods_index, id);
-+					this->goods[goods_index].cargo.RerouteStalePackets(id);
 +					links.erase(i++);
 +				}
-+			}
-+		}
-+
-+		if (_settings_game.linkgraph.GetDistributionType(goods_index) == DT_MANUAL) {
-+			this->goods[goods_index].flows.clear();
-+			continue;
-+		}
-+
-+		FlowStatMap &flows = this->goods[goods_index].flows;
-+		for (FlowStatMap::iterator i = flows.begin(); i != flows.end();) {
-+			if (!Station::IsValidID(i->first)) {
-+				flows.erase(i++);
-+			} else {
-+				FlowStatSet &flow_set = i->second;
-+				for (FlowStatSet::iterator j = flow_set.begin(); j != flow_set.end(); ++j) {
-+					if (Station::IsValidID(j->Via())) {
-+						new_flows.insert(j->GetDecreasedCopy());
-+					}
-+				}
-+				flow_set.swap(new_flows);
-+				new_flows.clear();
-+				++i;
 +			}
 +		}
 +	}
@@ -6138,7 +3377,7 @@ index 8597533..ac0f24e 100644
  /* called for every station each tick */
  static void StationHandleSmallTick(BaseStation *st)
  {
-@@ -3124,6 +3259,8 @@ void OnTick_Station()
+@@ -3124,6 +3206,8 @@ void OnTick_Station()
  {
  	if (_game_mode == GM_EDITOR) return;
  
@@ -6147,7 +3386,7 @@ index 8597533..ac0f24e 100644
  	BaseStation *st;
  	FOR_ALL_BASE_STATIONS(st) {
  		StationHandleSmallTick(st);
-@@ -3142,7 +3279,13 @@ void OnTick_Station()
+@@ -3142,7 +3226,13 @@ void OnTick_Station()
  
  void StationMonthlyLoop()
  {
@@ -6162,124 +3401,16 @@ index 8597533..ac0f24e 100644
  }
  
  
-@@ -3178,7 +3321,17 @@ static uint UpdateStationWaiting(Station *st, CargoID type, uint amount, SourceT
- 	/* No new "real" cargo item yet. */
+@@ -3179,6 +3269,7 @@ static uint UpdateStationWaiting(Station *st, CargoID type, uint amount, SourceT
  	if (amount == 0) return 0;
  
--	ge.cargo.Append(new CargoPacket(st->index, st->xy, amount, source_type, source_id));
-+	StationID id = st->index;
-+	StationID next = INVALID_STATION;
-+	FlowStatSet &flow_stats = ge.flows[id];
-+	FlowStatSet::iterator i = flow_stats.begin();
-+	if (i != flow_stats.end()) {
-+		next = i->Via();
-+		ge.UpdateFlowStats(flow_stats, i, amount);
-+	}
-+
-+	ge.cargo.Append(next, new CargoPacket(st->index, st->xy, amount, source_type, source_id));
+ 	ge.cargo.Append(new CargoPacket(st->index, st->xy, amount, source_type, source_id));
 +	ge.supply_new += amount;
  
  	if (!HasBit(ge.acceptance_pickup, GoodsEntry::PICKUP)) {
  		InvalidateWindowData(WC_STATION_LIST, st->index);
-@@ -3546,6 +3699,96 @@ static CommandCost TerraformTile_Station(TileIndex tile, DoCommandFlag flags, ui
- 	return DoCommand(tile, 0, 0, flags, CMD_LANDSCAPE_CLEAR);
- }
- 
-+/**
-+ * Update the flow stats for a specific entry.
-+ * @param flow_stats Flow stats to update.
-+ * @param flow_it Iterator pointing to an entry in flow_stats.
-+ * @param count Amount by which the flow should be increased.
-+ */
-+void GoodsEntry::UpdateFlowStats(FlowStatSet &flow_stats, FlowStatSet::iterator flow_it, uint count)
-+{
-+	FlowStat fs = *flow_it;
-+	fs.Increase(count);
-+	flow_stats.erase(flow_it);
-+	flow_stats.insert(fs);
-+}
-+
-+/**
-+ * Update the flow stats for a specific next station.
-+ * @param flow_stats Flow stats to update.
-+ * @param count Amount by which the flow should be increased.
-+ * @param next Next hop for which the flow stats should be updated.
-+ */
-+void GoodsEntry::UpdateFlowStats(FlowStatSet &flow_stats, uint count, StationID next)
-+{
-+	FlowStatSet::iterator flow_it = flow_stats.begin();
-+	while (flow_it != flow_stats.end()) {
-+		StationID via = flow_it->Via();
-+		if (via == next) { //usually the first one is the correct one
-+			this->UpdateFlowStats(flow_stats, flow_it, count);
-+			return;
-+		} else {
-+			++flow_it;
-+		}
-+	}
-+}
-+
-+/**
-+ * Update the flow stats for "count" cargo from "source" sent to "next".
-+ * @param source ID of station the cargo is from.
-+ * @param count Amount of cargo.
-+ * @param next ID of the station the cargo is travelling to.
-+ */
-+void GoodsEntry::UpdateFlowStats(StationID source, uint count, StationID next)
-+{
-+	if (source == INVALID_STATION || next == INVALID_STATION || this->flows.empty()) return;
-+	FlowStatSet &flow_stats = this->flows[source];
-+	this->UpdateFlowStats(flow_stats, count, next);
-+}
-+
-+/**
-+ * Update the flow stats for "count" cargo that cannot be delivered here.
-+ * @param source ID of station where the cargo is from.
-+ * @param count Amount of cargo.
-+ * @param curr ID of station where it is stored for now.
-+ * @return ID of the station where the cargo is sent next.
-+ */
-+StationID GoodsEntry::UpdateFlowStatsTransfer(StationID source, uint count, StationID curr)
-+{
-+	if (source == INVALID_STATION || this->flows.empty()) return INVALID_STATION;
-+	FlowStatSet &flow_stats = this->flows[source];
-+	FlowStatSet::iterator flow_it = flow_stats.begin();
-+	while (flow_it != flow_stats.end()) {
-+		StationID via = flow_it->Via();
-+		if (via != curr) {
-+			this->UpdateFlowStats(flow_stats, flow_it, count);
-+			return via;
-+		} else {
-+			++flow_it;
-+		}
-+	}
-+	return INVALID_STATION;
-+}
-+
-+/**
-+ * Get the sum of flows via a specific station from this GoodsEntry.
-+ * @param via Remote station to look for.
-+ * @return a FlowStat with all flows for 'via' added up.
-+ */
-+FlowStat GoodsEntry::GetSumFlowVia(StationID via) const
-+{
-+	FlowStat ret(1, via);
-+	for (FlowStatMap::const_iterator i = this->flows.begin(); i != this->flows.end(); ++i) {
-+		const FlowStatSet &flow_set = i->second;
-+		for (FlowStatSet::const_iterator j = flow_set.begin(); j != flow_set.end(); ++j) {
-+			const FlowStat &flow = *j;
-+			if (flow.Via() == via) {
-+				ret += flow;
-+			}
-+		}
-+	}
-+	return ret;
-+}
- 
- extern const TileTypeProcs _tile_type_station_procs = {
- 	DrawTile_Station,           // draw_tile_proc
 diff --git a/src/station_func.h b/src/station_func.h
-index 0fe5b2f..4eaf727 100644
+index 0fe5b2f..f114889 100644
 --- a/src/station_func.h
 +++ b/src/station_func.h
 @@ -18,6 +18,7 @@
@@ -6290,7 +3421,7 @@ index 0fe5b2f..4eaf727 100644
  
  void ModifyStationRatingAround(TileIndex tile, Owner owner, int amount, uint radius);
  
-@@ -46,4 +47,10 @@ bool IsStationTileElectrifiable(TileIndex tile);
+@@ -46,4 +47,8 @@ bool IsStationTileElectrifiable(TileIndex tile);
  
  void UpdateAirportsNoise();
  
@@ -6298,44 +3429,7 @@ index 0fe5b2f..4eaf727 100644
 +
 +void IncreaseStats(Station *st, CargoID cargo, StationID next_station_id, uint capacity, uint usage);
 +
-+void DeleteStaleFlows(StationID at, CargoID c_id, StationID to);
-+
  #endif /* STATION_FUNC_H */
-diff --git a/src/station_gui.cpp b/src/station_gui.cpp
-index b70e922..0ddde7c 100644
---- a/src/station_gui.cpp
-+++ b/src/station_gui.cpp
-@@ -1014,7 +1014,7 @@ struct StationViewWindow : public Window {
- 				this->cargo_rows[i] = (uint16)cargolist->size();
- 
- 				/* Add an entry for each distinct cargo source. */
--				const StationCargoList::List *packets = st->goods[i].cargo.Packets();
-+				const StationCargoPacketMap *packets = st->goods[i].cargo.Packets();
- 				for (StationCargoList::ConstIterator it(packets->begin()); it != packets->end(); it++) {
- 					const CargoPacket *cp = *it;
- 					if (cp->SourceStation() != station_id) {
-diff --git a/src/station_type.h b/src/station_type.h
-index c5eced5..ebcd188 100644
---- a/src/station_type.h
-+++ b/src/station_type.h
-@@ -14,6 +14,7 @@
- 
- #include "core/smallvec_type.hpp"
- #include "tilearea_type.h"
-+#include <list>
- 
- typedef uint16 StationID;
- typedef uint16 RoadStopID;
-@@ -87,6 +88,9 @@ enum CatchmentArea {
- 
- static const uint MAX_LENGTH_STATION_NAME_CHARS = 32; ///< The maximum length of a station name in characters including '\0'
- 
-+/** List of station IDs */
-+typedef std::list<StationID> StationIDList;
-+
- /** List of stations */
- typedef SmallVector<Station *, 2> StationList;
- 
 diff --git a/src/table/settings.ini b/src/table/settings.ini
 index b5ea729..0b241d3 100644
 --- a/src/table/settings.ini
@@ -6456,55 +3550,6 @@ index b5ea729..0b241d3 100644
  ; Vehicles
  
  [SDT_VAR]
-diff --git a/src/texteff.cpp b/src/texteff.cpp
-index 0feb522..644b281 100644
---- a/src/texteff.cpp
-+++ b/src/texteff.cpp
-@@ -20,6 +20,7 @@
- /** Container for all information about a text effect */
- struct TextEffect : public ViewportSign {
- 	uint64 params_1;     ///< DParam parameter
-+	uint64 params_2;     ///< second DParam parameter
- 	StringID string_id;  ///< String to draw for the text effect, if INVALID_STRING_ID then it's not valid
- 	uint8 duration;      ///< How long the text effect should stay, in ticks (applies only when mode == TE_RISING)
- 	TextEffectMode mode; ///< Type of text effect
-@@ -52,6 +53,7 @@ TextEffectID AddTextEffect(StringID msg, int center, int y, uint8 duration, Text
- 	te->string_id = msg;
- 	te->duration = duration;
- 	te->params_1 = GetDParam(0);
-+	te->params_2 = GetDParam(1);
- 	te->mode = mode;
- 
- 	/* Make sure we only dirty the new area */
-@@ -67,6 +69,7 @@ void UpdateTextEffect(TextEffectID te_id, StringID msg)
- 	TextEffect *te = _text_effects.Get(te_id);
- 	te->string_id = msg;
- 	te->params_1 = GetDParam(0);
-+	te->params_2 = GetDParam(1);
- 
- 	te->UpdatePosition(te->center, te->top, msg);
- }
-@@ -108,7 +111,7 @@ void DrawTextEffects(DrawPixelInfo *dpi)
- 	for (TextEffect *te = _text_effects.Begin(); te != end; te++) {
- 		if (te->string_id == INVALID_STRING_ID) continue;
- 		if (te->mode == TE_RISING || (_settings_client.gui.loading_indicators && !IsTransparencySet(TO_LOADING))) {
--			ViewportAddString(dpi, ZOOM_LVL_OUT_2X, te, te->string_id, te->string_id - 1, 0, te->params_1);
-+			ViewportAddString(dpi, ZOOM_LVL_OUT_2X, te, te->string_id, te->string_id - 1, 0, te->params_1, te->params_2);
- 		}
- 	}
- }
-diff --git a/src/texteff.hpp b/src/texteff.hpp
-index b9762c3..9ef74c1 100644
---- a/src/texteff.hpp
-+++ b/src/texteff.hpp
-@@ -41,6 +41,6 @@ void UpdateFillingPercent(TextEffectID te_id, uint8 percent, StringID colour);
- void HideFillingPercent(TextEffectID *te_id);
- 
- void ShowCostOrIncomeAnimation(int x, int y, int z, Money cost);
--void ShowFeederIncomeAnimation(int x, int y, int z, Money cost);
-+void ShowFeederIncomeAnimation(int x, int y, int z, Money transfer, Money income);
- 
- #endif /* TEXTEFF_HPP */
 diff --git a/src/train_cmd.cpp b/src/train_cmd.cpp
 index 92ee36e..6feef2f 100644
 --- a/src/train_cmd.cpp
@@ -6518,71 +3563,24 @@ index 92ee36e..6feef2f 100644
  		v->engine_type = e->index;
  		v->gcache.first_engine = INVALID_ENGINE; // needs to be set before first callback
 diff --git a/src/vehicle.cpp b/src/vehicle.cpp
-index 5b0b885..ddc2d2e 100644
+index 5b0b885..bb080b6 100644
 --- a/src/vehicle.cpp
 +++ b/src/vehicle.cpp
-@@ -670,10 +670,11 @@ void Vehicle::PreDestructor()
- 	if (CleaningPool()) return;
+@@ -1931,6 +1931,13 @@ void Vehicle::BeginLoading()
  
- 	if (Station::IsValidID(this->last_station_visited)) {
--		Station::Get(this->last_station_visited)->loading_vehicles.remove(this);
-+		Station *st = Station::Get(this->last_station_visited);
-+		st->loading_vehicles.remove(this);
+ 	Station::Get(this->last_station_visited)->loading_vehicles.push_back(this);
  
- 		HideFillingPercent(&this->fill_percent_te_id);
--
-+		this->CancelReservation(INVALID_STATION, st);
- 		delete this->cargo_payment;
- 	}
- 
-@@ -1176,7 +1177,7 @@ uint8 CalcPercentVehicleFilled(const Vehicle *v, StringID *colour)
- 
- 	/* Count up max and used */
- 	for (; v != NULL; v = v->Next()) {
--		count += v->cargo.Count();
-+		count += v->cargo.OnboardCount();
- 		max += v->cargo_cap;
- 		if (v->cargo_cap != 0 && colour != NULL) {
- 			unloading += HasBit(v->vehicle_flags, VF_CARGO_UNLOADING) ? 1 : 0;
-@@ -1929,7 +1930,12 @@ void Vehicle::BeginLoading()
- 		this->current_order.MakeLoading(false);
- 	}
- 
--	Station::Get(this->last_station_visited)->loading_vehicles.push_back(this);
 +	if (this->last_loading_station != INVALID_STATION &&
 +			this->last_loading_station != this->last_station_visited &&
 +			((this->current_order.GetLoadType() & OLFB_NO_LOAD) == 0 ||
 +			(this->current_order.GetUnloadType() & OUFB_NO_UNLOAD) == 0)) {
 +		IncreaseStats(Station::Get(this->last_loading_station), this, this->last_station_visited);
 +	}
- 
++
  	PrepareUnload(this);
  
-@@ -1944,6 +1950,23 @@ void Vehicle::BeginLoading()
- }
- 
- /**
-+ * Return all reserved cargo packets to the station.
-+ * @param st the station where the reserved packets should go.
-+ */
-+void Vehicle::CancelReservation(StationID next, Station *st)
-+{
-+	for (Vehicle *v = this; v != NULL; v = v->next) {
-+		VehicleCargoList &cargo = v->cargo;
-+		if (cargo.ReservedCount() > 0) {
-+			DEBUG(misc, 1, "cancelling cargo reservation");
-+			GoodsEntry &ge = st->goods[v->cargo_type];
-+			cargo.Unreserve(next, &ge.cargo);
-+			SetBit(ge.acceptance_pickup, GoodsEntry::PICKUP);
-+		}
-+	}
-+}
-+
-+/**
-  * Perform all actions when leaving a station.
-  * @pre this->current_order.IsType(OT_LOADING)
-  */
-@@ -1956,8 +1979,28 @@ void Vehicle::LeaveStation()
+ 	SetWindowDirty(GetWindowClassForVehicleType(this->type), this->owner);
+@@ -1956,6 +1963,25 @@ void Vehicle::LeaveStation()
  	/* Only update the timetable if the vehicle was supposed to stop here. */
  	if (this->current_order.GetNonStopType() != ONSF_STOP_EVERYWHERE) UpdateVehicleTimetable(this, false);
  
@@ -6607,11 +3605,8 @@ index 5b0b885..ddc2d2e 100644
 +
  	this->current_order.MakeLeaveStation();
  	Station *st = Station::Get(this->last_station_visited);
-+	this->CancelReservation(INVALID_STATION, st);
  	st->loading_vehicles.remove(this);
- 
- 	HideFillingPercent(&this->fill_percent_te_id);
-@@ -1970,6 +2013,95 @@ void Vehicle::LeaveStation()
+@@ -1970,6 +1996,95 @@ void Vehicle::LeaveStation()
  	}
  }
  
@@ -6707,7 +3702,7 @@ index 5b0b885..ddc2d2e 100644
  
  /**
   * Handle the loading of the vehicle; when not it skips through dummy
-@@ -2008,6 +2140,34 @@ void Vehicle::HandleLoading(bool mode)
+@@ -2008,6 +2123,34 @@ void Vehicle::HandleLoading(bool mode)
  }
  
  /**
@@ -6743,7 +3738,7 @@ index 5b0b885..ddc2d2e 100644
   * @param flags   the command flags (like execute and such).
   * @param command the command to execute.
 diff --git a/src/vehicle_base.h b/src/vehicle_base.h
-index a673bcf..7c805b5 100644
+index a673bcf..dbad4ec 100644
 --- a/src/vehicle_base.h
 +++ b/src/vehicle_base.h
 @@ -12,6 +12,7 @@
@@ -6775,15 +3770,7 @@ index a673bcf..7c805b5 100644
  	VehicleCargoList cargo;             ///< The cargo this vehicle is carrying
  
  	byte day_counter;                   ///< Increased by one for each day
-@@ -244,6 +248,7 @@ public:
- 	virtual ~Vehicle();
- 
- 	void BeginLoading();
-+	void CancelReservation(StationID next, Station *st);
- 	void LeaveStation();
- 
- 	GroundVehicleCache *GetGroundVehicleCache();
-@@ -256,6 +261,10 @@ public:
+@@ -256,6 +260,10 @@ public:
  
  	void HandleLoading(bool mode = false);
  
@@ -6794,7 +3781,7 @@ index a673bcf..7c805b5 100644
  	/**
  	 * Marks the vehicles to be redrawn and updates cached variables
  	 *
-@@ -542,6 +551,17 @@ public:
+@@ -542,6 +550,17 @@ public:
  	inline VehicleOrderID GetNumManualOrders() const { return (this->orders.list == NULL) ? 0 : this->orders.list->GetNumManualOrders(); }
  
  	/**
