@@ -101,8 +101,8 @@ protected:
 	 */
 	static inline void DrawVertMapIndicator(int x, int y, int y2)
 	{
-		GfxFillRect(x, y,      x, y + 3, 69);
-		GfxFillRect(x, y2 - 3, x, y2,    69);
+		GfxFillRect(x, y,      x, y + 3, PC_VERY_LIGHT_YELLOW);
+		GfxFillRect(x, y2 - 3, x, y2,    PC_VERY_LIGHT_YELLOW);
 	}
 
 	/**
@@ -113,8 +113,8 @@ protected:
 	 */
 	static inline void DrawHorizMapIndicator(int x, int x2, int y)
 	{
-		GfxFillRect(x,      y, x + 3, y, 69);
-		GfxFillRect(x2 - 3, y, x2,    y, 69);
+		GfxFillRect(x,      y, x + 3, y, PC_VERY_LIGHT_YELLOW);
+		GfxFillRect(x2 - 3, y, x2,    y, PC_VERY_LIGHT_YELLOW);
 	}
 
 	void DrawMapIndicators() const;
