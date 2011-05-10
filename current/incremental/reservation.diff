@@ -1,5 +1,5 @@
 diff --git a/src/cargopacket.cpp b/src/cargopacket.cpp
-index 55c62cd..f604b66 100644
+index 2c93d8c..8215cb4 100644
 --- a/src/cargopacket.cpp
 +++ b/src/cargopacket.cpp
 @@ -186,14 +186,15 @@ void CargoList<Tinst>::AddToCache(const CargoPacket *cp)
@@ -298,10 +298,10 @@ index 0f2e461..36b0f28 100644
  
  #endif /* CARGOPACKET_H */
 diff --git a/src/economy.cpp b/src/economy.cpp
-index 584eea7..1d121ef 100644
+index 6f2604c..2b8ea2f 100644
 --- a/src/economy.cpp
 +++ b/src/economy.cpp
-@@ -1102,38 +1102,53 @@ void PrepareUnload(Vehicle *front_v)
+@@ -1106,38 +1106,53 @@ void PrepareUnload(Vehicle *front_v)
  }
  
  /**
@@ -372,7 +372,7 @@ index 584eea7..1d121ef 100644
  	}
  
  	int unloading_time = 0;
-@@ -1169,7 +1184,7 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
+@@ -1173,7 +1188,7 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
  		GoodsEntry *ge = &st->goods[v->cargo_type];
  
  		if (HasBit(v->vehicle_flags, VF_CARGO_UNLOADING) && (u->current_order.GetUnloadType() & OUFB_NO_UNLOAD) == 0) {
@@ -381,7 +381,7 @@ index 584eea7..1d121ef 100644
  			uint amount_unloaded = _settings_game.order.gradual_loading ? min(cargo_count, load_amount) : cargo_count;
  			bool remaining = false; // Are there cargo entities in this vehicle that can still be unloaded here?
  			bool accepted  = false; // Is the cargo accepted by the station?
-@@ -1189,7 +1204,7 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
+@@ -1193,7 +1208,7 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
  			 * they were loaded, but to not force unload the vehicle when the
  			 * station is still accepting the cargo in the vehicle. It doesn't
  			 * accept cargo that was loaded at the same station. */
@@ -390,7 +390,7 @@ index 584eea7..1d121ef 100644
  				remaining = v->cargo.MoveTo(&ge->cargo, amount_unloaded, u->current_order.GetUnloadType() & OUFB_TRANSFER ? VehicleCargoList::MTA_TRANSFER : VehicleCargoList::MTA_UNLOAD, payment);
  				if (!HasBit(ge->acceptance_pickup, GoodsEntry::PICKUP)) {
  					InvalidateWindowData(WC_STATION_LIST, last_visited);
-@@ -1255,39 +1270,30 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
+@@ -1259,39 +1274,30 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
  
  		/* If there's goods waiting at the station, and the vehicle
  		 * has capacity for it, load it on the vehicle. */
@@ -444,7 +444,7 @@ index 584eea7..1d121ef 100644
  			/* TODO: Regarding this, when we do gradual loading, we
  			 * should first unload all vehicles and then start
  			 * loading them. Since this will cause
-@@ -1295,23 +1301,28 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
+@@ -1299,23 +1305,28 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
  			 * the whole vehicle chain is really totally empty, the
  			 * completely_emptied assignment can then be safely
  			 * removed; that's how TTDPatch behaves too. --pasky */
@@ -484,7 +484,7 @@ index 584eea7..1d121ef 100644
  			SetBit(cargo_full, v->cargo_type);
  		} else {
  			SetBit(cargo_not_full, v->cargo_type);
-@@ -1321,18 +1332,6 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
+@@ -1325,18 +1336,6 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
  	/* Only set completely_emptied, if we just unloaded all remaining cargo */
  	completely_emptied &= anything_unloaded;
  
@@ -503,7 +503,7 @@ index 584eea7..1d121ef 100644
  	v = u;
  
  	if (!anything_unloaded) delete payment;
-@@ -1358,7 +1357,7 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
+@@ -1362,7 +1361,7 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
  			if (v->current_order.GetLoadType() == OLF_FULL_LOAD_ANY) {
  				/* if the aircraft carries passengers and is NOT full, then
  				 * continue loading, no matter how much mail is in */
@@ -512,7 +512,7 @@ index 584eea7..1d121ef 100644
  						(cargo_not_full && (cargo_full & ~cargo_not_full) == 0)) { // There are still non-full cargoes
  					finished_loading = false;
  				}
-@@ -1412,6 +1411,7 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
+@@ -1416,6 +1415,7 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
  		st->MarkTilesDirty(true);
  		SetWindowDirty(WC_STATION_VIEW, last_visited);
  	}
@@ -520,7 +520,7 @@ index 584eea7..1d121ef 100644
  }
  
  /**
-@@ -1446,13 +1446,11 @@ void LoadUnloadStation(Station *st)
+@@ -1450,13 +1450,11 @@ void LoadUnloadStation(Station *st)
  	 */
  	if (last_loading == NULL) return;
  

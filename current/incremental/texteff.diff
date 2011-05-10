@@ -1,8 +1,8 @@
 diff --git a/src/economy.cpp b/src/economy.cpp
-index 584eea7..5dce7ed 100644
+index 6f2604c..c91ebc8 100644
 --- a/src/economy.cpp
 +++ b/src/economy.cpp
-@@ -1013,21 +1013,23 @@ CargoPayment::~CargoPayment()
+@@ -1017,21 +1017,23 @@ CargoPayment::~CargoPayment()
  
  	this->front->cargo_payment = NULL;
  
@@ -35,7 +35,7 @@ index 584eea7..5dce7ed 100644
  	}
  
  	cur_company.Restore();
-@@ -1069,7 +1071,7 @@ Money CargoPayment::PayTransfer(const CargoPacket *cp, uint count)
+@@ -1073,7 +1075,7 @@ Money CargoPayment::PayTransfer(const CargoPacket *cp, uint count)
  
  	profit = profit * _settings_game.economy.feeder_payment_share / 100;
  
@@ -45,7 +45,7 @@ index 584eea7..5dce7ed 100644
  }
  
 diff --git a/src/economy_base.h b/src/economy_base.h
-index edad76e..acbcff8 100644
+index 742d018..60b0964 100644
 --- a/src/economy_base.h
 +++ b/src/economy_base.h
 @@ -24,9 +24,10 @@ extern CargoPaymentPool _cargo_payment_pool;
@@ -63,10 +63,10 @@ index edad76e..acbcff8 100644
  	/* Unsaved variables */
  	Company *owner;            ///< The owner of the vehicle
 diff --git a/src/lang/english.txt b/src/lang/english.txt
-index 7ba24f3..0b92f7d 100644
+index 444c737..14618e7 100644
 --- a/src/lang/english.txt
 +++ b/src/lang/english.txt
-@@ -3390,6 +3390,10 @@ STR_INCOME_FLOAT_INCOME_SMALL                                   :{TINYFONT}{GREE
+@@ -3394,6 +3394,10 @@ STR_INCOME_FLOAT_INCOME_SMALL                                   :{TINYFONT}{GREE
  STR_INCOME_FLOAT_INCOME                                         :{GREEN}Income: {CURRENCY}
  STR_FEEDER_TINY                                                 :{TINYFONT}{YELLOW}Transfer: {CURRENCY}
  STR_FEEDER                                                      :{YELLOW}Transfer: {CURRENCY}
@@ -78,7 +78,7 @@ index 7ba24f3..0b92f7d 100644
  STR_MESSAGE_ESTIMATED_INCOME                                    :{WHITE}Estimated Income: {CURRENCY}
  
 diff --git a/src/misc_gui.cpp b/src/misc_gui.cpp
-index e0e29c0..1245e68 100644
+index bf49162..d1db1a0 100644
 --- a/src/misc_gui.cpp
 +++ b/src/misc_gui.cpp
 @@ -803,17 +803,28 @@ void ShowCostOrIncomeAnimation(int x, int y, int z, Money cost)
