@@ -533,6 +533,9 @@ bool IsQuitKey(uint16 keycode)
 
 void ShowSelectGameWindow();
 
+/**
+ * Initialise the default colours (remaps and the likes), and load the main windows.
+ */
 void SetupColoursAndInitialWindow()
 {
 	for (uint i = 0; i != 16; i++) {
@@ -558,6 +561,9 @@ void SetupColoursAndInitialWindow()
 	}
 }
 
+/**
+ * Show the vital in-game windows.
+ */
 void ShowVitalWindows()
 {
 	AllocateToolbar();
