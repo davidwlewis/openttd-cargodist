@@ -581,7 +581,7 @@ index b5fb001..dc4ed16 100644
 +
  #endif /* SAVELOAD_H */
 diff --git a/src/saveload/vehicle_sl.cpp b/src/saveload/vehicle_sl.cpp
-index f3af881..c365dda 100644
+index 8928df7..272e8e2 100644
 --- a/src/saveload/vehicle_sl.cpp
 +++ b/src/saveload/vehicle_sl.cpp
 @@ -499,6 +499,7 @@ const SaveLoad *GetVehicleDescription(VehicleType vt)
@@ -593,7 +593,7 @@ index f3af881..c365dda 100644
  		     SLE_VAR(Vehicle, day_counter,           SLE_UINT8),
  		     SLE_VAR(Vehicle, tick_counter,          SLE_UINT8),
 diff --git a/src/vehicle.cpp b/src/vehicle.cpp
-index 5b0b885..54ffdfb 100644
+index f2d391f..33e6ba2 100644
 --- a/src/vehicle.cpp
 +++ b/src/vehicle.cpp
 @@ -670,10 +670,11 @@ void Vehicle::PreDestructor()
@@ -650,7 +650,7 @@ index 5b0b885..54ffdfb 100644
  
  	HideFillingPercent(&this->fill_percent_te_id);
 diff --git a/src/vehicle_base.h b/src/vehicle_base.h
-index a673bcf..e099525 100644
+index 6781b47..cb932fd 100644
 --- a/src/vehicle_base.h
 +++ b/src/vehicle_base.h
 @@ -244,6 +244,7 @@ public:

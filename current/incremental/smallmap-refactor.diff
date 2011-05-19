@@ -1,5 +1,5 @@
 diff --git a/src/smallmap_gui.cpp b/src/smallmap_gui.cpp
-index 2fd8662..832616f 100644
+index 7989c5d..26bad3e 100644
 --- a/src/smallmap_gui.cpp
 +++ b/src/smallmap_gui.cpp
 @@ -14,43 +14,19 @@
@@ -47,7 +47,7 @@ index 2fd8662..832616f 100644
  static int _smallmap_industry_count; ///< Number of used industries
  static int _smallmap_company_count;  ///< Number of entries in the owner legend.
  
-@@ -77,18 +53,6 @@ static const int NUM_NO_COMPANY_ENTRIES = 4; ///< Number of entries in the owner
+@@ -84,18 +60,6 @@ static const uint8 PC_WATER           = 0xCA; ///< Dark blue palette colour for
   */
  #define MS(a, b) {a, b, INVALID_INDUSTRYTYPE, 0, INVALID_COMPANY, true, false, true}
  
@@ -66,8 +66,8 @@ index 2fd8662..832616f 100644
  /** Legend text giving the colours to look for on the minimap */
  static LegendAndColour _legend_land_contours[] = {
  	/* The colours for the following values are set at BuildLandLegend() based on each colour scheme. */
-@@ -558,991 +522,906 @@ static const byte _vehicle_type_colours[6] = {
- 	184, 191, 152, 15, 215, 184
+@@ -582,979 +546,906 @@ static const byte _vehicle_type_colours[6] = {
+ 	PC_RED, PC_YELLOW, PC_LIGHT_BLUE, PC_WHITE, PC_BLACK, PC_RED
  };
  
 +/**
@@ -532,7 +532,7 @@ index 2fd8662..832616f 100644
 +		if (dst >= dst_ptr_abs_end) continue;
  
 -			/* Calculate pointer to pixel and the colour */
--			byte colour = (this->map_type == SMT_VEHICLES) ? _vehicle_type_colours[v->type] : 0xF;
+-			byte colour = (this->map_type == SMT_VEHICLES) ? _vehicle_type_colours[v->type] : PC_WHITE;
 +		/* Construct tilearea covered by (xc, yc, xc + this->zoom, yc + this->zoom) such that it is within min_xy limits. */
 +		TileArea ta;
 +		if (min_xy == 1 && (xc == 0 || yc == 0)) {
@@ -621,11 +621,11 @@ index 2fd8662..832616f 100644
 -	 */
 -	static inline void DrawVertMapIndicator(int x, int y, int y2)
 -	{
--		GfxFillRect(x, y,      x, y + 3, 69);
--		GfxFillRect(x, y2 - 3, x, y2,    69);
+-		GfxFillRect(x, y,      x, y + 3, PC_VERY_LIGHT_YELLOW);
+-		GfxFillRect(x, y2 - 3, x, y2,    PC_VERY_LIGHT_YELLOW);
 -	}
 +		/* Calculate pointer to pixel and the colour */
-+		byte colour = (this->map_type == SMT_VEHICLES) ? _vehicle_type_colours[v->type] : 0xF;
++		byte colour = (this->map_type == SMT_VEHICLES) ? _vehicle_type_colours[v->type] : PC_WHITE;
  
 -	/**
 -	 * Draws horizontal part of map indicator
@@ -635,8 +635,8 @@ index 2fd8662..832616f 100644
 -	 */
 -	static inline void DrawHorizMapIndicator(int x, int x2, int y)
 -	{
--		GfxFillRect(x,      y, x + 3, y, 69);
--		GfxFillRect(x2 - 3, y, x2,    y, 69);
+-		GfxFillRect(x,      y, x + 3, y, PC_VERY_LIGHT_YELLOW);
+-		GfxFillRect(x2 - 3, y, x2,    y, PC_VERY_LIGHT_YELLOW);
 +		/* And draw either one or two pixels depending on clipping */
 +		blitter->SetPixel(dpi->dst_ptr, x, y, colour);
 +		if (!skip) blitter->SetPixel(dpi->dst_ptr, x + 1, y, colour);
@@ -725,7 +725,7 @@ index 2fd8662..832616f 100644
 -		_cur_dpi = dpi;
 -
 -		/* Clear it */
--		GfxFillRect(dpi->left, dpi->top, dpi->left + dpi->width - 1, dpi->top + dpi->height - 1, 0);
+-		GfxFillRect(dpi->left, dpi->top, dpi->left + dpi->width - 1, dpi->top + dpi->height - 1, PC_BLACK);
 -
 -		/* Which tile is displayed at (dpi->left, dpi->top)? */
 -		int dx;
@@ -780,7 +780,7 @@ index 2fd8662..832616f 100644
 +	_cur_dpi = dpi;
 +
 +	/* Clear it */
-+	GfxFillRect(dpi->left, dpi->top, dpi->left + dpi->width - 1, dpi->top + dpi->height - 1, 0);
++	GfxFillRect(dpi->left, dpi->top, dpi->left + dpi->width - 1, dpi->top + dpi->height - 1, PC_BLACK);
 +
 +	/* Which tile is displayed at (dpi->left, dpi->top)? */
 +	int dx;
@@ -864,15 +864,15 @@ index 2fd8662..832616f 100644
 -				plane = 1;
 -				break;
 -		}
-+	/* Draw map indicators */
-+	this->DrawMapIndicators();
- 
+-
 -		this->GetWidget<NWidgetCore>(SM_WIDGET_LEGEND)->SetDataTip(STR_NULL, legend_tooltip);
 -		this->GetWidget<NWidgetCore>(SM_WIDGET_ENABLE_ALL)->SetDataTip(STR_SMALLMAP_ENABLE_ALL, enable_all_tooltip);
 -		this->GetWidget<NWidgetCore>(SM_WIDGET_DISABLE_ALL)->SetDataTip(STR_SMALLMAP_DISABLE_ALL, disable_all_tooltip);
 -		this->GetWidget<NWidgetStacked>(SM_WIDGET_SELECT_BUTTONS)->SetDisplayedPlane(plane);
 -	}
--
++	/* Draw map indicators */
++	this->DrawMapIndicators();
+ 
 -public:
 -	uint min_number_of_columns;    ///< Minimal number of columns in legends.
 +	_cur_dpi = old_dpi;
@@ -1194,7 +1194,7 @@ index 2fd8662..832616f 100644
 -							DrawString(x + text_left, x + text_right, y, STR_SMALLMAP_INDUSTRY, TC_GREY);
 -						} else {
 -							DrawString(x + text_left, x + text_right, y, STR_SMALLMAP_INDUSTRY, TC_BLACK);
--							GfxFillRect(x + blob_left, y + 1, x + blob_right, y + row_height - 1, 0); // Outer border of the legend colour
+-							GfxFillRect(x + blob_left, y + 1, x + blob_right, y + row_height - 1, PC_BLACK); // Outer border of the legend colour
 -						}
 -					} else if (this->map_type == SMT_OWNER && tbl->company != INVALID_COMPANY) {
 -						SetDParam(0, tbl->company);
@@ -1204,7 +1204,7 @@ index 2fd8662..832616f 100644
 -							DrawString(x + text_left, x + text_right, y, STR_SMALLMAP_COMPANY, TC_GREY);
 -						} else {
 -							DrawString(x + text_left, x + text_right, y, STR_SMALLMAP_COMPANY, TC_BLACK);
--							GfxFillRect(x + blob_left, y + 1, x + blob_right, y + row_height - 1, 0); // Outer border of the legend colour
+-							GfxFillRect(x + blob_left, y + 1, x + blob_right, y + row_height - 1, PC_BLACK); // Outer border of the legend colour
 +						/* FALL THROUGH */
 +					case SMT_OWNER:
 +						if (this->map_type != SMT_OWNER || tbl->company != INVALID_COMPANY) {
@@ -1215,7 +1215,7 @@ index 2fd8662..832616f 100644
 +								DrawString(x + text_left, x + text_right, y, string, TC_GREY);
 +							} else {
 +								DrawString(x + text_left, x + text_right, y, string, TC_BLACK);
-+								GfxFillRect(x + blob_left, y + 1, x + blob_right, y + row_height - 1, 0); // Outer border of the legend colour
++								GfxFillRect(x + blob_left, y + 1, x + blob_right, y + row_height - 1, PC_BLACK); // Outer border of the legend colour
 +							}
 +							break;
  						}
@@ -1225,7 +1225,7 @@ index 2fd8662..832616f 100644
  						if (this->map_type == SMT_CONTOUR) SetDParam(0, tbl->height * TILE_HEIGHT_STEP);
 -
  						/* Anything that is not an industry or a company is using normal process */
- 						GfxFillRect(x + blob_left, y + 1, x + blob_right, y + row_height - 1, 0);
+ 						GfxFillRect(x + blob_left, y + 1, x + blob_right, y + row_height - 1, PC_BLACK);
  						DrawString(x + text_left, x + text_right, y, tbl->legend);
 -					}
 -					GfxFillRect(x + blob_left + 1, y + 2, x + blob_right - 1, y + row_height - 2, tbl->colour); // Legend colour
@@ -1407,9 +1407,7 @@ index 2fd8662..832616f 100644
 +		}
  
 -			case SM_WIDGET_LEGEND: // Legend
--				/* If industry type small map*/
--				if (this->map_type == SMT_INDUSTRY) {
--					/* If click on industries label, find right industry type and enable/disable it */
+-				if (this->map_type == SMT_INDUSTRY || this->map_type == SMT_OWNER) {
 -					const NWidgetBase *wi = this->GetWidget<NWidgetBase>(SM_WIDGET_LEGEND); // Label panel
 -					uint line = (pt.y - wi->pos_y - WD_FRAMERECT_TOP) / FONT_HEIGHT_SMALL;
 -					uint columns = this->GetNumberColumnsLegend(wi->current_x);
@@ -1421,65 +1419,55 @@ index 2fd8662..832616f 100644
 -					if (rtl) x = wi->current_x - x;
 -					uint column = (x - WD_FRAMERECT_LEFT) / this->column_width;
 -
--					/* Check if click is on industry label*/
--					int industry_pos = (column * number_of_rows) + line;
--					if (industry_pos < _smallmap_industry_count) {
--						if (_ctrl_pressed) {
--							/* Disable all, except the clicked one */
--							bool changes = false;
--							for (int i = 0; i != _smallmap_industry_count; i++) {
--								bool new_state = i == industry_pos;
--								if (_legend_from_industries[i].show_on_map != new_state) {
--									changes = true;
--									_legend_from_industries[i].show_on_map = new_state;
--								}
--							}
--							if (!changes) {
--								/* Nothing changed? Then show all (again). */
+-					/* If industry type small map*/
+-					if (this->map_type == SMT_INDUSTRY) {
+-						/* If click on industries label, find right industry type and enable/disable it. */
+-						int industry_pos = (column * number_of_rows) + line;
+-						if (industry_pos < _smallmap_industry_count) {
+-							if (_ctrl_pressed) {
+-								/* Disable all, except the clicked one. */
+-								bool changes = false;
 -								for (int i = 0; i != _smallmap_industry_count; i++) {
--									_legend_from_industries[i].show_on_map = true;
+-									bool new_state = i == industry_pos;
+-									if (_legend_from_industries[i].show_on_map != new_state) {
+-										changes = true;
+-										_legend_from_industries[i].show_on_map = new_state;
+-									}
 -								}
+-								if (!changes) {
+-									/* Nothing changed? Then show all (again). */
+-									for (int i = 0; i != _smallmap_industry_count; i++) {
+-										_legend_from_industries[i].show_on_map = true;
+-									}
+-								}
+-							} else {
+-								_legend_from_industries[industry_pos].show_on_map = !_legend_from_industries[industry_pos].show_on_map;
 -							}
--						} else {
--							_legend_from_industries[industry_pos].show_on_map = !_legend_from_industries[industry_pos].show_on_map;
 -						}
--					}
--					this->SetDirty();
--				} else if (this->map_type == SMT_OWNER) {
--					/* If click on companies label, find right company and enable/disable it. */
--					const NWidgetBase *wi = this->GetWidget<NWidgetBase>(SM_WIDGET_LEGEND);
--					uint line = (pt.y - wi->pos_y - WD_FRAMERECT_TOP) / FONT_HEIGHT_SMALL;
--					uint columns = this->GetNumberColumnsLegend(wi->current_x);
--					uint number_of_rows = max(CeilDiv(max(_smallmap_company_count, _smallmap_industry_count), columns), this->min_number_of_fixed_rows);
--					if (line >= number_of_rows) break;
--
--					bool rtl = _current_text_dir == TD_RTL;
--					int x = pt.x - wi->pos_x;
--					if (rtl) x = wi->current_x - x;
--					uint column = (x - WD_FRAMERECT_LEFT) / this->column_width;
--
--					/* Check if click is on company label. */
--					int company_pos = (column * number_of_rows) + line;
--					if (company_pos < NUM_NO_COMPANY_ENTRIES) break;
--					if (company_pos < _smallmap_company_count) {
--						if (_ctrl_pressed) {
--							/* Disable all, except the clicked one */
--							bool changes = false;
--							for (int i = NUM_NO_COMPANY_ENTRIES; i != _smallmap_company_count; i++) {
--								bool new_state = i == company_pos;
--								if (_legend_land_owners[i].show_on_map != new_state) {
--									changes = true;
--									_legend_land_owners[i].show_on_map = new_state;
--								}
--							}
--							if (!changes) {
--								/* Nothing changed? Then show all (again). */
+-					} else if (this->map_type == SMT_OWNER) {
+-						/* If click on companies label, find right company and enable/disable it. */
+-						int company_pos = (column * number_of_rows) + line;
+-						if (company_pos < NUM_NO_COMPANY_ENTRIES) break;
+-						if (company_pos < _smallmap_company_count) {
+-							if (_ctrl_pressed) {
+-								/* Disable all, except the clicked one */
+-								bool changes = false;
 -								for (int i = NUM_NO_COMPANY_ENTRIES; i != _smallmap_company_count; i++) {
--									_legend_land_owners[i].show_on_map = true;
+-									bool new_state = i == company_pos;
+-									if (_legend_land_owners[i].show_on_map != new_state) {
+-										changes = true;
+-										_legend_land_owners[i].show_on_map = new_state;
+-									}
 -								}
+-								if (!changes) {
+-									/* Nothing changed? Then show all (again). */
+-									for (int i = NUM_NO_COMPANY_ENTRIES; i != _smallmap_company_count; i++) {
+-										_legend_land_owners[i].show_on_map = true;
+-									}
+-								}
+-							} else {
+-								_legend_land_owners[company_pos].show_on_map = !_legend_land_owners[company_pos].show_on_map;
 -							}
--						} else {
--							_legend_land_owners[company_pos].show_on_map = !_legend_land_owners[company_pos].show_on_map;
 -						}
 -					}
 -					this->SetDirty();
@@ -1830,7 +1818,7 @@ index 2fd8662..832616f 100644
  SmallMapWindow::SmallMapType SmallMapWindow::map_type = SMT_CONTOUR;
  bool SmallMapWindow::show_towns = true;
 diff --git a/src/smallmap_gui.h b/src/smallmap_gui.h
-index 572a175..4cf7168 100644
+index 572a175..04b8bb7 100644
 --- a/src/smallmap_gui.h
 +++ b/src/smallmap_gui.h
 @@ -12,9 +12,174 @@
@@ -1926,8 +1914,8 @@ index 572a175..4cf7168 100644
 +	 */
 +	static inline void DrawVertMapIndicator(int x, int y, int y2)
 +	{
-+		GfxFillRect(x, y,      x, y + 3, 69);
-+		GfxFillRect(x, y2 - 3, x, y2,    69);
++		GfxFillRect(x, y,      x, y + 3, PC_VERY_LIGHT_YELLOW);
++		GfxFillRect(x, y2 - 3, x, y2,    PC_VERY_LIGHT_YELLOW);
 +	}
 +
 +	/**
@@ -1938,8 +1926,8 @@ index 572a175..4cf7168 100644
 +	 */
 +	static inline void DrawHorizMapIndicator(int x, int x2, int y)
 +	{
-+		GfxFillRect(x,      y, x + 3, y, 69);
-+		GfxFillRect(x2 - 3, y, x2,    y, 69);
++		GfxFillRect(x,      y, x + 3, y, PC_VERY_LIGHT_YELLOW);
++		GfxFillRect(x2 - 3, y, x2,    y, PC_VERY_LIGHT_YELLOW);
 +	}
 +
 +	void DrawMapIndicators() const;
