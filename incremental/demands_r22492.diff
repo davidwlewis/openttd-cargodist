@@ -1,0 +1,664 @@
+diff --git a/projects/openttd_vs100.vcxproj b/projects/openttd_vs100.vcxproj
+index f7bf1be..3b4fa5f 100644
+--- a/projects/openttd_vs100.vcxproj
++++ b/projects/openttd_vs100.vcxproj
+@@ -327,6 +327,7 @@
+     <ClCompile Include="..\src\ini.cpp" />
+     <ClCompile Include="..\src\ini_load.cpp" />
+     <ClCompile Include="..\src\landscape.cpp" />
++    <ClCompile Include="..\src\linkgraph\demands.cpp" />
+     <ClCompile Include="..\src\linkgraph\linkgraph.cpp" />
+     <ClCompile Include="..\src\map.cpp" />
+     <ClCompile Include="..\src\misc.cpp" />
+@@ -456,6 +457,7 @@
+     <ClInclude Include="..\src\landscape.h" />
+     <ClInclude Include="..\src\landscape_type.h" />
+     <ClInclude Include="..\src\language.h" />
++    <ClInclude Include="..\src\linkgraph\demands.h" />
+     <ClInclude Include="..\src\linkgraph\linkgraph.h" />
+     <ClInclude Include="..\src\linkgraph\linkgraph_type.h" />
+     <ClInclude Include="..\src\livery.h" />
+diff --git a/projects/openttd_vs100.vcxproj.filters b/projects/openttd_vs100.vcxproj.filters
+index 18f9453..46a9d43 100644
+--- a/projects/openttd_vs100.vcxproj.filters
++++ b/projects/openttd_vs100.vcxproj.filters
+@@ -201,6 +201,9 @@
+     <ClCompile Include="..\src\landscape.cpp">
+       <Filter>Source Files</Filter>
+     </ClCompile>
++    <ClCompile Include="..\src\linkgraph\demands.cpp">
++      <Filter>Source Files</Filter>
++    </ClCompile>
+     <ClCompile Include="..\src\linkgraph\linkgraph.cpp">
+       <Filter>Source Files</Filter>
+     </ClCompile>
+@@ -588,6 +591,9 @@
+     <ClInclude Include="..\src\language.h">
+       <Filter>Header Files</Filter>
+     </ClInclude>
++    <ClInclude Include="..\src\linkgraph\demands.h">
++      <Filter>Header Files</Filter>
++    </ClInclude>
+     <ClInclude Include="..\src\linkgraph\linkgraph.h">
+       <Filter>Header Files</Filter>
+     </ClInclude>
+diff --git a/projects/openttd_vs80.vcproj b/projects/openttd_vs80.vcproj
+index 7970348..95a5765 100644
+--- a/projects/openttd_vs80.vcproj
++++ b/projects/openttd_vs80.vcproj
+@@ -579,6 +579,10 @@
+ 				>
+ 			</File>
+ 			<File
++				RelativePath=".\..\src\linkgraph\demands.cpp"
++				>
++			</File>
++			<File
+ 				RelativePath=".\..\src\linkgraph\linkgraph.cpp"
+ 				>
+ 			</File>
+@@ -1099,6 +1103,10 @@
+ 				>
+ 			</File>
+ 			<File
++				RelativePath=".\..\src\linkgraph\demands.h"
++				>
++			</File>
++			<File
+ 				RelativePath=".\..\src\linkgraph\linkgraph.h"
+ 				>
+ 			</File>
+diff --git a/projects/openttd_vs90.vcproj b/projects/openttd_vs90.vcproj
+index 8d8df10..6a1b2e2 100644
+--- a/projects/openttd_vs90.vcproj
++++ b/projects/openttd_vs90.vcproj
+@@ -576,6 +576,10 @@
+ 				>
+ 			</File>
+ 			<File
++				RelativePath=".\..\src\linkgraph\demands.cpp"
++				>
++			</File>
++			<File
+ 				RelativePath=".\..\src\linkgraph\linkgraph.cpp"
+ 				>
+ 			</File>
+@@ -1096,6 +1100,10 @@
+ 				>
+ 			</File>
+ 			<File
++				RelativePath=".\..\src\linkgraph\demands.h"
++				>
++			</File>
++			<File
+ 				RelativePath=".\..\src\linkgraph\linkgraph.h"
+ 				>
+ 			</File>
+diff --git a/source.list b/source.list
+index e1c7d69..be66238 100644
+--- a/source.list
++++ b/source.list
+@@ -35,6 +35,7 @@ hotkeys.cpp
+ ini.cpp
+ ini_load.cpp
+ landscape.cpp
++linkgraph/demands.cpp
+ linkgraph/linkgraph.cpp
+ map.cpp
+ misc.cpp
+@@ -189,6 +190,7 @@ ini_type.h
+ landscape.h
+ landscape_type.h
+ language.h
++linkgraph/demands.h
+ linkgraph/linkgraph.h
+ linkgraph/linkgraph_type.h
+ livery.h
+diff --git a/src/lang/english.txt b/src/lang/english.txt
+index 5c125a0..a597612 100644
+--- a/src/lang/english.txt
++++ b/src/lang/english.txt
+@@ -1334,6 +1334,9 @@ STR_CONFIG_SETTING_DISTRIBUTION_PAX                             :{LTBLUE}Distrib
+ STR_CONFIG_SETTING_DISTRIBUTION_MAIL                            :{LTBLUE}Distribution for mail: {ORANGE}{STRING1}
+ STR_CONFIG_SETTING_DISTRIBUTION_ARMOURED                        :{LTBLUE}Distribution for the ARMOURED cargo class: {ORANGE}{STRING1}
+ STR_CONFIG_SETTING_DISTRIBUTION_DEFAULT                         :{LTBLUE}Distribution for other cargo classes: {ORANGE}{STRING1}
++STR_CONFIG_SETTING_LINKGRAPH_ACCURACY                           :{LTBLUE}Accuracy when calculating things on the link graph: {ORANGE}{STRING1}
++STR_CONFIG_SETTING_DEMAND_DISTANCE                              :{LTBLUE}Effect of distance on demands: {ORANGE}{STRING1}%
++STR_CONFIG_SETTING_DEMAND_SIZE                                  :{LTBLUE}Effect of remote station's popularity on symmetric demands: {ORANGE}{STRING1}%
+ 
+ STR_CONFIG_SETTING_GUI                                          :{ORANGE}Interface
+ STR_CONFIG_SETTING_CONSTRUCTION                                 :{ORANGE}Construction
+diff --git a/src/linkgraph/demands.cpp b/src/linkgraph/demands.cpp
+new file mode 100644
+index 0000000..6124cf1
+--- /dev/null
++++ b/src/linkgraph/demands.cpp
+@@ -0,0 +1,183 @@
++/** @file demands.h Definition of demand calculating link graph handler. */
++
++#include "../stdafx.h"
++#include "../station_base.h"
++#include "../settings_type.h"
++#include "../newgrf_cargo.h"
++#include "../cargotype.h"
++#include "../core/math_func.hpp"
++#include "demands.h"
++#include <list>
++
++typedef std::list<NodeID> NodeList;
++
++/**
++ * Set the demands between two nodes using the given base demand. In symmetric mode
++ * this sets demands in both directions.
++ * @param graph The link graph.
++ * @param from_id The supplying node.
++ * @þaram to_id The receiving node.
++ * @param demand_forw Demand calculated for the "forward" direction.
++ */
++void SymmetricScaler::SetDemands(LinkGraphComponent *graph, NodeID from_id, NodeID to_id, uint demand_forw)
++{
++	if (graph->GetNode(from_id).demand > 0) {
++		uint demand_back = demand_forw * this->mod_size / 100;
++		uint undelivered = graph->GetNode(to_id).undelivered_supply;
++		if (demand_back > undelivered) {
++			demand_back = undelivered;
++			demand_forw = max(1U, demand_back * 100 / this->mod_size);
++		}
++		this->Scaler::SetDemands(graph, to_id, from_id, demand_back);
++	}
++
++	this->Scaler::SetDemands(graph, from_id, to_id, demand_forw);
++}
++
++/**
++ * Set the demands between two nodes using the given base demand. In asymmetric mode
++ * this only sets demand in the "forward" direction.
++ * @param graph The link graph.
++ * @param from_id The supplying node.
++ * @þaram to_id The receiving node.
++ * @param demand_forw Demand calculated for the "forward" direction.
++ */
++FORCEINLINE void Scaler::SetDemands(LinkGraphComponent *graph, NodeID from_id, NodeID to_id, uint demand_forw)
++{
++	Edge &forward = graph->GetEdge(from_id, to_id);
++	forward.demand += demand_forw;
++	graph->GetNode(from_id).undelivered_supply -= demand_forw;
++}
++
++/**
++ * Do the actual demand calculation, called from constructor.
++ * @param graph Component to calculate the demands for.
++ */
++template<class Tscaler>
++void DemandCalculator::CalcDemand(LinkGraphComponent *graph, Tscaler scaler)
++{
++	NodeList supplies;
++	NodeList demands;
++	uint num_supplies = 0;
++	uint num_demands = 0;
++
++	for (NodeID node = 0; node < graph->GetSize(); node++) {
++		Node &n = graph->GetNode(node);
++		scaler.AddNode(n);
++		if (n.supply > 0) {
++			supplies.push_back(node);
++			num_supplies++;
++		}
++		if (n.demand > 0) {
++			demands.push_back(node);
++			num_demands++;
++		}
++	}
++
++	if (num_supplies == 0 || num_demands == 0) return;
++
++	/* mean acceptance attributed to each node. If the distribution is
++	 * symmetric this is relative to remote supply, otherwise it is
++	 * relative to remote demand.
++	 */
++	scaler.SetDemandPerNode(num_demands);
++	uint chance = 0;
++
++	while (!supplies.empty() && !demands.empty()) {
++		NodeID node1 = supplies.front();
++		supplies.pop_front();
++
++		Node &from = graph->GetNode(node1);
++
++		for (uint i = 0; i < num_demands; ++i) {
++			assert(!demands.empty());
++			NodeID node2 = demands.front();
++			demands.pop_front();
++			if (node1 == node2) {
++				if (demands.empty() && supplies.empty()) {
++					/* only one node with supply and demand left */
++					return;
++				} else {
++					demands.push_back(node2);
++					continue;
++				}
++			}
++			Node &to = graph->GetNode(node2);
++
++			int32 supply = scaler.EffectiveSupply(from, to);
++			assert(supply > 0);
++
++			/* scale the distance by mod_dist around max_distance */
++			int32 distance = this->max_distance - (this->max_distance -
++					(int32)graph->GetEdge(node1, node2).distance) * this->mod_dist / 100;
++
++			/* scale the accuracy by distance around accuracy / 2 */
++			int32 divisor = this->accuracy * (this->mod_dist - 50) / 100 +
++					this->accuracy * distance / this->max_distance + 1;
++
++			assert(divisor > 0);
++
++			uint demand_forw = 0;
++			if (divisor <= supply) {
++				/* at first only distribute demand if
++				 * effective supply / accuracy divisor >= 1
++				 * Others are too small or too far away to be considered.
++				 */
++				demand_forw = supply / divisor;
++			} else if (++chance > this->accuracy * num_demands * num_supplies) {
++				/* After some trying, if there is still supply left, distribute
++				 * demand also to other nodes.
++				 */
++				demand_forw = 1;
++			}
++
++			demand_forw = min(demand_forw, from.undelivered_supply);
++
++			scaler.SetDemands(graph, node1, node2, demand_forw);
++
++			if (scaler.DemandLeft(to)) {
++				demands.push_back(node2);
++			} else {
++				num_demands--;
++			}
++
++			if (from.undelivered_supply == 0) break;
++
++		}
++		if (from.undelivered_supply != 0) {
++			supplies.push_back(node1);
++		} else {
++			num_supplies--;
++		}
++	}
++}
++
++/**
++ * Create the DemandCalculator and immediately do the calculation.
++ * @param graph Component to calculate the demands for.
++ */
++DemandCalculator::DemandCalculator(LinkGraphComponent *graph) :
++	max_distance(MapSizeX() + MapSizeY() + 1)
++{
++	CargoID cargo = graph->GetCargo();
++	const LinkGraphSettings &settings = graph->GetSettings();
++
++	this->accuracy = settings.accuracy;
++	this->mod_dist = settings.demand_distance;
++	if (this->mod_dist > 100) {
++		/* increase effect of mod_dist > 100 */
++		int over100 = this->mod_dist - 100;
++		this->mod_dist = 100 + over100 * over100;
++	}
++
++	switch (settings.GetDistributionType(cargo)) {
++		case DT_SYMMETRIC:
++			this->CalcDemand<SymmetricScaler>(graph, SymmetricScaler(settings.demand_size));
++			break;
++		case DT_ASYMMETRIC:
++			this->CalcDemand<AsymmetricScaler>(graph, AsymmetricScaler());
++			break;
++		default:
++			NOT_REACHED();
++	}
++}
+diff --git a/src/linkgraph/demands.h b/src/linkgraph/demands.h
+new file mode 100644
+index 0000000..009019c
+--- /dev/null
++++ b/src/linkgraph/demands.h
+@@ -0,0 +1,159 @@
++/** @file demands.h Declaration of demand calculating link graph handler. */
++
++#ifndef DEMANDS_H_
++#define DEMANDS_H_
++
++#include "linkgraph.h"
++#include "../cargo_type.h"
++#include "../map_func.h"
++
++/**
++ * Scale various things according to symmetric/asymmetric distribution.
++ */
++class Scaler {
++public:
++	Scaler() : demand_per_node(0) {}
++
++	void SetDemands(LinkGraphComponent * graph, NodeID from, NodeID to, uint demand_forw);
++protected:
++	uint demand_per_node; ///< Mean demand associated with each node.
++};
++
++/**
++ * Scaler for symmetric distribution.
++ */
++class SymmetricScaler : public Scaler {
++public:
++	FORCEINLINE SymmetricScaler(uint mod_size) : mod_size(mod_size), supply_sum(0) {}
++
++	/**
++	 * Count a node's supply into the sum of supplies.
++	 * @param node Node.
++	 */
++	FORCEINLINE void AddNode(const Node &node)
++	{
++		this->supply_sum += node.supply;
++	}
++
++	/**
++	 * Calculate the mean demand per node using the sum of supplies.
++	 * @param num_demands Number of accepting nodes.
++	 */
++	FORCEINLINE void SetDemandPerNode(uint num_demands)
++	{
++		this->demand_per_node = max(this->supply_sum / num_demands, 1U);
++	}
++
++	/**
++	 * Get the effective supply of one node towards another one. In symmetric
++	 * distribution the supply of the other node is weighed in.
++	 * @param from The supplying node.
++	 * @param to The receiving node.
++	 * @return Effective supply.
++	 */
++	FORCEINLINE uint EffectiveSupply(const Node &from, const Node &to)
++	{
++		return max(from.supply * max(1U, to.supply) * this->mod_size / 100 / this->demand_per_node, 1U);
++	}
++
++	/**
++	 * Check if there is any acceptance left for this node. In symmetric distribution
++	 * nodes only accept anything if they also supply something. So if
++	 * undelivered_supply == 0 at the node there isn't any demand left either.
++	 * @param to The node to be checked.
++	 */
++	FORCEINLINE bool DemandLeft(Node &to)
++	{
++		return (to.supply == 0 || to.undelivered_supply > 0) && to.demand > 0;
++	}
++
++	void SetDemands(LinkGraphComponent *graph, NodeID from, NodeID to, uint demand_forw);
++
++private:
++	uint mod_size;   ///< Size modifier. Determines how much demands increase with the supply of the remote station
++	uint supply_sum; ///< Sum of all supplies in the component.
++};
++
++/**
++ * A scaler for asymmetric distribution.
++ */
++class AsymmetricScaler : public Scaler {
++public:
++	AsymmetricScaler() : demand_sum(0) {}
++
++	/**
++	 * Count a node's demand into the sum of demands.
++	 * @param node The node to be counted.
++	 */
++	FORCEINLINE void AddNode(const Node &node)
++	{
++		this->demand_sum += node.demand;
++	}
++
++	/**
++	 * Calculate the mean demand per node using the sum of demands.
++	 * @param num_demands Number of accepting nodes.
++	 */
++	FORCEINLINE void SetDemandPerNode(uint num_demands)
++	{
++		this->demand_per_node = max(this->demand_sum / num_demands, (uint)1);
++	}
++
++	/**
++	 * Get the effective supply of one node towards another one. In asymmetric
++	 * distribution the demand of the other node is weighed in.
++	 * @param from The supplying node.
++	 * @param to The receiving node.
++	 */
++	FORCEINLINE uint EffectiveSupply(const Node &from, const Node &to)
++	{
++		return max(from.supply * to.demand / this->demand_per_node, (uint)1);
++	}
++
++	/**
++	 * Check if there is any acceptance left for this node. In asymmetric distribution
++	 * nodes always accept as long as their demand > 0.
++	 * @param to The node to be checked.
++	 */
++	FORCEINLINE bool DemandLeft(Node &to) { return to.demand > 0; }
++
++private:
++	uint demand_sum; ///< Sum of all demands in the component.
++};
++
++/**
++ * Calculate the demands. This class has a state, but is recreated for each
++ * call to of DemandHandler::Run.
++ */
++class DemandCalculator {
++public:
++	DemandCalculator(LinkGraphComponent *graph);
++
++private:
++	int32 max_distance; ///< Maximum distance possible on the map.
++	int32 mod_dist;     ///< Distance modifier, determines how much demands decrease with distance.
++	int32 accuracy;     ///< Accuracy of the calculation.
++
++	template<class Tscaler>
++	void CalcDemand(LinkGraphComponent *graph, Tscaler scaler);
++};
++
++/**
++ * Stateless, thread safe demand hander. Doesn't do anything but call DemandCalculator.
++ */
++class DemandHandler : public ComponentHandler {
++public:
++
++	/**
++	 * Call the demand calculator on the given component.
++	 * @param graph Component to calculate the demands for.
++	 */
++	virtual void Run(LinkGraphComponent *graph) { DemandCalculator c(graph); }
++
++	/**
++	 * Virtual destructor has to be defined because of virtual Run().
++	 */
++	virtual ~DemandHandler() {}
++};
++
++#endif /* DEMANDS_H_ */
+diff --git a/src/linkgraph/linkgraph.cpp b/src/linkgraph/linkgraph.cpp
+index 267403a..a132843 100644
+--- a/src/linkgraph/linkgraph.cpp
++++ b/src/linkgraph/linkgraph.cpp
+@@ -15,6 +15,7 @@
+ #include "../debug.h"
+ #include "../moving_average.h"
+ #include "linkgraph.h"
++#include "demands.h"
+ #include <queue>
+ 
+ /**
+@@ -36,6 +37,7 @@ LinkGraphJob::HandlerList LinkGraphJob::_handlers;
+ FORCEINLINE void Node::Init(StationID st, uint sup, uint dem)
+ {
+ 	this->supply = sup;
++	this->undelivered_supply = sup;
+ 	this->demand = dem;
+ 	this->station = st;
+ }
+@@ -49,6 +51,7 @@ FORCEINLINE void Edge::Init(uint distance, uint capacity)
+ {
+ 	this->distance = distance;
+ 	this->capacity = capacity;
++	this->demand = 0;
+ }
+ 
+ 
+@@ -355,4 +358,5 @@ void InitializeLinkGraphs()
+ 	for (CargoID c = 0; c < NUM_CARGO; ++c) _link_graphs[c].Init(c);
+ 
+ 	LinkGraphJob::ClearHandlers();
++	LinkGraphJob::AddHandler(new DemandHandler);
+ }
+diff --git a/src/linkgraph/linkgraph.h b/src/linkgraph/linkgraph.h
+index 305255f..c496276 100644
+--- a/src/linkgraph/linkgraph.h
++++ b/src/linkgraph/linkgraph.h
+@@ -30,9 +30,10 @@ struct SaveLoad;
+  */
+ class Node {
+ public:
+-	uint supply;       ///< Supply at the station.
+-	uint demand;       ///< Acceptance at the station.
+-	StationID station; ///< Station ID.
++	uint supply;             ///< Supply at the station.
++	uint undelivered_supply; ///< Amount of supply that hasn't been distributed yet.
++	uint demand;             ///< Acceptance at the station.
++	StationID station;       ///< Station ID.
+ 
+ 	void Init(StationID st = INVALID_STATION, uint sup = 0, uint dem = 0);
+ };
+@@ -44,6 +45,7 @@ class Edge {
+ public:
+ 	uint distance; ///< Length of the link.
+ 	uint capacity; ///< Capacity of the link.
++	uint demand;   ///< Transport demand between the nodes.
+ 
+ 	void Init(uint distance = 0, uint capacity = 0);
+ };
+diff --git a/src/saveload/linkgraph_sl.cpp b/src/saveload/linkgraph_sl.cpp
+index 134010f..9f06b62 100644
+--- a/src/saveload/linkgraph_sl.cpp
++++ b/src/saveload/linkgraph_sl.cpp
+@@ -11,6 +11,7 @@
+ 
+ #include "../stdafx.h"
+ #include "../linkgraph/linkgraph.h"
++#include "../linkgraph/demands.h"
+ #include "../settings_internal.h"
+ #include "saveload.h"
+ #include <vector>
+@@ -128,6 +129,10 @@ static void Load_LGRP()
+ 		SlObject(&graph, GetLinkGraphDesc());
+ 		graph.SetSize();
+ 		SaveLoad_LinkGraphComponent(graph);
++		for (uint i = 0; i < graph.GetSize(); ++i) {
++			Node &node = graph.GetNode(i);
++			node.undelivered_supply = node.supply;
++		}
+ 	}
+ }
+ 
+diff --git a/src/saveload/saveload.cpp b/src/saveload/saveload.cpp
+index 9db7958..b9edd65 100644
+--- a/src/saveload/saveload.cpp
++++ b/src/saveload/saveload.cpp
+@@ -226,7 +226,7 @@
+  *  159   21962
+  *  160   21974
+  */
+-extern const uint16 SAVEGAME_VERSION = SL_COMPONENTS; ///< Current savegame version of OpenTTD.
++extern const uint16 SAVEGAME_VERSION = SL_DEMANDS; ///< Current savegame version of OpenTTD.
+ 
+ SavegameType _savegame_type; ///< type of savegame we are loading
+ 
+diff --git a/src/saveload/saveload.h b/src/saveload/saveload.h
+index 5dc371c..29d281a 100644
+--- a/src/saveload/saveload.h
++++ b/src/saveload/saveload.h
+@@ -554,6 +554,7 @@ enum SaveLoadVersions {
+ 	SL_TRUNK = 160,
+ 	SL_CAPACITIES = SL_TRUNK + 20,
+ 	SL_COMPONENTS,
++	SL_DEMANDS = SL_COMPONENTS + 20,
+ 
+ 	/** Highest possible savegame version. */
+ 	SL_MAX_VERSION = 255
+diff --git a/src/settings_gui.cpp b/src/settings_gui.cpp
+index e478483..5149aa8 100644
+--- a/src/settings_gui.cpp
++++ b/src/settings_gui.cpp
+@@ -1485,6 +1485,9 @@ static SettingEntry _settings_linkgraph[] = {
+ 	SettingEntry("linkgraph.distribution_mail"),
+ 	SettingEntry("linkgraph.distribution_armoured"),
+ 	SettingEntry("linkgraph.distribution_default"),
++	SettingEntry("linkgraph.accuracy"),
++	SettingEntry("linkgraph.demand_distance"),
++	SettingEntry("linkgraph.demand_size"),
+ };
+ /** Linkgraph sub-page */
+ static SettingsPage _settings_linkgraph_page = {_settings_linkgraph, lengthof(_settings_linkgraph)};
+diff --git a/src/settings_type.h b/src/settings_type.h
+index c72dc2b..b71ed1e 100644
+--- a/src/settings_type.h
++++ b/src/settings_type.h
+@@ -414,6 +414,9 @@ struct LinkGraphSettings {
+ 	DistributionTypeByte distribution_mail;     ///< distribution type for mail
+ 	DistributionTypeByte distribution_armoured; ///< distribution type for armoured cargo class
+ 	DistributionTypeByte distribution_default;  ///< distribution type for all other goods
++	uint8 accuracy;                             ///< accuracy when calculating things on the link graph. low accuracy => low running time
++	uint8 demand_size;                          ///< influence of supply ("station size") on the demand function
++	uint8 demand_distance;                      ///< influence of distance between stations on the demand function
+ 
+ 	FORCEINLINE DistributionType GetDistributionType(CargoID cargo) const {
+ 		if (IsCargoInClass(cargo, CC_PASSENGERS)) {
+diff --git a/src/table/settings.ini b/src/table/settings.ini
+index a353226..8c8539f 100644
+--- a/src/table/settings.ini
++++ b/src/table/settings.ini
+@@ -580,6 +580,39 @@ interval = 1
+ str      = STR_CONFIG_SETTING_DISTRIBUTION_DEFAULT
+ strval   = STR_CONFIG_SETTING_DISTRIBUTION_SYMMETRIC
+ 
++[SDT_VAR]
++base     = GameSettings
++var      = linkgraph.accuracy
++type     = SLE_UINT8
++from     = SL_DEMANDS
++def      = 16
++min      = 2
++max      = 64
++interval = 1
++str      = STR_CONFIG_SETTING_LINKGRAPH_ACCURACY
++
++[SDT_VAR]
++base     = GameSettings
++var      = linkgraph.demand_distance
++type     = SLE_UINT8
++from     = SL_DEMANDS
++def      = 100
++min      = 0
++max      = 255
++interval = 5
++str      = STR_CONFIG_SETTING_DEMAND_DISTANCE
++
++[SDT_VAR]
++base     = GameSettings
++var      = linkgraph.demand_size
++type     = SLE_UINT8
++from     = SL_DEMANDS
++def      = 100
++min      = 0
++max      = 100
++interval = 5
++str      = STR_CONFIG_SETTING_DEMAND_SIZE
++
+ ; Vehicles
+ 
+ [SDT_VAR]

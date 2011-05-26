@@ -1,5 +1,5 @@
 diff --git a/src/economy.cpp b/src/economy.cpp
-index 6f2604c..c91ebc8 100644
+index 9562dd5..978d192 100644
 --- a/src/economy.cpp
 +++ b/src/economy.cpp
 @@ -1017,21 +1017,23 @@ CargoPayment::~CargoPayment()
