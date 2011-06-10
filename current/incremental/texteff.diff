@@ -1,8 +1,8 @@
 diff --git a/src/economy.cpp b/src/economy.cpp
-index 9562dd5..978d192 100644
+index 4d7d858..5c9ed17 100644
 --- a/src/economy.cpp
 +++ b/src/economy.cpp
-@@ -1017,21 +1017,23 @@ CargoPayment::~CargoPayment()
+@@ -1024,21 +1024,23 @@ CargoPayment::~CargoPayment()
  
  	this->front->cargo_payment = NULL;
  
@@ -35,7 +35,7 @@ index 9562dd5..978d192 100644
  	}
  
  	cur_company.Restore();
-@@ -1073,7 +1075,7 @@ Money CargoPayment::PayTransfer(const CargoPacket *cp, uint count)
+@@ -1080,7 +1082,7 @@ Money CargoPayment::PayTransfer(const CargoPacket *cp, uint count)
  
  	profit = profit * _settings_game.economy.feeder_payment_share / 100;
  
