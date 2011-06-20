@@ -2315,6 +2315,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\..\src\saveload\storage_sl.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\..\src\saveload\strings_sl.cpp"
 				>
 			</File>
