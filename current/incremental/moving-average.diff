@@ -1,5 +1,5 @@
 diff --git a/projects/openttd_vs100.vcxproj b/projects/openttd_vs100.vcxproj
-index 936689b..37b9086 100644
+index a0e8d58..8f9d00b 100644
 --- a/projects/openttd_vs100.vcxproj
 +++ b/projects/openttd_vs100.vcxproj
 @@ -459,6 +459,8 @@
@@ -12,7 +12,7 @@ index 936689b..37b9086 100644
      <ClInclude Include="..\src\network\network_admin.h" />
      <ClInclude Include="..\src\network\network_base.h" />
 diff --git a/projects/openttd_vs100.vcxproj.filters b/projects/openttd_vs100.vcxproj.filters
-index 587e3f6..94cee24 100644
+index bc0b7b6..b105282 100644
 --- a/projects/openttd_vs100.vcxproj.filters
 +++ b/projects/openttd_vs100.vcxproj.filters
 @@ -597,6 +597,12 @@
@@ -29,7 +29,7 @@ index 587e3f6..94cee24 100644
        <Filter>Header Files</Filter>
      </ClInclude>
 diff --git a/projects/openttd_vs80.vcproj b/projects/openttd_vs80.vcproj
-index 79212ee..238cb15 100644
+index e15d2c8..16e4342 100644
 --- a/projects/openttd_vs80.vcproj
 +++ b/projects/openttd_vs80.vcproj
 @@ -1111,6 +1111,14 @@
@@ -48,7 +48,7 @@ index 79212ee..238cb15 100644
  				>
  			</File>
 diff --git a/projects/openttd_vs90.vcproj b/projects/openttd_vs90.vcproj
-index c6487d6..2866f94 100644
+index 023fea1..963995e 100644
 --- a/projects/openttd_vs90.vcproj
 +++ b/projects/openttd_vs90.vcproj
 @@ -1108,6 +1108,14 @@
@@ -67,7 +67,7 @@ index c6487d6..2866f94 100644
  				>
  			</File>
 diff --git a/source.list b/source.list
-index cc3562e..88914a4 100644
+index c8aace0..f37d012 100644
 --- a/source.list
 +++ b/source.list
 @@ -192,6 +192,8 @@ livery.h
