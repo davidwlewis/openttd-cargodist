@@ -298,10 +298,10 @@ index 1e30084..6b8b912 100644
  
  #endif /* CARGOPACKET_H */
 diff --git a/src/economy.cpp b/src/economy.cpp
-index a55b6c9..78b9ac4 100644
+index c1ea310..94b17ed 100644
 --- a/src/economy.cpp
 +++ b/src/economy.cpp
-@@ -1128,38 +1128,53 @@ void PrepareUnload(Vehicle *front_v)
+@@ -1129,38 +1129,53 @@ void PrepareUnload(Vehicle *front_v)
  }
  
  /**
@@ -372,7 +372,7 @@ index a55b6c9..78b9ac4 100644
  	}
  
  	int unloading_time = 0;
-@@ -1195,7 +1210,7 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
+@@ -1196,7 +1211,7 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
  		GoodsEntry *ge = &st->goods[v->cargo_type];
  
  		if (HasBit(v->vehicle_flags, VF_CARGO_UNLOADING) && (u->current_order.GetUnloadType() & OUFB_NO_UNLOAD) == 0) {
@@ -381,7 +381,7 @@ index a55b6c9..78b9ac4 100644
  			uint amount_unloaded = _settings_game.order.gradual_loading ? min(cargo_count, load_amount) : cargo_count;
  			bool remaining = false; // Are there cargo entities in this vehicle that can still be unloaded here?
  			bool accepted  = false; // Is the cargo accepted by the station?
-@@ -1215,7 +1230,7 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
+@@ -1216,7 +1231,7 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
  			 * they were loaded, but to not force unload the vehicle when the
  			 * station is still accepting the cargo in the vehicle. It doesn't
  			 * accept cargo that was loaded at the same station. */
@@ -390,7 +390,7 @@ index a55b6c9..78b9ac4 100644
  				remaining = v->cargo.MoveTo(&ge->cargo, amount_unloaded, u->current_order.GetUnloadType() & OUFB_TRANSFER ? VehicleCargoList::MTA_TRANSFER : VehicleCargoList::MTA_UNLOAD, payment);
  				if (!HasBit(ge->acceptance_pickup, GoodsEntry::GES_PICKUP)) {
  					InvalidateWindowData(WC_STATION_LIST, last_visited);
-@@ -1281,39 +1296,30 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
+@@ -1282,39 +1297,30 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
  
  		/* If there's goods waiting at the station, and the vehicle
  		 * has capacity for it, load it on the vehicle. */
@@ -444,7 +444,7 @@ index a55b6c9..78b9ac4 100644
  			/* TODO: Regarding this, when we do gradual loading, we
  			 * should first unload all vehicles and then start
  			 * loading them. Since this will cause
-@@ -1321,23 +1327,28 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
+@@ -1322,23 +1328,28 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
  			 * the whole vehicle chain is really totally empty, the
  			 * completely_emptied assignment can then be safely
  			 * removed; that's how TTDPatch behaves too. --pasky */
@@ -484,7 +484,7 @@ index a55b6c9..78b9ac4 100644
  			SetBit(cargo_full, v->cargo_type);
  		} else {
  			SetBit(cargo_not_full, v->cargo_type);
-@@ -1347,18 +1358,6 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
+@@ -1348,18 +1359,6 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
  	/* Only set completely_emptied, if we just unloaded all remaining cargo */
  	completely_emptied &= anything_unloaded;
  
@@ -503,7 +503,7 @@ index a55b6c9..78b9ac4 100644
  	v = u;
  
  	if (!anything_unloaded) delete payment;
-@@ -1384,7 +1383,7 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
+@@ -1385,7 +1384,7 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
  			if (v->current_order.GetLoadType() == OLF_FULL_LOAD_ANY) {
  				/* if the aircraft carries passengers and is NOT full, then
  				 * continue loading, no matter how much mail is in */
@@ -512,7 +512,7 @@ index a55b6c9..78b9ac4 100644
  						(cargo_not_full && (cargo_full & ~cargo_not_full) == 0)) { // There are still non-full cargoes
  					finished_loading = false;
  				}
-@@ -1438,6 +1437,7 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
+@@ -1439,6 +1438,7 @@ static void LoadUnloadVehicle(Vehicle *v, int *cargo_left)
  		st->MarkTilesDirty(true);
  		SetWindowDirty(WC_STATION_VIEW, last_visited);
  	}
@@ -520,7 +520,7 @@ index a55b6c9..78b9ac4 100644
  }
  
  /**
-@@ -1472,13 +1472,11 @@ void LoadUnloadStation(Station *st)
+@@ -1473,13 +1473,11 @@ void LoadUnloadStation(Station *st)
  	 */
  	if (last_loading == NULL) return;
  
@@ -537,7 +537,7 @@ index a55b6c9..78b9ac4 100644
  	}
  
 diff --git a/src/saveload/saveload.cpp b/src/saveload/saveload.cpp
-index 4dac043..33a76be 100644
+index 486d1d8..e9caddd 100644
 --- a/src/saveload/saveload.cpp
 +++ b/src/saveload/saveload.cpp
 @@ -227,7 +227,7 @@
