@@ -479,7 +479,7 @@ index 19a740d..e6307a1 100644
  	}
  
 diff --git a/src/cargopacket.cpp b/src/cargopacket.cpp
-index 8bd6b65..7c59b9c 100644
+index 8bd6b65..a8e021b 100644
 --- a/src/cargopacket.cpp
 +++ b/src/cargopacket.cpp
 @@ -10,7 +10,9 @@
@@ -1104,7 +1104,7 @@ index 8bd6b65..7c59b9c 100644
   * Ages the all cargo in this list.
   */
  void VehicleCargoList::AgeCargo()
-@@ -389,22 +714,188 @@ void VehicleCargoList::AgeCargo()
+@@ -389,22 +714,177 @@ void VehicleCargoList::AgeCargo()
  	}
  }
  
@@ -1222,42 +1222,31 @@ index 8bd6b65..7c59b9c 100644
 +
 +/**
 + * Truncate where each destination loses roughly the same percentage of its cargo.
-+ * This is done by randomizing the selection of packets to be removed. Also count
-+ * the cargo by origin station.
-+ * @param max_remaining Maximum amount of cargo to keep in the station.
-+ * @param cargo_per_source Container for counting the cargo by origin list.
++ * This is done by randomizing the selection of packets to be removed.
++ * @param max_remaining maximum amount of cargo to keep in the list.
 + */
-+void StationCargoList::CountAndTruncate(uint max_remaining, StationCargoAmountMap &cargo_per_source)
++void StationCargoList::RandomTruncate(uint max_remaining)
 +{
 +	uint prev_count = this->count;
-+	uint loop = 0;
 +	while (this->count > max_remaining) {
 +		for (Iterator it(this->packets.begin()); it != this->packets.end();) {
-+			CargoPacket *packet = *it;
-+			if (loop == 0) cargo_per_source[packet->source] += packet->count;
-+
 +			if (RandomRange(prev_count) < max_remaining) {
 +				++it;
 +				continue;
 +			}
-+
++			CargoPacket *packet = *it;
 +			uint diff = this->count - max_remaining;
 +			if (packet->count > diff) {
 +				packet->count -= diff;
 +				this->count = max_remaining;
 +				this->cargo_days_in_transit -= packet->days_in_transit * diff;
-+				if (loop > 0) {
-+					return;
-+				} else {
-+					++it;
-+				}
++				return;
 +			} else {
 +				it = this->packets.erase(it);
 +				this->RemoveFromCache(packet);
 +				delete packet;
 +			}
 +		}
-+		loop++;
 +	}
 +}
 +
@@ -1304,7 +1293,7 @@ index 8bd6b65..7c59b9c 100644
 +template class CargoList<VehicleCargoList, CargoPacketList>;
 +template class CargoList<StationCargoList, StationCargoPacketMap>;
 diff --git a/src/cargopacket.h b/src/cargopacket.h
-index 1e30084..440f48b 100644
+index 1e30084..2fb9e48 100644
 --- a/src/cargopacket.h
 +++ b/src/cargopacket.h
 @@ -15,8 +15,11 @@
@@ -1558,12 +1547,11 @@ index 1e30084..440f48b 100644
  	/**
  	 * Are two the two CargoPackets mergeable in the context of
  	 * a list of CargoPackets for a Vehicle?
-@@ -303,16 +373,21 @@ public:
+@@ -303,16 +373,20 @@ public:
  	}
  };
  
 +typedef MultiMap<StationID, CargoPacket *> StationCargoPacketMap;
-+typedef std::map<StationID, uint> StationCargoAmountMap;
 +
  /**
   * CargoList that is used for stations.
@@ -1582,7 +1570,7 @@ index 1e30084..440f48b 100644
  	/**
  	 * Are two the two CargoPackets mergeable in the context of
  	 * a list of CargoPackets for a Vehicle?
-@@ -327,6 +402,40 @@ public:
+@@ -327,6 +401,40 @@ public:
  				cp1->source_type     == cp2->source_type &&
  				cp1->source_id       == cp2->source_id;
  	}
@@ -1595,7 +1583,7 @@ index 1e30084..440f48b 100644
 +
 +	void RerouteStalePackets(StationID to);
 +
-+	void CountAndTruncate(uint max_remaining, StationCargoAmountMap &cargo_per_source);
++	void RandomTruncate(uint max_remaining);
 +
 +	/**
 +	 * Returns source of the first cargo packet in this list.
@@ -2570,18 +2558,10 @@ index d095dec..fcf97d8 100644
 +	OnTick_LinkGraph();
  }
 diff --git a/src/lang/english.txt b/src/lang/english.txt
-index 109a2e7..b9b9cbe 100644
+index 109a2e7..939f569 100644
 --- a/src/lang/english.txt
 +++ b/src/lang/english.txt
-@@ -220,6 +220,7 @@ STR_UNITS_HEIGHT_SI                                             :{COMMA} m
- STR_LIST_FILTER_OSKTITLE                                        :{BLACK}Enter filter string
- STR_LIST_FILTER_TOOLTIP                                         :{BLACK}Enter a keyword to filter the list for
- 
-+STR_TOOLTIP_GROUP_ORDER                                         :{BLACK}Select grouping order
- STR_TOOLTIP_SORT_ORDER                                          :{BLACK}Select sorting order (descending/ascending)
- STR_TOOLTIP_SORT_CRITERIA                                       :{BLACK}Select sorting criteria
- STR_TOOLTIP_FILTER_CRITERIA                                     :{BLACK}Select filtering criteria
-@@ -373,6 +374,7 @@ STR_FILE_MENU_EXIT                                              :Exit
+@@ -373,6 +373,7 @@ STR_FILE_MENU_EXIT                                              :Exit
  ############ range for map menu starts
  STR_MAP_MENU_MAP_OF_WORLD                                       :Map of world
  STR_MAP_MENU_EXTRA_VIEW_PORT                                    :Extra viewport
@@ -2589,45 +2569,7 @@ index 109a2e7..b9b9cbe 100644
  STR_MAP_MENU_SIGN_LIST                                          :Sign list
  ############ range for town menu starts, yet the town directory is shown in the map menu in the scenario editor
  STR_TOWN_MENU_TOWN_DIRECTORY                                    :Town directory
-@@ -658,17 +660,20 @@ STR_SMALLMAP_CAPTION                                            :{WHITE}Map - {S
- STR_SMALLMAP_TYPE_CONTOURS                                      :Contours
- STR_SMALLMAP_TYPE_VEHICLES                                      :Vehicles
- STR_SMALLMAP_TYPE_INDUSTRIES                                    :Industries
-+STR_SMALLMAP_TYPE_ROUTEMAP                                      :Link Statistics
- STR_SMALLMAP_TYPE_ROUTES                                        :Routes
- STR_SMALLMAP_TYPE_VEGETATION                                    :Vegetation
- STR_SMALLMAP_TYPE_OWNERS                                        :Owners
- STR_SMALLMAP_TOOLTIP_SHOW_LAND_CONTOURS_ON_MAP                  :{BLACK}Show land contours on map
- STR_SMALLMAP_TOOLTIP_SHOW_VEHICLES_ON_MAP                       :{BLACK}Show vehicles on map
- STR_SMALLMAP_TOOLTIP_SHOW_INDUSTRIES_ON_MAP                     :{BLACK}Show industries on map
-+STR_SMALLMAP_TOOLTIP_SHOW_LINK_STATS_ON_MAP                     :{BLACK}Show link statistics on map
- STR_SMALLMAP_TOOLTIP_SHOW_TRANSPORT_ROUTES_ON                   :{BLACK}Show transport routes on map
- STR_SMALLMAP_TOOLTIP_SHOW_VEGETATION_ON_MAP                     :{BLACK}Show vegetation on map
- STR_SMALLMAP_TOOLTIP_SHOW_LAND_OWNERS_ON_MAP                    :{BLACK}Show land owners on map
- STR_SMALLMAP_TOOLTIP_INDUSTRY_SELECTION                         :{BLACK}Click on an industry type to toggle displaying it. Ctrl+Click disables all types except the selected one. Ctrl+Click on it again to enable all industry types
- STR_SMALLMAP_TOOLTIP_COMPANY_SELECTION                          :{BLACK}Click on a company to toggle displaying its property. Ctrl+Click disables all companies except the selected one. Ctrl+Click on it again to enable all companies
-+STR_SMALLMAP_TOOLTIP_CARGO_SELECTION                            :{BLACK}Click on a cargo to toggle displaying its property. Ctrl+Click disables all cargos except the selected one. Ctrl+Click on it again to enable all cargos
- 
- STR_SMALLMAP_LEGENDA_ROADS                                      :{TINYFONT}{BLACK}Roads
- STR_SMALLMAP_LEGENDA_RAILROADS                                  :{TINYFONT}{BLACK}Railways
-@@ -702,6 +707,7 @@ STR_SMALLMAP_LEGENDA_SNOW                                       :{TINYFONT}{BLAC
- STR_SMALLMAP_TOOLTIP_TOGGLE_TOWN_NAMES_ON_OFF                   :{BLACK}Toggle town names on/off on map
- STR_SMALLMAP_CENTER                                             :{BLACK}Centre the smallmap on the current position
- STR_SMALLMAP_INDUSTRY                                           :{TINYFONT}{STRING} ({NUM})
-+STR_SMALLMAP_LINKSTATS                                          :{TINYFONT}{STRING}
- STR_SMALLMAP_COMPANY                                            :{TINYFONT}{COMPANY}
- STR_SMALLMAP_TOWN                                               :{TINYFONT}{WHITE}{TOWN}
- STR_SMALLMAP_DISABLE_ALL                                        :{BLACK}Disable all
-@@ -712,6 +718,8 @@ STR_SMALLMAP_TOOLTIP_ENABLE_ALL_INDUSTRIES                      :{BLACK}Display
- STR_SMALLMAP_TOOLTIP_SHOW_HEIGHT                                :{BLACK}Toggle display of heightmap
- STR_SMALLMAP_TOOLTIP_DISABLE_ALL_COMPANIES                      :{BLACK}Display no company property on the map
- STR_SMALLMAP_TOOLTIP_ENABLE_ALL_COMPANIES                       :{BLACK}Display all company property on the map
-+STR_SMALLMAP_TOOLTIP_DISABLE_ALL_CARGOS                         :{BLACK}Display no cargos on the map
-+STR_SMALLMAP_TOOLTIP_ENABLE_ALL_CARGOS                          :{BLACK}Display all cargos on the map
- 
- # Status bar messages
- STR_STATUSBAR_TOOLTIP_SHOW_LAST_NEWS                            :{BLACK}Show last message or news report
-@@ -1329,11 +1337,25 @@ STR_CONFIG_SETTING_LARGER_TOWNS_DISABLED                        :{LTBLUE}Proport
+@@ -1329,11 +1330,25 @@ STR_CONFIG_SETTING_LARGER_TOWNS_DISABLED                        :{LTBLUE}Proport
  STR_CONFIG_SETTING_CITY_SIZE_MULTIPLIER                         :{LTBLUE}Initial city size multiplier: {ORANGE}{STRING1}
  STR_CONFIG_SETTING_MODIFIED_ROAD_REBUILD                        :{LTBLUE}Remove absurd road-elements during the road construction: {ORANGE}{STRING1}
  
@@ -2653,7 +2595,7 @@ index 109a2e7..b9b9cbe 100644
  STR_CONFIG_SETTING_AI                                           :{ORANGE}Competitors
  STR_CONFIG_SETTING_DISPLAY_OPTIONS                              :{ORANGE}Display options
  STR_CONFIG_SETTING_INTERACTION                                  :{ORANGE}Interaction
-@@ -1884,6 +1906,15 @@ STR_TRANSPARENT_CATENARY_TOOLTIP                                :{BLACK}Toggle t
+@@ -1884,6 +1899,15 @@ STR_TRANSPARENT_CATENARY_TOOLTIP                                :{BLACK}Toggle t
  STR_TRANSPARENT_LOADING_TOOLTIP                                 :{BLACK}Toggle transparency for loading indicators. Ctrl+Click to lock
  STR_TRANSPARENT_INVISIBLE_TOOLTIP                               :{BLACK}Set objects invisible instead of transparent
  
@@ -2669,41 +2611,7 @@ index 109a2e7..b9b9cbe 100644
  # Base for station construction window(s)
  STR_STATION_BUILD_COVERAGE_AREA_TITLE                           :{BLACK}Coverage area highlight
  STR_STATION_BUILD_COVERAGE_OFF                                  :{BLACK}Off
-@@ -2617,8 +2648,32 @@ STR_STATION_VIEW_ACCEPTS_CARGO                                  :{BLACK}Accepts:
- 
- STR_STATION_VIEW_RATINGS_BUTTON                                 :{BLACK}Ratings
- STR_STATION_VIEW_RATINGS_TOOLTIP                                :{BLACK}Show station ratings
--STR_STATION_VIEW_CARGO_RATINGS_TITLE                            :{BLACK}Local rating of transport service:
-+STR_STATION_VIEW_CARGO_RATINGS_TITLE                            :{BLACK}Monthly supply and local rating:
- STR_STATION_VIEW_CARGO_RATING                                   :{WHITE}{STRING}: {YELLOW}{STRING} ({COMMA}%)
-+STR_STATION_VIEW_CARGO_SUPPLY_RATING                            :{WHITE}{STRING}: {YELLOW}{COMMA} / {STRING} ({COMMA}%)
-+
-+STR_STATION_VIEW_GROUP                                          :{BLACK}Group by
-+STR_STATION_VIEW_WAITING_STATION                                :Station: Waiting
-+STR_STATION_VIEW_WAITING_AMOUNT                                 :Amount: Waiting
-+STR_STATION_VIEW_PLANNED_STATION                                :Station: Planned
-+STR_STATION_VIEW_PLANNED_AMOUNT                                 :Amount: Planned
-+STR_STATION_VIEW_FROM                                           :{YELLOW}{SHORTCARGO} from {STATION}
-+STR_STATION_VIEW_VIA                                            :{YELLOW}{SHORTCARGO} via {STATION}
-+STR_STATION_VIEW_TO                                             :{YELLOW}{SHORTCARGO} to {STATION}
-+STR_STATION_VIEW_FROM_ANY                                       :{RED}{SHORTCARGO} from unknown station
-+STR_STATION_VIEW_TO_ANY                                         :{RED}{SHORTCARGO} to any station
-+STR_STATION_VIEW_VIA_ANY                                        :{RED}{SHORTCARGO} via any station
-+STR_STATION_VIEW_FROM_HERE                                      :{GREEN}{SHORTCARGO} from this station
-+STR_STATION_VIEW_VIA_HERE                                       :{GREEN}{SHORTCARGO} stopping at this station
-+STR_STATION_VIEW_TO_HERE                                        :{GREEN}{SHORTCARGO} to this station
-+STR_STATION_VIEW_NONSTOP                                        :{YELLOW}{SHORTCARGO} non-stop
-+
-+STR_STATION_VIEW_GROUP_S_V_D                                    :Source-Via-Destination
-+STR_STATION_VIEW_GROUP_S_D_V                                    :Source-Destination-Via
-+STR_STATION_VIEW_GROUP_V_S_D                                    :Via-Source-Destination
-+STR_STATION_VIEW_GROUP_V_D_S                                    :Via-Destination-Source
-+STR_STATION_VIEW_GROUP_D_S_V                                    :Destination-Source-Via
-+STR_STATION_VIEW_GROUP_D_V_S                                    :Destination-Via-Source
- 
- ############ range for rating starts
- STR_CARGO_RATING_APPALLING                                      :Appalling
-@@ -3401,6 +3456,10 @@ STR_INCOME_FLOAT_INCOME_SMALL                                   :{TINYFONT}{GREE
+@@ -3401,6 +3425,10 @@ STR_INCOME_FLOAT_INCOME_SMALL                                   :{TINYFONT}{GREE
  STR_INCOME_FLOAT_INCOME                                         :{GREEN}Income: {CURRENCY}
  STR_FEEDER_TINY                                                 :{TINYFONT}{YELLOW}Transfer: {CURRENCY}
  STR_FEEDER                                                      :{YELLOW}Transfer: {CURRENCY}
@@ -3167,10 +3075,10 @@ index 0000000..a2b6bc0
 +#endif /* FLOWMAPPER_H_ */
 diff --git a/src/linkgraph/linkgraph.cpp b/src/linkgraph/linkgraph.cpp
 new file mode 100644
-index 0000000..19fa5e0
+index 0000000..a43ce6c
 --- /dev/null
 +++ b/src/linkgraph/linkgraph.cpp
-@@ -0,0 +1,545 @@
+@@ -0,0 +1,542 @@
 +/* $Id$ */
 +
 +/*
@@ -3186,8 +3094,6 @@ index 0000000..19fa5e0
 +#include "../map_func.h"
 +#include "../core/bitmath_func.hpp"
 +#include "../debug.h"
-+#include "../window_func.h"
-+#include "../window_gui.h"
 +#include "../moving_average.h"
 +#include "linkgraph.h"
 +#include "demands.h"
@@ -3562,7 +3468,6 @@ index 0000000..19fa5e0
 +		Node &node = this->GetNode(node_id);
 +		if (Station::IsValidID(node.station)) {
 +			node.ExportFlows(this->cargo);
-+			InvalidateWindowData(WC_STATION_VIEW, node.station, this->GetCargo());
 +		}
 +	}
 +
@@ -4672,10 +4577,10 @@ index 0000000..f1a6349
 +#endif /* MCF_H_ */
 diff --git a/src/linkgraph_gui.cpp b/src/linkgraph_gui.cpp
 new file mode 100644
-index 0000000..cd96658
+index 0000000..a452178
 --- /dev/null
 +++ b/src/linkgraph_gui.cpp
-@@ -0,0 +1,537 @@
+@@ -0,0 +1,539 @@
 +/* $Id$ */
 +
 +/*
@@ -4693,9 +4598,8 @@ index 0000000..cd96658
 +#include "company_base.h"
 +#include "company_gui.h"
 +#include "date_func.h"
-+#include "viewport_func.h"
 +#include "linkgraph_gui.h"
-+#include "smallmap_gui.h"
++#include "viewport_func.h"
 +
 +/**
 + * Colours for the various "load" states of links. Ordered from "unused" to
@@ -4946,7 +4850,10 @@ index 0000000..cd96658
 +		return GetViewportStationMiddle(this->window->viewport, st);
 +	} else {
 +		/* assume this is a smallmap */
-+		return static_cast<const SmallMapWindow *>(this->window)->GetStationMiddle(st);
++		//return GetSmallmapStationMiddle(this->window, st);
++		Point dummy;
++		dummy.x = dummy.y = 0;
++		return dummy;
 +	}
 +}
 +
@@ -5576,20 +5483,6 @@ index 0000000..3a4d2eb
 +
 +#endif /* MOVING_AVERAGE_H_ */
 +
-diff --git a/src/newgrf.cpp b/src/newgrf.cpp
-index 59dc65a..add92b9 100644
---- a/src/newgrf.cpp
-+++ b/src/newgrf.cpp
-@@ -8346,6 +8346,9 @@ static void AfterLoadGRFs()
- 	/* Create dynamic list of industry legends for smallmap_gui.cpp */
- 	BuildIndustriesLegend();
- 
-+	/* build the routemap legend, based on the available cargos */
-+	BuildLinkStatsLegend();
-+
- 	/* Add all new airports to the airports array. */
- 	FinaliseAirportsArray();
- 	BindAirportSpecs();
 diff --git a/src/openttd.cpp b/src/openttd.cpp
 index a5fde97..3f199d7 100644
 --- a/src/openttd.cpp
@@ -6105,7 +5998,7 @@ index d4ff375..9fd1331 100644
  
  	return true;
 diff --git a/src/saveload/saveload.cpp b/src/saveload/saveload.cpp
-index 1627765..d8ce1c0 100644
+index 1627765..5e26d52 100644
 --- a/src/saveload/saveload.cpp
 +++ b/src/saveload/saveload.cpp
 @@ -228,7 +228,7 @@
@@ -6113,7 +6006,7 @@ index 1627765..d8ce1c0 100644
   *  162   22713
   */
 -extern const uint16 SAVEGAME_VERSION = 162; ///< Current savegame version of OpenTTD.
-+extern const uint16 SAVEGAME_VERSION = SL_EXT_RATING; ///< Current savegame version of OpenTTD.
++extern const uint16 SAVEGAME_VERSION = SL_CARGOMAP; ///< Current savegame version of OpenTTD.
  
  SavegameType _savegame_type; ///< type of savegame we are loading
  
@@ -6134,7 +6027,7 @@ index 1627765..d8ce1c0 100644
  	_object_chunk_handlers,
  	_persistent_storage_chunk_handlers,
 diff --git a/src/saveload/saveload.h b/src/saveload/saveload.h
-index 88d9d6c..065e9dd 100644
+index 88d9d6c..b49c919 100644
 --- a/src/saveload/saveload.h
 +++ b/src/saveload/saveload.h
 @@ -91,9 +91,6 @@ enum SLRefType {
@@ -6147,7 +6040,7 @@ index 88d9d6c..065e9dd 100644
  /** Flags of a chunk. */
  enum ChunkType {
  	CH_RIFF         =  0,
-@@ -550,4 +547,23 @@ bool SaveloadCrashWithMissingNewGRFs();
+@@ -550,4 +547,22 @@ bool SaveloadCrashWithMissingNewGRFs();
  extern char _savegame_format[8];
  extern bool _do_autosave;
  
@@ -6164,7 +6057,6 @@ index 88d9d6c..065e9dd 100644
 +	SL_MCF,
 +	SL_FLOWMAP,
 +	SL_CARGOMAP,
-+	SL_EXT_RATING,
 +
 +	/** Highest possible savegame version. */
 +	SL_MAX_VERSION = 255
@@ -6184,7 +6076,7 @@ index b400861..4bf5646 100644
  
  void UpdateOldAircraft();
 diff --git a/src/saveload/station_sl.cpp b/src/saveload/station_sl.cpp
-index 78277d4..cee65bc 100644
+index 78277d4..3e8ec42 100644
 --- a/src/saveload/station_sl.cpp
 +++ b/src/saveload/station_sl.cpp
 @@ -225,9 +225,11 @@ static const SaveLoad _old_station_desc[] = {
@@ -6250,7 +6142,7 @@ index 78277d4..cee65bc 100644
  /**
   * Wrapper function to get the GoodsEntry's internal structure while
   * some of the variables itself are private.
-@@ -259,14 +304,49 @@ const SaveLoad *GetGoodsDesc()
+@@ -259,14 +304,48 @@ const SaveLoad *GetGoodsDesc()
  		SLEG_CONDVAR(            _cargo_feeder_share, SLE_FILE_U32 | SLE_VAR_I64, 14, 64),
  		SLEG_CONDVAR(            _cargo_feeder_share, SLE_INT64,                  65, 67),
  		 SLE_CONDVAR(GoodsEntry, amount_fract,        SLE_UINT8,                 150, SL_MAX_VERSION),
@@ -6263,7 +6155,6 @@ index 78277d4..cee65bc 100644
 +		SLEG_CONDVAR(            _num_links,          SLE_UINT16,      SL_CAPACITIES, SL_MAX_VERSION),
 +		SLEG_CONDVAR(            _num_flows,          SLE_UINT32,         SL_FLOWMAP, SL_MAX_VERSION),
 +		 SLE_CONDVAR(GoodsEntry, last_component,      SLE_UINT16,      SL_COMPONENTS, SL_MAX_VERSION),
-+		 SLE_CONDVAR(GoodsEntry, max_waiting_cargo,   SLE_UINT32,      SL_EXT_RATING, SL_MAX_VERSION),
  		SLE_END()
  	};
  
@@ -6302,7 +6193,7 @@ index 78277d4..cee65bc 100644
  
  static void Load_STNS()
  {
-@@ -282,6 +362,7 @@ static void Load_STNS()
+@@ -282,6 +361,7 @@ static void Load_STNS()
  		for (CargoID i = 0; i < num_cargo; i++) {
  			GoodsEntry *ge = &st->goods[i];
  			SlObject(ge, GetGoodsDesc());
@@ -6310,7 +6201,7 @@ index 78277d4..cee65bc 100644
  			if (IsSavegameVersionBefore(68)) {
  				SB(ge->acceptance_pickup, GoodsEntry::GES_ACCEPTANCE, 1, HasBit(_waiting_acceptance, 15));
  				if (GB(_waiting_acceptance, 0, 12) != 0) {
-@@ -293,7 +374,10 @@ static void Load_STNS()
+@@ -293,7 +373,10 @@ static void Load_STNS()
  					 * savegame versions. As the CargoPacketPool has more than
  					 * 16 million entries; it fits by an order of magnitude. */
  					assert(CargoPacket::CanAllocateItem());
@@ -6322,7 +6213,7 @@ index 78277d4..cee65bc 100644
  					SB(ge->acceptance_pickup, GoodsEntry::GES_PICKUP, 1, 1);
  				}
  			}
-@@ -319,7 +403,9 @@ static void Ptrs_STNS()
+@@ -319,7 +402,9 @@ static void Ptrs_STNS()
  		if (!IsSavegameVersionBefore(68)) {
  			for (CargoID i = 0; i < NUM_CARGO; i++) {
  				GoodsEntry *ge = &st->goods[i];
@@ -6332,7 +6223,7 @@ index 78277d4..cee65bc 100644
  			}
  		}
  		SlObject(st, _old_station_desc);
-@@ -410,7 +496,28 @@ static void RealSave_STNN(BaseStation *bst)
+@@ -410,7 +495,28 @@ static void RealSave_STNN(BaseStation *bst)
  	if (!waypoint) {
  		Station *st = Station::From(bst);
  		for (CargoID i = 0; i < NUM_CARGO; i++) {
@@ -6361,7 +6252,7 @@ index 78277d4..cee65bc 100644
  		}
  	}
  
-@@ -452,6 +559,27 @@ static void Load_STNN()
+@@ -452,6 +558,27 @@ static void Load_STNN()
  
  			for (CargoID i = 0; i < NUM_CARGO; i++) {
  				SlObject(&st->goods[i], GetGoodsDesc());
@@ -6389,7 +6280,7 @@ index 78277d4..cee65bc 100644
  			}
  		}
  
-@@ -474,7 +602,16 @@ static void Ptrs_STNN()
+@@ -474,7 +601,16 @@ static void Ptrs_STNN()
  	FOR_ALL_STATIONS(st) {
  		for (CargoID i = 0; i < NUM_CARGO; i++) {
  			GoodsEntry *ge = &st->goods[i];
@@ -6486,7 +6377,7 @@ index 7237574..66c1a84 100644
  };
  
 diff --git a/src/settings_type.h b/src/settings_type.h
-index 5ff4a06..4c2f92a 100644
+index 5ff4a06..76f0933 100644
 --- a/src/settings_type.h
 +++ b/src/settings_type.h
 @@ -17,6 +17,8 @@
@@ -6498,18 +6389,7 @@ index 5ff4a06..4c2f92a 100644
  #include "openttd.h"
  
  /** Available industry map generation densities. */
-@@ -113,6 +115,10 @@ struct GUISettings {
- 
- 	uint16 console_backlog_timeout;          ///< the minimum amount of time items should be in the console backlog before they will be removed in ~3 seconds granularity.
- 	uint16 console_backlog_length;           ///< the minimum amount of items in the console backlog before items will be removed.
-+
-+	uint8  station_gui_group_order;          ///< the order of grouping cargo entries in the station gui
-+	uint8  station_gui_sort_by;              ///< sort cargo entries in the station gui by station name or amount
-+	uint8  station_gui_sort_order;           ///< the sort order of entries in the station gui - ascending or descending
- #ifdef ENABLE_NETWORK
- 	uint16 network_chat_box_width;           ///< width of the chat box in pixels
- 	uint8  network_chat_box_height;          ///< height of the chat box in lines
-@@ -406,6 +412,30 @@ struct EconomySettings {
+@@ -406,6 +408,30 @@ struct EconomySettings {
  	bool   allow_town_level_crossings;       ///< towns are allowed to build level crossings
  };
  
@@ -6540,7 +6420,7 @@ index 5ff4a06..4c2f92a 100644
  /** Settings related to stations. */
  struct StationSettings {
  	bool   modified_catchment;               ///< different-size catchment areas
-@@ -444,6 +474,7 @@ struct GameSettings {
+@@ -444,6 +470,7 @@ struct GameSettings {
  	OrderSettings        order;              ///< settings related to orders
  	VehicleSettings      vehicle;            ///< options for vehicles
  	EconomySettings      economy;            ///< settings to change the economy
@@ -6560,2191 +6440,6 @@ index 222d489..de0c9e1 100644
  		v->engine_type = e->index;
  
  		v->reliability = e->reliability;
-diff --git a/src/smallmap_gui.cpp b/src/smallmap_gui.cpp
-index 7989c5d..f3857e6 100644
---- a/src/smallmap_gui.cpp
-+++ b/src/smallmap_gui.cpp
-@@ -14,45 +14,25 @@
- #include "industry.h"
- #include "station_map.h"
- #include "landscape.h"
--#include "window_gui.h"
- #include "tree_map.h"
- #include "viewport_func.h"
- #include "town.h"
--#include "blitter/factory.hpp"
- #include "tunnelbridge_map.h"
--#include "strings_func.h"
- #include "core/endian_func.hpp"
- #include "vehicle_base.h"
- #include "sound_func.h"
- #include "window_func.h"
- #include "company_base.h"
-+#include "smallmap_gui.h"
- 
- #include "table/strings.h"
- 
--/** Widget numbers of the small map window. */
--enum SmallMapWindowWidgets {
--	SM_WIDGET_CAPTION,           ///< Caption widget.
--	SM_WIDGET_MAP_BORDER,        ///< Border around the smallmap.
--	SM_WIDGET_MAP,               ///< Panel containing the smallmap.
--	SM_WIDGET_LEGEND,            ///< Bottom panel to display smallmap legends.
--	SM_WIDGET_ZOOM_IN,           ///< Button to zoom in one step.
--	SM_WIDGET_ZOOM_OUT,          ///< Button to zoom out one step.
--	SM_WIDGET_CONTOUR,           ///< Button to select the contour view (height map).
--	SM_WIDGET_VEHICLES,          ///< Button to select the vehicles view.
--	SM_WIDGET_INDUSTRIES,        ///< Button to select the industries view.
--	SM_WIDGET_ROUTES,            ///< Button to select the routes view.
--	SM_WIDGET_VEGETATION,        ///< Button to select the vegetation view.
--	SM_WIDGET_OWNERS,            ///< Button to select the owners view.
--	SM_WIDGET_CENTERMAP,         ///< Button to move smallmap center to main window center.
--	SM_WIDGET_TOGGLETOWNNAME,    ///< Toggle button to display town names.
--	SM_WIDGET_SELECT_BUTTONS,    ///< Selection widget for the buttons present in some smallmap modes.
--	SM_WIDGET_ENABLE_ALL,        ///< Button to enable display of all legend entries.
--	SM_WIDGET_DISABLE_ALL,       ///< Button to disable display of all legend entries.
--	SM_WIDGET_SHOW_HEIGHT,       ///< Show heightmap toggle button.
--};
--
- static int _smallmap_industry_count; ///< Number of used industries
- static int _smallmap_company_count;  ///< Number of entries in the owner legend.
-+static int _smallmap_cargo_count;    ///< number of cargos in the link stats legend
-+
-+/** Link stat colours shown in legenda. */
-+static uint8 _linkstat_colours_in_legenda[] = {0, 1, 3, 5, 7, 9, 11};
- 
- static const int NUM_NO_COMPANY_ENTRIES = 4; ///< Number of entries in the owner legend that are not companies.
- 
-@@ -84,18 +64,6 @@ static const uint8 PC_WATER           = 0xCA; ///< Dark blue palette colour for
-  */
- #define MS(a, b) {a, b, INVALID_INDUSTRYTYPE, 0, INVALID_COMPANY, true, false, true}
- 
--/** Structure for holding relevant data for legends in small map */
--struct LegendAndColour {
--	uint8 colour;              ///< Colour of the item on the map.
--	StringID legend;           ///< String corresponding to the coloured item.
--	IndustryType type;         ///< Type of industry. Only valid for industry entries.
--	uint8 height;              ///< Height in tiles. Only valid for height legend entries.
--	CompanyID company;         ///< Company to display. Only valid for company entries of the owner legend.
--	bool show_on_map;          ///< For filtering industries, if \c true, industry is shown on the map in colour.
--	bool end;                  ///< This is the end of the list.
--	bool col_break;            ///< Perform a column break and go further at the next column.
--};
--
- /** Legend text giving the colours to look for on the minimap */
- static LegendAndColour _legend_land_contours[] = {
- 	/* The colours for the following values are set at BuildLandLegend() based on each colour scheme. */
-@@ -169,6 +137,8 @@ static LegendAndColour _legend_land_owners[NUM_NO_COMPANY_ENTRIES + MAX_COMPANIE
- #undef MOEND
- #undef MKEND
- 
-+/** Legend entries for the link stats view. */
-+static LegendAndColour _legend_linkstats[NUM_CARGO + lengthof(_linkstat_colours_in_legenda) + 1];
- /**
-  * Allow room for all industries, plus a terminator entry
-  * This is required in order to have the indutry slots all filled up
-@@ -212,10 +182,44 @@ void BuildIndustriesLegend()
- 	_smallmap_industry_count = j;
- }
- 
-+/**
-+ * Populate legend table for the link stat view.
-+ */
-+void BuildLinkStatsLegend()
-+{
-+	/* Clear the legend */
-+	memset(_legend_linkstats, 0, sizeof(_legend_linkstats));
-+
-+	uint i = 0;
-+	for (; i < _sorted_cargo_specs_size; ++i) {
-+		const CargoSpec *cs = _sorted_cargo_specs[i];
-+
-+		_legend_linkstats[i].legend = cs->name;
-+		_legend_linkstats[i].colour = cs->legend_colour;
-+		_legend_linkstats[i].type = cs->Index();
-+		_legend_linkstats[i].show_on_map = true;
-+	}
-+
-+	_legend_linkstats[i].col_break = true;
-+	_smallmap_cargo_count = i;
-+
-+	for (; i < _smallmap_cargo_count + lengthof(_linkstat_colours_in_legenda); ++i) {
-+		_legend_linkstats[i].legend = STR_EMPTY;
-+		_legend_linkstats[i].colour = LinkGraphOverlay::LINK_COLOURS[_linkstat_colours_in_legenda[i - _smallmap_cargo_count]];
-+		_legend_linkstats[i].show_on_map = true;
-+	}
-+
-+	_legend_linkstats[_smallmap_cargo_count].legend = STR_LINKGRAPH_LEGEND_UNUSED;
-+	_legend_linkstats[i - 1].legend = STR_LINKGRAPH_LEGEND_OVERLOADED;
-+	_legend_linkstats[(_smallmap_cargo_count + i - 1) / 2].legend = STR_LINKGRAPH_LEGEND_SATURATED;
-+	_legend_linkstats[i].end = true;
-+}
-+
- static const LegendAndColour * const _legend_table[] = {
- 	_legend_land_contours,
- 	_legend_vehicles,
- 	_legend_from_industries,
-+	_legend_linkstats,
- 	_legend_routes,
- 	_legend_vegetation,
- 	_legend_land_owners,
-@@ -506,6 +510,17 @@ static inline uint32 GetSmallMapRoutesPixels(TileIndex tile, TileType t)
- 	return ApplyMask(cs->default_colour, &_smallmap_contours_andor[t]);
- }
- 
-+/**
-+ * Return the colour a tile would be displayed with in the small map in mode "link stats".
-+ *
-+ * @param tile The tile of which we would like to get the colour.
-+ * @param t    Effective tile type of the tile (see #GetEffectiveTileType).
-+ * @return The colour of tile in the small map in mode "link stats"
-+ */
-+static inline uint32 GetSmallMapLinkStatsPixels(TileIndex tile, TileType t)
-+{
-+	return _smallmap_show_heightmap ? GetSmallMapContoursPixels(tile, t) : GetSmallMapRoutesPixels(tile, t);
-+}
- 
- static const uint32 _vegetation_clear_bits[] = {
- 	MKCOLOUR_XXXX(PC_GRASS_LAND), ///< full grass
-@@ -582,979 +597,981 @@ static const byte _vehicle_type_colours[6] = {
- 	PC_RED, PC_YELLOW, PC_LIGHT_BLUE, PC_WHITE, PC_BLACK, PC_RED
- };
- 
-+/**
-+ * Remap tile to location on this smallmap.
-+ * @param tile_x X coordinate of the tile.
-+ * @param tile_y Y coordinate of the tile.
-+ * @return Position to draw on.
-+ */
-+FORCEINLINE Point SmallMapWindow::RemapTile(int tile_x, int tile_y) const
-+{
-+	int x_offset = tile_x - this->scroll_x / (int)TILE_SIZE;
-+	int y_offset = tile_y - this->scroll_y / (int)TILE_SIZE;
- 
--/** Class managing the smallmap window. */
--class SmallMapWindow : public Window {
--	/** Types of legends in the #SM_WIDGET_LEGEND widget. */
--	enum SmallMapType {
--		SMT_CONTOUR,
--		SMT_VEHICLES,
--		SMT_INDUSTRY,
--		SMT_ROUTES,
--		SMT_VEGETATION,
--		SMT_OWNER,
--	};
--
--	/** Available kinds of zoomlevel changes. */
--	enum ZoomLevelChange {
--		ZLC_INITIALIZE, ///< Initialize zoom level.
--		ZLC_ZOOM_OUT,   ///< Zoom out.
--		ZLC_ZOOM_IN,    ///< Zoom in.
--	};
--
--	static SmallMapType map_type; ///< Currently displayed legends.
--	static bool show_towns;       ///< Display town names in the smallmap.
--
--	static const uint LEGEND_BLOB_WIDTH = 8;              ///< Width of the coloured blob in front of a line text in the #SM_WIDGET_LEGEND widget.
--	static const uint INDUSTRY_MIN_NUMBER_OF_COLUMNS = 2; ///< Minimal number of columns in the #SM_WIDGET_LEGEND widget for the #SMT_INDUSTRY legend.
--	uint min_number_of_fixed_rows; ///< Minimal number of rows in the legends for the fixed layouts only (all except #SMT_INDUSTRY).
--	uint column_width;             ///< Width of a column in the #SM_WIDGET_LEGEND widget.
--
--	int32 scroll_x;  ///< Horizontal world coordinate of the base tile left of the top-left corner of the smallmap display.
--	int32 scroll_y;  ///< Vertical world coordinate of the base tile left of the top-left corner of the smallmap display.
--	int32 subscroll; ///< Number of pixels (0..3) between the right end of the base tile and the pixel at the top-left corner of the smallmap display.
--	int zoom;        ///< Zoom level. Bigger number means more zoom-out (further away).
--
--	static const uint8 FORCE_REFRESH_PERIOD = 0x1F; ///< map is redrawn after that many ticks
--	uint8 refresh; ///< refresh counter, zeroed every FORCE_REFRESH_PERIOD ticks
--
--	/**
--	 * Remap tile to location on this smallmap.
--	 * @param tile_x X coordinate of the tile.
--	 * @param tile_y Y coordinate of the tile.
--	 * @return Position to draw on.
--	 */
--	FORCEINLINE Point RemapTile(int tile_x, int tile_y) const
--	{
--		int x_offset = tile_x - this->scroll_x / (int)TILE_SIZE;
--		int y_offset = tile_y - this->scroll_y / (int)TILE_SIZE;
--
--		if (this->zoom == 1) return RemapCoords(x_offset, y_offset, 0);
-+	if (this->zoom == 1) return RemapCoords(x_offset, y_offset, 0);
- 
--		/* For negative offsets, round towards -inf. */
--		if (x_offset < 0) x_offset -= this->zoom - 1;
--		if (y_offset < 0) y_offset -= this->zoom - 1;
-+	/* For negative offsets, round towards -inf. */
-+	if (x_offset < 0) x_offset -= this->zoom - 1;
-+	if (y_offset < 0) y_offset -= this->zoom - 1;
- 
--		return RemapCoords(x_offset / this->zoom, y_offset / this->zoom, 0);
--	}
-+	return RemapCoords(x_offset / this->zoom, y_offset / this->zoom, 0);
-+}
- 
--	/**
--	 * Determine the tile relative to the base tile of the smallmap, and the pixel position at
--	 * that tile for a point in the smallmap.
--	 * @param px       Horizontal coordinate of the pixel.
--	 * @param py       Vertical coordinate of the pixel.
--	 * @param sub[out] Pixel position at the tile (0..3).
--	 * @param add_sub  Add current #subscroll to the position.
--	 * @return Tile being displayed at the given position relative to #scroll_x and #scroll_y.
--	 * @note The #subscroll offset is already accounted for.
--	 */
--	FORCEINLINE Point PixelToTile(int px, int py, int *sub, bool add_sub = true) const
--	{
--		if (add_sub) px += this->subscroll;  // Total horizontal offset.
-+/**
-+ * Determine the tile relative to the base tile of the smallmap, and the pixel position at
-+ * that tile for a point in the smallmap.
-+ * @param px       Horizontal coordinate of the pixel.
-+ * @param py       Vertical coordinate of the pixel.
-+ * @param sub[out] Pixel position at the tile (0..3).
-+ * @param add_sub  Add current #subscroll to the position.
-+ * @return Tile being displayed at the given position relative to #scroll_x and #scroll_y.
-+ * @note The #subscroll offset is already accounted for.
-+ */
-+FORCEINLINE Point SmallMapWindow::PixelToTile(int px, int py, int *sub, bool add_sub) const
-+{
-+	if (add_sub) px += this->subscroll;  // Total horizontal offset.
- 
--		/* For each two rows down, add a x and a y tile, and
--		 * For each four pixels to the right, move a tile to the right. */
--		Point pt = {((py >> 1) - (px >> 2)) * this->zoom, ((py >> 1) + (px >> 2)) * this->zoom};
--		px &= 3;
-+	/* For each two rows down, add a x and a y tile, and
-+	 * For each four pixels to the right, move a tile to the right. */
-+	Point pt = {((py >> 1) - (px >> 2)) * this->zoom, ((py >> 1) + (px >> 2)) * this->zoom};
-+	px &= 3;
- 
--		if (py & 1) { // Odd number of rows, handle the 2 pixel shift.
--			if (px < 2) {
--				pt.x += this->zoom;
--				px += 2;
--			} else {
--				pt.y += this->zoom;
--				px -= 2;
--			}
-+	if (py & 1) { // Odd number of rows, handle the 2 pixel shift.
-+		if (px < 2) {
-+			pt.x += this->zoom;
-+			px += 2;
-+		} else {
-+			pt.y += this->zoom;
-+			px -= 2;
- 		}
--
--		*sub = px;
--		return pt;
- 	}
- 
--	/**
--	 * Compute base parameters of the smallmap such that tile (\a tx, \a ty) starts at pixel (\a x, \a y).
--	 * @param tx        Tile x coordinate.
--	 * @param ty        Tile y coordinate.
--	 * @param x         Non-negative horizontal position in the display where the tile starts.
--	 * @param y         Non-negative vertical position in the display where the tile starts.
--	 * @param sub [out] Value of #subscroll needed.
--	 * @return #scroll_x, #scroll_y values.
--	 */
--	Point ComputeScroll(int tx, int ty, int x, int y, int *sub)
--	{
--		assert(x >= 0 && y >= 0);
--
--		int new_sub;
--		Point tile_xy = PixelToTile(x, y, &new_sub, false);
--		tx -= tile_xy.x;
--		ty -= tile_xy.y;
--
--		Point scroll;
--		if (new_sub == 0) {
--			*sub = 0;
--			scroll.x = (tx + this->zoom) * TILE_SIZE;
--			scroll.y = (ty - this->zoom) * TILE_SIZE;
--		} else {
--			*sub = 4 - new_sub;
--			scroll.x = (tx + 2 * this->zoom) * TILE_SIZE;
--			scroll.y = (ty - 2 * this->zoom) * TILE_SIZE;
--		}
--		return scroll;
-+	*sub = px;
-+	return pt;
-+}
-+
-+/**
-+ * Compute base parameters of the smallmap such that tile (\a tx, \a ty) starts at pixel (\a x, \a y).
-+ * @param tx        Tile x coordinate.
-+ * @param ty        Tile y coordinate.
-+ * @param x         Non-negative horizontal position in the display where the tile starts.
-+ * @param y         Non-negative vertical position in the display where the tile starts.
-+ * @param sub [out] Value of #subscroll needed.
-+ * @return #scroll_x, #scroll_y values.
-+ */
-+Point SmallMapWindow::ComputeScroll(int tx, int ty, int x, int y, int *sub)
-+{
-+	assert(x >= 0 && y >= 0);
-+
-+	int new_sub;
-+	Point tile_xy = PixelToTile(x, y, &new_sub, false);
-+	tx -= tile_xy.x;
-+	ty -= tile_xy.y;
-+
-+	Point scroll;
-+	if (new_sub == 0) {
-+		*sub = 0;
-+		scroll.x = (tx + this->zoom) * TILE_SIZE;
-+		scroll.y = (ty - this->zoom) * TILE_SIZE;
-+	} else {
-+		*sub = 4 - new_sub;
-+		scroll.x = (tx + 2 * this->zoom) * TILE_SIZE;
-+		scroll.y = (ty - 2 * this->zoom) * TILE_SIZE;
- 	}
-+	return scroll;
-+}
- 
--	/**
--	 * Initialize or change the zoom level.
--	 * @param change  Way to change the zoom level.
--	 * @param zoom_pt Position to keep fixed while zooming.
--	 * @pre \c *zoom_pt should contain a point in the smallmap display when zooming in or out.
--	 */
--	void SetZoomLevel(ZoomLevelChange change, const Point *zoom_pt)
--	{
--		static const int zoomlevels[] = {1, 2, 4, 6, 8}; // Available zoom levels. Bigger number means more zoom-out (further away).
--		static const int MIN_ZOOM_INDEX = 0;
--		static const int MAX_ZOOM_INDEX = lengthof(zoomlevels) - 1;
--
--		int new_index, cur_index, sub;
--		Point tile;
--		switch (change) {
--			case ZLC_INITIALIZE:
--				cur_index = - 1; // Definitely different from new_index.
--				new_index = MIN_ZOOM_INDEX;
--				break;
-+/**
-+ * Initialize or change the zoom level.
-+ * @param change  Way to change the zoom level.
-+ * @param zoom_pt Position to keep fixed while zooming.
-+ * @pre \c *zoom_pt should contain a point in the smallmap display when zooming in or out.
-+ */
-+void SmallMapWindow::SetZoomLevel(ZoomLevelChange change, const Point *zoom_pt)
-+{
-+	static const int zoomlevels[] = {1, 2, 4, 6, 8}; // Available zoom levels. Bigger number means more zoom-out (further away).
-+	static const int MIN_ZOOM_INDEX = 0;
-+	static const int MAX_ZOOM_INDEX = lengthof(zoomlevels) - 1;
-+
-+	int new_index, cur_index, sub;
-+	Point tile;
-+	switch (change) {
-+		case ZLC_INITIALIZE:
-+			cur_index = - 1; // Definitely different from new_index.
-+			new_index = MIN_ZOOM_INDEX;
-+			break;
-+
-+		case ZLC_ZOOM_IN:
-+		case ZLC_ZOOM_OUT:
-+			for (cur_index = MIN_ZOOM_INDEX; cur_index <= MAX_ZOOM_INDEX; cur_index++) {
-+				if (this->zoom == zoomlevels[cur_index]) break;
-+			}
-+			assert(cur_index <= MAX_ZOOM_INDEX);
- 
--			case ZLC_ZOOM_IN:
--			case ZLC_ZOOM_OUT:
--				for (cur_index = MIN_ZOOM_INDEX; cur_index <= MAX_ZOOM_INDEX; cur_index++) {
--					if (this->zoom == zoomlevels[cur_index]) break;
--				}
--				assert(cur_index <= MAX_ZOOM_INDEX);
-+			tile = this->PixelToTile(zoom_pt->x, zoom_pt->y, &sub);
-+			new_index = Clamp(cur_index + ((change == ZLC_ZOOM_IN) ? -1 : 1), MIN_ZOOM_INDEX, MAX_ZOOM_INDEX);
-+			break;
- 
--				tile = this->PixelToTile(zoom_pt->x, zoom_pt->y, &sub);
--				new_index = Clamp(cur_index + ((change == ZLC_ZOOM_IN) ? -1 : 1), MIN_ZOOM_INDEX, MAX_ZOOM_INDEX);
--				break;
-+		default: NOT_REACHED();
-+	}
- 
--			default: NOT_REACHED();
-+	if (new_index != cur_index) {
-+		this->zoom = zoomlevels[new_index];
-+		if (cur_index >= 0) {
-+			Point new_tile = this->PixelToTile(zoom_pt->x, zoom_pt->y, &sub);
-+			this->SetNewScroll(this->scroll_x + (tile.x - new_tile.x) * TILE_SIZE,
-+					this->scroll_y + (tile.y - new_tile.y) * TILE_SIZE, sub);
-+		} else if (this->map_type == SMT_LINKSTATS) {
-+			this->overlay->RebuildCache();
- 		}
-+		this->SetWidgetDisabledState(SM_WIDGET_ZOOM_IN,  this->zoom == zoomlevels[MIN_ZOOM_INDEX]);
-+		this->SetWidgetDisabledState(SM_WIDGET_ZOOM_OUT, this->zoom == zoomlevels[MAX_ZOOM_INDEX]);
-+		this->SetDirty();
-+	}
-+}
- 
--		if (new_index != cur_index) {
--			this->zoom = zoomlevels[new_index];
--			if (cur_index >= 0) {
--				Point new_tile = this->PixelToTile(zoom_pt->x, zoom_pt->y, &sub);
--				this->SetNewScroll(this->scroll_x + (tile.x - new_tile.x) * TILE_SIZE,
--						this->scroll_y + (tile.y - new_tile.y) * TILE_SIZE, sub);
--			}
--			this->SetWidgetDisabledState(SM_WIDGET_ZOOM_IN,  this->zoom == zoomlevels[MIN_ZOOM_INDEX]);
--			this->SetWidgetDisabledState(SM_WIDGET_ZOOM_OUT, this->zoom == zoomlevels[MAX_ZOOM_INDEX]);
--			this->SetDirty();
-+/**
-+ * Decide which colours to show to the user for a group of tiles.
-+ * @param ta Tile area to investigate.
-+ * @return Colours to display.
-+ */
-+inline uint32 SmallMapWindow::GetTileColours(const TileArea &ta) const
-+{
-+	int importance = 0;
-+	TileIndex tile = INVALID_TILE; // Position of the most important tile.
-+	TileType et = MP_VOID;         // Effective tile type at that position.
-+
-+	TILE_AREA_LOOP(ti, ta) {
-+		TileType ttype = GetEffectiveTileType(ti);
-+		if (_tiletype_importance[ttype] > importance) {
-+			importance = _tiletype_importance[ttype];
-+			tile = ti;
-+			et = ttype;
- 		}
- 	}
- 
--	/**
--	 * Decide which colours to show to the user for a group of tiles.
--	 * @param ta Tile area to investigate.
--	 * @return Colours to display.
--	 */
--	inline uint32 GetTileColours(const TileArea &ta) const
--	{
--		int importance = 0;
--		TileIndex tile = INVALID_TILE; // Position of the most important tile.
--		TileType et = MP_VOID;         // Effective tile type at that position.
--
--		TILE_AREA_LOOP(ti, ta) {
--			TileType ttype = GetEffectiveTileType(ti);
--			if (_tiletype_importance[ttype] > importance) {
--				importance = _tiletype_importance[ttype];
--				tile = ti;
--				et = ttype;
--			}
--		}
-+	switch (this->map_type) {
-+		case SMT_CONTOUR:
-+			return GetSmallMapContoursPixels(tile, et);
- 
--		switch (this->map_type) {
--			case SMT_CONTOUR:
--				return GetSmallMapContoursPixels(tile, et);
-+		case SMT_VEHICLES:
-+			return GetSmallMapVehiclesPixels(tile, et);
- 
--			case SMT_VEHICLES:
--				return GetSmallMapVehiclesPixels(tile, et);
-+		case SMT_INDUSTRY:
-+			return GetSmallMapIndustriesPixels(tile, et);
- 
--			case SMT_INDUSTRY:
--				return GetSmallMapIndustriesPixels(tile, et);
-+		case SMT_LINKSTATS:
-+			return GetSmallMapLinkStatsPixels(tile, et);
- 
--			case SMT_ROUTES:
--				return GetSmallMapRoutesPixels(tile, et);
-+		case SMT_ROUTES:
-+			return GetSmallMapRoutesPixels(tile, et);
- 
--			case SMT_VEGETATION:
--				return GetSmallMapVegetationPixels(tile, et);
-+		case SMT_VEGETATION:
-+			return GetSmallMapVegetationPixels(tile, et);
- 
--			case SMT_OWNER:
--				return GetSmallMapOwnerPixels(tile, et);
-+		case SMT_OWNER:
-+			return GetSmallMapOwnerPixels(tile, et);
- 
--			default: NOT_REACHED();
--		}
-+		default: NOT_REACHED();
- 	}
-+}
- 
--	/**
--	 * Draws one column of tiles of the small map in a certain mode onto the screen buffer, skipping the shifted rows in between.
--	 *
--	 * @param dst Pointer to a part of the screen buffer to write to.
--	 * @param xc The X coordinate of the first tile in the column.
--	 * @param yc The Y coordinate of the first tile in the column
--	 * @param pitch Number of pixels to advance in the screen buffer each time a pixel is written.
--	 * @param reps Number of lines to draw
--	 * @param start_pos Position of first pixel to draw.
--	 * @param end_pos Position of last pixel to draw (exclusive).
--	 * @param blitter current blitter
--	 * @note If pixel position is below \c 0, skip drawing.
--	 * @see GetSmallMapPixels(TileIndex)
--	 */
--	void DrawSmallMapColumn(void *dst, uint xc, uint yc, int pitch, int reps, int start_pos, int end_pos, Blitter *blitter) const
--	{
--		void *dst_ptr_abs_end = blitter->MoveTo(_screen.dst_ptr, 0, _screen.height);
--		uint min_xy = _settings_game.construction.freeform_edges ? 1 : 0;
--
--		do {
--			/* Check if the tile (xc,yc) is within the map range */
--			if (xc >= MapMaxX() || yc >= MapMaxY()) continue;
-+/**
-+ * Draws one column of tiles of the small map in a certain mode onto the screen buffer, skipping the shifted rows in between.
-+ *
-+ * @param dst Pointer to a part of the screen buffer to write to.
-+ * @param xc The X coordinate of the first tile in the column.
-+ * @param yc The Y coordinate of the first tile in the column
-+ * @param pitch Number of pixels to advance in the screen buffer each time a pixel is written.
-+ * @param reps Number of lines to draw
-+ * @param start_pos Position of first pixel to draw.
-+ * @param end_pos Position of last pixel to draw (exclusive).
-+ * @param blitter current blitter
-+ * @note If pixel position is below \c 0, skip drawing.
-+ * @see GetSmallMapPixels(TileIndex)
-+ */
-+void SmallMapWindow::DrawSmallMapColumn(void *dst, uint xc, uint yc, int pitch, int reps, int start_pos, int end_pos, Blitter *blitter) const
-+{
-+	void *dst_ptr_abs_end = blitter->MoveTo(_screen.dst_ptr, 0, _screen.height);
-+	uint min_xy = _settings_game.construction.freeform_edges ? 1 : 0;
- 
--			/* Check if the dst pointer points to a pixel inside the screen buffer */
--			if (dst < _screen.dst_ptr) continue;
--			if (dst >= dst_ptr_abs_end) continue;
-+	do {
-+		/* Check if the tile (xc,yc) is within the map range */
-+		if (xc >= MapMaxX() || yc >= MapMaxY()) continue;
- 
--			/* Construct tilearea covered by (xc, yc, xc + this->zoom, yc + this->zoom) such that it is within min_xy limits. */
--			TileArea ta;
--			if (min_xy == 1 && (xc == 0 || yc == 0)) {
--				if (this->zoom == 1) continue; // The tile area is empty, don't draw anything.
-+		/* Check if the dst pointer points to a pixel inside the screen buffer */
-+		if (dst < _screen.dst_ptr) continue;
-+		if (dst >= dst_ptr_abs_end) continue;
- 
--				ta = TileArea(TileXY(max(min_xy, xc), max(min_xy, yc)), this->zoom - (xc == 0), this->zoom - (yc == 0));
--			} else {
--				ta = TileArea(TileXY(xc, yc), this->zoom, this->zoom);
--			}
--			ta.ClampToMap(); // Clamp to map boundaries (may contain MP_VOID tiles!).
--
--			uint32 val = this->GetTileColours(ta);
--			uint8 *val8 = (uint8 *)&val;
--			int idx = max(0, -start_pos);
--			for (int pos = max(0, start_pos); pos < end_pos; pos++) {
--				blitter->SetPixel(dst, idx, 0, val8[idx]);
--				idx++;
--			}
--		/* Switch to next tile in the column */
--		} while (xc += this->zoom, yc += this->zoom, dst = blitter->MoveTo(dst, pitch, 0), --reps != 0);
--	}
-+		/* Construct tilearea covered by (xc, yc, xc + this->zoom, yc + this->zoom) such that it is within min_xy limits. */
-+		TileArea ta;
-+		if (min_xy == 1 && (xc == 0 || yc == 0)) {
-+			if (this->zoom == 1) continue; // The tile area is empty, don't draw anything.
- 
--	/**
--	 * Adds vehicles to the smallmap.
--	 * @param dpi the part of the smallmap to be drawn into
--	 * @param blitter current blitter
--	 */
--	void DrawVehicles(const DrawPixelInfo *dpi, Blitter *blitter) const
--	{
--		const Vehicle *v;
--		FOR_ALL_VEHICLES(v) {
--			if (v->type == VEH_EFFECT) continue;
--			if (v->vehstatus & (VS_HIDDEN | VS_UNCLICKABLE)) continue;
--
--			/* Remap into flat coordinates. */
--			Point pt = this->RemapTile(v->x_pos / TILE_SIZE, v->y_pos / TILE_SIZE);
--
--			int y = pt.y - dpi->top;
--			if (!IsInsideMM(y, 0, dpi->height)) continue; // y is out of bounds.
--
--			bool skip = false; // Default is to draw both pixels.
--			int x = pt.x - this->subscroll - 3 - dpi->left; // Offset X coordinate.
--			if (x < 0) {
--				/* if x+1 is 0, that means we're on the very left edge,
--				 * and should thus only draw a single pixel */
--				if (++x != 0) continue;
--				skip = true;
--			} else if (x >= dpi->width - 1) {
--				/* Check if we're at the very right edge, and if so draw only a single pixel */
--				if (x != dpi->width - 1) continue;
--				skip = true;
--			}
--
--			/* Calculate pointer to pixel and the colour */
--			byte colour = (this->map_type == SMT_VEHICLES) ? _vehicle_type_colours[v->type] : PC_WHITE;
--
--			/* And draw either one or two pixels depending on clipping */
--			blitter->SetPixel(dpi->dst_ptr, x, y, colour);
--			if (!skip) blitter->SetPixel(dpi->dst_ptr, x + 1, y, colour);
-+			ta = TileArea(TileXY(max(min_xy, xc), max(min_xy, yc)), this->zoom - (xc == 0), this->zoom - (yc == 0));
-+		} else {
-+			ta = TileArea(TileXY(xc, yc), this->zoom, this->zoom);
- 		}
--	}
-+		ta.ClampToMap(); // Clamp to map boundaries (may contain MP_VOID tiles!).
-+
-+		uint32 val = this->GetTileColours(ta);
-+		uint8 *val8 = (uint8 *)&val;
-+		int idx = max(0, -start_pos);
-+		for (int pos = max(0, start_pos); pos < end_pos; pos++) {
-+			blitter->SetPixel(dst, idx, 0, val8[idx]);
-+			idx++;
-+		}
-+	/* Switch to next tile in the column */
-+	} while (xc += this->zoom, yc += this->zoom, dst = blitter->MoveTo(dst, pitch, 0), --reps != 0);
-+}
- 
--	/**
--	 * Adds town names to the smallmap.
--	 * @param dpi the part of the smallmap to be drawn into
--	 */
--	void DrawTowns(const DrawPixelInfo *dpi) const
--	{
--		const Town *t;
--		FOR_ALL_TOWNS(t) {
--			/* Remap the town coordinate */
--			Point pt = this->RemapTile(TileX(t->xy), TileY(t->xy));
--			int x = pt.x - this->subscroll - (t->sign.width_small >> 1);
--			int y = pt.y;
--
--			/* Check if the town sign is within bounds */
--			if (x + t->sign.width_small > dpi->left &&
--					x < dpi->left + dpi->width &&
--					y + FONT_HEIGHT_SMALL > dpi->top &&
--					y < dpi->top + dpi->height) {
--				/* And draw it. */
--				SetDParam(0, t->index);
--				DrawString(x, x + t->sign.width_small, y, STR_SMALLMAP_TOWN);
--			}
-+/**
-+ * Adds vehicles to the smallmap.
-+ * @param dpi the part of the smallmap to be drawn into
-+ * @param blitter current blitter
-+ */
-+void SmallMapWindow::DrawVehicles(const DrawPixelInfo *dpi, Blitter *blitter) const
-+{
-+	const Vehicle *v;
-+	FOR_ALL_VEHICLES(v) {
-+		if (v->type == VEH_EFFECT) continue;
-+		if (v->vehstatus & (VS_HIDDEN | VS_UNCLICKABLE)) continue;
-+
-+		/* Remap into flat coordinates. */
-+		Point pt = this->RemapTile(v->x_pos / TILE_SIZE, v->y_pos / TILE_SIZE);
-+
-+		int y = pt.y - dpi->top;
-+		if (!IsInsideMM(y, 0, dpi->height)) continue; // y is out of bounds.
-+
-+		bool skip = false; // Default is to draw both pixels.
-+		int x = pt.x - this->subscroll - 3 - dpi->left; // Offset X coordinate.
-+		if (x < 0) {
-+			/* if x+1 is 0, that means we're on the very left edge,
-+			 * and should thus only draw a single pixel */
-+			if (++x != 0) continue;
-+			skip = true;
-+		} else if (x >= dpi->width - 1) {
-+			/* Check if we're at the very right edge, and if so draw only a single pixel */
-+			if (x != dpi->width - 1) continue;
-+			skip = true;
- 		}
--	}
- 
--	/**
--	 * Draws vertical part of map indicator
--	 * @param x X coord of left/right border of main viewport
--	 * @param y Y coord of top border of main viewport
--	 * @param y2 Y coord of bottom border of main viewport
--	 */
--	static inline void DrawVertMapIndicator(int x, int y, int y2)
--	{
--		GfxFillRect(x, y,      x, y + 3, PC_VERY_LIGHT_YELLOW);
--		GfxFillRect(x, y2 - 3, x, y2,    PC_VERY_LIGHT_YELLOW);
--	}
-+		/* Calculate pointer to pixel and the colour */
-+		byte colour = (this->map_type == SMT_VEHICLES) ? _vehicle_type_colours[v->type] : PC_WHITE;
- 
--	/**
--	 * Draws horizontal part of map indicator
--	 * @param x X coord of left border of main viewport
--	 * @param x2 X coord of right border of main viewport
--	 * @param y Y coord of top/bottom border of main viewport
--	 */
--	static inline void DrawHorizMapIndicator(int x, int x2, int y)
--	{
--		GfxFillRect(x,      y, x + 3, y, PC_VERY_LIGHT_YELLOW);
--		GfxFillRect(x2 - 3, y, x2,    y, PC_VERY_LIGHT_YELLOW);
-+		/* And draw either one or two pixels depending on clipping */
-+		blitter->SetPixel(dpi->dst_ptr, x, y, colour);
-+		if (!skip) blitter->SetPixel(dpi->dst_ptr, x + 1, y, colour);
- 	}
-+}
- 
--	/**
--	 * Adds map indicators to the smallmap.
--	 */
--	void DrawMapIndicators() const
--	{
--		/* Find main viewport. */
--		const ViewPort *vp = FindWindowById(WC_MAIN_WINDOW, 0)->viewport;
-+/**
-+ * Adds town names to the smallmap.
-+ * @param dpi the part of the smallmap to be drawn into
-+ */
-+void SmallMapWindow::DrawTowns(const DrawPixelInfo *dpi) const
-+{
-+	const Town *t;
-+	FOR_ALL_TOWNS(t) {
-+		/* Remap the town coordinate */
-+		Point pt = this->RemapTile(TileX(t->xy), TileY(t->xy));
-+		int x = pt.x - this->subscroll - (t->sign.width_small >> 1);
-+		int y = pt.y;
-+
-+		/* Check if the town sign is within bounds */
-+		if (x + t->sign.width_small > dpi->left &&
-+				x < dpi->left + dpi->width &&
-+				y + FONT_HEIGHT_SMALL > dpi->top &&
-+				y < dpi->top + dpi->height) {
-+			/* And draw it. */
-+			SetDParam(0, t->index);
-+			DrawString(x, x + t->sign.width_small, y, STR_SMALLMAP_TOWN);
-+		}
-+	}
-+}
- 
--		Point tile = InverseRemapCoords(vp->virtual_left, vp->virtual_top);
--		Point tl = this->RemapTile(tile.x >> 4, tile.y >> 4);
--		tl.x -= this->subscroll;
-+/**
-+ * Adds map indicators to the smallmap.
-+ */
-+void SmallMapWindow::DrawMapIndicators() const
-+{
-+	/* Find main viewport. */
-+	const ViewPort *vp = FindWindowById(WC_MAIN_WINDOW, 0)->viewport;
- 
--		tile = InverseRemapCoords(vp->virtual_left + vp->virtual_width, vp->virtual_top + vp->virtual_height);
--		Point br = this->RemapTile(tile.x >> 4, tile.y >> 4);
--		br.x -= this->subscroll;
-+	Point tile = InverseRemapCoords(vp->virtual_left, vp->virtual_top);
-+	Point tl = this->RemapTile(tile.x >> 4, tile.y >> 4);
-+	tl.x -= this->subscroll;
- 
--		SmallMapWindow::DrawVertMapIndicator(tl.x, tl.y, br.y);
--		SmallMapWindow::DrawVertMapIndicator(br.x, tl.y, br.y);
-+	tile = InverseRemapCoords(vp->virtual_left + vp->virtual_width, vp->virtual_top + vp->virtual_height);
-+	Point br = this->RemapTile(tile.x >> 4, tile.y >> 4);
-+	br.x -= this->subscroll;
- 
--		SmallMapWindow::DrawHorizMapIndicator(tl.x, br.x, tl.y);
--		SmallMapWindow::DrawHorizMapIndicator(tl.x, br.x, br.y);
--	}
-+	SmallMapWindow::DrawVertMapIndicator(tl.x, tl.y, br.y);
-+	SmallMapWindow::DrawVertMapIndicator(br.x, tl.y, br.y);
- 
--	/**
--	 * Draws the small map.
--	 *
--	 * Basically, the small map is draw column of pixels by column of pixels. The pixels
--	 * are drawn directly into the screen buffer. The final map is drawn in multiple passes.
--	 * The passes are:
--	 * <ol><li>The colours of tiles in the different modes.</li>
--	 * <li>Town names (optional)</li></ol>
--	 *
--	 * @param dpi pointer to pixel to write onto
--	 */
--	void DrawSmallMap(DrawPixelInfo *dpi) const
--	{
--		Blitter *blitter = BlitterFactoryBase::GetCurrentBlitter();
--		DrawPixelInfo *old_dpi;
--
--		old_dpi = _cur_dpi;
--		_cur_dpi = dpi;
--
--		/* Clear it */
--		GfxFillRect(dpi->left, dpi->top, dpi->left + dpi->width - 1, dpi->top + dpi->height - 1, PC_BLACK);
--
--		/* Which tile is displayed at (dpi->left, dpi->top)? */
--		int dx;
--		Point tile = this->PixelToTile(dpi->left, dpi->top, &dx);
--		int tile_x = this->scroll_x / (int)TILE_SIZE + tile.x;
--		int tile_y = this->scroll_y / (int)TILE_SIZE + tile.y;
--
--		void *ptr = blitter->MoveTo(dpi->dst_ptr, -dx - 4, 0);
--		int x = - dx - 4;
--		int y = 0;
--
--		for (;;) {
--			/* Distance from left edge */
--			if (x >= -3) {
--				if (x >= dpi->width) break; // Exit the loop.
--
--				int end_pos = min(dpi->width, x + 4);
--				int reps = (dpi->height - y + 1) / 2; // Number of lines.
--				if (reps > 0) {
--					this->DrawSmallMapColumn(ptr, tile_x, tile_y, dpi->pitch * 2, reps, x, end_pos, blitter);
--				}
--			}
-+	SmallMapWindow::DrawHorizMapIndicator(tl.x, br.x, tl.y);
-+	SmallMapWindow::DrawHorizMapIndicator(tl.x, br.x, br.y);
-+}
- 
--			if (y == 0) {
--				tile_y += this->zoom;
--				y++;
--				ptr = blitter->MoveTo(ptr, 0, 1);
--			} else {
--				tile_x -= this->zoom;
--				y--;
--				ptr = blitter->MoveTo(ptr, 0, -1);
-+/**
-+ * Draws the small map.
-+ *
-+ * Basically, the small map is draw column of pixels by column of pixels. The pixels
-+ * are drawn directly into the screen buffer. The final map is drawn in multiple passes.
-+ * The passes are:
-+ * <ol><li>The colours of tiles in the different modes.</li>
-+ * <li>Town names (optional)</li></ol>
-+ *
-+ * @param dpi pointer to pixel to write onto
-+ */
-+void SmallMapWindow::DrawSmallMap(DrawPixelInfo *dpi) const
-+{
-+	Blitter *blitter = BlitterFactoryBase::GetCurrentBlitter();
-+	DrawPixelInfo *old_dpi;
-+
-+	old_dpi = _cur_dpi;
-+	_cur_dpi = dpi;
-+
-+	/* Clear it */
-+	GfxFillRect(dpi->left, dpi->top, dpi->left + dpi->width - 1, dpi->top + dpi->height - 1, PC_BLACK);
-+
-+	/* Which tile is displayed at (dpi->left, dpi->top)? */
-+	int dx;
-+	Point tile = this->PixelToTile(dpi->left, dpi->top, &dx);
-+	int tile_x = this->scroll_x / (int)TILE_SIZE + tile.x;
-+	int tile_y = this->scroll_y / (int)TILE_SIZE + tile.y;
-+
-+	void *ptr = blitter->MoveTo(dpi->dst_ptr, -dx - 4, 0);
-+	int x = - dx - 4;
-+	int y = 0;
-+
-+	for (;;) {
-+		/* Distance from left edge */
-+		if (x >= -3) {
-+			if (x >= dpi->width) break; // Exit the loop.
-+
-+			int end_pos = min(dpi->width, x + 4);
-+			int reps = (dpi->height - y + 1) / 2; // Number of lines.
-+			if (reps > 0) {
-+				this->DrawSmallMapColumn(ptr, tile_x, tile_y, dpi->pitch * 2, reps, x, end_pos, blitter);
- 			}
--			ptr = blitter->MoveTo(ptr, 2, 0);
--			x += 2;
- 		}
- 
--		/* Draw vehicles */
--		if (this->map_type == SMT_CONTOUR || this->map_type == SMT_VEHICLES) this->DrawVehicles(dpi, blitter);
--
--		/* Draw town names */
--		if (this->show_towns) this->DrawTowns(dpi);
--
--		/* Draw map indicators */
--		this->DrawMapIndicators();
--
--		_cur_dpi = old_dpi;
-+		if (y == 0) {
-+			tile_y += this->zoom;
-+			y++;
-+			ptr = blitter->MoveTo(ptr, 0, 1);
-+		} else {
-+			tile_x -= this->zoom;
-+			y--;
-+			ptr = blitter->MoveTo(ptr, 0, -1);
-+		}
-+		ptr = blitter->MoveTo(ptr, 2, 0);
-+		x += 2;
- 	}
- 
--	/**
--	 * Function to set up widgets depending on the information being shown on the smallmap.
--	 */
--	void SetupWidgetData()
--	{
--		StringID legend_tooltip;
--		StringID enable_all_tooltip;
--		StringID disable_all_tooltip;
--		int plane;
--		switch (this->map_type) {
--			case SMT_INDUSTRY:
--				legend_tooltip = STR_SMALLMAP_TOOLTIP_INDUSTRY_SELECTION;
--				enable_all_tooltip = STR_SMALLMAP_TOOLTIP_ENABLE_ALL_INDUSTRIES;
--				disable_all_tooltip = STR_SMALLMAP_TOOLTIP_DISABLE_ALL_INDUSTRIES;
--				plane = 0;
--				break;
-+	/* Draw vehicles */
-+	if (this->map_type == SMT_CONTOUR || this->map_type == SMT_VEHICLES) this->DrawVehicles(dpi, blitter);
- 
--			case SMT_OWNER:
--				legend_tooltip = STR_SMALLMAP_TOOLTIP_COMPANY_SELECTION;
--				enable_all_tooltip = STR_SMALLMAP_TOOLTIP_ENABLE_ALL_COMPANIES;
--				disable_all_tooltip = STR_SMALLMAP_TOOLTIP_DISABLE_ALL_COMPANIES;
--				plane = 0;
--				break;
-+	/* Draw link stat overlay */
-+	if (this->map_type == SMT_LINKSTATS) this->overlay->Draw(dpi);
- 
--			default:
--				legend_tooltip = STR_NULL;
--				enable_all_tooltip = STR_NULL;
--				disable_all_tooltip = STR_NULL;
--				plane = 1;
--				break;
--		}
-+	/* Draw town names */
-+	if (this->show_towns) this->DrawTowns(dpi);
- 
--		this->GetWidget<NWidgetCore>(SM_WIDGET_LEGEND)->SetDataTip(STR_NULL, legend_tooltip);
--		this->GetWidget<NWidgetCore>(SM_WIDGET_ENABLE_ALL)->SetDataTip(STR_SMALLMAP_ENABLE_ALL, enable_all_tooltip);
--		this->GetWidget<NWidgetCore>(SM_WIDGET_DISABLE_ALL)->SetDataTip(STR_SMALLMAP_DISABLE_ALL, disable_all_tooltip);
--		this->GetWidget<NWidgetStacked>(SM_WIDGET_SELECT_BUTTONS)->SetDisplayedPlane(plane);
--	}
-+	/* Draw map indicators */
-+	this->DrawMapIndicators();
- 
--public:
--	uint min_number_of_columns;    ///< Minimal number of columns in legends.
-+	_cur_dpi = old_dpi;
-+}
- 
--	SmallMapWindow(const WindowDesc *desc, int window_number) : Window(), refresh(FORCE_REFRESH_PERIOD)
--	{
--		this->InitNested(desc, window_number);
--		this->LowerWidget(this->map_type + SM_WIDGET_CONTOUR);
-+/**
-+ * Function to set up widgets depending on the information being shown on the smallmap.
-+ */
-+void SmallMapWindow::SetupWidgetData()
-+{
-+	StringID legend_tooltip;
-+	StringID enable_all_tooltip;
-+	StringID disable_all_tooltip;
-+	int plane;
-+	switch (this->map_type) {
-+		case SMT_INDUSTRY:
-+			legend_tooltip = STR_SMALLMAP_TOOLTIP_INDUSTRY_SELECTION;
-+			enable_all_tooltip = STR_SMALLMAP_TOOLTIP_ENABLE_ALL_INDUSTRIES;
-+			disable_all_tooltip = STR_SMALLMAP_TOOLTIP_DISABLE_ALL_INDUSTRIES;
-+			plane = 0;
-+			break;
-+
-+		case SMT_OWNER:
-+			legend_tooltip = STR_SMALLMAP_TOOLTIP_COMPANY_SELECTION;
-+			enable_all_tooltip = STR_SMALLMAP_TOOLTIP_ENABLE_ALL_COMPANIES;
-+			disable_all_tooltip = STR_SMALLMAP_TOOLTIP_DISABLE_ALL_COMPANIES;
-+			plane = 0;
-+			break;
-+
-+		case SMT_LINKSTATS:
-+			legend_tooltip = STR_SMALLMAP_TOOLTIP_CARGO_SELECTION;
-+			enable_all_tooltip = STR_SMALLMAP_TOOLTIP_ENABLE_ALL_CARGOS;
-+			disable_all_tooltip = STR_SMALLMAP_TOOLTIP_DISABLE_ALL_CARGOS;
-+			plane = 0;
-+			break;
- 
--		BuildLandLegend();
--		this->SetWidgetLoweredState(SM_WIDGET_SHOW_HEIGHT, _smallmap_show_heightmap);
-+		default:
-+			legend_tooltip = STR_NULL;
-+			enable_all_tooltip = STR_NULL;
-+			disable_all_tooltip = STR_NULL;
-+			plane = 1;
-+			break;
-+	}
- 
--		this->SetWidgetLoweredState(SM_WIDGET_TOGGLETOWNNAME, this->show_towns);
-+	this->GetWidget<NWidgetCore>(SM_WIDGET_LEGEND)->SetDataTip(STR_NULL, legend_tooltip);
-+	this->GetWidget<NWidgetCore>(SM_WIDGET_ENABLE_ALL)->SetDataTip(STR_SMALLMAP_ENABLE_ALL, enable_all_tooltip);
-+	this->GetWidget<NWidgetCore>(SM_WIDGET_DISABLE_ALL)->SetDataTip(STR_SMALLMAP_DISABLE_ALL, disable_all_tooltip);
-+	this->GetWidget<NWidgetStacked>(SM_WIDGET_SELECT_BUTTONS)->SetDisplayedPlane(plane);
-+}
- 
--		this->SetupWidgetData();
-+SmallMapWindow::SmallMapWindow(const WindowDesc *desc, int window_number) :
-+		Window(),
-+		refresh(FORCE_REFRESH_PERIOD)
-+{
-+	this->overlay = new LinkGraphOverlay(this, SM_WIDGET_MAP);
-+	this->InitNested(desc, window_number);
-+	this->LowerWidget(this->map_type + SM_WIDGET_CONTOUR);
- 
--		this->SetZoomLevel(ZLC_INITIALIZE, NULL);
--		this->SmallMapCenterOnCurrentPos();
--	}
-+	BuildLandLegend();
-+	this->SetWidgetLoweredState(SM_WIDGET_SHOW_HEIGHT, _smallmap_show_heightmap);
- 
--	/**
--	 * Compute minimal required width of the legends.
--	 * @return Minimally needed width for displaying the smallmap legends in pixels.
--	 */
--	inline uint GetMinLegendWidth() const
--	{
--		return WD_FRAMERECT_LEFT + this->min_number_of_columns * this->column_width;
--	}
-+	this->SetWidgetLoweredState(SM_WIDGET_TOGGLETOWNNAME, this->show_towns);
- 
--	/**
--	 * Return number of columns that can be displayed in \a width pixels.
--	 * @return Number of columns to display.
--	 */
--	inline uint GetNumberColumnsLegend(uint width) const
--	{
--		return width / this->column_width;
--	}
-+	this->SetupWidgetData();
- 
--	/**
--	 * Compute height given a number of columns.
--	 * @param Number of columns.
--	 * @return Needed height for displaying the smallmap legends in pixels.
--	 */
--	uint GetLegendHeight(uint num_columns) const
--	{
--		uint num_rows = max(this->min_number_of_fixed_rows, CeilDiv(max(_smallmap_company_count, _smallmap_industry_count), num_columns));
--		return WD_FRAMERECT_TOP + WD_FRAMERECT_BOTTOM + num_rows * FONT_HEIGHT_SMALL;
--	}
-+	this->SetZoomLevel(ZLC_INITIALIZE, NULL);
-+	this->SmallMapCenterOnCurrentPos();
-+}
- 
--	virtual void SetStringParameters(int widget) const
--	{
--		switch (widget) {
--			case SM_WIDGET_CAPTION:
--				SetDParam(0, STR_SMALLMAP_TYPE_CONTOURS + this->map_type);
--				break;
--		}
-+/**
-+ * Compute height given a number of columns.
-+ * @param Number of columns.
-+ * @return Needed height for displaying the smallmap legends in pixels.
-+ */
-+void SmallMapWindow::SetStringParameters(int widget) const
-+{
-+	switch (widget) {
-+		case SM_WIDGET_CAPTION:
-+			SetDParam(0, STR_SMALLMAP_TYPE_CONTOURS + this->map_type);
-+			break;
- 	}
-+}
- 
--	virtual void OnInit()
--	{
--		uint min_width = 0;
--		this->min_number_of_columns = INDUSTRY_MIN_NUMBER_OF_COLUMNS;
--		this->min_number_of_fixed_rows = 0;
--		for (uint i = 0; i < lengthof(_legend_table); i++) {
--			uint height = 0;
--			uint num_columns = 1;
--			for (const LegendAndColour *tbl = _legend_table[i]; !tbl->end; ++tbl) {
--				StringID str;
--				if (i == SMT_INDUSTRY) {
--					SetDParam(0, tbl->legend);
--					SetDParam(1, IndustryPool::MAX_SIZE);
--					str = STR_SMALLMAP_INDUSTRY;
--				} else if (i == SMT_OWNER) {
--					if (tbl->company != INVALID_COMPANY) {
--						if (!Company::IsValidID(tbl->company)) {
--							/* Rebuild the owner legend. */
--							BuildOwnerLegend();
--							this->OnInit();
--							return;
--						}
--						/* Non-fixed legend entries for the owner view. */
--						SetDParam(0, tbl->company);
--						str = STR_SMALLMAP_COMPANY;
--					} else {
--						str = tbl->legend;
-+void SmallMapWindow::OnInit()
-+{
-+	uint min_width = 0;
-+	this->min_number_of_columns = INDUSTRY_MIN_NUMBER_OF_COLUMNS;
-+	this->min_number_of_fixed_rows = lengthof(_linkstat_colours_in_legenda);
-+	for (uint i = 0; i < lengthof(_legend_table); i++) {
-+		uint height = 0;
-+		uint num_columns = 1;
-+		for (const LegendAndColour *tbl = _legend_table[i]; !tbl->end; ++tbl) {
-+			StringID str;
-+			if (i == SMT_INDUSTRY) {
-+				SetDParam(0, tbl->legend);
-+				SetDParam(1, IndustryPool::MAX_SIZE);
-+				str = STR_SMALLMAP_INDUSTRY;
-+			} else if (i == SMT_LINKSTATS) {
-+				SetDParam(0, tbl->legend);
-+				str = STR_SMALLMAP_LINKSTATS;
-+			} else if (i == SMT_OWNER) {
-+				if (tbl->company != INVALID_COMPANY) {
-+					if (!Company::IsValidID(tbl->company)) {
-+						/* Rebuild the owner legend. */
-+						BuildOwnerLegend();
-+						this->OnInit();
-+						return;
- 					}
-+					/* Non-fixed legend entries for the owner view. */
-+					SetDParam(0, tbl->company);
-+					str = STR_SMALLMAP_COMPANY;
- 				} else {
--					if (tbl->col_break) {
--						this->min_number_of_fixed_rows = max(this->min_number_of_fixed_rows, height);
--						height = 0;
--						num_columns++;
--					}
--					height++;
- 					str = tbl->legend;
- 				}
--				min_width = max(GetStringBoundingBox(str).width, min_width);
-+			} else {
-+				if (tbl->col_break) {
-+					this->min_number_of_fixed_rows = max(this->min_number_of_fixed_rows, height);
-+					height = 0;
-+					num_columns++;
-+				}
-+				height++;
-+				str = tbl->legend;
- 			}
--			this->min_number_of_fixed_rows = max(this->min_number_of_fixed_rows, height);
--			this->min_number_of_columns = max(this->min_number_of_columns, num_columns);
-+			min_width = max(GetStringBoundingBox(str).width, min_width);
- 		}
--
--		/* The width of a column is the minimum width of all texts + the size of the blob + some spacing */
--		this->column_width = min_width + LEGEND_BLOB_WIDTH + WD_FRAMERECT_LEFT + WD_FRAMERECT_RIGHT;
-+		this->min_number_of_fixed_rows = max(this->min_number_of_fixed_rows, height);
-+		this->min_number_of_columns = max(this->min_number_of_columns, num_columns);
- 	}
- 
--	virtual void OnPaint()
--	{
--		if (this->map_type == SMT_OWNER) {
--			for (const LegendAndColour *tbl = _legend_table[this->map_type]; !tbl->end; ++tbl) {
--				if (tbl->company != INVALID_COMPANY && !Company::IsValidID(tbl->company)) {
--					/* Rebuild the owner legend. */
--					BuildOwnerLegend();
--					this->InvalidateData(1);
--					break;
--				}
-+	/* The width of a column is the minimum width of all texts + the size of the blob + some spacing */
-+	this->column_width = min_width + LEGEND_BLOB_WIDTH + WD_FRAMERECT_LEFT + WD_FRAMERECT_RIGHT;
-+}
-+
-+void SmallMapWindow::OnPaint()
-+{
-+	if (this->map_type == SMT_OWNER) {
-+		for (const LegendAndColour *tbl = _legend_table[this->map_type]; !tbl->end; ++tbl) {
-+			if (tbl->company != INVALID_COMPANY && !Company::IsValidID(tbl->company)) {
-+				/* Rebuild the owner legend. */
-+				BuildOwnerLegend();
-+				this->InvalidateData(1);
-+				break;
- 			}
- 		}
--
--		this->DrawWidgets();
- 	}
- 
--	virtual void DrawWidget(const Rect &r, int widget) const
--	{
--		switch (widget) {
--			case SM_WIDGET_MAP: {
--				DrawPixelInfo new_dpi;
--				if (!FillDrawPixelInfo(&new_dpi, r.left + 1, r.top + 1, r.right - r.left - 1, r.bottom - r.top - 1)) return;
--				this->DrawSmallMap(&new_dpi);
--				break;
-+	this->DrawWidgets();
-+}
-+
-+void SmallMapWindow::DrawWidget(const Rect &r, int widget) const
-+{
-+	switch (widget) {
-+		case SM_WIDGET_MAP: {
-+			DrawPixelInfo new_dpi;
-+			if (!FillDrawPixelInfo(&new_dpi, r.left + 1, r.top + 1, r.right - r.left - 1, r.bottom - r.top - 1)) return;
-+			this->DrawSmallMap(&new_dpi);
-+			break;
-+		}
-+
-+		case SM_WIDGET_LEGEND: {
-+			uint columns = this->GetNumberColumnsLegend(r.right - r.left + 1);
-+			uint number_of_rows = this->GetNumberRowsLegend(columns);
-+			bool rtl = _current_text_dir == TD_RTL;
-+			uint y_org = r.top + WD_FRAMERECT_TOP;
-+			uint x = rtl ? r.right - this->column_width - WD_FRAMERECT_RIGHT : r.left + WD_FRAMERECT_LEFT;
-+			uint y = y_org;
-+			uint i = 0; // Row counter for industry legend.
-+			uint row_height = FONT_HEIGHT_SMALL;
-+
-+			uint text_left  = rtl ? 0 : LEGEND_BLOB_WIDTH + WD_FRAMERECT_LEFT;
-+			uint text_right = this->column_width - 1 - (rtl ? LEGEND_BLOB_WIDTH + WD_FRAMERECT_RIGHT : 0);
-+			uint blob_left  = rtl ? this->column_width - 1 - LEGEND_BLOB_WIDTH : 0;
-+			uint blob_right = rtl ? this->column_width - 1 : LEGEND_BLOB_WIDTH;
-+
-+			StringID string = STR_NULL;
-+			switch (this->map_type) {
-+				case SMT_INDUSTRY:
-+					string = STR_SMALLMAP_INDUSTRY;
-+					break;
-+				case SMT_LINKSTATS:
-+					string = STR_SMALLMAP_LINKSTATS;
-+					break;
-+				case SMT_OWNER:
-+					string = STR_SMALLMAP_COMPANY;
-+					break;
-+				default:
-+					break;
- 			}
- 
--			case SM_WIDGET_LEGEND: {
--				uint columns = this->GetNumberColumnsLegend(r.right - r.left + 1);
--				uint number_of_rows = max((this->map_type == SMT_INDUSTRY || this->map_type == SMT_OWNER) ? CeilDiv(max(_smallmap_company_count, _smallmap_industry_count), columns) : 0, this->min_number_of_fixed_rows);
--				bool rtl = _current_text_dir == TD_RTL;
--				uint y_org = r.top + WD_FRAMERECT_TOP;
--				uint x = rtl ? r.right - this->column_width - WD_FRAMERECT_RIGHT : r.left + WD_FRAMERECT_LEFT;
--				uint y = y_org;
--				uint i = 0; // Row counter for industry legend.
--				uint row_height = FONT_HEIGHT_SMALL;
--
--				uint text_left  = rtl ? 0 : LEGEND_BLOB_WIDTH + WD_FRAMERECT_LEFT;
--				uint text_right = this->column_width - 1 - (rtl ? LEGEND_BLOB_WIDTH + WD_FRAMERECT_RIGHT : 0);
--				uint blob_left  = rtl ? this->column_width - 1 - LEGEND_BLOB_WIDTH : 0;
--				uint blob_right = rtl ? this->column_width - 1 : LEGEND_BLOB_WIDTH;
--
--				for (const LegendAndColour *tbl = _legend_table[this->map_type]; !tbl->end; ++tbl) {
--					if (tbl->col_break || ((this->map_type == SMT_INDUSTRY || this->map_type == SMT_OWNER) && i++ >= number_of_rows)) {
--						/* Column break needed, continue at top, COLUMN_WIDTH pixels
--						 * (one "row") to the right. */
--						x += rtl ? -(int)this->column_width : this->column_width;
--						y = y_org;
--						i = 1;
--					}
-+			for (const LegendAndColour *tbl = _legend_table[this->map_type]; !tbl->end; ++tbl) {
-+				if (tbl->col_break || ((this->map_type == SMT_INDUSTRY || this->map_type == SMT_OWNER || this->map_type == SMT_LINKSTATS) && i++ >= number_of_rows)) {
-+					/* Column break needed, continue at top, COLUMN_WIDTH pixels
-+					 * (one "row") to the right. */
-+					x += rtl ? -(int)this->column_width : this->column_width;
-+					y = y_org;
-+					i = 1;
-+				}
- 
--					if (this->map_type == SMT_INDUSTRY) {
-+				switch (this->map_type) {
-+					case SMT_INDUSTRY:
- 						/* Industry name must be formatted, since it's not in tiny font in the specs.
- 						 * So, draw with a parameter and use the STR_SMALLMAP_INDUSTRY string, which is tiny font */
- 						SetDParam(0, tbl->legend);
- 						SetDParam(1, Industry::GetIndustryTypeCount(tbl->type));
--						if (!tbl->show_on_map) {
--							/* Simply draw the string, not the black border of the legend colour.
--							 * This will enforce the idea of the disabled item */
--							DrawString(x + text_left, x + text_right, y, STR_SMALLMAP_INDUSTRY, TC_GREY);
--						} else {
--							DrawString(x + text_left, x + text_right, y, STR_SMALLMAP_INDUSTRY, TC_BLACK);
--							GfxFillRect(x + blob_left, y + 1, x + blob_right, y + row_height - 1, PC_BLACK); // Outer border of the legend colour
--						}
--					} else if (this->map_type == SMT_OWNER && tbl->company != INVALID_COMPANY) {
--						SetDParam(0, tbl->company);
--						if (!tbl->show_on_map) {
--							/* Simply draw the string, not the black border of the legend colour.
--							 * This will enforce the idea of the disabled item */
--							DrawString(x + text_left, x + text_right, y, STR_SMALLMAP_COMPANY, TC_GREY);
--						} else {
--							DrawString(x + text_left, x + text_right, y, STR_SMALLMAP_COMPANY, TC_BLACK);
--							GfxFillRect(x + blob_left, y + 1, x + blob_right, y + row_height - 1, PC_BLACK); // Outer border of the legend colour
-+						/* FALL THROUGH */
-+					case SMT_LINKSTATS:
-+						SetDParam(0, tbl->legend);
-+						/* FALL_THROUGH */
-+					case SMT_OWNER:
-+						if (this->map_type != SMT_OWNER || tbl->company != INVALID_COMPANY) {
-+							if (this->map_type == SMT_OWNER) SetDParam(0, tbl->company);
-+							if (!tbl->show_on_map) {
-+								/* Simply draw the string, not the black border of the legend colour.
-+								 * This will enforce the idea of the disabled item */
-+								DrawString(x + text_left, x + text_right, y, string, TC_GREY);
-+							} else {
-+								DrawString(x + text_left, x + text_right, y, string, TC_BLACK);
-+								GfxFillRect(x + blob_left, y + 1, x + blob_right, y + row_height - 1, PC_BLACK); // Outer border of the legend colour
-+							}
-+							break;
- 						}
--					} else {
-+						/* FALL_THROUGH */
-+					default:
- 						if (this->map_type == SMT_CONTOUR) SetDParam(0, tbl->height * TILE_HEIGHT_STEP);
--
- 						/* Anything that is not an industry or a company is using normal process */
- 						GfxFillRect(x + blob_left, y + 1, x + blob_right, y + row_height - 1, PC_BLACK);
- 						DrawString(x + text_left, x + text_right, y, tbl->legend);
--					}
--					GfxFillRect(x + blob_left + 1, y + 2, x + blob_right - 1, y + row_height - 2, tbl->colour); // Legend colour
--
--					y += row_height;
-+						break;
- 				}
-+
-+				GfxFillRect(x + blob_left + 1, y + 2, x + blob_right - 1, y + row_height - 2, tbl->colour); // Legend colour
-+
-+				y += row_height;
- 			}
- 		}
- 	}
-+}
- 
--	/**
--	 * Select a new map type.
--	 * @param map_type New map type.
--	 */
--	void SwitchMapType(SmallMapType map_type)
--	{
--		this->RaiseWidget(this->map_type + SM_WIDGET_CONTOUR);
--		this->map_type = map_type;
--		this->LowerWidget(this->map_type + SM_WIDGET_CONTOUR);
-+/**
-+ * Get the number of rows in the legend from the number of columns. Those
-+ * are at least min_number_of_fixed_rows and possibly more if there are so
-+ * many cargoes, industry types or companies that they won't fit in the
-+ * available space.
-+ * @param columns Number of columns in the legend.
-+ * @return Number of rows needed for everything to fit in.
-+ */
-+FORCEINLINE uint SmallMapWindow::GetNumberRowsLegend(uint columns) const
-+{
-+	/* reserve one column for link colours */
-+	uint num_rows_linkstats = CeilDiv(_smallmap_cargo_count, columns - 1);
-+	uint num_rows_others = CeilDiv(max(_smallmap_industry_count,_smallmap_company_count), columns);
-+	return max(this->min_number_of_fixed_rows, max(num_rows_linkstats, num_rows_others));
-+}
- 
--		this->SetupWidgetData();
-+/**
-+ * Select and toggle a legend item. When CTRL is pressed, disable all other
-+ * items in the group defined by begin_legend_item and end_legend_item and
-+ * keep the clicked one enabled even if it was already enabled before. If
-+ * the other items in the group are all disabled already and CTRL is pressed
-+ * enable them instead.
-+ * @param click_pos the index of the item being selected
-+ * @param legend the legend from which we select
-+ * @param end_legend_item index one past the last item in the group to be inverted
-+ * @param begin_legend_item index of the first item in the group to be inverted
-+ */
-+void SmallMapWindow::SelectLegendItem(int click_pos, LegendAndColour *legend, int end_legend_item, int begin_legend_item)
-+{
-+	if (_ctrl_pressed) {
-+		/* Disable all, except the clicked one */
-+		bool changes = false;
-+		for (int i = begin_legend_item; i != end_legend_item; i++) {
-+			bool new_state = (i == click_pos);
-+			if (legend[i].show_on_map != new_state) {
-+				changes = true;
-+				legend[i].show_on_map = new_state;
-+			}
-+		}
-+		if (!changes) {
-+			/* Nothing changed? Then show all (again). */
-+			for (int i = begin_legend_item; i != end_legend_item; i++) {
-+				legend[i].show_on_map = true;
-+			}
-+		}
-+	} else {
-+		legend[click_pos].show_on_map = !legend[click_pos].show_on_map;
-+	}
-+	this->SetOverlayCargoMask();
-+}
- 
--		this->SetDirty();
-+/**
-+ * Set the link graph overlay cargo mask from the legend.
-+ */
-+void SmallMapWindow::SetOverlayCargoMask()
-+{
-+	if (this->map_type == SMT_LINKSTATS) {
-+		uint32 cargo_mask = 0;
-+		for (int i = 0; i != _smallmap_cargo_count; ++i) {
-+			if (_legend_linkstats[i].show_on_map) SetBit(cargo_mask, _legend_linkstats[i].type);
-+		}
-+		this->overlay->SetCargoMask(cargo_mask);
-+		this->overlay->RebuildCache();
- 	}
-+}
- 
--	virtual void OnClick(Point pt, int widget, int click_count)
--	{
--		/* User clicked something, notify the industry chain window to stop sending newly selected industries. */
--		InvalidateWindowClassesData(WC_INDUSTRY_CARGOES, NUM_INDUSTRYTYPES);
--
--		switch (widget) {
--			case SM_WIDGET_MAP: { // Map window
--				/*
--				 * XXX: scrolling with the left mouse button is done by subsequently
--				 * clicking with the left mouse button; clicking once centers the
--				 * large map at the selected point. So by unclicking the left mouse
--				 * button here, it gets reclicked during the next inputloop, which
--				 * would make it look like the mouse is being dragged, while it is
--				 * actually being (virtually) clicked every inputloop.
--				 */
--				_left_button_clicked = false;
--
--				const NWidgetBase *wid = this->GetWidget<NWidgetBase>(SM_WIDGET_MAP);
--				Window *w = FindWindowById(WC_MAIN_WINDOW, 0);
--				int sub;
--				pt = this->PixelToTile(pt.x - wid->pos_x, pt.y - wid->pos_y, &sub);
--				pt = RemapCoords(this->scroll_x + pt.x * TILE_SIZE + this->zoom * (TILE_SIZE - sub * TILE_SIZE / 4),
--						this->scroll_y + pt.y * TILE_SIZE + sub * this->zoom * TILE_SIZE / 4, 0);
--
--				w->viewport->follow_vehicle = INVALID_VEHICLE;
--				w->viewport->dest_scrollpos_x = pt.x - (w->viewport->virtual_width  >> 1);
--				w->viewport->dest_scrollpos_y = pt.y - (w->viewport->virtual_height >> 1);
-+/**
-+ * Select a new map type.
-+ * @param map_type New map type.
-+ */
-+void SmallMapWindow::SwitchMapType(SmallMapType map_type)
-+{
-+	this->RaiseWidget(this->map_type + SM_WIDGET_CONTOUR);
-+	this->map_type = map_type;
-+	this->LowerWidget(this->map_type + SM_WIDGET_CONTOUR);
- 
--				this->SetDirty();
--				break;
--			}
-+	this->SetupWidgetData();
- 
--			case SM_WIDGET_ZOOM_IN:
--			case SM_WIDGET_ZOOM_OUT: {
--				const NWidgetBase *wid = this->GetWidget<NWidgetBase>(SM_WIDGET_MAP);
--				Point pt = {wid->current_x / 2, wid->current_y / 2};
--				this->SetZoomLevel((widget == SM_WIDGET_ZOOM_IN) ? ZLC_ZOOM_IN : ZLC_ZOOM_OUT, &pt);
--				SndPlayFx(SND_15_BEEP);
--				break;
--			}
-+	if (map_type == SMT_LINKSTATS) this->overlay->RebuildCache();
-+	this->SetDirty();
-+}
- 
--			case SM_WIDGET_CONTOUR:    // Show land contours
--			case SM_WIDGET_VEHICLES:   // Show vehicles
--			case SM_WIDGET_INDUSTRIES: // Show industries
--			case SM_WIDGET_ROUTES:     // Show transport routes
--			case SM_WIDGET_VEGETATION: // Show vegetation
--			case SM_WIDGET_OWNERS:     // Show land owners
--				this->SwitchMapType((SmallMapType)(widget - SM_WIDGET_CONTOUR));
--				SndPlayFx(SND_15_BEEP);
--				break;
-+void SmallMapWindow::OnClick(Point pt, int widget, int click_count)
-+{
-+	/* User clicked something, notify the industry chain window to stop sending newly selected industries. */
-+	InvalidateWindowClassesData(WC_INDUSTRY_CARGOES, NUM_INDUSTRYTYPES);
-+
-+	switch (widget) {
-+		case SM_WIDGET_MAP: { // Map window
-+			/*
-+			 * XXX: scrolling with the left mouse button is done by subsequently
-+			 * clicking with the left mouse button; clicking once centers the
-+			 * large map at the selected point. So by unclicking the left mouse
-+			 * button here, it gets reclicked during the next inputloop, which
-+			 * would make it look like the mouse is being dragged, while it is
-+			 * actually being (virtually) clicked every inputloop.
-+			 */
-+			_left_button_clicked = false;
- 
--			case SM_WIDGET_CENTERMAP: // Center the smallmap again
--				this->SmallMapCenterOnCurrentPos();
--				this->HandleButtonClick(SM_WIDGET_CENTERMAP);
--				SndPlayFx(SND_15_BEEP);
--				break;
-+			const NWidgetBase *wid = this->GetWidget<NWidgetBase>(SM_WIDGET_MAP);
-+			Window *w = FindWindowById(WC_MAIN_WINDOW, 0);
-+			int sub;
-+			pt = this->PixelToTile(pt.x - wid->pos_x, pt.y - wid->pos_y, &sub);
-+			pt = RemapCoords(this->scroll_x + pt.x * TILE_SIZE + this->zoom * (TILE_SIZE - sub * TILE_SIZE / 4),
-+					this->scroll_y + pt.y * TILE_SIZE + sub * this->zoom * TILE_SIZE / 4, 0);
- 
--			case SM_WIDGET_TOGGLETOWNNAME: // Toggle town names
--				this->show_towns = !this->show_towns;
--				this->SetWidgetLoweredState(SM_WIDGET_TOGGLETOWNNAME, this->show_towns);
-+			w->viewport->follow_vehicle = INVALID_VEHICLE;
-+			w->viewport->dest_scrollpos_x = pt.x - (w->viewport->virtual_width  >> 1);
-+			w->viewport->dest_scrollpos_y = pt.y - (w->viewport->virtual_height >> 1);
- 
--				this->SetDirty();
--				SndPlayFx(SND_15_BEEP);
--				break;
-+			this->SetDirty();
-+			break;
-+		}
- 
--			case SM_WIDGET_LEGEND: // Legend
--				if (this->map_type == SMT_INDUSTRY || this->map_type == SMT_OWNER) {
--					const NWidgetBase *wi = this->GetWidget<NWidgetBase>(SM_WIDGET_LEGEND); // Label panel
--					uint line = (pt.y - wi->pos_y - WD_FRAMERECT_TOP) / FONT_HEIGHT_SMALL;
--					uint columns = this->GetNumberColumnsLegend(wi->current_x);
--					uint number_of_rows = max(CeilDiv(max(_smallmap_company_count, _smallmap_industry_count), columns), this->min_number_of_fixed_rows);
--					if (line >= number_of_rows) break;
--
--					bool rtl = _current_text_dir == TD_RTL;
--					int x = pt.x - wi->pos_x;
--					if (rtl) x = wi->current_x - x;
--					uint column = (x - WD_FRAMERECT_LEFT) / this->column_width;
--
--					/* If industry type small map*/
--					if (this->map_type == SMT_INDUSTRY) {
--						/* If click on industries label, find right industry type and enable/disable it. */
--						int industry_pos = (column * number_of_rows) + line;
--						if (industry_pos < _smallmap_industry_count) {
--							if (_ctrl_pressed) {
--								/* Disable all, except the clicked one. */
--								bool changes = false;
--								for (int i = 0; i != _smallmap_industry_count; i++) {
--									bool new_state = i == industry_pos;
--									if (_legend_from_industries[i].show_on_map != new_state) {
--										changes = true;
--										_legend_from_industries[i].show_on_map = new_state;
--									}
--								}
--								if (!changes) {
--									/* Nothing changed? Then show all (again). */
--									for (int i = 0; i != _smallmap_industry_count; i++) {
--										_legend_from_industries[i].show_on_map = true;
--									}
--								}
--							} else {
--								_legend_from_industries[industry_pos].show_on_map = !_legend_from_industries[industry_pos].show_on_map;
--							}
--						}
--					} else if (this->map_type == SMT_OWNER) {
--						/* If click on companies label, find right company and enable/disable it. */
--						int company_pos = (column * number_of_rows) + line;
--						if (company_pos < NUM_NO_COMPANY_ENTRIES) break;
--						if (company_pos < _smallmap_company_count) {
--							if (_ctrl_pressed) {
--								/* Disable all, except the clicked one */
--								bool changes = false;
--								for (int i = NUM_NO_COMPANY_ENTRIES; i != _smallmap_company_count; i++) {
--									bool new_state = i == company_pos;
--									if (_legend_land_owners[i].show_on_map != new_state) {
--										changes = true;
--										_legend_land_owners[i].show_on_map = new_state;
--									}
--								}
--								if (!changes) {
--									/* Nothing changed? Then show all (again). */
--									for (int i = NUM_NO_COMPANY_ENTRIES; i != _smallmap_company_count; i++) {
--										_legend_land_owners[i].show_on_map = true;
--									}
--								}
--							} else {
--								_legend_land_owners[company_pos].show_on_map = !_legend_land_owners[company_pos].show_on_map;
--							}
--						}
--					}
--					this->SetDirty();
--				}
--				break;
-+		case SM_WIDGET_ZOOM_IN:
-+		case SM_WIDGET_ZOOM_OUT: {
-+			const NWidgetBase *wid = this->GetWidget<NWidgetBase>(SM_WIDGET_MAP);
-+			Point pt = {wid->current_x / 2, wid->current_y / 2};
-+			this->SetZoomLevel((widget == SM_WIDGET_ZOOM_IN) ? ZLC_ZOOM_IN : ZLC_ZOOM_OUT, &pt);
-+			SndPlayFx(SND_15_BEEP);
-+			break;
-+		}
- 
--			case SM_WIDGET_ENABLE_ALL:
--				if (this->map_type == SMT_INDUSTRY) {
--					for (int i = 0; i != _smallmap_industry_count; i++) {
--						_legend_from_industries[i].show_on_map = true;
--					}
--				} else if (this->map_type == SMT_OWNER) {
--					for (int i = NUM_NO_COMPANY_ENTRIES; i != _smallmap_company_count; i++) {
--						_legend_land_owners[i].show_on_map = true;
--					}
--				}
--				this->SetDirty();
--				break;
-+		case SM_WIDGET_CONTOUR:    // Show land contours
-+		case SM_WIDGET_VEHICLES:   // Show vehicles
-+		case SM_WIDGET_INDUSTRIES: // Show industries
-+		case SM_WIDGET_LINKSTATS:  // Show route map
-+		case SM_WIDGET_ROUTES:     // Show transport routes
-+		case SM_WIDGET_VEGETATION: // Show vegetation
-+		case SM_WIDGET_OWNERS:     // Show land owners
-+			this->SwitchMapType((SmallMapType)(widget - SM_WIDGET_CONTOUR));
-+			SndPlayFx(SND_15_BEEP);
-+			break;
-+
-+		case SM_WIDGET_CENTERMAP: // Center the smallmap again
-+			this->SmallMapCenterOnCurrentPos();
-+			this->HandleButtonClick(SM_WIDGET_CENTERMAP);
-+			SndPlayFx(SND_15_BEEP);
-+			break;
-+
-+		case SM_WIDGET_TOGGLETOWNNAME: // Toggle town names
-+			this->show_towns = !this->show_towns;
-+			this->SetWidgetLoweredState(SM_WIDGET_TOGGLETOWNNAME, this->show_towns);
- 
--			case SM_WIDGET_DISABLE_ALL:
-+			this->SetDirty();
-+			SndPlayFx(SND_15_BEEP);
-+			break;
-+
-+		case SM_WIDGET_LEGEND: // Legend
-+			if (this->map_type == SMT_INDUSTRY || this->map_type == SMT_LINKSTATS || this->map_type == SMT_OWNER) {
-+				/* If click on label, find right type and enable/disable it */
-+				const NWidgetBase *wi = this->GetWidget<NWidgetBase>(SM_WIDGET_LEGEND); // Label panel
-+				uint line = (pt.y - wi->pos_y - WD_FRAMERECT_TOP) / FONT_HEIGHT_SMALL;
-+				uint columns = this->GetNumberColumnsLegend(wi->current_x);
-+				uint number_of_rows = this->GetNumberRowsLegend(columns);
-+				if (line >= number_of_rows) break;
-+
-+				bool rtl = _current_text_dir == TD_RTL;
-+				int x = pt.x - wi->pos_x;
-+				if (rtl) x = wi->current_x - x;
-+				uint column = (x - WD_FRAMERECT_LEFT) / this->column_width;
-+
-+				/* Check if click is on label*/
-+				int click_pos = (column * number_of_rows) + line;
- 				if (this->map_type == SMT_INDUSTRY) {
--					for (int i = 0; i != _smallmap_industry_count; i++) {
--						_legend_from_industries[i].show_on_map = false;
-+					if (click_pos < _smallmap_industry_count) {
-+						this->SelectLegendItem(click_pos, _legend_from_industries, _smallmap_industry_count);
- 					}
--				} else {
--					for (int i = NUM_NO_COMPANY_ENTRIES; i != _smallmap_company_count; i++) {
--						_legend_land_owners[i].show_on_map = false;
-+				} else if (this->map_type == SMT_LINKSTATS) {
-+					if (click_pos < _smallmap_cargo_count) {
-+						this->SelectLegendItem(click_pos, _legend_linkstats, _smallmap_cargo_count);
-+					}
-+				} else if (this->map_type == SMT_OWNER) {
-+					if (click_pos < _smallmap_company_count) {
-+						this->SelectLegendItem(click_pos, _legend_land_owners, _smallmap_company_count, NUM_NO_COMPANY_ENTRIES);
- 					}
- 				}
- 				this->SetDirty();
--				break;
--
--			case SM_WIDGET_SHOW_HEIGHT: // Enable/disable showing of heightmap.
--				_smallmap_show_heightmap = !_smallmap_show_heightmap;
--				this->SetWidgetLoweredState(SM_WIDGET_SHOW_HEIGHT, _smallmap_show_heightmap);
--				this->SetDirty();
--				break;
-+			}
-+			break;
-+
-+		case SM_WIDGET_ENABLE_ALL:
-+			/* FALL THROUGH */
-+		case SM_WIDGET_DISABLE_ALL: {
-+			LegendAndColour *tbl = NULL;
-+			switch (this->map_type) {
-+				case SMT_INDUSTRY:
-+					tbl = _legend_from_industries;
-+					break;
-+				case SMT_OWNER:
-+					tbl = &(_legend_land_owners[NUM_NO_COMPANY_ENTRIES]);
-+					break;
-+				case SMT_LINKSTATS:
-+					tbl = _legend_linkstats;
-+					break;
-+				default:
-+					NOT_REACHED();
-+			}
-+			for (;!tbl->end && tbl->legend != STR_LINKGRAPH_LEGEND_UNUSED; ++tbl) {
-+				tbl->show_on_map = (widget == SM_WIDGET_ENABLE_ALL);
-+			}
-+			this->SetOverlayCargoMask();
-+			this->SetDirty();
-+			break;
- 		}
--	}
- 
--	/**
--	 * Some data on this window has become invalid.
--	 * @param data Information about the changed data.
--	 * - data = 0: Displayed industries at the industry chain window have changed.
--	 * - data = 1: Companies have changed.
--	 * @param gui_scope Whether the call is done from GUI scope. You may not do everything when not in GUI scope. See #InvalidateWindowData() for details.
--	 */
--	virtual void OnInvalidateData(int data = 0, bool gui_scope = true)
--	{
--		if (!gui_scope) return;
--		switch (data) {
--			case 1:
--				/* The owner legend has already been rebuilt. */
--				this->ReInit();
--				break;
--
--			case 0: {
--				extern uint64 _displayed_industries;
--				if (this->map_type != SMT_INDUSTRY) this->SwitchMapType(SMT_INDUSTRY);
-+		case SM_WIDGET_SHOW_HEIGHT: // Enable/disable showing of heightmap.
-+			_smallmap_show_heightmap = !_smallmap_show_heightmap;
-+			this->SetWidgetLoweredState(SM_WIDGET_SHOW_HEIGHT, _smallmap_show_heightmap);
-+			this->SetDirty();
-+			break;
-+	}
-+}
- 
--				for (int i = 0; i != _smallmap_industry_count; i++) {
--					_legend_from_industries[i].show_on_map = HasBit(_displayed_industries, _legend_from_industries[i].type);
--				}
--				break;
-+/**
-+ * Some data on this window has become invalid.
-+ * @param data Information about the changed data.
-+ * - data = 0: Displayed industries at the industry chain window have changed.
-+ * - data = 1: Companies have changed.
-+ * @param gui_scope Whether the call is done from GUI scope. You may not do everything when not in GUI scope. See #InvalidateWindowData() for details.
-+ */
-+void SmallMapWindow::OnInvalidateData(int data, bool gui_scope)
-+{
-+	if (!gui_scope) return;
-+	switch (data) {
-+		case 1:
-+			/* The owner legend has already been rebuilt. */
-+			this->ReInit();
-+			break;
-+
-+		case 0: {
-+			extern uint64 _displayed_industries;
-+			if (this->map_type != SMT_INDUSTRY) this->SwitchMapType(SMT_INDUSTRY);
-+
-+			for (int i = 0; i != _smallmap_industry_count; i++) {
-+				_legend_from_industries[i].show_on_map = HasBit(_displayed_industries, _legend_from_industries[i].type);
- 			}
--
--			default: NOT_REACHED();
-+			break;
- 		}
--		this->SetDirty();
-+
-+		default: NOT_REACHED();
- 	}
-+	this->SetDirty();
-+}
- 
--	virtual bool OnRightClick(Point pt, int widget)
--	{
--		if (widget != SM_WIDGET_MAP || _scrolling_viewport) return false;
-+bool SmallMapWindow::OnRightClick(Point pt, int widget)
-+{
-+	if (widget != SM_WIDGET_MAP || _scrolling_viewport) return false;
- 
--		_scrolling_viewport = true;
--		return true;
--	}
-+	_scrolling_viewport = true;
-+	return true;
-+}
- 
--	virtual void OnMouseWheel(int wheel)
--	{
--		if (_settings_client.gui.scrollwheel_scrolling == 0) {
--			const NWidgetBase *wid = this->GetWidget<NWidgetBase>(SM_WIDGET_MAP);
--			int cursor_x = _cursor.pos.x - this->left - wid->pos_x;
--			int cursor_y = _cursor.pos.y - this->top  - wid->pos_y;
--			if (IsInsideMM(cursor_x, 0, wid->current_x) && IsInsideMM(cursor_y, 0, wid->current_y)) {
--				Point pt = {cursor_x, cursor_y};
--				this->SetZoomLevel((wheel < 0) ? ZLC_ZOOM_IN : ZLC_ZOOM_OUT, &pt);
--			}
-+void SmallMapWindow::OnMouseWheel(int wheel)
-+{
-+	if (_settings_client.gui.scrollwheel_scrolling == 0) {
-+		const NWidgetBase *wid = this->GetWidget<NWidgetBase>(SM_WIDGET_MAP);
-+		int cursor_x = _cursor.pos.x - this->left - wid->pos_x;
-+		int cursor_y = _cursor.pos.y - this->top  - wid->pos_y;
-+		if (IsInsideMM(cursor_x, 0, wid->current_x) && IsInsideMM(cursor_y, 0, wid->current_y)) {
-+			Point pt = {cursor_x, cursor_y};
-+			this->SetZoomLevel((wheel < 0) ? ZLC_ZOOM_IN : ZLC_ZOOM_OUT, &pt);
- 		}
- 	}
-+}
- 
--	virtual void OnTick()
--	{
--		/* Update the window every now and then */
--		if (--this->refresh != 0) return;
-+void SmallMapWindow::OnTick()
-+{
-+	/* Update the window every now and then */
-+	if (--this->refresh != 0) return;
- 
--		this->refresh = FORCE_REFRESH_PERIOD;
--		this->SetDirty();
-+	if (this->map_type == SMT_LINKSTATS) this->overlay->RebuildCache();
-+	this->refresh = FORCE_REFRESH_PERIOD;
-+	this->SetDirty();
-+}
-+
-+/**
-+ * Set new #scroll_x, #scroll_y, and #subscroll values after limiting them such that the center
-+ * of the smallmap always contains a part of the map.
-+ * @param sx  Proposed new #scroll_x
-+ * @param sy  Proposed new #scroll_y
-+ * @param sub Proposed new #subscroll
-+ */
-+void SmallMapWindow::SetNewScroll(int sx, int sy, int sub)
-+{
-+	const NWidgetBase *wi = this->GetWidget<NWidgetBase>(SM_WIDGET_MAP);
-+	Point hv = InverseRemapCoords(wi->current_x * TILE_SIZE / 2, wi->current_y * TILE_SIZE / 2);
-+	hv.x *= this->zoom;
-+	hv.y *= this->zoom;
-+
-+	if (sx < -hv.x) {
-+		sx = -hv.x;
-+		sub = 0;
-+	}
-+	if (sx > (int)(MapMaxX() * TILE_SIZE) - hv.x) {
-+		sx = MapMaxX() * TILE_SIZE - hv.x;
-+		sub = 0;
-+	}
-+	if (sy < -hv.y) {
-+		sy = -hv.y;
-+		sub = 0;
-+	}
-+	if (sy > (int)(MapMaxY() * TILE_SIZE) - hv.y) {
-+		sy = MapMaxY() * TILE_SIZE - hv.y;
-+		sub = 0;
- 	}
- 
--	/**
--	 * Set new #scroll_x, #scroll_y, and #subscroll values after limiting them such that the center
--	 * of the smallmap always contains a part of the map.
--	 * @param sx  Proposed new #scroll_x
--	 * @param sy  Proposed new #scroll_y
--	 * @param sub Proposed new #subscroll
--	 */
--	void SetNewScroll(int sx, int sy, int sub)
--	{
--		const NWidgetBase *wi = this->GetWidget<NWidgetBase>(SM_WIDGET_MAP);
--		Point hv = InverseRemapCoords(wi->current_x * TILE_SIZE / 2, wi->current_y * TILE_SIZE / 2);
--		hv.x *= this->zoom;
--		hv.y *= this->zoom;
--
--		if (sx < -hv.x) {
--			sx = -hv.x;
--			sub = 0;
--		}
--		if (sx > (int)(MapMaxX() * TILE_SIZE) - hv.x) {
--			sx = MapMaxX() * TILE_SIZE - hv.x;
--			sub = 0;
--		}
--		if (sy < -hv.y) {
--			sy = -hv.y;
--			sub = 0;
--		}
--		if (sy > (int)(MapMaxY() * TILE_SIZE) - hv.y) {
--			sy = MapMaxY() * TILE_SIZE - hv.y;
--			sub = 0;
--		}
-+	this->scroll_x = sx;
-+	this->scroll_y = sy;
-+	this->subscroll = sub;
-+	if (this->map_type == SMT_LINKSTATS) this->overlay->RebuildCache();
-+}
- 
--		this->scroll_x = sx;
--		this->scroll_y = sy;
--		this->subscroll = sub;
--	}
-+void SmallMapWindow::OnScroll(Point delta)
-+{
-+	_cursor.fix_at = true;
- 
--	virtual void OnScroll(Point delta)
--	{
--		_cursor.fix_at = true;
-+	/* While tile is at (delta.x, delta.y)? */
-+	int sub;
-+	Point pt = this->PixelToTile(delta.x, delta.y, &sub);
-+	this->SetNewScroll(this->scroll_x + pt.x * TILE_SIZE, this->scroll_y + pt.y * TILE_SIZE, sub);
- 
--		/* While tile is at (delta.x, delta.y)? */
--		int sub;
--		Point pt = this->PixelToTile(delta.x, delta.y, &sub);
--		this->SetNewScroll(this->scroll_x + pt.x * TILE_SIZE, this->scroll_y + pt.y * TILE_SIZE, sub);
-+	this->SetDirty();
-+}
- 
--		this->SetDirty();
--	}
-+void SmallMapWindow::SmallMapCenterOnCurrentPos()
-+{
-+	const ViewPort *vp = FindWindowById(WC_MAIN_WINDOW, 0)->viewport;
-+	Point pt = InverseRemapCoords(vp->virtual_left + vp->virtual_width  / 2, vp->virtual_top  + vp->virtual_height / 2);
-+
-+	int sub;
-+	const NWidgetBase *wid = this->GetWidget<NWidgetBase>(SM_WIDGET_MAP);
-+	Point sxy = this->ComputeScroll(pt.x / TILE_SIZE, pt.y / TILE_SIZE, max(0, (int)wid->current_x / 2 - 2), wid->current_y / 2, &sub);
-+	this->SetNewScroll(sxy.x, sxy.y, sub);
-+	this->SetDirty();
-+}
- 
--	void SmallMapCenterOnCurrentPos()
--	{
--		const ViewPort *vp = FindWindowById(WC_MAIN_WINDOW, 0)->viewport;
--		Point pt = InverseRemapCoords(vp->virtual_left + vp->virtual_width  / 2, vp->virtual_top  + vp->virtual_height / 2);
-+/**
-+ * Get the center of the given station as point on the screen in the smallmap window.
-+ * @param st Station to find in the smallmap.
-+ * @return Point with coordinates of the station.
-+ */
-+Point SmallMapWindow::GetStationMiddle(const Station *st) const
-+{
-+	int x = (st->rect.right + st->rect.left + 1) / 2;
-+	int y = (st->rect.bottom + st->rect.top + 1) / 2;
-+	Point ret = this->RemapTile(x, y);
- 
--		int sub;
--		const NWidgetBase *wid = this->GetWidget<NWidgetBase>(SM_WIDGET_MAP);
--		Point sxy = this->ComputeScroll(pt.x / TILE_SIZE, pt.y / TILE_SIZE, max(0, (int)wid->current_x / 2 - 2), wid->current_y / 2, &sub);
--		this->SetNewScroll(sxy.x, sxy.y, sub);
--		this->SetDirty();
--	}
--};
-+	/* Same magic 3 as in DrawVehicles; that's where I got it from.
-+	 * No idea what it is, but without it the result looks bad.
-+	 */
-+	ret.x -= 3 + this->subscroll;
-+	return ret;
-+}
- 
- SmallMapWindow::SmallMapType SmallMapWindow::map_type = SMT_CONTOUR;
- bool SmallMapWindow::show_towns = true;
-@@ -1651,6 +1668,8 @@ static const NWidgetPart _nested_smallmap_bar[] = {
- 							SetDataTip(SPR_IMG_ZOOMIN, STR_TOOLBAR_TOOLTIP_ZOOM_THE_VIEW_IN), SetFill(1, 1),
- 					NWidget(WWT_PUSHIMGBTN, COLOUR_BROWN, SM_WIDGET_CENTERMAP),
- 							SetDataTip(SPR_IMG_SMALLMAP, STR_SMALLMAP_CENTER), SetFill(1, 1),
-+					NWidget(WWT_IMGBTN, COLOUR_BROWN, SM_WIDGET_BLANK),
-+							SetDataTip(SPR_DOT_SMALL, STR_NULL), SetFill(1, 1),
- 					NWidget(WWT_IMGBTN, COLOUR_BROWN, SM_WIDGET_CONTOUR),
- 							SetDataTip(SPR_IMG_SHOW_COUNTOURS, STR_SMALLMAP_TOOLTIP_SHOW_LAND_CONTOURS_ON_MAP), SetFill(1, 1),
- 					NWidget(WWT_IMGBTN, COLOUR_BROWN, SM_WIDGET_VEHICLES),
-@@ -1664,6 +1683,8 @@ static const NWidgetPart _nested_smallmap_bar[] = {
- 							SetDataTip(SPR_IMG_ZOOMOUT, STR_TOOLBAR_TOOLTIP_ZOOM_THE_VIEW_OUT), SetFill(1, 1),
- 					NWidget(WWT_IMGBTN, COLOUR_BROWN, SM_WIDGET_TOGGLETOWNNAME),
- 							SetDataTip(SPR_IMG_TOWN, STR_SMALLMAP_TOOLTIP_TOGGLE_TOWN_NAMES_ON_OFF), SetFill(1, 1),
-+					NWidget(WWT_IMGBTN, COLOUR_BROWN, SM_WIDGET_LINKSTATS),
-+							SetDataTip(SPR_IMG_GRAPHS, STR_SMALLMAP_TOOLTIP_SHOW_LINK_STATS_ON_MAP), SetFill(1, 1),
- 					NWidget(WWT_IMGBTN, COLOUR_BROWN, SM_WIDGET_ROUTES),
- 							SetDataTip(SPR_IMG_SHOW_ROUTES, STR_SMALLMAP_TOOLTIP_SHOW_TRANSPORT_ROUTES_ON), SetFill(1, 1),
- 					NWidget(WWT_IMGBTN, COLOUR_BROWN, SM_WIDGET_VEGETATION),
-@@ -1715,7 +1736,7 @@ static const NWidgetPart _nested_smallmap_widgets[] = {
- };
- 
- static const WindowDesc _smallmap_desc(
--	WDP_AUTO, 446, 314,
-+	WDP_AUTO, 484, 314,
- 	WC_SMALLMAP, WC_NONE,
- 	WDF_UNCLICK_BUTTONS,
- 	_nested_smallmap_widgets, lengthof(_nested_smallmap_widgets)
-diff --git a/src/smallmap_gui.h b/src/smallmap_gui.h
-index 572a175..96a21f8 100644
---- a/src/smallmap_gui.h
-+++ b/src/smallmap_gui.h
-@@ -12,9 +12,185 @@
- #ifndef SMALLMAP_GUI_H
- #define SMALLMAP_GUI_H
- 
-+#include "industry_type.h"
-+#include "window_gui.h"
-+#include "strings_func.h"
-+#include "blitter/factory.hpp"
-+#include "linkgraph_gui.h"
-+
-+/* set up the cargos to be displayed in the smallmap's route legend */
-+void BuildLinkStatsLegend();
-+
- void BuildIndustriesLegend();
- void ShowSmallMap();
- void BuildLandLegend();
- void BuildOwnerLegend();
- 
-+/** Structure for holding relevant data for legends in small map */
-+struct LegendAndColour {
-+	uint8 colour;              ///< Colour of the item on the map.
-+	StringID legend;           ///< String corresponding to the coloured item.
-+	IndustryType type;         ///< Type of industry. Only valid for industry entries.
-+	uint8 height;              ///< Height in tiles. Only valid for height legend entries.
-+	CompanyID company;         ///< Company to display. Only valid for company entries of the owner legend.
-+	bool show_on_map;          ///< For filtering industries, if \c true, industry is shown on the map in colour.
-+	bool end;                  ///< This is the end of the list.
-+	bool col_break;            ///< Perform a column break and go further at the next column.
-+};
-+
-+/** Widget numbers of the small map window. */
-+enum SmallMapWindowWidgets {
-+	SM_WIDGET_CAPTION,           ///< Caption widget.
-+	SM_WIDGET_MAP_BORDER,        ///< Border around the smallmap.
-+	SM_WIDGET_MAP,               ///< Panel containing the smallmap.
-+	SM_WIDGET_LEGEND,            ///< Bottom panel to display smallmap legends.
-+	SM_WIDGET_BLANK,             ///< Empty button as placeholder.
-+	SM_WIDGET_ZOOM_IN,           ///< Button to zoom in one step.
-+	SM_WIDGET_ZOOM_OUT,          ///< Button to zoom out one step.
-+	SM_WIDGET_CONTOUR,           ///< Button to select the contour view (height map).
-+	SM_WIDGET_VEHICLES,          ///< Button to select the vehicles view.
-+	SM_WIDGET_INDUSTRIES,        ///< Button to select the industries view.
-+	SM_WIDGET_LINKSTATS,         ///< Button to select the link stats view.
-+	SM_WIDGET_ROUTES,            ///< Button to select the routes view.
-+	SM_WIDGET_VEGETATION,        ///< Button to select the vegetation view.
-+	SM_WIDGET_OWNERS,            ///< Button to select the owners view.
-+	SM_WIDGET_CENTERMAP,         ///< Button to move smallmap center to main window center.
-+	SM_WIDGET_TOGGLETOWNNAME,    ///< Toggle button to display town names.
-+	SM_WIDGET_SELECT_BUTTONS,    ///< Selection widget for the buttons present in some smallmap modes.
-+	SM_WIDGET_ENABLE_ALL,        ///< Button to enable display of all legend entries.
-+	SM_WIDGET_DISABLE_ALL,       ///< Button to disable display of all legend entries.
-+	SM_WIDGET_SHOW_HEIGHT,       ///< Show heightmap toggle button.
-+};
-+
-+/** Class managing the smallmap window. */
-+class SmallMapWindow : public Window {
-+protected:
-+	/** Types of legends in the #SM_WIDGET_LEGEND widget. */
-+	enum SmallMapType {
-+		SMT_CONTOUR,
-+		SMT_VEHICLES,
-+		SMT_INDUSTRY,
-+		SMT_LINKSTATS,
-+		SMT_ROUTES,
-+		SMT_VEGETATION,
-+		SMT_OWNER,
-+	};
-+
-+	/** Available kinds of zoomlevel changes. */
-+	enum ZoomLevelChange {
-+		ZLC_INITIALIZE, ///< Initialize zoom level.
-+		ZLC_ZOOM_OUT,   ///< Zoom out.
-+		ZLC_ZOOM_IN,    ///< Zoom in.
-+	};
-+
-+	static SmallMapType map_type; ///< Currently displayed legends.
-+	static bool show_towns;       ///< Display town names in the smallmap.
-+
-+	static const uint LEGEND_BLOB_WIDTH = 8;              ///< Width of the coloured blob in front of a line text in the #SM_WIDGET_LEGEND widget.
-+	static const uint INDUSTRY_MIN_NUMBER_OF_COLUMNS = 2; ///< Minimal number of columns in the #SM_WIDGET_LEGEND widget for the #SMT_INDUSTRY legend.
-+	static const uint8 FORCE_REFRESH_PERIOD = 0x1F; ///< map is redrawn after that many ticks
-+
-+	uint min_number_of_fixed_rows; ///< Minimal number of rows in the legends for the fixed layouts only (all except #SMT_INDUSTRY).
-+	uint column_width;             ///< Width of a column in the #SM_WIDGET_LEGEND widget.
-+
-+	int32 scroll_x;  ///< Horizontal world coordinate of the base tile left of the top-left corner of the smallmap display.
-+	int32 scroll_y;  ///< Vertical world coordinate of the base tile left of the top-left corner of the smallmap display.
-+	int32 subscroll; ///< Number of pixels (0..3) between the right end of the base tile and the pixel at the top-left corner of the smallmap display.
-+	int zoom;        ///< Zoom level. Bigger number means more zoom-out (further away).
-+
-+	uint8 refresh;   ///< Refresh counter, zeroed every FORCE_REFRESH_PERIOD ticks.
-+	LinkGraphOverlay *overlay;
-+
-+	/**
-+	 * Draws vertical part of map indicator
-+	 * @param x X coord of left/right border of main viewport
-+	 * @param y Y coord of top border of main viewport
-+	 * @param y2 Y coord of bottom border of main viewport
-+	 */
-+	static inline void DrawVertMapIndicator(int x, int y, int y2)
-+	{
-+		GfxFillRect(x, y,      x, y + 3, PC_VERY_LIGHT_YELLOW);
-+		GfxFillRect(x, y2 - 3, x, y2,    PC_VERY_LIGHT_YELLOW);
-+	}
-+
-+	/**
-+	 * Draws horizontal part of map indicator
-+	 * @param x X coord of left border of main viewport
-+	 * @param x2 X coord of right border of main viewport
-+	 * @param y Y coord of top/bottom border of main viewport
-+	 */
-+	static inline void DrawHorizMapIndicator(int x, int x2, int y)
-+	{
-+		GfxFillRect(x,      y, x + 3, y, PC_VERY_LIGHT_YELLOW);
-+		GfxFillRect(x2 - 3, y, x2,    y, PC_VERY_LIGHT_YELLOW);
-+	}
-+
-+	void DrawMapIndicators() const;
-+	void DrawSmallMapColumn(void *dst, uint xc, uint yc, int pitch, int reps, int start_pos, int end_pos, Blitter *blitter) const;
-+	void DrawVehicles(const DrawPixelInfo *dpi, Blitter *blitter) const;
-+	void DrawTowns(const DrawPixelInfo *dpi) const;
-+	void DrawSmallMap(DrawPixelInfo *dpi) const;
-+
-+	Point RemapTile(int tile_x, int tile_y) const;
-+	Point PixelToTile(int px, int py, int *sub, bool add_sub = true) const;
-+	Point ComputeScroll(int tx, int ty, int x, int y, int *sub);
-+	void SetZoomLevel(ZoomLevelChange change, const Point *zoom_pt);
-+	void SetOverlayCargoMask();
-+	void SetupWidgetData();
-+	uint32 GetTileColours(const TileArea &ta) const;
-+
-+public:
-+	uint min_number_of_columns;    ///< Minimal number of columns in legends.
-+
-+	SmallMapWindow(const WindowDesc *desc, int window_number);
-+	virtual ~SmallMapWindow() {delete this->overlay;}
-+
-+	/**
-+	 * Compute minimal required width of the legends.
-+	 * @return Minimally needed width for displaying the smallmap legends in pixels.
-+	 */
-+	inline uint GetMinLegendWidth() const
-+	{
-+		return WD_FRAMERECT_LEFT + this->min_number_of_columns * this->column_width;
-+	}
-+
-+	/**
-+	 * Return number of columns that can be displayed in \a width pixels.
-+	 * @return Number of columns to display.
-+	 */
-+	inline uint GetNumberColumnsLegend(uint width) const
-+	{
-+		return width / this->column_width;
-+	}
-+
-+	/**
-+	 * Compute height given a number of columns.
-+	 * @param Number of columns.
-+	 * @return Needed height for displaying the smallmap legends in pixels.
-+	 */
-+	inline uint GetLegendHeight(uint num_columns) const
-+	{
-+		return WD_FRAMERECT_TOP + WD_FRAMERECT_BOTTOM +
-+				this->GetNumberRowsLegend(num_columns) * FONT_HEIGHT_SMALL;
-+	}
-+
-+	uint GetNumberRowsLegend(uint columns) const;
-+	Point GetStationMiddle(const Station *st) const;
-+	void SwitchMapType(SmallMapType map_type);
-+	void SetNewScroll(int sx, int sy, int sub);
-+	void SelectLegendItem(int click_pos, LegendAndColour *legend, int end_legend_item, int begin_legend_item = 0);
-+	void SmallMapCenterOnCurrentPos();
-+
-+	virtual void SetStringParameters(int widget) const;
-+	virtual void OnInit();
-+	virtual void OnPaint();
-+	virtual void DrawWidget(const Rect &r, int widget) const;
-+	virtual void OnClick(Point pt, int widget, int click_count);
-+	virtual void OnInvalidateData(int data = 0, bool gui_scope = true);
-+	virtual bool OnRightClick(Point pt, int widget);
-+	virtual void OnMouseWheel(int wheel);
-+	virtual void OnTick();
-+	virtual void OnScroll(Point delta);
-+};
-+
- #endif /* SMALLMAP_GUI_H */
 diff --git a/src/station.cpp b/src/station.cpp
 index a0b72e7..44bc172 100644
 --- a/src/station.cpp
@@ -8794,7 +6489,7 @@ index a0b72e7..44bc172 100644
  
  	/* Clear the persistent storage. */
 diff --git a/src/station_base.h b/src/station_base.h
-index 984582c..1fe0594 100644
+index 984582c..96d62bf 100644
 --- a/src/station_base.h
 +++ b/src/station_base.h
 @@ -16,7 +16,11 @@
@@ -9076,7 +6771,7 @@ index 984582c..1fe0594 100644
   * Stores station stats for a single cargo.
   */
  struct GoodsEntry {
-@@ -42,7 +306,11 @@ struct GoodsEntry {
+@@ -42,7 +306,10 @@ struct GoodsEntry {
  		days_since_pickup(255),
  		rating(INITIAL_STATION_RATING),
  		last_speed(0),
@@ -9084,12 +6779,11 @@ index 984582c..1fe0594 100644
 +		last_age(255),
 +		supply(0),
 +		supply_new(0),
-+		last_component(INVALID_LINKGRAPH_COMPONENT),
-+		max_waiting_cargo(0)
++		last_component(INVALID_LINKGRAPH_COMPONENT)
  	{}
  
  	byte acceptance_pickup; ///< Status of this cargo, see #GoodsEntryStatus.
-@@ -52,6 +320,19 @@ struct GoodsEntry {
+@@ -52,6 +319,18 @@ struct GoodsEntry {
  	byte last_age;          ///< Age in years of the last vehicle that picked up this cargo.
  	byte amount_fract;      ///< Fractional part of the amount in the cargo list
  	StationCargoList cargo; ///< The cargo packets of cargo waiting in this station
@@ -9098,7 +6792,6 @@ index 984582c..1fe0594 100644
 +	FlowStatMap flows;      ///< Planned flows through this station.
 +	LinkStatMap link_stats; ///< Capacities and usage statistics for outgoing links.
 +	LinkGraphComponentID last_component; ///< Component this station was last part of in this cargo's link graph.
-+	uint max_waiting_cargo;              ///< Max cargo from this station waiting at any station.
 +	FlowStat GetSumFlowVia(StationID via) const;
 +
 +	void UpdateFlowStats(StationID source, uint count, StationID next);
@@ -9109,7 +6802,7 @@ index 984582c..1fe0594 100644
  };
  
  /** All airport-related information. Only valid if tile != INVALID_TILE. */
-@@ -231,6 +512,8 @@ public:
+@@ -231,6 +510,8 @@ public:
  	/* virtual */ uint32 GetNewGRFVariable(const ResolverObject *object, byte variable, byte parameter, bool *available) const;
  
  	/* virtual */ void GetTileArea(TileArea *ta, StationType type) const;
@@ -9119,7 +6812,7 @@ index 984582c..1fe0594 100644
  
  #define FOR_ALL_STATIONS(var) FOR_ALL_BASE_STATIONS_OF_TYPE(Station, var)
 diff --git a/src/station_cmd.cpp b/src/station_cmd.cpp
-index 3495f11..1f9d724 100644
+index 3495f11..4be91c8 100644
 --- a/src/station_cmd.cpp
 +++ b/src/station_cmd.cpp
 @@ -45,6 +45,7 @@
@@ -9130,109 +6823,16 @@ index 3495f11..1f9d724 100644
  #include "table/airporttile_ids.h"
  #include "newgrf_airporttiles.h"
  #include "order_backup.h"
-@@ -3061,6 +3062,19 @@ static void UpdateStationRating(Station *st)
- 			int rating = 0;
- 			uint waiting = ge->cargo.Count();
- 
-+			/* num_dests is at least 1 if there is any cargo as
-+			 * INVALID_STATION is also a destination.
-+			 */
-+			uint num_dests = (uint)ge->cargo.Packets()->MapSize();
-+
-+			/* Average amount of cargo per next hop, but prefer solitary stations
-+			 * with only one or two next hops. They are allowed to have more
-+			 * cargo waiting per next hop.
-+			 * With manual cargo distribution waiting_avg = waiting / 2 as then
-+			 * INVALID_STATION is the only destination.
-+			 */
-+			uint waiting_avg = waiting / (num_dests + 1);
-+
- 			if (HasBit(cs->callback_mask, CBM_CARGO_STATION_RATING_CALC)) {
- 				/* Perform custom station rating. If it succeeds the speed, days in transit and
- 				 * waiting cargo ratings must not be executed. */
-@@ -3069,7 +3083,7 @@ static void UpdateStationRating(Station *st)
- 				uint last_speed = ge->last_speed;
- 				if (last_speed == 0) last_speed = 0xFF;
- 
--				uint32 var18 = min(ge->days_since_pickup, 0xFF) | (min(waiting, 0xFFFF) << 8) | (min(last_speed, 0xFF) << 24);
-+				uint32 var18 = min(ge->days_since_pickup, 0xFF) | (min(ge->max_waiting_cargo, 0xFFFF) << 8) | (min(last_speed, 0xFF) << 24);
- 				/* Convert to the 'old' vehicle types */
- 				uint32 var10 = (st->last_vehicle_type == VEH_INVALID) ? 0x0 : (st->last_vehicle_type + 0x10);
- 				uint16 callback = GetCargoCallback(CBID_CARGO_STATION_RATING_CALC, var10, var18, cs);
-@@ -3094,11 +3108,11 @@ static void UpdateStationRating(Station *st)
- 				(rating += 45, days > 3) ||
- 				(rating += 35, true);
- 
--				(rating -= 90, waiting > 1500) ||
--				(rating += 55, waiting > 1000) ||
--				(rating += 35, waiting > 600) ||
--				(rating += 10, waiting > 300) ||
--				(rating += 20, waiting > 100) ||
-+				(rating -= 90, ge->max_waiting_cargo > 1500) ||
-+				(rating += 55, ge->max_waiting_cargo > 1000) ||
-+				(rating += 35, ge->max_waiting_cargo > 600) ||
-+				(rating += 10, ge->max_waiting_cargo > 300) ||
-+				(rating += 20, ge->max_waiting_cargo > 100) ||
- 				(rating += 10, true);
- 			}
- 
-@@ -3116,12 +3130,12 @@ static void UpdateStationRating(Station *st)
- 				/* only modify rating in steps of -2, -1, 0, 1 or 2 */
- 				ge->rating = rating = or_ + Clamp(Clamp(rating, 0, 255) - or_, -2, 2);
- 
--				/* if rating is <= 64 and more than 200 items waiting,
-+				/* if rating is <= 64 and more than 100 items waiting on average per destination,
- 				 * remove some random amount of goods from the station */
--				if (rating <= 64 && waiting >= 200) {
-+				if (rating <= 64 && waiting_avg >= 100) {
- 					int dec = Random() & 0x1F;
--					if (waiting < 400) dec &= 7;
--					waiting -= dec + 1;
-+					if (waiting_avg < 200) dec &= 7;
-+					waiting -= (dec + 1) * num_dests;
- 					waiting_changed = true;
- 				}
- 
-@@ -3130,7 +3144,7 @@ static void UpdateStationRating(Station *st)
- 					uint32 r = Random();
- 					if (rating <= (int)GB(r, 0, 7)) {
- 						/* Need to have int, otherwise it will just overflow etc. */
--						waiting = max((int)waiting - (int)GB(r, 8, 2) - 1, 0);
-+						waiting = max((int)waiting - (int)((GB(r, 8, 2) - 1) * num_dests), 0);
- 						waiting_changed = true;
- 					}
- 				}
-@@ -3150,7 +3164,28 @@ static void UpdateStationRating(Station *st)
+@@ -3150,7 +3151,7 @@ static void UpdateStationRating(Station *st)
  					waiting_changed = true;
  				}
  
 -				if (waiting_changed) ge->cargo.Truncate(waiting);
-+				if (waiting_changed) {
-+					/* feed back the exact own waiting cargo at this station for the
-+					 * next rating calculation.
-+					 */
-+					ge->max_waiting_cargo = 0;
-+
-+					/* If truncating also punish the source stations' ratings to
-+					 * decrease the flow of incoming cargo. */
-+
-+					StationCargoAmountMap waiting_per_source;
-+					ge->cargo.CountAndTruncate(waiting, waiting_per_source);
-+					for (StationCargoAmountMap::iterator i(waiting_per_source.begin()); i != waiting_per_source.end(); ++i) {
-+						Station *source_station = Station::GetIfValid(i->first);
-+						if (source_station == NULL) continue;
-+
-+						GoodsEntry &source_ge = source_station->goods[cs->Index()];
-+						source_ge.max_waiting_cargo = max(source_ge.max_waiting_cargo, i->second);
-+					}
-+				} else {
-+					/* if the average number per next hop is low, be more forgiving. */
-+					ge->max_waiting_cargo = waiting_avg;
-+				}
++				if (waiting_changed) ge->cargo.RandomTruncate(waiting);
  			}
  		}
  	}
-@@ -3163,6 +3198,140 @@ static void UpdateStationRating(Station *st)
+@@ -3163,6 +3164,140 @@ static void UpdateStationRating(Station *st)
  	}
  }
  
@@ -9373,7 +6973,7 @@ index 3495f11..1f9d724 100644
  /* called for every station each tick */
  static void StationHandleSmallTick(BaseStation *st)
  {
-@@ -3179,6 +3348,8 @@ void OnTick_Station()
+@@ -3179,6 +3314,8 @@ void OnTick_Station()
  {
  	if (_game_mode == GM_EDITOR) return;
  
@@ -9382,7 +6982,7 @@ index 3495f11..1f9d724 100644
  	BaseStation *st;
  	FOR_ALL_BASE_STATIONS(st) {
  		StationHandleSmallTick(st);
-@@ -3205,6 +3376,8 @@ void StationMonthlyLoop()
+@@ -3205,6 +3342,8 @@ void StationMonthlyLoop()
  			GoodsEntry *ge = &st->goods[i];
  			SB(ge->acceptance_pickup, GoodsEntry::GES_LAST_MONTH, 1, GB(ge->acceptance_pickup, GoodsEntry::GES_CURRENT_MONTH, 1));
  			ClrBit(ge->acceptance_pickup, GoodsEntry::GES_CURRENT_MONTH);
@@ -9391,7 +6991,7 @@ index 3495f11..1f9d724 100644
  		}
  	}
  }
-@@ -3242,7 +3415,17 @@ static uint UpdateStationWaiting(Station *st, CargoID type, uint amount, SourceT
+@@ -3242,7 +3381,17 @@ static uint UpdateStationWaiting(Station *st, CargoID type, uint amount, SourceT
  	/* No new "real" cargo item yet. */
  	if (amount == 0) return 0;
  
@@ -9410,7 +7010,7 @@ index 3495f11..1f9d724 100644
  
  	if (!HasBit(ge.acceptance_pickup, GoodsEntry::GES_PICKUP)) {
  		InvalidateWindowData(WC_STATION_LIST, st->index);
-@@ -3616,6 +3799,96 @@ static CommandCost TerraformTile_Station(TileIndex tile, DoCommandFlag flags, ui
+@@ -3616,6 +3765,96 @@ static CommandCost TerraformTile_Station(TileIndex tile, DoCommandFlag flags, ui
  	return DoCommand(tile, 0, 0, flags, CMD_LANDSCAPE_CLEAR);
  }
  
@@ -9531,1299 +7131,18 @@ index 0fe5b2f..4eaf727 100644
 +
  #endif /* STATION_FUNC_H */
 diff --git a/src/station_gui.cpp b/src/station_gui.cpp
-index dda06ee..a6fb4ae 100644
+index dda06ee..7e47497 100644
 --- a/src/station_gui.cpp
 +++ b/src/station_gui.cpp
-@@ -32,6 +32,8 @@
+@@ -1012,7 +1012,7 @@ struct StationViewWindow : public Window {
+ 				this->cargo_rows[i] = (uint16)cargolist->size();
  
- #include "table/strings.h"
- 
-+#include <vector>
-+
- /**
-  * Draw a (multi)line of cargos seperated by commas, and prefixed with a string.
-  * @param cargo_mask Mask of cargos to include in the list.
-@@ -818,10 +820,18 @@ static const NWidgetPart _nested_station_view_widgets[] = {
- 		NWidget(WWT_STICKYBOX, COLOUR_GREY),
- 	EndContainer(),
- 	NWidget(NWID_HORIZONTAL),
--		NWidget(WWT_PANEL, COLOUR_GREY, SVW_WAITING), SetMinimalSize(237, 52), SetResize(1, 10), SetScrollbar(SVW_SCROLLBAR), EndContainer(),
-+		NWidget(WWT_PUSHTXTBTN, COLOUR_GREY, SVW_SORT_ORDER), SetMinimalSize(81, 12), SetFill(1, 1), SetDataTip(STR_BUTTON_SORT_BY, STR_TOOLTIP_SORT_ORDER),
-+		NWidget(WWT_DROPDOWN, COLOUR_GREY, SVW_SORT_BY), SetMinimalSize(168, 12), SetResize(1, 0), SetFill(0, 1), SetDataTip(0x0, STR_TOOLTIP_SORT_CRITERIA),
-+	EndContainer(),
-+	NWidget(NWID_HORIZONTAL),
-+		NWidget(WWT_TEXTBTN, COLOUR_GREY, SVW_GROUP), SetMinimalSize(81, 12), SetFill(1, 1), SetDataTip(STR_STATION_VIEW_GROUP, 0x0),
-+		NWidget(WWT_DROPDOWN, COLOUR_GREY, SVW_GROUP_BY), SetMinimalSize(168, 12), SetResize(1, 0), SetFill(0, 1), SetDataTip(0x0, STR_TOOLTIP_GROUP_ORDER),
-+	EndContainer(),
-+	NWidget(NWID_HORIZONTAL),
-+		NWidget(WWT_PANEL, COLOUR_GREY, SVW_WAITING), SetMinimalSize(237, 44), SetResize(1, 10), SetScrollbar(SVW_SCROLLBAR), EndContainer(),
- 		NWidget(NWID_VSCROLLBAR, COLOUR_GREY, SVW_SCROLLBAR),
- 	EndContainer(),
--	NWidget(WWT_PANEL, COLOUR_GREY, SVW_ACCEPTLIST), SetMinimalSize(249, 32), SetResize(1, 0), EndContainer(),
-+	NWidget(WWT_PANEL, COLOUR_GREY, SVW_ACCEPTLIST), SetMinimalSize(249, 23), SetResize(1, 0), EndContainer(),
- 	NWidget(NWID_HORIZONTAL, NC_EQUALSIZE),
- 		NWidget(WWT_PUSHTXTBTN, COLOUR_GREY, SVW_LOCATION), SetMinimalSize(60, 12), SetResize(1, 0), SetFill(1, 1),
- 				SetDataTip(STR_BUTTON_LOCATION, STR_STATION_VIEW_CENTER_TOOLTIP),
-@@ -854,33 +864,270 @@ static void DrawCargoIcons(CargoID i, uint waiting, int left, int right, int y)
- 
- 	SpriteID sprite = CargoSpec::Get(i)->GetCargoIcon();
- 
--	int x = _current_text_dir == TD_RTL ? right - num * 10 : left;
-+	int x = _current_text_dir == TD_RTL ? left : right - num * 10;
- 	do {
- 		DrawSprite(sprite, PAL_NONE, x, y);
- 		x += 10;
- 	} while (--num);
- }
- 
--struct CargoData {
--	CargoID cargo;
--	StationID source;
--	uint count;
-+CargoDataEntry::CargoDataEntry() :
-+	parent(NULL),
-+	station(INVALID_STATION),
-+	num_children(0),
-+	count(0),
-+	children(new CargoDataSet(CargoSorter(ST_CARGO_ID)))
-+{}
-+
-+CargoDataEntry::CargoDataEntry(CargoID cargo, uint count, CargoDataEntry *parent) :
-+	parent(parent),
-+	cargo(cargo),
-+	num_children(0),
-+	count(count),
-+	children(new CargoDataSet)
-+{}
-+
-+CargoDataEntry::CargoDataEntry(StationID station, uint count, CargoDataEntry *parent) :
-+	parent(parent),
-+	station(station),
-+	num_children(0),
-+	count(count),
-+	children(new CargoDataSet)
-+{}
-+
-+CargoDataEntry::CargoDataEntry(StationID station) :
-+	parent(NULL),
-+	station(station),
-+	num_children(0),
-+	count(0),
-+	children(NULL)
-+{}
-+
-+CargoDataEntry::CargoDataEntry(CargoID cargo) :
-+	parent(NULL),
-+	cargo(cargo),
-+	num_children(0),
-+	count(0),
-+	children(NULL)
-+{}
-+
-+CargoDataEntry::~CargoDataEntry()
-+{
-+	this->Clear();
-+	delete this->children;
-+}
- 
--	CargoData(CargoID cargo, StationID source, uint count) :
--		cargo(cargo),
--		source(source),
--		count(count)
--	{ }
--};
-+/**
-+ * Delete all subentries, reset count and num_children and adapt parent's count.
-+ */
-+void CargoDataEntry::Clear()
-+{
-+	if (this->children != NULL) {
-+		for (CargoDataSet::iterator i = this->children->begin(); i != this->children->end(); ++i) {
-+			assert(*i != this);
-+			delete *i;
-+		}
-+		this->children->clear();
-+	}
-+	if (this->parent != NULL) this->parent->count -= this->count;
-+	this->count = 0;
-+	this->num_children = 0;
-+}
-+
-+/**
-+ * Remove a subentry from this one and delete it.
-+ * @param child the entry to be removed. This may also be a synthetic entry
-+ * which only contains the ID of the entry to be removed. In this case child is
-+ * not deleted.
-+ */
-+void CargoDataEntry::Remove(CargoDataEntry *child)
-+{
-+	CargoDataSet::iterator i = this->children->find(child);
-+	if (i != this->children->end()) {
-+		delete *i;
-+		this->children->erase(i);
-+	}
-+}
-+
-+/**
-+ * Retrieve a subentry or insert it if it doesn't exist, yet.
-+ * @tparam ID type of ID: either StationID or CargoID
-+ * @param child_id ID of the child to be inserted or retrieved.
-+ * @return the new or retrieved subentry
-+ */
-+template<class ID>
-+CargoDataEntry *CargoDataEntry::InsertOrRetrieve(ID child_id)
-+{
-+	CargoDataEntry tmp(child_id);
-+	CargoDataSet::iterator i = this->children->find(&tmp);
-+	if (i == this->children->end()) {
-+		IncrementSize();
-+		return *(this->children->insert(new CargoDataEntry(child_id, 0, this)).first);
-+	} else {
-+		CargoDataEntry *ret = *i;
-+		assert(this->children->value_comp().GetSortType() != ST_COUNT);
-+		return ret;
-+	}
-+}
-+
-+/**
-+ * Update the count for this entry and propagate the change to the parent entry
-+ * if there is one.
-+ * @param count the amount to be added to this entry
-+ */
-+void CargoDataEntry::Update(uint count)
-+{
-+	this->count += count;
-+	if (this->parent != NULL) this->parent->Update(count);
-+}
-+
-+/**
-+ * Increment
-+ */
-+void CargoDataEntry::IncrementSize()
-+{
-+	 ++this->num_children;
-+	 if (this->parent != NULL) this->parent->IncrementSize();
-+}
-+
-+void CargoDataEntry::Resort(CargoSortType type, SortOrder order)
-+{
-+	CargoDataSet *new_subs = new CargoDataSet(this->children->begin(), this->children->end(), CargoSorter(type, order));
-+	delete this->children;
-+	this->children = new_subs;
-+}
-+
-+CargoDataEntry *CargoDataEntry::Retrieve(CargoDataSet::iterator i) const
-+{
-+	if (i == this->children->end()) {
-+		return NULL;
-+	} else {
-+		assert(this->children->value_comp().GetSortType() != ST_COUNT);
-+		return *i;
-+	}
-+}
-+
-+bool CargoSorter::operator()(const CargoDataEntry *cd1, const CargoDataEntry *cd2) const
-+{
-+	switch (this->type) {
-+		case ST_STATION_ID:
-+			return this->SortId<StationID>(cd1->GetStation(), cd2->GetStation());
-+			break;
-+		case ST_CARGO_ID:
-+			return this->SortId<CargoID>(cd1->GetCargo(), cd2->GetCargo());
-+			break;
-+		case ST_COUNT:
-+			return this->SortCount(cd1, cd2);
-+			break;
-+		case ST_STATION_STRING:
-+			return this->SortStation(cd1->GetStation(), cd2->GetStation());
-+			break;
-+		default:
-+			NOT_REACHED();
-+	}
-+}
-+
-+template<class ID>
-+bool CargoSorter::SortId(ID st1, ID st2) const
-+{
-+	return (this->order == SO_ASCENDING) ? st1 < st2 : st2 < st1;
-+}
- 
--typedef std::list<CargoData> CargoDataList;
-+bool CargoSorter::SortCount(const CargoDataEntry *cd1, const CargoDataEntry *cd2) const
-+{
-+	uint c1 = cd1->GetCount();
-+	uint c2 = cd2->GetCount();
-+	if (c1 == c2) {
-+		return this->SortStation(cd1->GetStation(), cd2->GetStation());
-+	} else if (this->order == SO_ASCENDING) {
-+		return c1 < c2;
-+	} else {
-+		return c2 < c1;
-+	}
-+}
-+
-+bool CargoSorter::SortStation(StationID st1, StationID st2) const
-+{
-+	static char buf1[MAX_LENGTH_STATION_NAME_CHARS];
-+	static char buf2[MAX_LENGTH_STATION_NAME_CHARS];
-+
-+	if (!Station::IsValidID(st1)) {
-+		return Station::IsValidID(st2) ? this->order == SO_ASCENDING : this->SortId(st1, st2);
-+	} else if (!Station::IsValidID(st2)) {
-+		return order == SO_DESCENDING;
-+	}
-+
-+	SetDParam(0, st1);
-+	GetString(buf1, STR_STATION_NAME, lastof(buf1));
-+	SetDParam(0, st2);
-+	GetString(buf2, STR_STATION_NAME, lastof(buf2));
-+
-+	int res = strcmp(buf1, buf2);
-+	if (res == 0) {
-+		return this->SortId(st1, st2);
-+	} else {
-+		return (this->order == SO_ASCENDING) ? res < 0 : res > 0;
-+	}
-+}
- 
- /**
-  * The StationView window
-  */
- struct StationViewWindow : public Window {
--	uint32 cargo;                 ///< Bitmask of cargo types to expand
--	uint16 cargo_rows[NUM_CARGO]; ///< Header row for each cargo type
-+	/**
-+	 * A row being displayed in the cargo view (as opposed to being "hidden" behind a plus sign).
-+	 */
-+	struct RowDisplay {
-+		RowDisplay(CargoDataEntry *f, StationID n) : filter(f), next_station(n) {}
-+		RowDisplay(CargoDataEntry *f, CargoID n) : filter(f), next_cargo(n) {}
-+
-+		/**
-+		 * Parent of the cargo entry belonging to the row.
-+		 */
-+		CargoDataEntry *filter;
-+		union {
-+			/**
-+			 * ID of the station belonging to the entry actually displayed if it's to/from/via.
-+			 */
-+			StationID next_station;
-+
-+			/**
-+			 * ID of the cargo belonging to the entry actually displayed if it's cargo.
-+			 */
-+			CargoID next_cargo;
-+		};
-+	};
-+
-+	typedef std::vector<RowDisplay> CargoDataVector;
-+
-+	static const int NUM_COLUMNS = 4; ///< Number of "columns" in the cargo view: cargo, from, via, to
-+
-+	/**
-+	 * Type of data invalidation.
-+	 */
-+	enum Invalidation {
-+		INV_FLOWS = 0x100, ///< The planned flows have been recalculated and everything has to be updated.
-+		INV_CARGO = 0x200  ///< Some cargo has been added or removed.
-+	};
-+
-+	/**
-+	 * Type of grouping used in each of the "columns".
-+	 */
-+	enum Grouping {
-+		GR_SOURCE,      ///< Group by source of cargo ("from").
-+		GR_NEXT,        ///< Group by next station ("via").
-+		GR_DESTINATION, ///< Group by estimated final destination ("to").
-+		GR_CARGO,       ///< Group by cargo type.
-+	};
-+
-+	/**
-+	 * Display mode of the cargo view.
-+	 */
-+	enum Mode {
-+		MODE_WAITING, ///< Show cargo waiting at the station.
-+		MODE_PLANNED  ///< Show cargo planned to pass through the station.
-+	};
-+
- 	uint expand_shrink_width;     ///< The width allocated to the expand/shrink 'button'
- 	int rating_lines;             ///< Number of lines in the cargo ratings view.
- 	int accepts_lines;            ///< Number of lines in the accepted cargo view.
-@@ -892,7 +1139,31 @@ struct StationViewWindow : public Window {
- 		ALH_ACCEPTS = 3,  ///< Height of the accepted cargo view.
- 	};
- 
--	StationViewWindow(const WindowDesc *desc, WindowNumber window_number) : Window()
-+	static const StringID _sort_names[];  ///< Names of the sorting options in the dropdown.
-+	static const StringID _group_names[]; ///< Names of the grouping options in the dropdown.
-+
-+	/**
-+	 * Sort types of the different 'columns'.
-+	 * In fact only ST_COUNT and ST_AS_GROUPING are active and you can only
-+	 * sort all the columns in the same way. The other options haven't been
-+	 * included in the GUI due to lack of space.
-+	 */
-+	CargoSortType sortings[NUM_COLUMNS];
-+
-+	/** Sort order (ascending/descending) for the 'columns'. */
-+	SortOrder sort_orders[NUM_COLUMNS];
-+
-+	int scroll_to_row;                  ///< If set, scroll the main viewport to the station pointed to by this row.
-+	int grouping_index;                 ///< Currently selected entry in the grouping drop down.
-+	Mode current_mode;                  ///< Currently selected display mode of cargo view.
-+	Grouping groupings[NUM_COLUMNS];    ///< Grouping modes for the different columns.
-+
-+	CargoDataEntry expanded_rows;       ///< Parent entry of currently expanded rows.
-+	CargoDataEntry cached_destinations; ///< Cache for the flows passing through this station.
-+	CargoDataVector displayed_rows;     ///< Parent entry of currently displayed rows (including collapsed ones).
-+
-+	StationViewWindow(const WindowDesc *desc, WindowNumber window_number) : Window(),
-+		scroll_to_row(INT_MAX), grouping_index(0)
- 	{
- 		this->rating_lines  = ALH_RATING;
- 		this->accepts_lines = ALH_ACCEPTS;
-@@ -902,6 +1173,12 @@ struct StationViewWindow : public Window {
- 		/* Nested widget tree creation is done in two steps to ensure that this->GetWidget<NWidgetCore>(SVW_ACCEPTS) exists in UpdateWidgetSize(). */
- 		this->FinishInitNested(desc, window_number);
- 
-+		this->groupings[0] = GR_CARGO;
-+		this->sortings[0] = ST_AS_GROUPING;
-+		this->SelectGroupBy(_settings_client.gui.station_gui_group_order);
-+		this->SelectSortBy(_settings_client.gui.station_gui_sort_by);
-+		this->sort_orders[0] = SO_ASCENDING;
-+		this->SelectSortOrder((SortOrder)_settings_client.gui.station_gui_sort_order);
- 		Owner owner = Station::Get(window_number)->owner;
- 		if (owner != OWNER_NONE) this->owner = owner;
- 	}
-@@ -917,12 +1194,50 @@ struct StationViewWindow : public Window {
- 		DeleteWindowById(WC_AIRCRAFT_LIST, VehicleListIdentifier(VL_STATION_LIST, VEH_AIRCRAFT, owner, this->window_number).Pack(), false);
- 	}
- 
-+	/**
-+	 * Show a certain cargo entry characterized by source/next/dest station, cargo ID and amount of cargo at the
-+	 * right place in the cargo view. I.e. update as many rows as are expanded following that characterization.
-+	 * @param data Root entry of the tree.
-+	 * @param cargo Cargo ID of the entry to be shown.
-+	 * @param source Source station of the entry to be shown.
-+	 * @param next Next station the cargo to be shown will visit.
-+	 * @param dest Final destination of the cargo to be shown.
-+	 * @param count Amount of cargo to be shown.
-+	 */
-+	void ShowCargo(CargoDataEntry *data, CargoID cargo, StationID source, StationID next, StationID dest, uint count)
-+	{
-+		if (count == 0) return;
-+		const CargoDataEntry *expand = &this->expanded_rows;
-+		for (int i = 0; i < NUM_COLUMNS && expand != NULL; ++i) {
-+			switch (groupings[i]) {
-+				case GR_CARGO:
-+					assert(i == 0);
-+					data = data->InsertOrRetrieve(cargo);
-+					expand = expand->Retrieve(cargo);
-+					break;
-+				case GR_SOURCE:
-+					data = data->InsertOrRetrieve(source);
-+					expand = expand->Retrieve(source);
-+					break;
-+				case GR_NEXT:
-+					data = data->InsertOrRetrieve(next);
-+					expand = expand->Retrieve(next);
-+					break;
-+				case GR_DESTINATION:
-+					data = data->InsertOrRetrieve(dest);
-+					expand = expand->Retrieve(dest);
-+					break;
-+			}
-+		}
-+		data->Update(count);
-+	}
-+
- 	virtual void UpdateWidgetSize(int widget, Dimension *size, const Dimension &padding, Dimension *fill, Dimension *resize)
- 	{
- 		switch (widget) {
- 			case SVW_WAITING:
- 				resize->height = FONT_HEIGHT_NORMAL;
--				size->height = WD_FRAMERECT_TOP + 5 * resize->height + WD_FRAMERECT_BOTTOM;
-+				size->height = WD_FRAMERECT_TOP + 4 * resize->height + WD_FRAMERECT_BOTTOM;
- 				this->expand_shrink_width = max(GetStringBoundingBox("-").width, GetStringBoundingBox("+").width) + WD_FRAMERECT_LEFT + WD_FRAMERECT_RIGHT;
- 				break;
- 
-@@ -934,20 +1249,21 @@ struct StationViewWindow : public Window {
- 
- 	virtual void OnPaint()
- 	{
--		CargoDataList cargolist;
--		uint32 transfers = 0;
--		this->OrderWaitingCargo(&cargolist, &transfers);
-+		const Station *st = Station::Get(this->window_number);
-+		CargoDataEntry cargo;
-+		BuildCargoList(&cargo, st);
- 
--		this->vscroll->SetCount((int)cargolist.size() + 1); // update scrollbar
-+		this->vscroll->SetCount(cargo.GetNumChildren()); // update scrollbar
- 
- 		/* disable some buttons */
--		const Station *st = Station::Get(this->window_number);
- 		this->SetWidgetDisabledState(SVW_RENAME,   st->owner != _local_company);
- 		this->SetWidgetDisabledState(SVW_TRAINS,   !(st->facilities & FACIL_TRAIN));
- 		this->SetWidgetDisabledState(SVW_ROADVEHS, !(st->facilities & FACIL_TRUCK_STOP) && !(st->facilities & FACIL_BUS_STOP));
- 		this->SetWidgetDisabledState(SVW_SHIPS,    !(st->facilities & FACIL_DOCK));
- 		this->SetWidgetDisabledState(SVW_PLANES,   !(st->facilities & FACIL_AIRPORT));
- 
-+		SetDParam(0, st->index);
-+		SetDParam(1, st->facilities);
- 		this->DrawWidgets();
- 
- 		if (!this->IsShaded()) {
-@@ -970,10 +1286,20 @@ struct StationViewWindow : public Window {
- 				}
- 			}
- 
-+			/* draw arrow pointing up/down for ascending/descending sorting */
-+			this->DrawSortButtonState(SVW_SORT_ORDER, sort_orders[1] == SO_ASCENDING ? SBS_UP : SBS_DOWN);
-+
-+			int pos = this->vscroll->GetPosition();
-+
-+			int maxrows = this->vscroll->GetCapacity();
-+
-+			displayed_rows.clear();
-+
- 			/* Draw waiting cargo. */
- 			NWidgetBase *nwi = this->GetWidget<NWidgetBase>(SVW_WAITING);
- 			Rect waiting_rect = {nwi->pos_x, nwi->pos_y, nwi->pos_x + nwi->current_x - 1, nwi->pos_y + nwi->current_y - 1};
--			this->DrawWaitingCargo(waiting_rect, cargolist, transfers);
-+			this->DrawEntries(&cargo, waiting_rect, pos, maxrows, 0);
-+			scroll_to_row = INT_MAX;
- 		}
- 	}
- 
-@@ -987,116 +1313,332 @@ struct StationViewWindow : public Window {
- 	}
- 
- 	/**
--	 * Order waiting cargo by type and destination.
--	 * @param cargolist [out] Ordered cargo.
--	 * @param transfers [out] Bitmask for cargoes being transfered.
--	 * @pre \c *cargolist must be empty.
-+	 * Rebuild the cache for estimated destinations which is used to quickly show the "destination" entries
-+	 * even if we actually don't know the destination of a certain packet from just looking at it.
-+	 * @param i Cargo to recalculate the cache for.
- 	 */
--	void OrderWaitingCargo(CargoDataList *cargolist, uint32 *transfers)
-+	void RecalcDestinations(CargoID i)
- 	{
--		assert(cargolist->size() == 0);
--		*transfers = 0;
-+		const Station *st = Station::Get(this->window_number);
-+		CargoDataEntry *cargo_entry = cached_destinations.InsertOrRetrieve(i);
-+		cargo_entry->Clear();
-+
-+		const FlowStatMap &flows = st->goods[i].flows;
-+		for (FlowStatMap::const_iterator it = flows.begin(); it != flows.end(); ++it) {
-+			StationID from = it->first;
-+			CargoDataEntry *source_entry = cargo_entry->InsertOrRetrieve(from);
-+			const FlowStatSet &flow_set = it->second;
-+			for (FlowStatSet::const_iterator flow_it = flow_set.begin(); flow_it != flow_set.end(); ++flow_it) {
-+				const FlowStat &stat = *flow_it;
-+				StationID via = stat.Via();
-+				CargoDataEntry *via_entry = source_entry->InsertOrRetrieve(via);
-+				if (via == this->window_number) {
-+					via_entry->InsertOrRetrieve(via)->Update(stat.Planned());
-+				} else {
-+					EstimateDestinations(i, from, via, stat.Planned(), via_entry);
-+				}
-+			}
-+		}
-+	}
- 
--		StationID station_id = this->window_number;
--		const Station *st = Station::Get(station_id);
-+	/**
-+	 * Estimate the amounts of cargo per final destination for a given cargo, source station and next hop and
-+	 * save the result as children of the given CargoDataEntry.
-+	 * @param cargo ID of the cargo to estimate destinations for.
-+	 * @param source Source station of the given batch of cargo.
-+	 * @param next Intermediate hop to start the calculation at ("next hop").
-+	 * @param count Size of the batch of cargo.
-+	 * @param dest CargoDataEntry to save the results in.
-+	 */
-+	void EstimateDestinations(CargoID cargo, StationID source, StationID next, uint count, CargoDataEntry *dest)
-+	{
-+		if (Station::IsValidID(next) && Station::IsValidID(source)) {
-+			CargoDataEntry tmp;
-+			const FlowStatMap &flowmap = Station::Get(next)->goods[cargo].flows;
-+			FlowStatMap::const_iterator map_it = flowmap.find(source);
-+			if (map_it != flowmap.end()) {
-+				const FlowStatSet &flows = map_it->second;
-+				for (FlowStatSet::const_iterator i = flows.begin(); i != flows.end(); ++i) {
-+					tmp.InsertOrRetrieve(i->Via())->Update(i->Planned());
-+				}
-+			}
- 
--		/* count types of cargos waiting in station */
--		for (CargoID i = 0; i < NUM_CARGO; i++) {
--			if (st->goods[i].cargo.Empty()) {
--				this->cargo_rows[i] = 0;
-+			if (tmp.GetCount() == 0) {
-+				dest->InsertOrRetrieve(INVALID_STATION)->Update(count);
- 			} else {
--				/* Add an entry for total amount of cargo of this type waiting. */
--				cargolist->push_back(CargoData(i, INVALID_STATION, st->goods[i].cargo.Count()));
--
--				/* Set the row for this cargo entry for the expand/hide button */
--				this->cargo_rows[i] = (uint16)cargolist->size();
--
--				/* Add an entry for each distinct cargo source. */
+ 				/* Add an entry for each distinct cargo source. */
 -				const StationCargoList::List *packets = st->goods[i].cargo.Packets();
--				for (StationCargoList::ConstIterator it(packets->begin()); it != packets->end(); it++) {
--					const CargoPacket *cp = *it;
--					if (cp->SourceStation() != station_id) {
--						bool added = false;
--
--						/* Enable the expand/hide button for this cargo type */
--						SetBit(*transfers, i);
--
--						/* Don't add cargo lines if not expanded */
--						if (!HasBit(this->cargo, i)) break;
--
--						/* Check if we already have this source in the list */
--						for (CargoDataList::iterator jt(cargolist->begin()); jt != cargolist->end(); jt++) {
--							CargoData *cd = &(*jt);
--							if (cd->cargo == i && cd->source == cp->SourceStation()) {
--								cd->count += cp->Count();
--								added = true;
--								break;
--							}
-+				uint sum_estimated = 0;
-+				while (sum_estimated < count) {
-+					for (CargoDataSet::iterator i = tmp.Begin(); i != tmp.End() && sum_estimated < count; ++i) {
-+						CargoDataEntry *child = *i;
-+						uint estimate = DivideApprox(child->GetCount() * count, tmp.GetCount());
-+						if (estimate == 0) estimate = 1;
-+
-+						sum_estimated += estimate;
-+						if (sum_estimated > count) {
-+							estimate -= sum_estimated - count;
-+							sum_estimated = count;
- 						}
- 
--						if (!added) cargolist->push_back(CargoData(i, cp->SourceStation(), cp->Count()));
-+						if (estimate > 0) {
-+							if (child->GetStation() == next) {
-+								dest->InsertOrRetrieve(next)->Update(estimate);
-+							} else {
-+								EstimateDestinations(cargo, source, child->GetStation(), estimate, dest);
-+							}
-+						}
- 					}
-+
- 				}
- 			}
-+		} else {
-+			dest->InsertOrRetrieve(INVALID_STATION)->Update(count);
- 		}
- 	}
- 
- 	/**
--	 * Draw waiting cargo.
--	 * @param r Rectangle of the widget.
--	 * @param cargolist Cargo, ordered by type and destination.
--	 * @param transfers Bitmask for cargoes that are transfered.
-+	 * Build up the cargo view for PLANNED mode and a specific cargo.
-+	 * @param i Cargo to show.
-+	 * @param flows The current station's flows for that cargo.
-+	 * @param cargo The CargoDataEntry to save the results in.
- 	 */
--	void DrawWaitingCargo(const Rect &r, const CargoDataList &cargolist, uint32 transfers) const
-+	void BuildFlowList(CargoID i, const FlowStatMap &flows, CargoDataEntry *cargo)
- 	{
--		int y = r.top + WD_FRAMERECT_TOP;
--		int pos = this->vscroll->GetPosition();
-+		const CargoDataEntry *source_dest = this->cached_destinations.Retrieve(i);
-+		for (FlowStatMap::const_iterator it = flows.begin(); it != flows.end(); ++it) {
-+			StationID from = it->first;
-+			const CargoDataEntry *source_entry = source_dest->Retrieve(from);
-+			const FlowStatSet &flow_set = it->second;
-+			for (FlowStatSet::const_iterator flow_it = flow_set.begin(); flow_it != flow_set.end(); ++flow_it) {
-+				const FlowStat &stat = *flow_it;
-+				const CargoDataEntry *via_entry = source_entry->Retrieve(stat.Via());
-+				for (CargoDataSet::iterator dest_it = via_entry->Begin(); dest_it != via_entry->End(); ++dest_it) {
-+					CargoDataEntry *dest_entry = *dest_it;
-+					ShowCargo(cargo, i, from, stat.Via(), dest_entry->GetStation(), dest_entry->GetCount());
-+				}
-+			}
-+		}
-+	}
- 
--		const Station *st = Station::Get(this->window_number);
--		if (--pos < 0) {
--			StringID str = STR_JUST_NOTHING;
--			for (CargoID i = 0; i < NUM_CARGO; i++) {
--				if (!st->goods[i].cargo.Empty()) str = STR_EMPTY;
-+	/**
-+	 * Build up the cargo view for WAITING mode and a specific cargo.
-+	 * @param i Cargo to show.
-+	 * @param packets The current station's cargo list for that cargo.
-+	 * @param cargo The CargoDataEntry to save the result in.
-+	 */
-+	void BuildCargoList(CargoID i, const StationCargoList &packets, CargoDataEntry *cargo)
-+	{
-+		const CargoDataEntry *source_dest = this->cached_destinations.Retrieve(i);
-+		for (StationCargoList::ConstIterator it = packets.Packets()->begin(); it != packets.Packets()->end(); it++) {
-+			const CargoPacket *cp = *it;
-+			StationID next = it.GetKey();
-+
-+			const CargoDataEntry *source_entry = source_dest->Retrieve(cp->SourceStation());
-+			if (source_entry == NULL) {
-+				ShowCargo(cargo, i, cp->SourceStation(), next, INVALID_STATION, cp->Count());
-+				continue;
-+			}
-+
-+			const CargoDataEntry *via_entry = source_entry->Retrieve(next);
-+			if (via_entry == NULL) {
-+				ShowCargo(cargo, i, cp->SourceStation(), next, INVALID_STATION, cp->Count());
-+				continue;
-+			}
-+
-+			for (CargoDataSet::iterator dest_it = via_entry->Begin(); dest_it != via_entry->End(); ++dest_it) {
-+				CargoDataEntry *dest_entry = *dest_it;
-+				uint val = DivideApprox(cp->Count() * dest_entry->GetCount(), via_entry->GetCount());
-+				ShowCargo(cargo, i, cp->SourceStation(), next, dest_entry->GetStation(), val);
- 			}
--			SetDParam(0, str);
--			DrawString(r.left + WD_FRAMERECT_LEFT, r.right - WD_FRAMERECT_RIGHT, y, STR_STATION_VIEW_WAITING_TITLE);
--			y += FONT_HEIGHT_NORMAL;
- 		}
-+	}
- 
--		bool rtl = _current_text_dir == TD_RTL;
--		int text_left    = rtl ? r.left + this->expand_shrink_width : r.left + WD_FRAMERECT_LEFT;
--		int text_right   = rtl ? r.right - WD_FRAMERECT_LEFT : r.right - this->expand_shrink_width;
--		int shrink_left  = rtl ? r.left + WD_FRAMERECT_LEFT : r.right - this->expand_shrink_width + WD_FRAMERECT_LEFT;
--		int shrink_right = rtl ? r.left + this->expand_shrink_width - WD_FRAMERECT_RIGHT : r.right - WD_FRAMERECT_RIGHT;
--
--
--		int maxrows = this->vscroll->GetCapacity();
--		for (CargoDataList::const_iterator it = cargolist.begin(); it != cargolist.end() && pos > -maxrows; ++it) {
--			if (--pos < 0) {
--				const CargoData *cd = &(*it);
--				if (cd->source == INVALID_STATION) {
--					/* Heading */
--					DrawCargoIcons(cd->cargo, cd->count, r.left + WD_FRAMERECT_LEFT, r.right - WD_FRAMERECT_RIGHT, y);
--					SetDParam(0, cd->cargo);
--					SetDParam(1, cd->count);
--					if (HasBit(transfers, cd->cargo)) {
--						/* This cargo has transfers waiting so show the expand or shrink 'button' */
--						const char *sym = HasBit(this->cargo, cd->cargo) ? "-" : "+";
--						DrawString(text_left, text_right, y, STR_STATION_VIEW_WAITING_CARGO, TC_FROMSTRING, SA_RIGHT);
--						DrawString(shrink_left, shrink_right, y, sym, TC_YELLOW, SA_RIGHT);
--					} else {
--						DrawString(r.left + WD_FRAMERECT_LEFT, r.right - WD_FRAMERECT_RIGHT, y, STR_STATION_VIEW_WAITING_CARGO, TC_FROMSTRING, SA_RIGHT);
--					}
-+	/**
-+	 * Build up the cargo view for all cargoes.
-+	 * @param cargo The root cargo entry to save all results in.
-+	 * @param st The station to calculate the cargo view from.
-+	 */
-+	void BuildCargoList(CargoDataEntry *cargo, const Station *st)
-+	{
-+		for (CargoID i = 0; i < NUM_CARGO; i++) {
-+
-+			if (this->cached_destinations.Retrieve(i) == NULL) {
-+				this->RecalcDestinations(i);
-+			}
-+
-+			if (this->current_mode == MODE_WAITING) {
-+				BuildCargoList(i, st->goods[i].cargo, cargo);
-+			} else {
-+				BuildFlowList(i, st->goods[i].flows, cargo);
-+			}
-+		}
-+	}
-+
-+	/**
-+	 * Mark a specific row, characterized by its CargoDataEntry, as expanded.
-+	 * @param data The row to be marked as expanded.
-+	 */
-+	void SetDisplayedRow(const CargoDataEntry *data)
-+	{
-+		std::list<StationID> stations;
-+		const CargoDataEntry *parent = data->GetParent();
-+		if (parent->GetParent() == NULL) {
-+			this->displayed_rows.push_back(RowDisplay(&this->expanded_rows, data->GetCargo()));
-+			return;
-+		}
-+
-+		StationID next = data->GetStation();
-+		while (parent->GetParent()->GetParent() != NULL) {
-+			stations.push_back(parent->GetStation());
-+			parent = parent->GetParent();
-+		}
-+
-+		CargoID cargo = parent->GetCargo();
-+		CargoDataEntry *filter = this->expanded_rows.Retrieve(cargo);
-+		while (!stations.empty()) {
-+			filter = filter->Retrieve(stations.back());
-+			stations.pop_back();
-+		}
-+
-+		this->displayed_rows.push_back(RowDisplay(filter, next));
-+	}
-+
-+	/**
-+	 * Select the correct string for an entry referring to the specified station.
-+	 * @param station Station the entry is showing cargo for.
-+	 * @param here String to be shown if the entry refers to the same station as this station GUI belongs to.
-+	 * @param other_station String to be shown if the entry refers to a specific other station.
-+	 * @param any String to be shown if the entry refers to "any station".
-+	 * @return One of the three given strings, depending on what station the entry refers to.
-+	 */
-+	StringID GetEntryString(StationID station, StringID here, StringID other_station, StringID any)
-+	{
-+		if (station == this->window_number) {
-+			return here;
-+		} else if (station != INVALID_STATION) {
-+			SetDParam(2, station);
-+			return other_station;
-+		} else {
-+			return any;
-+		}
-+	}
-+
-+	/**
-+	 * Determine if we need to show the special "non-stop" string.
-+	 * @param cd Entry we are going to show.
-+	 * @param station Station the entry refers to.
-+	 * @param column The "column" the entry will be shown in.
-+	 * @return either STR_STATION_VIEW_VIA or STR_STATION_VIEW_NONSTOP.
-+	 */
-+	StringID SearchNonStop(CargoDataEntry *cd, StationID station, int column)
-+	{
-+		CargoDataEntry *parent = cd->GetParent();
-+		for (int i = column - 1; i > 0; --i) {
-+			if (this->groupings[i] == GR_DESTINATION) {
-+				if (parent->GetStation() == station) {
-+					return STR_STATION_VIEW_NONSTOP;
-+				} else {
-+					return STR_STATION_VIEW_VIA;
-+				}
-+			}
-+			parent = parent->GetParent();
-+		}
-+
-+		if (this->groupings[column + 1] == GR_DESTINATION) {
-+			CargoDataSet::iterator begin = cd->Begin();
-+			CargoDataSet::iterator end = cd->End();
-+			if (begin != end && ++(cd->Begin()) == end && (*(begin))->GetStation() == station) {
-+				return STR_STATION_VIEW_NONSTOP;
-+			} else {
-+				return STR_STATION_VIEW_VIA;
-+			}
-+		}
-+
-+		return STR_STATION_VIEW_VIA;
-+	}
-+
-+	/**
-+	 * Draw the given cargo entries in the station GUI.
-+	 * @param entry Root entry for all cargo to be drawn.
-+	 * @param r Screen rectangle to draw into.
-+	 * @param pos Current row to be drawn to (counted down from 0 to -maxrows, same as vscroll->GetPosition()).
-+	 * @param maxrows Maximum row to be drawn.
-+	 * @param column Current "column" being drawn.
-+	 * @param cargo Current cargo being drawn (if cargo column has been passed).
-+	 * @return row (in "pos" counting) after the one we have last drawn to.
-+	 */
-+	int DrawEntries(CargoDataEntry *entry, Rect &r, int pos, int maxrows, int column, CargoID cargo = CT_INVALID)
-+	{
-+		if (this->sortings[column] == ST_AS_GROUPING) {
-+			if (this->groupings[column] != GR_CARGO) {
-+				entry->Resort(ST_STATION_STRING, this->sort_orders[column]);
-+			}
-+		} else {
-+			entry->Resort(ST_COUNT, this->sort_orders[column]);
-+		}
-+		for (CargoDataSet::iterator i = entry->Begin(); i != entry->End(); ++i) {
-+			CargoDataEntry *cd = *i;
-+
-+			if (this->groupings[column] == GR_CARGO) cargo = cd->GetCargo();
-+
-+			if (pos > -maxrows && pos <= 0) {
-+				StringID str = STR_EMPTY;
-+				int y = r.top + WD_FRAMERECT_TOP - pos * FONT_HEIGHT_NORMAL;
-+				SetDParam(0, cargo);
-+				SetDParam(1, cd->GetCount());
-+
-+				if (this->groupings[column] == GR_CARGO) {
-+					str = STR_STATION_VIEW_WAITING_CARGO;
-+					DrawCargoIcons(cd->GetCargo(), cd->GetCount(), r.left + WD_FRAMERECT_LEFT + this->expand_shrink_width, r.right - WD_FRAMERECT_RIGHT - this->expand_shrink_width, y);
- 				} else {
--					SetDParam(0, cd->cargo);
--					SetDParam(1, cd->count);
--					SetDParam(2, cd->source);
--					DrawString(r.left + WD_FRAMERECT_LEFT, r.right - WD_FRAMERECT_RIGHT, y, STR_STATION_VIEW_EN_ROUTE_FROM, TC_FROMSTRING, SA_RIGHT);
-+					StationID station = cd->GetStation();
-+
-+					switch (this->groupings[column]) {
-+						case GR_SOURCE:
-+							str = this->GetEntryString(station, STR_STATION_VIEW_FROM_HERE, STR_STATION_VIEW_FROM, STR_STATION_VIEW_FROM_ANY);
-+							break;
-+						case GR_NEXT:
-+							str = this->GetEntryString(station, STR_STATION_VIEW_VIA_HERE, STR_STATION_VIEW_VIA, STR_STATION_VIEW_VIA_ANY);
-+							if (str == STR_STATION_VIEW_VIA) str = SearchNonStop(cd, station, column);
-+							break;
-+						case GR_DESTINATION:
-+							str = this->GetEntryString(station, STR_STATION_VIEW_TO_HERE, STR_STATION_VIEW_TO, STR_STATION_VIEW_TO_ANY);
-+							break;
-+						default:
-+							NOT_REACHED();
-+					}
-+					if (pos == -this->scroll_to_row && Station::IsValidID(station)) {
-+						ScrollMainWindowToTile(Station::Get(station)->xy);
-+					}
- 				}
- 
--				y += FONT_HEIGHT_NORMAL;
-+				bool rtl = _current_text_dir == TD_RTL;
-+				int text_left    = rtl ? r.left + this->expand_shrink_width : r.left + WD_FRAMERECT_LEFT + column * this->expand_shrink_width;
-+				int text_right   = rtl ? r.right - WD_FRAMERECT_LEFT - column * this->expand_shrink_width : r.right - this->expand_shrink_width;
-+				int shrink_left  = rtl ? r.left + WD_FRAMERECT_LEFT : r.right - this->expand_shrink_width + WD_FRAMERECT_LEFT;
-+				int shrink_right = rtl ? r.left + this->expand_shrink_width - WD_FRAMERECT_RIGHT : r.right - WD_FRAMERECT_RIGHT;
-+
-+				DrawString(text_left, text_right, y, str);
-+
-+				if (column < NUM_COLUMNS - 1) {
-+					const char *sym = cd->GetNumChildren() > 0 ? "-" : "+";
-+					DrawString(shrink_left, shrink_right, y, sym, TC_YELLOW);
-+				}
-+				SetDisplayedRow(cd);
- 			}
-+			pos = DrawEntries(cd, r, --pos, maxrows, column + 1, cargo);
- 		}
-+		return pos;
-+	}
-+
-+	/**
-+	 * Invalidate the cache for the given cargo.
-+	 * @param cargo ID of the cargo.
-+	 * @param gui_scope Whether the call is done from GUI scope. You may not do everything when not in GUI scope. See #InvalidateWindowData() for details.
-+	 */
-+	virtual void OnInvalidateData(int data = 0, bool gui_scope = true)
-+	{
-+		if (!gui_scope) return;
-+		this->cached_destinations.Remove((CargoID)data);
- 	}
- 
- 	/**
-@@ -1136,32 +1678,55 @@ struct StationViewWindow : public Window {
- 			if (!HasBit(ge->acceptance_pickup, GoodsEntry::GES_PICKUP)) continue;
- 
- 			SetDParam(0, cs->name);
--			SetDParam(2, ToPercent8(ge->rating));
--			SetDParam(1, STR_CARGO_RATING_APPALLING + (ge->rating >> 5));
--			DrawString(r.left + WD_FRAMERECT_LEFT + 6, r.right - WD_FRAMERECT_RIGHT - 6, y, STR_STATION_VIEW_CARGO_RATING);
-+			SetDParam(1, ge->supply);
-+			SetDParam(3, ToPercent8(ge->rating));
-+			SetDParam(2, STR_CARGO_RATING_APPALLING + (ge->rating >> 5));
-+			DrawString(r.left + WD_FRAMERECT_LEFT + 6, r.right - WD_FRAMERECT_RIGHT - 6, y, STR_STATION_VIEW_CARGO_SUPPLY_RATING);
- 			y += FONT_HEIGHT_NORMAL;
- 		}
- 		return CeilDiv(y - r.top - WD_FRAMERECT_TOP, FONT_HEIGHT_NORMAL);
- 	}
- 
--	void HandleCargoWaitingClick(int row)
-+	/**
-+	 * Expand or collapse a specific row.
-+	 * @param filter Parent of the row.
-+	 * @param next ID pointing to the row.
-+	 */
-+	template<class ID>
-+	void HandleCargoWaitingClick(CargoDataEntry *filter, ID next)
- 	{
--		if (row == 0) return;
-+		if (filter->Retrieve(next) != NULL) {
-+			filter->Remove(next);
-+		} else {
-+			filter->InsertOrRetrieve(next);
-+		}
-+	}
- 
--		for (CargoID c = 0; c < NUM_CARGO; c++) {
--			if (this->cargo_rows[c] == row) {
--				ToggleBit(this->cargo, c);
--				this->SetWidgetDirty(SVW_WAITING);
--				break;
-+	/**
-+	 * Handle a click on a specific row in the cargo view.
-+	 * @param row Row being clicked.
-+	 */
-+	void HandleCargoWaitingClick(int row)
-+	{
-+		if (row < 0 || (uint)row >= this->displayed_rows.size()) return;
-+		if (_ctrl_pressed) {
-+			this->scroll_to_row = row;
-+		} else {
-+			RowDisplay &display = this->displayed_rows[row];
-+			if (display.filter == &this->expanded_rows) {
-+				this->HandleCargoWaitingClick<CargoID>(display.filter, display.next_cargo);
-+			} else {
-+				this->HandleCargoWaitingClick<StationID>(display.filter, display.next_station);
- 			}
- 		}
-+		this->SetWidgetDirty(SVW_WAITING);
- 	}
- 
- 	virtual void OnClick(Point pt, int widget, int click_count)
- 	{
- 		switch (widget) {
- 			case SVW_WAITING:
--				this->HandleCargoWaitingClick(this->vscroll->GetScrolledRowFromWidget(pt.y, this, SVW_WAITING, WD_FRAMERECT_TOP, FONT_HEIGHT_NORMAL));
-+				this->HandleCargoWaitingClick(this->vscroll->GetScrolledRowFromWidget(pt.y, this, SVW_WAITING, WD_FRAMERECT_TOP, FONT_HEIGHT_NORMAL) - this->vscroll->GetPosition());
- 				break;
- 
- 			case SVW_LOCATION:
-@@ -1199,6 +1764,119 @@ struct StationViewWindow : public Window {
- 			case SVW_PLANES:   // Show list of scheduled aircraft to this station
- 				ShowVehicleListWindow(this->owner, (VehicleType)(widget - SVW_TRAINS), (StationID)this->window_number);
- 				break;
-+
-+			case SVW_SORT_BY: {
-+				ShowDropDownMenu(this, _sort_names, this->current_mode, SVW_SORT_BY, 0, 0);
-+				break;
-+			}
-+
-+			case SVW_GROUP_BY: {
-+				ShowDropDownMenu(this, _group_names, this->grouping_index, SVW_GROUP_BY, 0, 0);
-+				break;
-+			}
-+
-+			case SVW_SORT_ORDER: { // flip sorting method asc/desc
-+				this->SelectSortOrder(this->sort_orders[1] == SO_ASCENDING ? SO_DESCENDING : SO_ASCENDING);
-+				this->flags4 |= WF_TIMEOUT_BEGIN;
-+				this->LowerWidget(SVW_SORT_ORDER);
-+				break;
-+			}
-+		}
-+	}
-+
-+	/**
-+	 * Select a new sort order for the cargo view.
-+	 * @param order New sort order.
-+	 */
-+	void SelectSortOrder(SortOrder order)
-+	{
-+		this->sort_orders[1] = this->sort_orders[2] = this->sort_orders[3] = order;
-+		_settings_client.gui.station_gui_sort_order = this->sort_orders[1];
-+		this->SetDirty();
-+	}
-+
-+	/**
-+	 * Select a new sort criterium for the cargo view.
-+	 * @param index Row being selected in the sort criteria drop down.
-+	 */
-+	void SelectSortBy(int index)
-+	{
-+		_settings_client.gui.station_gui_sort_by = index;
-+		switch (_sort_names[index]) {
-+			case STR_STATION_VIEW_WAITING_STATION:
-+				this->current_mode = MODE_WAITING;
-+				this->sortings[1] = this->sortings[2] = this->sortings[3] = ST_AS_GROUPING;
-+				break;
-+			case STR_STATION_VIEW_WAITING_AMOUNT:
-+				this->current_mode = MODE_WAITING;
-+				this->sortings[1] = this->sortings[2] = this->sortings[3] = ST_COUNT;
-+				break;
-+			case STR_STATION_VIEW_PLANNED_STATION:
-+				this->current_mode = MODE_PLANNED;
-+				this->sortings[1] = this->sortings[2] = this->sortings[3] = ST_AS_GROUPING;
-+				break;
-+			case STR_STATION_VIEW_PLANNED_AMOUNT:
-+				this->current_mode = MODE_PLANNED;
-+				this->sortings[1] = this->sortings[2] = this->sortings[3] = ST_COUNT;
-+				break;
-+			default:
-+				NOT_REACHED();
-+		}
-+		/* Display the current sort variant */
-+		this->GetWidget<NWidgetCore>(SVW_SORT_BY)->widget_data = _sort_names[index];
-+		this->SetDirty();
-+	}
-+
-+	/**
-+	 * Select a new grouping mode for the cargo view.
-+	 * @param index Row being selected in the grouping drop down.
-+	 */
-+	void SelectGroupBy(int index)
-+	{
-+		this->grouping_index = index;
-+		_settings_client.gui.station_gui_group_order = index;
-+		this->GetWidget<NWidgetCore>(SVW_GROUP_BY)->widget_data = _group_names[index];
-+		switch (_group_names[index]) {
-+			case STR_STATION_VIEW_GROUP_S_V_D:
-+				this->groupings[1] = GR_SOURCE;
-+				this->groupings[2] = GR_NEXT;
-+				this->groupings[3] = GR_DESTINATION;
-+				break;
-+			case STR_STATION_VIEW_GROUP_S_D_V:
-+				this->groupings[1] = GR_SOURCE;
-+				this->groupings[2] = GR_DESTINATION;
-+				this->groupings[3] = GR_NEXT;
-+				break;
-+			case STR_STATION_VIEW_GROUP_V_S_D:
-+				this->groupings[1] = GR_NEXT;
-+				this->groupings[2] = GR_SOURCE;
-+				this->groupings[3] = GR_DESTINATION;
-+				break;
-+			case STR_STATION_VIEW_GROUP_V_D_S:
-+				this->groupings[1] = GR_NEXT;
-+				this->groupings[2] = GR_DESTINATION;
-+				this->groupings[3] = GR_SOURCE;
-+				break;
-+			case STR_STATION_VIEW_GROUP_D_S_V:
-+				this->groupings[1] = GR_DESTINATION;
-+				this->groupings[2] = GR_SOURCE;
-+				this->groupings[3] = GR_NEXT;
-+				break;
-+			case STR_STATION_VIEW_GROUP_D_V_S:
-+				this->groupings[1] = GR_DESTINATION;
-+				this->groupings[2] = GR_NEXT;
-+				this->groupings[3] = GR_SOURCE;
-+				break;
-+		}
-+		this->SetDirty();
-+	}
-+
-+	virtual void OnDropdownSelect(int widget, int index)
-+	{
-+		if (widget == SVW_SORT_BY) {
-+			this->SelectSortBy(index);
-+		} else {
-+			this->SelectGroupBy(index);
- 		}
- 	}
- 
-@@ -1215,9 +1893,26 @@ struct StationViewWindow : public Window {
- 	}
- };
- 
-+const StringID StationViewWindow::_sort_names[] = {
-+	STR_STATION_VIEW_WAITING_STATION,
-+	STR_STATION_VIEW_WAITING_AMOUNT,
-+	STR_STATION_VIEW_PLANNED_STATION,
-+	STR_STATION_VIEW_PLANNED_AMOUNT,
-+	INVALID_STRING_ID
-+};
-+
-+const StringID StationViewWindow::_group_names[] = {
-+	STR_STATION_VIEW_GROUP_S_V_D,
-+	STR_STATION_VIEW_GROUP_S_D_V,
-+	STR_STATION_VIEW_GROUP_V_S_D,
-+	STR_STATION_VIEW_GROUP_V_D_S,
-+	STR_STATION_VIEW_GROUP_D_S_V,
-+	STR_STATION_VIEW_GROUP_D_V_S,
-+	INVALID_STRING_ID
-+};
- 
- static const WindowDesc _station_view_desc(
--	WDP_AUTO, 249, 110,
-+	WDP_AUTO, 249, 117,
- 	WC_STATION_VIEW, WC_NONE,
- 	WDF_UNCLICK_BUTTONS,
- 	_nested_station_view_widgets, lengthof(_nested_station_view_widgets)
-diff --git a/src/station_gui.h b/src/station_gui.h
-index dd442dc..5485b87 100644
---- a/src/station_gui.h
-+++ b/src/station_gui.h
-@@ -13,21 +13,28 @@
- #define STATION_GUI_H
- 
- #include "command_type.h"
-+#include "station_type.h"
- #include "tilearea_type.h"
- #include "window_type.h"
-+#include "cargo_type.h"
-+#include <set>
- 
- /** Enum for StationView, referring to _station_view_widgets and _station_view_expanded_widgets */
- enum StationViewWidgets {
- 	SVW_CAPTION    =  0, ///< Caption of the window
--	SVW_WAITING    =  1, ///< List of waiting cargo
--	SVW_SCROLLBAR  =  2, ///< Scrollbar
--	SVW_ACCEPTLIST =  3, ///< List of accepted cargos
--	SVW_RATINGLIST =  3, ///< Ratings of cargos
--	SVW_LOCATION   =  4, ///< 'Location' button
--	SVW_RATINGS    =  5, ///< 'Ratings' button
--	SVW_ACCEPTS    =  5, ///< 'Accepts' button
--	SVW_RENAME     =  6, ///< 'Rename' button
--	SVW_TRAINS     =  7, ///< List of scheduled trains button
-+	SVW_SORT_ORDER =  1, ///< 'Sort order' button
-+	SVW_SORT_BY    =  2, ///< 'Sort by' button
-+	SVW_GROUP      =  3, ///< label for "group by"
-+	SVW_GROUP_BY   =  4, ///< 'Group by' button
-+	SVW_WAITING    =  5, ///< List of waiting cargo
-+	SVW_SCROLLBAR  =  6, ///< Scrollbar
-+	SVW_ACCEPTLIST =  7, ///< List of accepted cargos
-+	SVW_RATINGLIST =  7, ///< Ratings of cargos
-+	SVW_LOCATION   =  8, ///< 'Location' button
-+	SVW_RATINGS    =  9, ///< 'Ratings' button
-+	SVW_ACCEPTS    =  9, ///< 'Accepts' button
-+	SVW_RENAME     = 10, ///< 'Rename' button
-+	SVW_TRAINS     = 11, ///< List of scheduled trains button
- 	SVW_ROADVEHS,        ///< List of scheduled road vehs button
- 	SVW_SHIPS,           ///< List of scheduled ships button
- 	SVW_PLANES,          ///< List of scheduled planes button
-@@ -46,4 +53,152 @@ void CheckRedrawStationCoverage(const Window *w);
- void ShowSelectStationIfNeeded(CommandContainer cmd, TileArea ta);
- void ShowSelectWaypointIfNeeded(CommandContainer cmd, TileArea ta);
- 
-+enum SortOrder {
-+	SO_DESCENDING,
-+	SO_ASCENDING
-+};
-+
-+class CargoDataEntry;
-+
-+enum CargoSortType {
-+	ST_AS_GROUPING,    ///< by the same principle the entries are being grouped
-+	ST_COUNT,          ///< by amount of cargo
-+	ST_STATION_STRING, ///< by station name
-+	ST_STATION_ID,     ///< by station id
-+	ST_CARGO_ID,       ///< by cargo id
-+};
-+
-+class CargoSorter {
-+public:
-+	CargoSorter(CargoSortType t = ST_STATION_ID, SortOrder o = SO_ASCENDING) : type(t), order(o) {}
-+	CargoSortType GetSortType() {return this->type;}
-+	bool operator()(const CargoDataEntry *cd1, const CargoDataEntry *cd2) const;
-+
-+private:
-+	CargoSortType type;
-+	SortOrder order;
-+
-+	template<class ID>
-+	bool SortId(ID st1, ID st2) const;
-+	bool SortCount(const CargoDataEntry *cd1, const CargoDataEntry *cd2) const;
-+	bool SortStation (StationID st1, StationID st2) const;
-+};
-+
-+typedef std::set<CargoDataEntry *, CargoSorter> CargoDataSet;
-+
-+/**
-+ * A cargo data entry representing one possible row in the station view window's
-+ * top part. Cargo data entries form a tree where each entry can have several
-+ * children. Parents keep track of the sums of their childrens' cargo counts.
-+ */
-+class CargoDataEntry {
-+public:
-+	CargoDataEntry();
-+	~CargoDataEntry();
-+
-+	/**
-+	 * Insert a new child or retrieve an existing child using a station ID as ID.
-+	 * @param station ID of the station for which an entry shall be created or retrieved
-+	 * @return a child entry associated with the given station.
-+	 */
-+	CargoDataEntry *InsertOrRetrieve(StationID station) {return this->InsertOrRetrieve<StationID>(station);}
-+
-+	/**
-+	 * Insert a new child or retrieve an existing child using a cargo ID as ID.
-+	 * @param cargo ID of the cargo for which an entry shall be created or retrieved
-+	 * @return a child entry associated with the given cargo.
-+	 */
-+	CargoDataEntry *InsertOrRetrieve(CargoID cargo) {return this->InsertOrRetrieve<CargoID>(cargo);}
-+
-+	void Update(uint count);
-+
-+	/**
-+	 * Remove a child associated with the given station.
-+	 * @param station ID of the station for which the child should be removed.
-+	 */
-+	void Remove(StationID station) {CargoDataEntry t(station); this->Remove(&t);}
-+
-+	/**
-+	 * Remove a child associated with the given cargo.
-+	 * @param cargo ID of the cargo for which the child should be removed.
-+	 */
-+	void Remove(CargoID cargo) {CargoDataEntry t(cargo); this->Remove(&t);}
-+
-+	/**
-+	 * Retrieve a child for the given station. Return NULL if it doesn't exist.
-+	 * @param station ID of the station the child we're looking for is associated with.
-+	 * @return a child entry for the given station or NULL.
-+	 */
-+	CargoDataEntry *Retrieve(StationID station) const {CargoDataEntry t(station); return this->Retrieve(this->children->find(&t));}
-+
-+	/**
-+	 * Retrieve a child for the given cargo. Return NULL if it doesn't exist.
-+	 * @param cargo ID of the cargo the child we're looking for is associated with.
-+	 * @return a child entry for the given cargo or NULL.
-+	 */
-+	CargoDataEntry *Retrieve(CargoID cargo) const {CargoDataEntry t(cargo);return this->Retrieve(this->children->find(&t));}
-+
-+	void Resort(CargoSortType type, SortOrder order);
-+
-+	/**
-+	 * Get the station ID for this entry.
-+	 */
-+	StationID GetStation() const {return this->station;}
-+
-+	/**
-+	 * Get the cargo ID for this entry.
-+	 */
-+	CargoID GetCargo() const {return this->cargo;}
-+
-+	/**
-+	 * Get the cargo count for this entry.
-+	 */
-+	uint GetCount() const {return this->count;}
-+
-+	/**
-+	 * Get the parent entry for this entry.
-+	 */
-+	CargoDataEntry *GetParent() const {return this->parent;}
-+
-+	/**
-+	 * Get the number of children for this entry.
-+	 */
-+	uint GetNumChildren() const {return this->num_children;}
-+
-+	/**
-+	 * Get an iterator pointing to the begin of the set of children.
-+	 */
-+	CargoDataSet::iterator Begin() const {return this->children->begin();}
-+
-+	/**
-+	 * Get an iterator pointing to the end of the set of children.
-+	 */
-+	CargoDataSet::iterator End() const {return this->children->end();}
-+
-+	void Clear();
-+private:
-+
-+	CargoDataEntry(StationID st, uint c, CargoDataEntry *p);
-+	CargoDataEntry(CargoID car, uint c, CargoDataEntry *p);
-+	CargoDataEntry(StationID st);
-+	CargoDataEntry(CargoID car);
-+
-+	CargoDataEntry *Retrieve(CargoDataSet::iterator i) const;
-+
-+	template<class ID>
-+	CargoDataEntry *InsertOrRetrieve(ID s);
-+
-+	void Remove(CargoDataEntry *comp);
-+	void IncrementSize();
-+
-+	CargoDataEntry *parent;   ///< the parent of this entry
-+	const union {
-+		StationID station;    ///< ID of the station this entry is associated with
-+		CargoID cargo;        ///< ID of the cargo this entry is associated with
-+	};
-+	uint num_children;        ///< the number of subentries belonging to this entry
-+	uint count;               ///< sum of counts of all children or amount of cargo for this entry
-+	CargoDataSet *children;   ///< the children of this entry
-+};
-+
- #endif /* STATION_GUI_H */
++				const StationCargoPacketMap *packets = st->goods[i].cargo.Packets();
+ 				for (StationCargoList::ConstIterator it(packets->begin()); it != packets->end(); it++) {
+ 					const CargoPacket *cp = *it;
+ 					if (cp->SourceStation() != station_id) {
 diff --git a/src/station_type.h b/src/station_type.h
 index c5eced5..ebcd188 100644
 --- a/src/station_type.h
@@ -10847,7 +7166,7 @@ index c5eced5..ebcd188 100644
  typedef SmallVector<Station *, 2> StationList;
  
 diff --git a/src/table/settings.ini b/src/table/settings.ini
-index c5fe20e..176ee25 100644
+index c5fe20e..f3bd8bf 100644
 --- a/src/table/settings.ini
 +++ b/src/table/settings.ini
 @@ -515,6 +515,115 @@ guiflags = SGF_NO_NETWORK
@@ -10966,39 +7285,6 @@ index c5fe20e..176ee25 100644
  ; Vehicles
  
  [SDT_VAR]
-@@ -2352,6 +2461,32 @@ def      = false
- str      = STR_CONFIG_SETTING_EXPENSES_LAYOUT
- proc     = RedrawScreen
- 
-+[SDTC_VAR]
-+var      = gui.station_gui_group_order
-+type     = SLE_UINT8
-+flags    = SLF_NOT_IN_SAVE | SLF_NO_NETWORK_SYNC
-+def      = 0
-+min      = 0
-+max      = 5
-+interval = 1
-+
-+[SDTC_VAR]
-+var      = gui.station_gui_sort_by
-+type     = SLE_UINT8
-+flags    = SLF_NOT_IN_SAVE | SLF_NO_NETWORK_SYNC
-+def      = 0
-+min      = 0
-+max      = 3
-+interval = 1
-+
-+[SDTC_VAR]
-+var      = gui.station_gui_sort_order
-+type     = SLE_UINT8
-+flags    = SLF_NOT_IN_SAVE | SLF_NO_NETWORK_SYNC
-+def      = 0
-+min      = 0
-+max      = 1
-+interval = 1
- 
- ; For the dedicated build we'll enable dates in logs by default.
- [SDTC_BOOL]
 diff --git a/src/texteff.cpp b/src/texteff.cpp
 index 0feb522..644b281 100644
 --- a/src/texteff.cpp

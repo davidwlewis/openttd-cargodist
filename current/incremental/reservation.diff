@@ -537,20 +537,20 @@ index c1ea310..94b17ed 100644
  	}
  
 diff --git a/src/saveload/saveload.cpp b/src/saveload/saveload.cpp
-index 486d1d8..e9caddd 100644
+index 1627765..08adcef 100644
 --- a/src/saveload/saveload.cpp
 +++ b/src/saveload/saveload.cpp
-@@ -227,7 +227,7 @@
-  *  160   21974
+@@ -228,7 +228,7 @@
   *  161   22567
+  *  162   22713
   */
--extern const uint16 SAVEGAME_VERSION = 161; ///< Current savegame version of OpenTTD.
+-extern const uint16 SAVEGAME_VERSION = 162; ///< Current savegame version of OpenTTD.
 +extern const uint16 SAVEGAME_VERSION = SL_RESERVATION; ///< Current savegame version of OpenTTD.
  
  SavegameType _savegame_type; ///< type of savegame we are loading
  
 diff --git a/src/saveload/saveload.h b/src/saveload/saveload.h
-index 88d9d6c..41be090 100644
+index 88d9d6c..e338214 100644
 --- a/src/saveload/saveload.h
 +++ b/src/saveload/saveload.h
 @@ -91,9 +91,6 @@ enum SLRefType {
@@ -572,7 +572,7 @@ index 88d9d6c..41be090 100644
 + * SL_TRUNK is always the current trunk version.
 + */
 +enum SaveLoadVersions {
-+	SL_TRUNK = 161,
++	SL_TRUNK = 162,
 +	SL_RESERVATION = SL_TRUNK + 10,
 +
 +	/** Highest possible savegame version. */
@@ -581,22 +581,22 @@ index 88d9d6c..41be090 100644
 +
  #endif /* SAVELOAD_H */
 diff --git a/src/saveload/vehicle_sl.cpp b/src/saveload/vehicle_sl.cpp
-index b9b2d53..7367da7 100644
+index ff738c7..487889f 100644
 --- a/src/saveload/vehicle_sl.cpp
 +++ b/src/saveload/vehicle_sl.cpp
-@@ -499,6 +499,7 @@ const SaveLoad *GetVehicleDescription(VehicleType vt)
+@@ -508,6 +508,7 @@ const SaveLoad *GetVehicleDescription(VehicleType vt)
  		     SLE_VAR(Vehicle, cargo_cap,             SLE_UINT16),
  		SLEG_CONDVAR(         _cargo_count,          SLE_UINT16,                   0,  67),
  		 SLE_CONDLST(Vehicle, cargo.packets,         REF_CARGO_PACKET,            68, SL_MAX_VERSION),
 +		 SLE_CONDLST(Vehicle, cargo.reserved,        REF_CARGO_PACKET,SL_RESERVATION, SL_MAX_VERSION),
+ 		 SLE_CONDVAR(Vehicle, cargo_age_counter,     SLE_UINT16,                 162, SL_MAX_VERSION),
  
  		     SLE_VAR(Vehicle, day_counter,           SLE_UINT8),
- 		     SLE_VAR(Vehicle, tick_counter,          SLE_UINT8),
 diff --git a/src/vehicle.cpp b/src/vehicle.cpp
-index ccbb960..edceb33 100644
+index ab1b4df..6896c31 100644
 --- a/src/vehicle.cpp
 +++ b/src/vehicle.cpp
-@@ -670,10 +670,11 @@ void Vehicle::PreDestructor()
+@@ -668,10 +668,11 @@ void Vehicle::PreDestructor()
  	if (CleaningPool()) return;
  
  	if (Station::IsValidID(this->last_station_visited)) {
@@ -610,7 +610,7 @@ index ccbb960..edceb33 100644
  		delete this->cargo_payment;
  	}
  
-@@ -1186,7 +1187,7 @@ uint8 CalcPercentVehicleFilled(const Vehicle *v, StringID *colour)
+@@ -1188,7 +1189,7 @@ uint8 CalcPercentVehicleFilled(const Vehicle *v, StringID *colour)
  
  	/* Count up max and used */
  	for (; v != NULL; v = v->Next()) {
@@ -619,7 +619,7 @@ index ccbb960..edceb33 100644
  		max += v->cargo_cap;
  		if (v->cargo_cap != 0 && colour != NULL) {
  			unloading += HasBit(v->vehicle_flags, VF_CARGO_UNLOADING) ? 1 : 0;
-@@ -1954,6 +1955,21 @@ void Vehicle::BeginLoading()
+@@ -1956,6 +1957,21 @@ void Vehicle::BeginLoading()
  }
  
  /**
@@ -641,7 +641,7 @@ index ccbb960..edceb33 100644
   * Perform all actions when leaving a station.
   * @pre this->current_order.IsType(OT_LOADING)
   */
-@@ -1968,6 +1984,7 @@ void Vehicle::LeaveStation()
+@@ -1970,6 +1986,7 @@ void Vehicle::LeaveStation()
  
  	this->current_order.MakeLeaveStation();
  	Station *st = Station::Get(this->last_station_visited);
@@ -650,10 +650,10 @@ index ccbb960..edceb33 100644
  
  	HideFillingPercent(&this->fill_percent_te_id);
 diff --git a/src/vehicle_base.h b/src/vehicle_base.h
-index 6781b47..cb932fd 100644
+index 547344c..abf5cf6 100644
 --- a/src/vehicle_base.h
 +++ b/src/vehicle_base.h
-@@ -244,6 +244,7 @@ public:
+@@ -246,6 +246,7 @@ public:
  	virtual ~Vehicle();
  
  	void BeginLoading();
