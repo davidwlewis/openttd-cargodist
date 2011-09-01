@@ -1,8 +1,8 @@
 diff --git a/projects/openttd_vs100.vcxproj b/projects/openttd_vs100.vcxproj
-index a0e8d58..91f1b54 100644
+index 3d624d8..6c95752 100644
 --- a/projects/openttd_vs100.vcxproj
 +++ b/projects/openttd_vs100.vcxproj
-@@ -619,6 +619,7 @@
+@@ -621,6 +621,7 @@
      <ClCompile Include="..\src\core\math_func.cpp" />
      <ClInclude Include="..\src\core\math_func.hpp" />
      <ClInclude Include="..\src\core\mem_func.hpp" />
@@ -11,10 +11,10 @@ index a0e8d58..91f1b54 100644
      <ClCompile Include="..\src\core\pool_func.cpp" />
      <ClInclude Include="..\src\core\pool_func.hpp" />
 diff --git a/projects/openttd_vs100.vcxproj.filters b/projects/openttd_vs100.vcxproj.filters
-index bc0b7b6..b264fce 100644
+index f51ed02..6af90cb 100644
 --- a/projects/openttd_vs100.vcxproj.filters
 +++ b/projects/openttd_vs100.vcxproj.filters
-@@ -1077,6 +1077,9 @@
+@@ -1083,6 +1083,9 @@
      <ClInclude Include="..\src\core\mem_func.hpp">
        <Filter>Core Source Code</Filter>
      </ClInclude>
@@ -25,10 +25,10 @@ index bc0b7b6..b264fce 100644
        <Filter>Core Source Code</Filter>
      </ClInclude>
 diff --git a/projects/openttd_vs80.vcproj b/projects/openttd_vs80.vcproj
-index e15d2c8..6bf72cf 100644
+index 121c539..82111bb 100644
 --- a/projects/openttd_vs80.vcproj
 +++ b/projects/openttd_vs80.vcproj
-@@ -1755,6 +1755,10 @@
+@@ -1763,6 +1763,10 @@
  				>
  			</File>
  			<File
@@ -40,10 +40,10 @@ index e15d2c8..6bf72cf 100644
  				>
  			</File>
 diff --git a/projects/openttd_vs90.vcproj b/projects/openttd_vs90.vcproj
-index 023fea1..251cf2f 100644
+index 92f1a8e..e828216 100644
 --- a/projects/openttd_vs90.vcproj
 +++ b/projects/openttd_vs90.vcproj
-@@ -1752,6 +1752,10 @@
+@@ -1760,6 +1760,10 @@
  				>
  			</File>
  			<File
@@ -55,10 +55,10 @@ index 023fea1..251cf2f 100644
  				>
  			</File>
 diff --git a/source.list b/source.list
-index c8aace0..dd83973 100644
+index 610a4e5..b7c7acb 100644
 --- a/source.list
 +++ b/source.list
-@@ -369,6 +369,7 @@ core/geometry_type.hpp
+@@ -371,6 +371,7 @@ core/geometry_type.hpp
  core/math_func.cpp
  core/math_func.hpp
  core/mem_func.hpp
@@ -68,10 +68,10 @@ index c8aace0..dd83973 100644
  core/pool_func.hpp
 diff --git a/src/core/multimap.hpp b/src/core/multimap.hpp
 new file mode 100644
-index 0000000..b42ae6f
+index 0000000..6df7321
 --- /dev/null
 +++ b/src/core/multimap.hpp
-@@ -0,0 +1,400 @@
+@@ -0,0 +1,401 @@
 +/* $Id$ */
 +
 +/*
@@ -391,15 +391,16 @@ index 0000000..b42ae6f
 +		assert(!list.empty());
 +		if (it.list_valid) {
 +			it.list_iter = list.erase(it.list_iter);
++			/* This can't be the first list element as otherwise list_valid would have
++			 * to be false. So the list cannot be empty here.
++			 */
++			if (it.list_iter == list.end()) {
++				++it.map_iter;
++				it.list_valid = false;
++			}
 +		} else {
 +			list.erase(list.begin());
-+		}
-+
-+		if (list.empty()) {
-+			this->Map::erase(it.map_iter++);
-+		} else if (it.list_iter == list.end()) {
-+			++it.map_iter;
-+			it.list_valid = false;
++			if (list.empty()) this->Map::erase(it.map_iter++);
 +		}
 +		return it;
 +	}

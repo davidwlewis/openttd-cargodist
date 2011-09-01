@@ -63,10 +63,10 @@ index 742d018..60b0964 100644
  	/* Unsaved variables */
  	Company *owner;            ///< The owner of the vehicle
 diff --git a/src/lang/english.txt b/src/lang/english.txt
-index 109a2e7..b116161 100644
+index f8b341a..971b1ff 100644
 --- a/src/lang/english.txt
 +++ b/src/lang/english.txt
-@@ -3401,6 +3401,10 @@ STR_INCOME_FLOAT_INCOME_SMALL                                   :{TINYFONT}{GREE
+@@ -3421,6 +3421,10 @@ STR_INCOME_FLOAT_INCOME_SMALL                                   :{TINYFONT}{GREE
  STR_INCOME_FLOAT_INCOME                                         :{GREEN}Income: {CURRENCY}
  STR_FEEDER_TINY                                                 :{TINYFONT}{YELLOW}Transfer: {CURRENCY}
  STR_FEEDER                                                      :{YELLOW}Transfer: {CURRENCY}
@@ -78,10 +78,10 @@ index 109a2e7..b116161 100644
  STR_MESSAGE_ESTIMATED_INCOME                                    :{WHITE}Estimated Income: {CURRENCY}
  
 diff --git a/src/misc_gui.cpp b/src/misc_gui.cpp
-index d2bc2be..9a8fce6 100644
+index e5694ed..44819f3 100644
 --- a/src/misc_gui.cpp
 +++ b/src/misc_gui.cpp
-@@ -813,17 +813,28 @@ void ShowCostOrIncomeAnimation(int x, int y, int z, Money cost)
+@@ -814,17 +814,28 @@ void ShowCostOrIncomeAnimation(int x, int y, int z, Money cost)
  
  /**
   * Display animated feeder income.
