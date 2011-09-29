@@ -1,0 +1,275 @@
+diff --git a/src/linkgraph_gui.cpp b/src/linkgraph_gui.cpp
+index 7fe88ca..a452178 100644
+--- a/src/linkgraph_gui.cpp
++++ b/src/linkgraph_gui.cpp
+@@ -263,15 +263,15 @@ void LinkGraphOverlay::DrawStationDots(const DrawPixelInfo *dpi) const
+  * @return Middle point of the station in the current window.
+  */
+ Point LinkGraphOverlay::GetStationMiddle(const Station *st) const {
+-	//if (this->window->viewport != NULL) {
+-	//	return GetViewportStationMiddle(this->window->viewport, st);
+-	//} else {
++	if (this->window->viewport != NULL) {
++		return GetViewportStationMiddle(this->window->viewport, st);
++	} else {
+ 		/* assume this is a smallmap */
+ 		//return GetSmallmapStationMiddle(this->window, st);
+ 		Point dummy;
+ 		dummy.x = dummy.y = 0;
+ 		return dummy;
+-	//}
++	}
+ }
+ 
+ /**
+@@ -410,7 +410,7 @@ LinkGraphLegendWindow::LinkGraphLegendWindow(const WindowDesc *desc, int window_
+ {
+ 	this->InitNested(desc, window_number);
+ 	this->InvalidateData(0);
+-	//this->SetOverlay(FindWindowById(WC_MAIN_WINDOW, 0)->viewport->overlay);
++	this->SetOverlay(FindWindowById(WC_MAIN_WINDOW, 0)->viewport->overlay);
+ }
+ 
+ /**
+diff --git a/src/main_gui.cpp b/src/main_gui.cpp
+index 4d6f1a1..5704e32 100644
+--- a/src/main_gui.cpp
++++ b/src/main_gui.cpp
+@@ -29,6 +29,7 @@
+ #include "company_func.h"
+ #include "toolbar_gui.h"
+ #include "statusbar_gui.h"
++#include "linkgraph_gui.h"
+ #include "tilehighlight_func.h"
+ #include "hotkeys.h"
+ 
+@@ -241,6 +242,11 @@ enum {
+ 
+ struct MainWindow : Window
+ {
++	uint refresh;
++
++	static const uint LINKGRAPH_REFRESH_PERIOD = 0xff;
++	static const uint LINKGRAPH_DELAY = 0xf;
++
+ 	MainWindow() : Window()
+ 	{
+ 		this->InitNested(&_main_window_desc, 0);
+@@ -249,6 +255,18 @@ struct MainWindow : Window
+ 
+ 		NWidgetViewport *nvp = this->GetWidget<NWidgetViewport>(MW_VIEWPORT);
+ 		nvp->InitializeViewport(this, TileXY(32, 32), ZOOM_LVL_VIEWPORT);
++
++		this->viewport->overlay = new LinkGraphOverlay(this, MW_VIEWPORT, 0, 0, 3);
++		this->refresh = LINKGRAPH_DELAY;
++	}
++
++	virtual void OnTick()
++	{
++		if (--refresh == 0) {
++			this->viewport->overlay->RebuildCache();
++			this->GetWidget<NWidgetBase>(MW_VIEWPORT)->SetDirty(this);
++			this->refresh = LINKGRAPH_REFRESH_PERIOD;
++		}
+ 	}
+ 
+ 	virtual void OnPaint()
+@@ -414,6 +432,7 @@ struct MainWindow : Window
+ 		this->viewport->scrollpos_y += ScaleByZoom(delta.y, this->viewport->zoom);
+ 		this->viewport->dest_scrollpos_x = this->viewport->scrollpos_x;
+ 		this->viewport->dest_scrollpos_y = this->viewport->scrollpos_y;
++		this->refresh = LINKGRAPH_DELAY;
+ 	}
+ 
+ 	virtual void OnMouseWheel(int wheel)
+@@ -428,6 +447,7 @@ struct MainWindow : Window
+ 		if (this->viewport != NULL) {
+ 			NWidgetViewport *nvp = this->GetWidget<NWidgetViewport>(MW_VIEWPORT);
+ 			nvp->UpdateViewportCoordinates(this);
++			this->refresh = LINKGRAPH_DELAY;
+ 		}
+ 	}
+ 
+diff --git a/src/viewport.cpp b/src/viewport.cpp
+index d118df5..8fb1156 100644
+--- a/src/viewport.cpp
++++ b/src/viewport.cpp
+@@ -45,6 +45,7 @@
+ #include "window_func.h"
+ #include "tilehighlight_func.h"
+ #include "window_gui.h"
++#include "linkgraph_gui.h"
+ 
+ #include "table/strings.h"
+ 
+@@ -213,6 +214,8 @@ void InitializeWindowViewport(Window *w, int x, int y,
+ 	vp->dest_scrollpos_x = pt.x;
+ 	vp->dest_scrollpos_y = pt.y;
+ 
++	vp->overlay = NULL;
++
+ 	w->viewport = vp;
+ 	vp->virtual_left = 0;//pt.x;
+ 	vp->virtual_top = 0;//pt.y;
+@@ -1361,22 +1364,8 @@ static void ViewportDrawBoundingBoxes(const ParentSpriteToSortVector *psd)
+ 	}
+ }
+ 
+-static void ViewportDrawStrings(DrawPixelInfo *dpi, const StringSpriteToDrawVector *sstdv)
++static void ViewportDrawStrings(ZoomLevel zoom, const StringSpriteToDrawVector *sstdv)
+ {
+-	DrawPixelInfo dp;
+-	ZoomLevel zoom;
+-
+-	_cur_dpi = &dp;
+-	dp = *dpi;
+-
+-	zoom = dp.zoom;
+-	dp.zoom = ZOOM_LVL_NORMAL;
+-
+-	dp.left   = UnScaleByZoom(dp.left,   zoom);
+-	dp.top    = UnScaleByZoom(dp.top,    zoom);
+-	dp.width  = UnScaleByZoom(dp.width,  zoom);
+-	dp.height = UnScaleByZoom(dp.height, zoom);
+-
+ 	const StringSpriteToDraw *ssend = sstdv->End();
+ 	for (const StringSpriteToDraw *ss = sstdv->Begin(); ss != ssend; ++ss) {
+ 		TextColour colour = TC_BLACK;
+@@ -1458,7 +1447,24 @@ void ViewportDoDraw(const ViewPort *vp, int left, int top, int right, int bottom
+ 
+ 	if (_draw_bounding_boxes) ViewportDrawBoundingBoxes(&_vd.parent_sprites_to_sort);
+ 
+-	if (_vd.string_sprites_to_draw.Length() != 0) ViewportDrawStrings(&_vd.dpi, &_vd.string_sprites_to_draw);
++	DrawPixelInfo dp = _vd.dpi;
++	ZoomLevel zoom = _vd.dpi.zoom;
++	dp.zoom = ZOOM_LVL_NORMAL;
++	dp.width = UnScaleByZoom(dp.width, zoom);
++	dp.height = UnScaleByZoom(dp.height, zoom);
++	_cur_dpi = &dp;
++
++	/* translate to window coordinates */
++	dp.left = x;
++	dp.top = y;
++
++	if (vp->overlay != NULL) vp->overlay->Draw(&dp);
++
++	/* translate back to world coordinates */
++	dp.left = UnScaleByZoom(_vd.dpi.left, zoom);
++	dp.top = UnScaleByZoom(_vd.dpi.top, zoom);
++
++	if (_vd.string_sprites_to_draw.Length() != 0) ViewportDrawStrings(zoom, &_vd.string_sprites_to_draw);
+ 
+ 	_cur_dpi = old_dpi;
+ 
+@@ -1574,6 +1580,7 @@ void UpdateViewportPosition(Window *w)
+ 		int delta_x = w->viewport->dest_scrollpos_x - w->viewport->scrollpos_x;
+ 		int delta_y = w->viewport->dest_scrollpos_y - w->viewport->scrollpos_y;
+ 
++		bool update_overlay = false;
+ 		if (delta_x != 0 || delta_y != 0) {
+ 			if (_settings_client.gui.smooth_scroll) {
+ 				int max_scroll = ScaleByMapSize1D(512);
+@@ -1584,11 +1591,14 @@ void UpdateViewportPosition(Window *w)
+ 				w->viewport->scrollpos_x = w->viewport->dest_scrollpos_x;
+ 				w->viewport->scrollpos_y = w->viewport->dest_scrollpos_y;
+ 			}
++			update_overlay = (w->viewport->scrollpos_x == w->viewport->dest_scrollpos_x &&
++								w->viewport->scrollpos_y == w->viewport->dest_scrollpos_y);
+ 		}
+ 
+ 		ClampViewportToMap(vp, w->viewport->scrollpos_x, w->viewport->scrollpos_y);
+ 
+ 		SetViewportPosition(w, w->viewport->scrollpos_x, w->viewport->scrollpos_y);
++		if (update_overlay) RebuildViewportOverlay(w);
+ 	}
+ }
+ 
+@@ -1933,6 +1943,15 @@ bool HandleViewportClicked(const ViewPort *vp, int x, int y)
+ 	return result;
+ }
+ 
++void RebuildViewportOverlay(Window *w)
++{
++	if (w->viewport->overlay != NULL &&
++			w->viewport->overlay->GetCompanyMask() != 0 &&
++			w->viewport->overlay->GetCargoMask() != 0) {
++		w->viewport->overlay->RebuildCache();
++		w->SetDirty();
++	}
++}
+ 
+ /**
+  * Scrolls the viewport in a window to a given location.
+@@ -1956,6 +1975,7 @@ bool ScrollWindowTo(int x, int y, int z, Window *w, bool instant)
+ 	if (instant) {
+ 		w->viewport->scrollpos_x = pt.x;
+ 		w->viewport->scrollpos_y = pt.y;
++		RebuildViewportOverlay(w);
+ 	}
+ 
+ 	w->viewport->dest_scrollpos_x = pt.x;
+@@ -2912,3 +2932,15 @@ void ResetObjectToPlace()
+ {
+ 	SetObjectToPlace(SPR_CURSOR_MOUSE, PAL_NONE, HT_NONE, WC_MAIN_WINDOW, 0);
+ }
++
++Point GetViewportStationMiddle(const ViewPort *vp, const Station *st)
++{
++	int x = TileX(st->xy) * TILE_SIZE;
++	int y = TileY(st->xy) * TILE_SIZE;
++	int z = GetSlopeZ(Clamp(x, 0, MapSizeX() * TILE_SIZE - 1), Clamp(y, 0, MapSizeY() * TILE_SIZE - 1));
++
++	Point p = RemapCoords(x, y, z);
++	p.x = UnScaleByZoom(p.x - vp->virtual_left, vp->zoom) + vp->left;
++	p.y = UnScaleByZoom(p.y - vp->virtual_top, vp->zoom) + vp->top;
++	return p;
++}
+diff --git a/src/viewport_func.h b/src/viewport_func.h
+index 7faa173..213138d 100644
+--- a/src/viewport_func.h
++++ b/src/viewport_func.h
+@@ -16,6 +16,7 @@
+ #include "viewport_type.h"
+ #include "window_type.h"
+ #include "tile_type.h"
++#include "station_type.h"
+ 
+ static const int TILE_HEIGHT_STEP = 50; ///< One Z unit tile height difference is displayed as 50m.
+ 
+@@ -67,6 +68,8 @@ void ViewportDoDraw(const ViewPort *vp, int left, int top, int right, int bottom
+ bool ScrollWindowToTile(TileIndex tile, Window *w, bool instant = false);
+ bool ScrollWindowTo(int x, int y, int z, Window *w, bool instant = false);
+ 
++void RebuildViewportOverlay(Window *w);
++
+ bool ScrollMainWindowToTile(TileIndex tile, bool instant = false);
+ bool ScrollMainWindowTo(int x, int y, int z = -1, bool instant = false);
+ 
+@@ -76,4 +79,6 @@ extern Point _tile_fract_coords;
+ 
+ void MarkTileDirtyByTile(TileIndex tile);
+ 
++Point GetViewportStationMiddle(const ViewPort *vp, const Station *st);
++
+ #endif /* VIEWPORT_FUNC_H */
+diff --git a/src/viewport_type.h b/src/viewport_type.h
+index cd8ebae..d95ede4 100644
+--- a/src/viewport_type.h
++++ b/src/viewport_type.h
+@@ -15,6 +15,8 @@
+ #include "zoom_type.h"
+ #include "strings_type.h"
+ 
++class LinkGraphOverlay;
++
+ /**
+  * Data structure for viewport, display of a part of the world
+  */
+@@ -30,6 +32,7 @@ struct ViewPort {
+ 	int virtual_height;  ///< height << zoom
+ 
+ 	ZoomLevel zoom; ///< The zoom level of the viewport.
++	LinkGraphOverlay *overlay;
+ };
+ 
+ /** Margings for the viewport sign */
