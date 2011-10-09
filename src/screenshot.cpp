@@ -745,6 +745,7 @@ static bool MakeZoomedInScreenshot()
 	vp.width = vp.virtual_width;
 	vp.virtual_height = w->viewport->virtual_height;
 	vp.height = vp.virtual_height;
+	vp.overlay = NULL;
 
 	const ScreenshotFormat *sf = _screenshot_formats + _cur_screenshot_format;
 	return sf->proc(MakeScreenshotName(SCREENSHOT_NAME, sf->extension), LargeWorldCallback, &vp, vp.width, vp.height,
@@ -771,6 +772,7 @@ static bool MakeWorldScreenshot()
 	vp.width = vp.virtual_width;
 	vp.virtual_height = ((MapMaxX() + MapMaxY()) * TILE_PIXELS >> 1) + extra_height_top - reclaim_height_bottom;
 	vp.height = vp.virtual_height;
+	vp.overlay = NULL;
 
 	sf = _screenshot_formats + _cur_screenshot_format;
 	return sf->proc(MakeScreenshotName(SCREENSHOT_NAME, sf->extension), LargeWorldCallback, &vp, vp.width, vp.height,
