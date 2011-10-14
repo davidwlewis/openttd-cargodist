@@ -109,7 +109,7 @@ void LinkGraph::CreateComponent(Station *first)
 void LinkGraph::NextComponent()
 {
 	if (this->GetSize() > 0) return; // don't mess with running jobs (might happen when changing interval)
-	StationID last_station_id = this->current_station_id;
+	StationID last_station_id = min(this->current_station_id, Station::GetPoolSize() - 1);
 	LinkGraphComponentID current_component_id = this->LinkGraphComponent::index;
 
 	do {
