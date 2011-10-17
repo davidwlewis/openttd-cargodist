@@ -298,7 +298,7 @@ index 1e30084..6b8b912 100644
  
  #endif /* CARGOPACKET_H */
 diff --git a/src/economy.cpp b/src/economy.cpp
-index 92babd8..f7b7a67 100644
+index 78d2712..d999573 100644
 --- a/src/economy.cpp
 +++ b/src/economy.cpp
 @@ -1140,38 +1140,53 @@ void PrepareUnload(Vehicle *front_v)
