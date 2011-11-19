@@ -1,5 +1,5 @@
 diff --git a/src/economy.cpp b/src/economy.cpp
-index 8da463f..eb53899 100644
+index 9a6dea2..26b3dfe 100644
 --- a/src/economy.cpp
 +++ b/src/economy.cpp
 @@ -1060,21 +1060,23 @@ CargoPayment::~CargoPayment()
@@ -63,10 +63,10 @@ index 742d018..60b0964 100644
  	/* Unsaved variables */
  	Company *owner;            ///< The owner of the vehicle
 diff --git a/src/lang/english.txt b/src/lang/english.txt
-index e2b778c..98630b4 100644
+index 185ab8b..207b793 100644
 --- a/src/lang/english.txt
 +++ b/src/lang/english.txt
-@@ -3421,6 +3421,10 @@ STR_INCOME_FLOAT_INCOME_SMALL                                   :{TINYFONT}{GREE
+@@ -3455,6 +3455,10 @@ STR_INCOME_FLOAT_INCOME_SMALL                                   :{TINYFONT}{GREE
  STR_INCOME_FLOAT_INCOME                                         :{GREEN}Income: {CURRENCY}
  STR_FEEDER_TINY                                                 :{TINYFONT}{YELLOW}Transfer: {CURRENCY}
  STR_FEEDER                                                      :{YELLOW}Transfer: {CURRENCY}
@@ -78,7 +78,7 @@ index e2b778c..98630b4 100644
  STR_MESSAGE_ESTIMATED_INCOME                                    :{WHITE}Estimated Income: {CURRENCY}
  
 diff --git a/src/misc_gui.cpp b/src/misc_gui.cpp
-index cd1ef3f..cbdd8a9 100644
+index 2f1ad58..18162fe 100644
 --- a/src/misc_gui.cpp
 +++ b/src/misc_gui.cpp
 @@ -814,17 +814,28 @@ void ShowCostOrIncomeAnimation(int x, int y, int z, Money cost)
