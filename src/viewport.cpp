@@ -2937,7 +2937,7 @@ Point GetViewportStationMiddle(const ViewPort *vp, const Station *st)
 {
 	int x = TileX(st->xy) * TILE_SIZE;
 	int y = TileY(st->xy) * TILE_SIZE;
-	int z = GetSlopeZ(Clamp(x, 0, MapSizeX() * TILE_SIZE - 1), Clamp(y, 0, MapSizeY() * TILE_SIZE - 1));
+	int z = GetSlopePixelZ(Clamp(x, 0, MapSizeX() * TILE_SIZE - 1), Clamp(y, 0, MapSizeY() * TILE_SIZE - 1));
 
 	Point p = RemapCoords(x, y, z);
 	p.x = UnScaleByZoom(p.x - vp->virtual_left, vp->zoom) + vp->left;
