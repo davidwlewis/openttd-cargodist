@@ -1913,9 +1913,9 @@ STR_LINKGRAPH_LEGEND_CAPTION                                    :{BLACK}Link gra
 STR_LINKGRAPH_LEGEND_ALL                                        :{BLACK}All
 STR_LINKGRAPH_LEGEND_NONE                                       :{BLACK}None
 STR_LINKGRAPH_LEGEND_SELECT_COMPANIES                           :{BLACK}Select companies to be displayed
-STR_LINKGRAPH_LEGEND_UNUSED                                     :{TINYFONT}{BLACK}unused
-STR_LINKGRAPH_LEGEND_SATURATED                                  :{TINYFONT}{BLACK}saturated
-STR_LINKGRAPH_LEGEND_OVERLOADED                                 :{TINYFONT}{BLACK}overloaded
+STR_LINKGRAPH_LEGEND_UNUSED                                     :{TINY_FONT}{BLACK}unused
+STR_LINKGRAPH_LEGEND_SATURATED                                  :{TINY_FONT}{BLACK}saturated
+STR_LINKGRAPH_LEGEND_OVERLOADED                                 :{TINY_FONT}{BLACK}overloaded
 
 # Base for station construction window(s)
 STR_STATION_BUILD_COVERAGE_AREA_TITLE                           :{BLACK}Coverage area highlight
