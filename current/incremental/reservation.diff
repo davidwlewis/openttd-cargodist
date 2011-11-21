@@ -298,7 +298,7 @@ index 1e30084..6b8b912 100644
  
  #endif /* CARGOPACKET_H */
 diff --git a/src/economy.cpp b/src/economy.cpp
-index 9a6dea2..0dc3dcd 100644
+index 9a6dea2..414471d 100644
 --- a/src/economy.cpp
 +++ b/src/economy.cpp
 @@ -1149,38 +1149,53 @@ void PrepareUnload(Vehicle *front_v)
@@ -390,6 +390,26 @@ index 9a6dea2..0dc3dcd 100644
  				remaining = v->cargo.MoveTo(&ge->cargo, amount_unloaded, front->current_order.GetUnloadType() & OUFB_TRANSFER ? VehicleCargoList::MTA_TRANSFER : VehicleCargoList::MTA_UNLOAD, payment);
  				if (!HasBit(ge->acceptance_pickup, GoodsEntry::GES_PICKUP)) {
  					InvalidateWindowData(WC_STATION_LIST, last_visited);
+@@ -1308,16 +1323,16 @@ static void LoadUnloadVehicle(Vehicle *front, int *cargo_left)
+ 
+ 			if (new_cid == CT_AUTO_REFIT) {
+ 				/* Get refittable cargo type with the most waiting cargo. */
+-				int amount = 0;
++				uint amount = 0;
+ 				CargoID cid;
+ 				FOR_EACH_SET_CARGO_ID(cid, refit_mask) {
+-					if (cargo_left[cid] > amount) {
++					if (st->goods[cid].cargo.Count() > amount) {
+ 						/* Try to find out if auto-refitting would succeed. In case the refit is allowed,
+ 						 * the returned refit capacity will be greater than zero. */
+ 						new_subtype = GetBestFittingSubType(v, v, cid);
+ 						DoCommand(v->tile, v->index, cid | 1U << 6 | new_subtype << 8 | 1U << 16, DC_QUERY_COST, GetCmdRefitVeh(v)); // Auto-refit and only this vehicle including artic parts.
+ 						if (_returned_refit_capacity > 0) {
+-							amount = cargo_left[cid];
++							amount = st->goods[cid].cargo.Count();
+ 							new_cid = cid;
+ 						}
+ 					}
 @@ -1360,39 +1375,30 @@ static void LoadUnloadVehicle(Vehicle *front, int *cargo_left)
  
  		/* If there's goods waiting at the station, and the vehicle
