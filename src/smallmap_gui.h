@@ -101,6 +101,8 @@ protected:
 	uint8 refresh;   ///< Refresh counter, zeroed every FORCE_REFRESH_PERIOD ticks.
 	LinkGraphOverlay *overlay;
 
+	Point SmallmapRemapCoords(int x, int y) const;
+
 	/**
 	 * Draws vertical part of map indicator
 	 * @param x X coord of left/right border of main viewport
