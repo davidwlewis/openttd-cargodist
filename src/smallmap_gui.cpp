@@ -546,6 +546,14 @@ static const byte _vehicle_type_colours[6] = {
 	PC_RED, PC_YELLOW, PC_LIGHT_BLUE, PC_WHITE, PC_BLACK, PC_RED
 };
 
+FORCEINLINE Point SmallMapWindow::SmallmapRemapCoords(int x, int y) const
+{
+	Point pt;
+	pt.x = (y - x) * 2;
+	pt.y = y + x;
+	return pt;
+}
+
 /**
  * Remap tile to location on this smallmap.
  * @param tile_x X coordinate of the tile.
@@ -557,13 +565,13 @@ FORCEINLINE Point SmallMapWindow::RemapTile(int tile_x, int tile_y) const
 	int x_offset = tile_x - this->scroll_x / (int)TILE_SIZE;
 	int y_offset = tile_y - this->scroll_y / (int)TILE_SIZE;
 
-	if (this->zoom == 1) return RemapCoords(x_offset, y_offset, 0);
+	if (this->zoom == 1) return SmallmapRemapCoords(x_offset, y_offset);
 
 	/* For negative offsets, round towards -inf. */
 	if (x_offset < 0) x_offset -= this->zoom - 1;
 	if (y_offset < 0) y_offset -= this->zoom - 1;
 
-	return RemapCoords(x_offset / this->zoom, y_offset / this->zoom, 0);
+	return SmallmapRemapCoords(x_offset / this->zoom, y_offset / this->zoom);
 }
 
 /**
@@ -1396,7 +1404,7 @@ void SmallMapWindow::OnTick()
 void SmallMapWindow::SetNewScroll(int sx, int sy, int sub)
 {
 	const NWidgetBase *wi = this->GetWidget<NWidgetBase>(SM_WIDGET_MAP);
-	Point hv = InverseRemapCoords(wi->current_x * TILE_SIZE / 2, wi->current_y * TILE_SIZE / 2);
+	Point hv = InverseRemapCoords(wi->current_x * ZOOM_LVL_BASE * TILE_SIZE / 2, wi->current_y * ZOOM_LVL_BASE * TILE_SIZE / 2);
 	hv.x *= this->zoom;
 	hv.y *= this->zoom;
 
