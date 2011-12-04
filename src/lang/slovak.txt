@@ -1332,7 +1332,6 @@ STR_CONFIG_SETTING_AI_BUILDS_AIRCRAFT                           :{LTBLUE}Zakáza
 STR_CONFIG_SETTING_AI_BUILDS_SHIPS                              :{LTBLUE}Zakázať lode pre počítač: {ORANGE}{STRING}
 
 STR_CONFIG_SETTING_AI_IN_MULTIPLAYER                            :{LTBLUE}Povoliť AI-ov v hre viacerých hráčov: {ORANGE}{STRING}
-STR_CONFIG_SETTING_AI_MAX_OPCODES                               :{LTBLUE}#opkódy pred AI sú pozastavené: {ORANGE}{STRING}
 
 STR_CONFIG_SETTING_SERVINT_ISPERCENT                            :{LTBLUE}Servisné intervaly v percentách: {ORANGE}{STRING}
 STR_CONFIG_SETTING_SERVINT_TRAINS                               :{LTBLUE}Implicitný servisný interval pre vlaky: {ORANGE}{STRING} dní/%
@@ -3442,8 +3441,6 @@ STR_AI_DEBUG_CONTINUE                                           :{BLACK}Pokračo
 STR_AI_DEBUG_CONTINUE_TOOLTIP                                   :{BLACK}Odpauzovať a povoliť AI
 STR_AI_DEBUG_SELECT_AI_TOOLTIP                                  :{BLACK}Ukázať ladiaci výpis tejto UI
 
-STR_ERROR_NO_AI                                                 :{WHITE}OpenTTD je vytvorené bez podpory AI...
-STR_ERROR_NO_AI_SUB                                             :{WHITE}... žiadne AI nieje dostupné!
 
 STR_ERROR_AI_NO_AI_FOUND                                        :Nebolo nájdená žiadne použitelné AI.{}Toto AI je hlúpe a nebude nič robiť.{}Môžete si stiahnúť niekoľko AI cez 'Online Obsah' systém.
 STR_ERROR_AI_PLEASE_REPORT_CRASH                                :{WHITE}Jedna z AI padla. Prosím nahláste to autorovi AI a priložte screenshot Debugovacej obrazovky AI.
