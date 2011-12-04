@@ -1253,7 +1253,6 @@ STR_CONFIG_SETTING_AI_BUILDS_AIRCRAFT                           :{LTBLUE}不允�
 STR_CONFIG_SETTING_AI_BUILDS_SHIPS                              :{LTBLUE}不允許電腦使用船舶：{ORANGE}{STRING}
 
 STR_CONFIG_SETTING_AI_IN_MULTIPLAYER                            :{LTBLUE}多人遊戲中允許電腦 AI 加入：{ORANGE}{STRING}
-STR_CONFIG_SETTING_AI_MAX_OPCODES                               :{LTBLUE}在 AI 中止前的最大 #opcodes 數：{ORANGE}{STRING}
 
 STR_CONFIG_SETTING_SERVINT_ISPERCENT                            :{LTBLUE}維護間隔以百分比 (%) 計算：{ORANGE}{STRING}
 STR_CONFIG_SETTING_SERVINT_TRAINS                               :{LTBLUE}列車預設維護間隔：{ORANGE}{STRING} 天/%
@@ -3312,8 +3311,6 @@ STR_AI_DEBUG_CONTINUE                                           :{BLACK}繼續
 STR_AI_DEBUG_CONTINUE_TOOLTIP                                   :{BLACK}取消暫停並繼續 AI
 STR_AI_DEBUG_SELECT_AI_TOOLTIP                                  :{BLACK}檢視此 AI 的除錯輸出資訊
 
-STR_ERROR_NO_AI                                                 :{WHITE}OpenTTD 編譯時未加入 AI 支援...
-STR_ERROR_NO_AI_SUB                                             :{WHITE}... 無 AI 可使用！
 
 STR_ERROR_AI_NO_AI_FOUND                                        :找不到適合的 AI 可以載入。{}此 AI 是虛擬 AI，沒有任何效果。{}您可以透過「線上內容」系統下載更多 AI。
 STR_ERROR_AI_PLEASE_REPORT_CRASH                                :{WHITE}正在運行中的其中一個 AI 發生錯誤。請打開「AI 除錯」視窗後擷取螢幕圖片，將此問題回報給 AI 作者。
