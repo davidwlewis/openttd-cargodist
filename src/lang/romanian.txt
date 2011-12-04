@@ -1142,6 +1142,7 @@ STR_CONFIG_SETTING_ROAD_VEHICLE_QUEUEING                        :{LTBLUE}Autoveh
 STR_CONFIG_SETTING_AUTOSCROLL                                   :{LTBLUE}Mută imaginea când mouse-ul este la marginea ecranului: {ORANGE}{STRING}
 STR_CONFIG_SETTING_BRIBE                                        :{LTBLUE}Permite mituirea autorităţilor locale: {ORANGE}{STRING}
 STR_CONFIG_SETTING_ALLOW_EXCLUSIVE                              :{LTBLUE}Permite cumpărarea de drepturi exclusive de transport: {ORANGE}{STRING}
+STR_CONFIG_SETTING_ALLOW_FUND_BUILDINGS                         :{LTBLUE}Permite fondarea a noi clădiri: {ORANGE}{STRING}
 STR_CONFIG_SETTING_ALLOW_FUND_ROAD                              :{LTBLUE}Permite finanțarea reconstrucției străzilor locale: {ORANGE}{STRING}
 STR_CONFIG_SETTING_ALLOW_GIVE_MONEY                             :{LTBLUE}Permite transfer de bani către alte companii: {ORANGE}{STRING}
 STR_CONFIG_SETTING_FREIGHT_TRAINS                               :{LTBLUE}Multiplicator greutate pt marfar pt simularea trenurilor grele: {ORANGE}{STRING}
@@ -1155,6 +1156,7 @@ STR_CONFIG_SETTING_STOP_ON_COMPETITOR_ROAD                      :{LTBLUE}Permite
 STR_CONFIG_SETTING_ADJACENT_STATIONS                            :{LTBLUE}Permite construirea de staţii adiacente: {ORANGE}{STRING}
 STR_CONFIG_SETTING_DYNAMIC_ENGINES                              :{LTBLUE}Permite mai multe seturi NewGRF simultan: {ORANGE}{STRING}
 STR_CONFIG_SETTING_DYNAMIC_ENGINES_EXISTING_VEHICLES            :{WHITE}Schimbarea acestei setări nu este permisă când există vehicule în joc
+STR_CONFIG_SETTING_INFRASTRUCTURE_MAINTENANCE                   :{LTBLUE}Mentenanță infrastructură: {ORANGE}{STRING}
 
 STR_CONFIG_SETTING_NEVER_EXPIRE_AIRPORTS                        :{LTBLUE}Aeroporturile nu expiră niciodată: {ORANGE}{STRING}
 
@@ -1263,7 +1265,6 @@ STR_CONFIG_SETTING_AI_BUILDS_AIRCRAFT                           :{LTBLUE}Dezacti
 STR_CONFIG_SETTING_AI_BUILDS_SHIPS                              :{LTBLUE}Dezactivează navele pentru jucătorii controlaţi de calculator: {ORANGE}{STRING}
 
 STR_CONFIG_SETTING_AI_IN_MULTIPLAYER                            :{LTBLUE}Permite Inteligenţă Artificială în multiplayer: {ORANGE}{STRING}
-STR_CONFIG_SETTING_AI_MAX_OPCODES                               :{LTBLUE}# de operaţii după care IA este suspendată: {ORANGE}{STRING}
 
 STR_CONFIG_SETTING_SERVINT_ISPERCENT                            :{LTBLUE}Intervaluri de service în procente: {ORANGE}{STRING}
 STR_CONFIG_SETTING_SERVINT_TRAINS                               :{LTBLUE}Intervalul de service implicit pentru trenuri: {ORANGE}{STRING} zi{P 0:1 "" le}/%
@@ -1320,6 +1321,14 @@ STR_CONFIG_SETTING_SNAP_RADIUS                                  :{LTBLUE}Distan�
 STR_CONFIG_SETTING_SNAP_RADIUS_DISABLED                         :{LTBLUE}Distanţa de 'snap' pentru ferestre: {ORANGE}dezactivată
 STR_CONFIG_SETTING_SOFT_LIMIT                                   :{LTBLUE}Numărul maxim de ferestre nefixate: {ORANGE}{STRING}
 STR_CONFIG_SETTING_SOFT_LIMIT_DISABLED                          :{LTBLUE}Numărul maxim de ferestre nefixate: {ORANGE}dezactivat
+STR_CONFIG_SETTING_ZOOM_MIN                                     :{LTBLUE}Nivelul maxim de apropiere imagine: {ORANGE}{STRING}
+STR_CONFIG_SETTING_ZOOM_MAX                                     :{LTBLUE}Nivelul maxim de îndepărtare imagine: {ORANGE}{STRING}
+STR_CONFIG_SETTING_ZOOM_LVL_MIN                                 :x4
+STR_CONFIG_SETTING_ZOOM_LVL_IN_2X                               :x2
+STR_CONFIG_SETTING_ZOOM_LVL_NORMAL                              :Normal
+STR_CONFIG_SETTING_ZOOM_LVL_OUT_2X                              :x2
+STR_CONFIG_SETTING_ZOOM_LVL_OUT_4X                              :x4
+STR_CONFIG_SETTING_ZOOM_LVL_OUT_8X                              :x8
 STR_CONFIG_SETTING_TOWN_GROWTH                                  :{LTBLUE}Viteza de dezvoltare a oraşului: {ORANGE}{STRING}
 STR_CONFIG_SETTING_TOWN_GROWTH_NONE                             :Deloc
 STR_CONFIG_SETTING_TOWN_GROWTH_SLOW                             :Lentă
@@ -1875,6 +1884,11 @@ STR_CONTENT_ERROR_COULD_NOT_DOWNLOAD_CONNECTION_LOST            :{WHITE}... cone
 STR_CONTENT_ERROR_COULD_NOT_DOWNLOAD_FILE_NOT_WRITABLE          :{WHITE}... fişierul nu poate fi scris
 STR_CONTENT_ERROR_COULD_NOT_EXTRACT                             :{WHITE}Fişierul descărcat nu a putut fi decompresat
 
+STR_MISSING_GRAPHICS_SET_CAPTION                                :{WHITE}Elemente grafice lipsă
+STR_MISSING_GRAPHICS_SET_MESSAGE                                :{BLACK}OpenTTD necesită elemente grafice pentru a funcționa, dar nici un pachet grafic nu a fost găsit. Permiți ca OpenTTD sa descarce și să instaleze pachetele grafice necesare?
+STR_MISSING_GRAPHICS_YES_DOWNLOAD                               :{BLACK}Da, descarcă pachetele grafice
+STR_MISSING_GRAPHICS_NO_QUIT                                    :{BLACK}Nu, ieși din OpenTTD
+
 # Transparency settings window
 STR_TRANSPARENCY_CAPTION                                        :{WHITE}Optiuni transparenţă
 STR_TRANSPARENT_SIGNS_TOOLTIP                                   :{BLACK}Comută transparenţa pentru semnele de staţii. Ctrl+Click pentru blocare
@@ -2196,6 +2210,28 @@ STR_LAI_CLEAR_DESCRIPTION_FIELDS                                :Teren agricol
 STR_LAI_CLEAR_DESCRIPTION_SNOW_COVERED_LAND                     :Teren înzăpezit
 STR_LAI_CLEAR_DESCRIPTION_DESERT                                :Deşert
 
+STR_LAI_RAIL_DESCRIPTION_TRACK                                  :{STRING} cale ferată
+STR_LAI_RAIL_DESCRIPTION_TRACK_WITH_NORMAL_SIGNALS              :{STRING} cale ferată cu semafoare
+STR_LAI_RAIL_DESCRIPTION_TRACK_WITH_PRESIGNALS                  :{STRING} cale ferată cu presemafoare
+STR_LAI_RAIL_DESCRIPTION_TRACK_WITH_EXITSIGNALS                 :{STRING} cale ferată cu semafoare de ieșire
+STR_LAI_RAIL_DESCRIPTION_TRACK_WITH_COMBOSIGNALS                :{STRING} cale ferată cu semafoare combo
+STR_LAI_RAIL_DESCRIPTION_TRACK_WITH_PBSSIGNALS                  :{STRING} cale ferată cu semafoare de direcționare
+STR_LAI_RAIL_DESCRIPTION_TRACK_WITH_NOENTRYSIGNALS              :{STRING} cale ferată cu semafoare de direcționare unidirecționale
+STR_LAI_RAIL_DESCRIPTION_TRACK_WITH_NORMAL_PRESIGNALS           :{STRING} cale ferată cu semafoare și presemafoare
+STR_LAI_RAIL_DESCRIPTION_TRACK_WITH_NORMAL_EXITSIGNALS          :{STRING} cale ferată cu semafoare și semafoare de ieșire
+STR_LAI_RAIL_DESCRIPTION_TRACK_WITH_NORMAL_COMBOSIGNALS         :{STRING} cale ferată cu semafoare și semafoare combo
+STR_LAI_RAIL_DESCRIPTION_TRACK_WITH_NORMAL_PBSSIGNALS           :{STRING} cale ferată cu semafoare și semafoare de direcționare
+STR_LAI_RAIL_DESCRIPTION_TRACK_WITH_NORMAL_NOENTRYSIGNALS       :{STRING} cale ferată cu semafoare și semafoare de direcționare unidirecționale
+STR_LAI_RAIL_DESCRIPTION_TRACK_WITH_PRE_EXITSIGNALS             :{STRING} cale ferată cu presemafoare și semafoare de ieșire
+STR_LAI_RAIL_DESCRIPTION_TRACK_WITH_PRE_COMBOSIGNALS            :{STRING} cale ferată cu presemafoare și semafoare combo
+STR_LAI_RAIL_DESCRIPTION_TRACK_WITH_PRE_PBSSIGNALS              :{STRING} cale ferată cu presemafoare și semafoare de direcționare
+STR_LAI_RAIL_DESCRIPTION_TRACK_WITH_PRE_NOENTRYSIGNALS          :{STRING} cale ferată cu presemafoare și semafoare de direcționare unidirecționale
+STR_LAI_RAIL_DESCRIPTION_TRACK_WITH_EXIT_COMBOSIGNALS           :{STRING} cale ferată cu semafoare de ieșire și semafoare combo
+STR_LAI_RAIL_DESCRIPTION_TRACK_WITH_EXIT_PBSSIGNALS             :{STRING} cale ferată cu semafoare de ieșire și semafoare direcționale
+STR_LAI_RAIL_DESCRIPTION_TRACK_WITH_EXIT_NOENTRYSIGNALS         :{STRING} cale ferată cu semafoare de ieșire și semafoare direcționale unidirecționale
+STR_LAI_RAIL_DESCRIPTION_TRACK_WITH_COMBO_PBSSIGNALS            :{STRING} cale ferată cu semafoare combo și semafoare direcționale
+STR_LAI_RAIL_DESCRIPTION_TRACK_WITH_COMBO_NOENTRYSIGNALS        :{STRING} cale ferată cu semafoare combo și semafoare direcționale unidirecționale
+STR_LAI_RAIL_DESCRIPTION_TRACK_WITH_PBS_NOENTRYSIGNALS          :{STRING} cale ferată cu semafoare direcționale si semafoare directionale unidirecționale ;-)
 STR_LAI_RAIL_DESCRIPTION_TRAIN_DEPOT                            :{STRING} depou trenuri
 
 STR_LAI_ROAD_DESCRIPTION_ROAD                                   :Şosea
@@ -2380,7 +2416,12 @@ STR_NEWGRF_SETTINGS_MOVEUP                                      :{BLACK}Mută î
 STR_NEWGRF_SETTINGS_MOVEUP_TOOLTIP                              :{BLACK}Mută fişierul NewGRF ales mai sus în listă
 STR_NEWGRF_SETTINGS_MOVEDOWN                                    :{BLACK}Mută în jos
 STR_NEWGRF_SETTINGS_MOVEDOWN_TOOLTIP                            :{BLACK}Mută fişierul NewGRF ales mai jos în listă
-STR_NEWGRF_SETTINGS_FILE_TOOLTIP                                :{BLACK}O listă a fişierelor NewGRF instalate. Click pe un fişier pt a-i modifica parameterii
+STR_NEWGRF_SETTINGS_FILE_TOOLTIP                                :{BLACK}O listă a fişierelor NewGRF instalate.
+
+# Additional textfiles accompanying NewGRFs
+STR_NEWGRF_SETTINGS_VIEW_README                                 :{BLACK}Vezi fișierul readme
+STR_NEWGRF_SETTINGS_VIEW_CHANGELOG                              :{BLACK}Listă modificări
+STR_NEWGRF_SETTINGS_VIEW_LICENSE                                :{BLACK}Licențe
 
 STR_NEWGRF_SETTINGS_SET_PARAMETERS                              :{BLACK}Setează parametri
 STR_NEWGRF_SETTINGS_TOGGLE_PALETTE                              :{BLACK}Comută paleta
@@ -2403,7 +2444,6 @@ STR_NEWGRF_SETTINGS_NOT_FOUND                                   :{RED}Niciun fis
 STR_NEWGRF_SETTINGS_DISABLED                                    :{RED}Dezactivat
 STR_NEWGRF_SETTINGS_INCOMPATIBLE                                :{RED}Incompatibil cu această versiune de OpenTTD
 
-
 # NewGRF parameters window
 STR_NEWGRF_PARAMETERS_CAPTION                                   :{WHITE}Schimbă parametrii NewGRF
 STR_NEWGRF_PARAMETERS_CLOSE                                     :{BLACK}Închide
@@ -2412,6 +2452,11 @@ STR_NEWGRF_PARAMETERS_RESET_TOOLTIP                             :{BLACK}Setează
 STR_NEWGRF_PARAMETERS_DEFAULT_NAME                              :Parametru {NUM}
 STR_NEWGRF_PARAMETERS_SETTING                                   :{STRING}: {ORANGE}{STRING}
 STR_NEWGRF_PARAMETERS_NUM_PARAM                                 :{LTBLUE}Număr de parametrii: {ORANGE}{NUM}
+
+# NewGRF textfile window
+STR_NEWGRF_README_CAPTION                                       :{WHITE}Fișier readme al NewGRF {STRING}
+STR_NEWGRF_CHANGELOG_CAPTION                                    :{WHITE}Listă modificări a NewGRF {STRING}
+STR_NEWGRF_LICENSE_CAPTION                                      :{WHITE}Licența fișierului NewGRF {STRING}
 
 # NewGRF inspect window
 STR_NEWGRF_INSPECT_CAPTION                                      :{WHITE}Inspectează - {STRING}
@@ -2494,6 +2539,7 @@ STR_BROKEN_VEHICLE_LENGTH                                       :{WHITE}Trenul '
 STR_NEWGRF_BUGGY                                                :{WHITE}NewGRF '{0:STRING}' produce informaţii incorecte
 STR_NEWGRF_BUGGY_ARTICULATED_CARGO                              :{WHITE}Datele despre marfa/regarnisire pentru '{1:ENGINE}' diferă de valorile iniţiale după construcţie. Acest lucru ar putea cauza eşuarea autorenovarii/schimbarii.
 STR_NEWGRF_BUGGY_ENDLESS_PRODUCTION_CALLBACK                    :{WHITE}'{1:STRING}' a cauzat o buclă infinită în funcţia de producţie
+STR_NEWGRF_BUGGY_UNKNOWN_CALLBACK_RESULT                        :{WHITE}Execuția 0x{HEX} a returnat răspunsul invalid/necunoscut 0x{HEX}
 
 # 'User removed essential NewGRFs'-placeholders for stuff without specs
 STR_NEWGRF_INVALID_CARGO                                        :<cargo invalid>
@@ -2538,6 +2584,12 @@ STR_TOWN_VIEW_MAIL_LAST_MONTH_MAX                               :{BLACK}Colete p
 STR_TOWN_VIEW_CARGO_FOR_TOWNGROWTH                              :{BLACK}Transporturi necesare dezvoltării oraşului:
 STR_TOWN_VIEW_CARGO_FOR_TOWNGROWTH_REQUIRED_GENERAL             :{ORANGE}{STRING}{RED} necesare
 STR_TOWN_VIEW_CARGO_FOR_TOWNGROWTH_REQUIRED_WINTER              :{ORANGE}{STRING}{BLACK} necesare iarna
+STR_TOWN_VIEW_CARGO_FOR_TOWNGROWTH_DELIVERED_GENERAL            :{ORANGE}{STRING}{GREEN} livrate
+STR_TOWN_VIEW_CARGO_FOR_TOWNGROWTH_REQUIRED                     :{ORANGE}{CARGO_TINY} / {CARGO_LONG}{RED} (mai sunt necesare)
+STR_TOWN_VIEW_CARGO_FOR_TOWNGROWTH_DELIVERED                    :{ORANGE}{CARGO_TINY} / {CARGO_LONG}{GREEN} (livrate)
+STR_TOWN_VIEW_TOWN_GROWS_EVERY                                  :{BLACK}Orașul crește la fiecare {ORANGE}{COMMA}{BLACK} zi{P "" le}
+STR_TOWN_VIEW_TOWN_GROWS_EVERY_FUNDED                           :{BLACK}Orașul crește la fiecare {ORANGE}{COMMA}{BLACK} zi{P "" le} (cu fonduri)
+STR_TOWN_VIEW_TOWN_GROW_STOPPED                                 :{BLACK}Orașul {RED}nu{BLACK} crește
 STR_TOWN_VIEW_NOISE_IN_TOWN                                     :{BLACK}Limita zgomotului în oraş: {ORANGE}{COMMA}{BLACK}  maxim: {ORANGE}{COMMA}
 STR_TOWN_VIEW_CENTER_TOOLTIP                                    :{BLACK}Centrează imaginea pe locaţia oraşului. Ctrl+Click deshide o fereastra cu locaţia oraşului
 STR_TOWN_VIEW_LOCAL_AUTHORITY_BUTTON                            :{BLACK}Autorit. locală
@@ -2712,6 +2764,11 @@ STR_COMPANY_VIEW_COMPANY_NAME_QUERY_CAPTION                     :Noul nume al co
 STR_COMPANY_VIEW_PRESIDENT_S_NAME_QUERY_CAPTION                 :Noul nume al preşedintelui
 
 STR_BUY_COMPANY_MESSAGE                                         :{WHITE}Căutăm o companie de transport care să preia societatea noastră {}{}Doriţi să cumpăraţi {COMPANY} la preţul de {CURRENCY_LONG}?
+
+# Company infrastructure window
+STR_COMPANY_INFRASTRUCTURE_VIEW_AIRPORTS                        :{WHITE}Aeroporturi
+STR_COMPANY_INFRASTRUCTURE_VIEW_COST                            :{WHITE}{1:CURRENCY_LONG}/an ({0:COMMA})
+STR_COMPANY_INFRASTRUCTURE_VIEW_TOTAL                           :{WHITE}{CURRENCY_LONG}/an
 
 # Industry directory
 STR_INDUSTRY_DIRECTORY_CAPTION                                  :{WHITE}Industrii
@@ -3168,6 +3225,10 @@ STR_ORDER_TOOLTIP_UNLOAD                                        :{BLACK}Schimbă
 
 STR_ORDER_REFIT                                                 :{BLACK}Rearanjeaza
 STR_ORDER_REFIT_TOOLTIP                                         :{BLACK}Alege tipul de marfă pentru rearanjarea în comandă. Ctrl+clic pentru a anula rearanjarea
+STR_ORDER_REFIT_AUTO                                            :{BLACK}Auto-modificare
+STR_ORDER_REFIT_AUTO_TOOLTIP                                    :{BLACK}Selectează tipul de marfă pentru modificare cu acest ordin. Ctrl+click pentru a elimina o instrucțiune de modificare îmcărcătură. Modificarea automată va fi efectuată doar dacă vehiculul permite asta.
+STR_ORDER_DROP_REFIT_AUTO                                       :Tip incărcătură nemodificabil
+STR_ORDER_DROP_REFIT_AUTO_ANY                                   :Incărcătură disponibilă
 
 STR_ORDER_SERVICE                                               :{BLACK}Service
 STR_ORDER_DROP_GO_ALWAYS_DEPOT                                  :Merge mereu
@@ -3256,6 +3317,18 @@ STR_ORDER_NO_UNLOAD_FULL_LOAD                                   :(Nu descărca �
 STR_ORDER_NO_UNLOAD_FULL_LOAD_ANY                               :(Nu descărca şi aşteaptă orice încărcătură)
 STR_ORDER_NO_UNLOAD_NO_LOAD                                     :(Fără încărcare sau descărcare)
 
+STR_ORDER_AUTO_REFIT                                            :(Înlocuire automată cu {STRING})
+STR_ORDER_FULL_LOAD_REFIT                                       :(Încărcare completă cu auto-modificare pentru {STRING})
+STR_ORDER_FULL_LOAD_ANY_REFIT                                   :(Încarcă complet orice tip de marfă cu auto-înlocuire la {STRING})
+STR_ORDER_UNLOAD_REFIT                                          :(Descarcă și preia marfă cu auto-înlocuire pentru {STRING})
+STR_ORDER_UNLOAD_FULL_LOAD_REFIT                                :(Descarcă și așteaptă incărcare completă cu auto-înlocuire pentru {STRING})
+STR_ORDER_UNLOAD_FULL_LOAD_ANY_REFIT                            :(Descarcă și așteaptă incărcare completă orice tip cu auto-înlocuire pentru {STRING})
+STR_ORDER_TRANSFER_REFIT                                        :(Transferă și ia marfă cu auto-înlocuire la {STRING})
+STR_ORDER_TRANSFER_FULL_LOAD_REFIT                              :(Transferă și așteaptă încărcare completă cu auto-înlocuire la {STRING})
+STR_ORDER_TRANSFER_FULL_LOAD_ANY_REFIT                          :(Transferă și așteaptă încărcare completă orice tip cu auto-înlocuire la {STRING})
+STR_ORDER_NO_UNLOAD_REFIT                                       :(Incărcare marfă fără descărcare cu auto-înlocuire la {STRING})
+STR_ORDER_NO_UNLOAD_FULL_LOAD_REFIT                             :(Incărcare marfă completă fără descărcare cu auto-înlocuire la {STRING})
+STR_ORDER_NO_UNLOAD_FULL_LOAD_ANY_REFIT                         :(Incărcare marfă completă orice tip fără descărcare cu auto-înlocuire la {STRING})
 
 STR_ORDER_AUTO_REFIT_ANY                                        :incărcătura disponibilă
 
@@ -3343,9 +3416,6 @@ STR_AI_DEBUG_MATCH_CASE_TOOLTIP                                 :{BLACK}Comuntă
 STR_AI_DEBUG_CONTINUE                                           :{BLACK}Continuă
 STR_AI_DEBUG_CONTINUE_TOOLTIP                                   :{BLACK}Continuă execuţia modulului de Inteligenţă Artificială
 STR_AI_DEBUG_SELECT_AI_TOOLTIP                                  :{BLACK}Vizualizează datele de debug ale acestui modul de IA
-
-STR_ERROR_NO_AI                                                 :{WHITE}OpenTTD este compilat fără suport de Inteligenţă Artificială...
-STR_ERROR_NO_AI_SUB                                             :{WHITE}... nu este disponibil nici un modul de Inteligenţă artificială!
 
 STR_ERROR_AI_NO_AI_FOUND                                        :Nici o IA potrivită a fost găsită{}Această IA este nefuncţională.{}Poţi descărca IA-uri folsind opţiunea "Resurse online" din meniul principal.
 STR_ERROR_AI_PLEASE_REPORT_CRASH                                :{WHITE}O Inteligentă Artificială s-a oprit în mod eronat. Raportează această problemă autorului împreună cu o captură de ecran a ferestrei Depanare IA
@@ -3471,6 +3541,7 @@ STR_ERROR_NOT_ALLOWED_WHILE_PAUSED                              :{WHITE}Nepermis
 STR_ERROR_LOCAL_AUTHORITY_REFUSES_TO_ALLOW_THIS                 :{WHITE}Autorităţile locale din {TOWN} refuză să permită această acţiune
 STR_ERROR_LOCAL_AUTHORITY_REFUSES_AIRPORT                       :{WHITE}Autoritatea locală din {TOWN} refuză să permită construirea unui nou aeroport în acest oraş
 STR_ERROR_LOCAL_AUTHORITY_REFUSES_NOISE                         :{WHITE}Autoritatea locală din {TOWN} nu permite construirea unui nou aeroport datorită poluării fonice
+STR_ERROR_BRIBE_FAILED                                          :{WHITE}Tentativa de mituire a fost descoperită de un investigator regional
 
 # Levelling errors
 STR_ERROR_CAN_T_RAISE_LAND_HERE                                 :{WHITE}Nu se poate înălţa terenul...
@@ -4241,6 +4312,7 @@ STR_TINY_BLACK_COMA                                             :{TINY_FONT}{BLA
 STR_TINY_COMMA                                                  :{TINY_FONT}{COMMA}
 STR_BLUE_COMMA                                                  :{BLUE}{COMMA}
 STR_RED_COMMA                                                   :{RED}{COMMA}
+STR_WHITE_COMMA                                                 :{WHITE}{COMMA}
 STR_TINY_BLACK_DECIMAL                                          :{TINY_FONT}{BLACK}{DECIMAL}
 STR_COMPANY_MONEY                                               :{WHITE}{CURRENCY_LONG}
 STR_BLACK_DATE_LONG                                             :{BLACK}{DATE_LONG}
