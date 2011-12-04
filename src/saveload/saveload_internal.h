@@ -32,6 +32,7 @@ void AfterLoadStations();
 void AfterLoadRoadStops();
 void AfterLoadLabelMaps();
 void AfterLoadLinkGraphs();
+void AfterLoadCompanyStats();
 void UpdateHousesAndTowns();
 
 void UpdateOldAircraft();
