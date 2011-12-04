@@ -1,8 +1,8 @@
 diff --git a/src/economy.cpp b/src/economy.cpp
-index 9a6dea2..26b3dfe 100644
+index 9fa2e11..8b69202 100644
 --- a/src/economy.cpp
 +++ b/src/economy.cpp
-@@ -1060,21 +1060,23 @@ CargoPayment::~CargoPayment()
+@@ -1083,21 +1083,23 @@ CargoPayment::~CargoPayment()
  
  	this->front->cargo_payment = NULL;
  
@@ -35,7 +35,7 @@ index 9a6dea2..26b3dfe 100644
  	}
  
  	cur_company.Restore();
-@@ -1116,7 +1118,7 @@ Money CargoPayment::PayTransfer(const CargoPacket *cp, uint count)
+@@ -1139,7 +1141,7 @@ Money CargoPayment::PayTransfer(const CargoPacket *cp, uint count)
  
  	profit = profit * _settings_game.economy.feeder_payment_share / 100;
  
@@ -63,22 +63,22 @@ index 742d018..60b0964 100644
  	/* Unsaved variables */
  	Company *owner;            ///< The owner of the vehicle
 diff --git a/src/lang/english.txt b/src/lang/english.txt
-index 185ab8b..207b793 100644
+index cc80abe..95b5c55 100644
 --- a/src/lang/english.txt
 +++ b/src/lang/english.txt
-@@ -3455,6 +3455,10 @@ STR_INCOME_FLOAT_INCOME_SMALL                                   :{TINYFONT}{GREE
- STR_INCOME_FLOAT_INCOME                                         :{GREEN}Income: {CURRENCY}
- STR_FEEDER_TINY                                                 :{TINYFONT}{YELLOW}Transfer: {CURRENCY}
- STR_FEEDER                                                      :{YELLOW}Transfer: {CURRENCY}
-+STR_FEEDER_INCOME_TINY                                          :{TINYFONT}{YELLOW}Transfer: {CURRENCY}{WHITE} / {GREEN}Income: {CURRENCY}
-+STR_FEEDER_INCOME                                               :{YELLOW}Transfer: {CURRENCY}{WHITE} / {GREEN}Income: {CURRENCY}
-+STR_FEEDER_COST_TINY                                            :{TINYFONT}{YELLOW}Transfer: {CURRENCY}{WHITE} / {RED}Cost: {CURRENCY}
-+STR_FEEDER_COST                                                 :{YELLOW}Transfer: {CURRENCY}{WHITE} / {RED}Cost: {CURRENCY}
- STR_MESSAGE_ESTIMATED_COST                                      :{WHITE}Estimated Cost: {CURRENCY}
- STR_MESSAGE_ESTIMATED_INCOME                                    :{WHITE}Estimated Income: {CURRENCY}
+@@ -3493,6 +3493,10 @@ STR_INCOME_FLOAT_INCOME_SMALL                                   :{TINY_FONT}{GRE
+ STR_INCOME_FLOAT_INCOME                                         :{GREEN}Income: {CURRENCY_LONG}
+ STR_FEEDER_TINY                                                 :{TINY_FONT}{YELLOW}Transfer: {CURRENCY_LONG}
+ STR_FEEDER                                                      :{YELLOW}Transfer: {CURRENCY_LONG}
++STR_FEEDER_INCOME_TINY                                          :{TINY_FONT}{YELLOW}Transfer: {CURRENCY_LONG}{WHITE} / {GREEN}Income: {CURRENCY_LONG}
++STR_FEEDER_INCOME                                               :{YELLOW}Transfer: {CURRENCY_LONG}{WHITE} / {GREEN}Income: {CURRENCY_LONG}
++STR_FEEDER_COST_TINY                                            :{TINY_FONT}{YELLOW}Transfer: {CURRENCY_LONG}{WHITE} / {RED}Cost: {CURRENCY_LONG}
++STR_FEEDER_COST                                                 :{YELLOW}Transfer: {CURRENCY_LONG}{WHITE} / {RED}Cost: {CURRENCY_LONG}
+ STR_MESSAGE_ESTIMATED_COST                                      :{WHITE}Estimated Cost: {CURRENCY_LONG}
+ STR_MESSAGE_ESTIMATED_INCOME                                    :{WHITE}Estimated Income: {CURRENCY_LONG}
  
 diff --git a/src/misc_gui.cpp b/src/misc_gui.cpp
-index 2f1ad58..18162fe 100644
+index ed19339..23faa7d 100644
 --- a/src/misc_gui.cpp
 +++ b/src/misc_gui.cpp
 @@ -814,17 +814,28 @@ void ShowCostOrIncomeAnimation(int x, int y, int z, Money cost)
@@ -131,7 +131,7 @@ index 9bdad61..be66e70 100644
  };
  
 diff --git a/src/texteff.cpp b/src/texteff.cpp
-index 0feb522..644b281 100644
+index 32062fc..1675930 100644
 --- a/src/texteff.cpp
 +++ b/src/texteff.cpp
 @@ -20,6 +20,7 @@
@@ -162,8 +162,8 @@ index 0feb522..644b281 100644
  	for (TextEffect *te = _text_effects.Begin(); te != end; te++) {
  		if (te->string_id == INVALID_STRING_ID) continue;
  		if (te->mode == TE_RISING || (_settings_client.gui.loading_indicators && !IsTransparencySet(TO_LOADING))) {
--			ViewportAddString(dpi, ZOOM_LVL_OUT_2X, te, te->string_id, te->string_id - 1, 0, te->params_1);
-+			ViewportAddString(dpi, ZOOM_LVL_OUT_2X, te, te->string_id, te->string_id - 1, 0, te->params_1, te->params_2);
+-			ViewportAddString(dpi, ZOOM_LVL_OUT_8X, te, te->string_id, te->string_id - 1, 0, te->params_1);
++			ViewportAddString(dpi, ZOOM_LVL_OUT_8X, te, te->string_id, te->string_id - 1, 0, te->params_1, te->params_2);
  		}
  	}
  }

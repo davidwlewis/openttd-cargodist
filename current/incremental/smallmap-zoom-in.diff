@@ -1,5 +1,5 @@
 diff --git a/src/smallmap_gui.cpp b/src/smallmap_gui.cpp
-index 871fff2..8638daa 100644
+index c8b38f8..7876b92 100644
 --- a/src/smallmap_gui.cpp
 +++ b/src/smallmap_gui.cpp
 @@ -595,6 +595,27 @@ class SmallMapWindow : public Window {
@@ -37,8 +37,8 @@ index 871fff2..8638daa 100644
 +	static const uint8 REFRESH_NEXT_TICK = 1;       ///< if refresh has this value the map is redrawn in the next tick
  	uint8 refresh; ///< refresh counter, zeroed every FORCE_REFRESH_PERIOD ticks
  
- 	/**
-@@ -626,43 +648,61 @@ class SmallMapWindow : public Window {
+ 	FORCEINLINE Point SmallmapRemapCoords(int x, int y) const
+@@ -634,43 +656,61 @@ class SmallMapWindow : public Window {
  	 */
  	FORCEINLINE Point RemapTile(int tile_x, int tile_y) const
  	{
@@ -48,7 +48,7 @@ index 871fff2..8638daa 100644
 +			int x_offset = tile_x - this->scroll_x / (int)TILE_SIZE;
 +			int y_offset = tile_y - this->scroll_y / (int)TILE_SIZE;
  
--		if (this->zoom == 1) return RemapCoords(x_offset, y_offset, 0);
+-		if (this->zoom == 1) return SmallmapRemapCoords(x_offset, y_offset);
 +			/* For negative offsets, round towards -inf. */
 +			if (x_offset < 0) x_offset -= this->zoom - 1;
 +			if (y_offset < 0) y_offset -= this->zoom - 1;
@@ -61,7 +61,7 @@ index 871fff2..8638daa 100644
 +			int x_offset = tile_x * (-this->zoom) - this->scroll_x * (-this->zoom) / (int)TILE_SIZE;
 +			int y_offset = tile_y * (-this->zoom) - this->scroll_y * (-this->zoom) / (int)TILE_SIZE;
  
--		return RemapCoords(x_offset / this->zoom, y_offset / this->zoom, 0);
+-		return SmallmapRemapCoords(x_offset / this->zoom, y_offset / this->zoom);
 +			return RemapCoords(x_offset, y_offset, 0);
 +		}
  	}
@@ -114,7 +114,7 @@ index 871fff2..8638daa 100644
  				px -= 2;
  			}
  		}
-@@ -685,19 +725,21 @@ class SmallMapWindow : public Window {
+@@ -693,19 +733,21 @@ class SmallMapWindow : public Window {
  		assert(x >= 0 && y >= 0);
  
  		int new_sub;
@@ -141,7 +141,7 @@ index 871fff2..8638daa 100644
  		}
  		return scroll;
  	}
-@@ -710,16 +752,17 @@ class SmallMapWindow : public Window {
+@@ -718,16 +760,17 @@ class SmallMapWindow : public Window {
  	 */
  	void SetZoomLevel(ZoomLevelChange change, const Point *zoom_pt)
  	{
@@ -162,7 +162,7 @@ index 871fff2..8638daa 100644
  				break;
  
  			case ZLC_ZOOM_IN:
-@@ -729,7 +772,7 @@ class SmallMapWindow : public Window {
+@@ -737,7 +780,7 @@ class SmallMapWindow : public Window {
  				}
  				assert(cur_index <= MAX_ZOOM_INDEX);
  
@@ -171,7 +171,7 @@ index 871fff2..8638daa 100644
  				new_index = Clamp(cur_index + ((change == ZLC_ZOOM_IN) ? -1 : 1), MIN_ZOOM_INDEX, MAX_ZOOM_INDEX);
  				break;
  
-@@ -739,9 +782,9 @@ class SmallMapWindow : public Window {
+@@ -747,9 +790,9 @@ class SmallMapWindow : public Window {
  		if (new_index != cur_index) {
  			this->zoom = zoomlevels[new_index];
  			if (cur_index >= 0) {
@@ -184,7 +184,7 @@ index 871fff2..8638daa 100644
  			}
  			this->SetWidgetDisabledState(SM_WIDGET_ZOOM_IN,  this->zoom == zoomlevels[MIN_ZOOM_INDEX]);
  			this->SetWidgetDisabledState(SM_WIDGET_ZOOM_OUT, this->zoom == zoomlevels[MAX_ZOOM_INDEX]);
-@@ -796,8 +839,8 @@ class SmallMapWindow : public Window {
+@@ -804,8 +847,8 @@ class SmallMapWindow : public Window {
  	 * Draws one column of tiles of the small map in a certain mode onto the screen buffer, skipping the shifted rows in between.
  	 *
  	 * @param dst Pointer to a part of the screen buffer to write to.
@@ -195,7 +195,7 @@ index 871fff2..8638daa 100644
  	 * @param pitch Number of pixels to advance in the screen buffer each time a pixel is written.
  	 * @param reps Number of lines to draw
  	 * @param start_pos Position of first pixel to draw.
-@@ -811,9 +854,12 @@ class SmallMapWindow : public Window {
+@@ -819,9 +862,12 @@ class SmallMapWindow : public Window {
  		void *dst_ptr_abs_end = blitter->MoveTo(_screen.dst_ptr, 0, _screen.height);
  		uint min_xy = _settings_game.construction.freeform_edges ? 1 : 0;
  
@@ -209,7 +209,7 @@ index 871fff2..8638daa 100644
  
  			/* Check if the dst pointer points to a pixel inside the screen buffer */
  			if (dst < _screen.dst_ptr) continue;
-@@ -821,12 +867,12 @@ class SmallMapWindow : public Window {
+@@ -829,12 +875,12 @@ class SmallMapWindow : public Window {
  
  			/* Construct tilearea covered by (xc, yc, xc + this->zoom, yc + this->zoom) such that it is within min_xy limits. */
  			TileArea ta;
@@ -226,7 +226,7 @@ index 871fff2..8638daa 100644
  			}
  			ta.ClampToMap(); // Clamp to map boundaries (may contain MP_VOID tiles!).
  
-@@ -838,7 +884,7 @@ class SmallMapWindow : public Window {
+@@ -846,7 +892,7 @@ class SmallMapWindow : public Window {
  				idx++;
  			}
  		/* Switch to next tile in the column */
@@ -235,7 +235,7 @@ index 871fff2..8638daa 100644
  	}
  
  	/**
-@@ -848,36 +894,35 @@ class SmallMapWindow : public Window {
+@@ -856,36 +902,35 @@ class SmallMapWindow : public Window {
  	 */
  	void DrawVehicles(const DrawPixelInfo *dpi, Blitter *blitter) const
  	{
@@ -292,7 +292,7 @@ index 871fff2..8638daa 100644
  		}
  	}
  
-@@ -977,13 +1022,14 @@ class SmallMapWindow : public Window {
+@@ -985,13 +1030,14 @@ class SmallMapWindow : public Window {
  
  		/* Which tile is displayed at (dpi->left, dpi->top)? */
  		int dx;
@@ -310,7 +310,7 @@ index 871fff2..8638daa 100644
  
  		for (;;) {
  			/* Distance from left edge */
-@@ -993,16 +1039,16 @@ class SmallMapWindow : public Window {
+@@ -1001,16 +1047,16 @@ class SmallMapWindow : public Window {
  				int end_pos = min(dpi->width, x + 4);
  				int reps = (dpi->height - y + 1) / 2; // Number of lines.
  				if (reps > 0) {
@@ -330,7 +330,7 @@ index 871fff2..8638daa 100644
  				y--;
  				ptr = blitter->MoveTo(ptr, 0, -1);
  			}
-@@ -1023,6 +1069,31 @@ class SmallMapWindow : public Window {
+@@ -1031,6 +1077,31 @@ class SmallMapWindow : public Window {
  	}
  
  	/**
@@ -362,7 +362,7 @@ index 871fff2..8638daa 100644
  	 * Function to set up widgets depending on the information being shown on the smallmap.
  	 */
  	void SetupWidgetData()
-@@ -1287,9 +1358,10 @@ public:
+@@ -1295,9 +1366,10 @@ public:
  				const NWidgetBase *wid = this->GetWidget<NWidgetBase>(SM_WIDGET_MAP);
  				Window *w = FindWindowById(WC_MAIN_WINDOW, 0);
  				int sub;
@@ -376,7 +376,7 @@ index 871fff2..8638daa 100644
  
  				w->viewport->follow_vehicle = INVALID_VEHICLE;
  				w->viewport->dest_scrollpos_x = pt.x - (w->viewport->virtual_width  >> 1);
-@@ -1491,6 +1563,8 @@ public:
+@@ -1499,6 +1571,8 @@ public:
  		/* Update the window every now and then */
  		if (--this->refresh != 0) return;
  
@@ -385,12 +385,14 @@ index 871fff2..8638daa 100644
  		this->refresh = FORCE_REFRESH_PERIOD;
  		this->SetDirty();
  	}
-@@ -1506,8 +1580,13 @@ public:
+@@ -1513,9 +1587,14 @@ public:
+ 	void SetNewScroll(int sx, int sy, int sub)
  	{
  		const NWidgetBase *wi = this->GetWidget<NWidgetBase>(SM_WIDGET_MAP);
- 		Point hv = InverseRemapCoords(wi->current_x * TILE_SIZE / 2, wi->current_y * TILE_SIZE / 2);
+-		Point hv = InverseRemapCoords(wi->current_x * ZOOM_LVL_BASE * TILE_SIZE / 2, wi->current_y * ZOOM_LVL_BASE * TILE_SIZE / 2);
 -		hv.x *= this->zoom;
 -		hv.y *= this->zoom;
++		Point hv = InverseRemapCoords(wi->current_x * TILE_SIZE / 2, wi->current_y * TILE_SIZE / 2);
 +		if (this->zoom > 0) {
 +			hv.x *= this->zoom;
 +			hv.y *= this->zoom;
@@ -401,7 +403,7 @@ index 871fff2..8638daa 100644
  
  		if (sx < -hv.x) {
  			sx = -hv.x;
-@@ -1537,8 +1616,8 @@ public:
+@@ -1545,8 +1624,8 @@ public:
  
  		/* While tile is at (delta.x, delta.y)? */
  		int sub;
@@ -412,7 +414,7 @@ index 871fff2..8638daa 100644
  
  		this->SetDirty();
  	}
-@@ -1550,7 +1629,7 @@ public:
+@@ -1558,7 +1637,7 @@ public:
  
  		int sub;
  		const NWidgetBase *wid = this->GetWidget<NWidgetBase>(SM_WIDGET_MAP);

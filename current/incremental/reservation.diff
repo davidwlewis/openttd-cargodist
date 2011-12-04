@@ -298,10 +298,10 @@ index 1e30084..6b8b912 100644
  
  #endif /* CARGOPACKET_H */
 diff --git a/src/economy.cpp b/src/economy.cpp
-index 9a6dea2..414471d 100644
+index 9fa2e11..8f1eef2 100644
 --- a/src/economy.cpp
 +++ b/src/economy.cpp
-@@ -1149,38 +1149,53 @@ void PrepareUnload(Vehicle *front_v)
+@@ -1172,38 +1172,53 @@ void PrepareUnload(Vehicle *front_v)
  }
  
  /**
@@ -372,7 +372,7 @@ index 9a6dea2..414471d 100644
  	}
  
  	int unloading_time = 0;
-@@ -1229,7 +1244,7 @@ static void LoadUnloadVehicle(Vehicle *front, int *cargo_left)
+@@ -1252,7 +1267,7 @@ static void LoadUnloadVehicle(Vehicle *front, int *cargo_left)
  		GoodsEntry *ge = &st->goods[v->cargo_type];
  
  		if (HasBit(v->vehicle_flags, VF_CARGO_UNLOADING) && (front->current_order.GetUnloadType() & OUFB_NO_UNLOAD) == 0) {
@@ -381,7 +381,7 @@ index 9a6dea2..414471d 100644
  			uint amount_unloaded = _settings_game.order.gradual_loading ? min(cargo_count, load_amount) : cargo_count;
  			bool remaining = false; // Are there cargo entities in this vehicle that can still be unloaded here?
  			bool accepted  = false; // Is the cargo accepted by the station?
-@@ -1249,7 +1264,7 @@ static void LoadUnloadVehicle(Vehicle *front, int *cargo_left)
+@@ -1272,7 +1287,7 @@ static void LoadUnloadVehicle(Vehicle *front, int *cargo_left)
  			 * they were loaded, but to not force unload the vehicle when the
  			 * station is still accepting the cargo in the vehicle. It doesn't
  			 * accept cargo that was loaded at the same station. */
@@ -390,7 +390,7 @@ index 9a6dea2..414471d 100644
  				remaining = v->cargo.MoveTo(&ge->cargo, amount_unloaded, front->current_order.GetUnloadType() & OUFB_TRANSFER ? VehicleCargoList::MTA_TRANSFER : VehicleCargoList::MTA_UNLOAD, payment);
  				if (!HasBit(ge->acceptance_pickup, GoodsEntry::GES_PICKUP)) {
  					InvalidateWindowData(WC_STATION_LIST, last_visited);
-@@ -1308,16 +1323,16 @@ static void LoadUnloadVehicle(Vehicle *front, int *cargo_left)
+@@ -1331,16 +1346,16 @@ static void LoadUnloadVehicle(Vehicle *front, int *cargo_left)
  
  			if (new_cid == CT_AUTO_REFIT) {
  				/* Get refittable cargo type with the most waiting cargo. */
@@ -410,7 +410,7 @@ index 9a6dea2..414471d 100644
  							new_cid = cid;
  						}
  					}
-@@ -1360,39 +1375,30 @@ static void LoadUnloadVehicle(Vehicle *front, int *cargo_left)
+@@ -1383,39 +1398,30 @@ static void LoadUnloadVehicle(Vehicle *front, int *cargo_left)
  
  		/* If there's goods waiting at the station, and the vehicle
  		 * has capacity for it, load it on the vehicle. */
@@ -464,7 +464,7 @@ index 9a6dea2..414471d 100644
  			/* TODO: Regarding this, when we do gradual loading, we
  			 * should first unload all vehicles and then start
  			 * loading them. Since this will cause
-@@ -1400,25 +1406,30 @@ static void LoadUnloadVehicle(Vehicle *front, int *cargo_left)
+@@ -1423,25 +1429,30 @@ static void LoadUnloadVehicle(Vehicle *front, int *cargo_left)
  			 * the whole vehicle chain is really totally empty, the
  			 * completely_emptied assignment can then be safely
  			 * removed; that's how TTDPatch behaves too. --pasky */
@@ -508,7 +508,7 @@ index 9a6dea2..414471d 100644
  			SetBit(cargo_full, v->cargo_type);
  		} else {
  			SetBit(cargo_not_full, v->cargo_type);
-@@ -1432,17 +1443,6 @@ static void LoadUnloadVehicle(Vehicle *front, int *cargo_left)
+@@ -1455,17 +1466,6 @@ static void LoadUnloadVehicle(Vehicle *front, int *cargo_left)
  	/* Only set completely_emptied, if we just unloaded all remaining cargo */
  	completely_emptied &= anything_unloaded;
  
@@ -526,7 +526,7 @@ index 9a6dea2..414471d 100644
  
  	if (!anything_unloaded) delete payment;
  
-@@ -1467,7 +1467,7 @@ static void LoadUnloadVehicle(Vehicle *front, int *cargo_left)
+@@ -1490,7 +1490,7 @@ static void LoadUnloadVehicle(Vehicle *front, int *cargo_left)
  			if (front->current_order.GetLoadType() == OLF_FULL_LOAD_ANY) {
  				/* if the aircraft carries passengers and is NOT full, then
  				 * continue loading, no matter how much mail is in */
@@ -535,7 +535,7 @@ index 9a6dea2..414471d 100644
  						(cargo_not_full && (cargo_full & ~cargo_not_full) == 0)) { // There are still non-full cargoes
  					finished_loading = false;
  				}
-@@ -1521,6 +1521,7 @@ static void LoadUnloadVehicle(Vehicle *front, int *cargo_left)
+@@ -1544,6 +1544,7 @@ static void LoadUnloadVehicle(Vehicle *front, int *cargo_left)
  		st->MarkTilesDirty(true);
  		SetWindowDirty(WC_STATION_VIEW, last_visited);
  	}
@@ -543,7 +543,7 @@ index 9a6dea2..414471d 100644
  }
  
  /**
-@@ -1555,13 +1556,11 @@ void LoadUnloadStation(Station *st)
+@@ -1578,13 +1579,11 @@ void LoadUnloadStation(Station *st)
  	 */
  	if (last_loading == NULL) return;
  
@@ -560,20 +560,20 @@ index 9a6dea2..414471d 100644
  	}
  
 diff --git a/src/saveload/saveload.cpp b/src/saveload/saveload.cpp
-index c2c1588..450ff70 100644
+index c603f58..b033cc8 100644
 --- a/src/saveload/saveload.cpp
 +++ b/src/saveload/saveload.cpp
-@@ -229,7 +229,7 @@
-  *  162   22713
-  *  163   22767
+@@ -232,7 +232,7 @@
+  *  165   23304
+  *  166   23415
   */
--extern const uint16 SAVEGAME_VERSION = 163; ///< Current savegame version of OpenTTD.
+-extern const uint16 SAVEGAME_VERSION = 166; ///< Current savegame version of OpenTTD.
 +extern const uint16 SAVEGAME_VERSION = SL_RESERVATION; ///< Current savegame version of OpenTTD.
  
  SavegameType _savegame_type; ///< type of savegame we are loading
  
 diff --git a/src/saveload/saveload.h b/src/saveload/saveload.h
-index db3af4d..0661601 100644
+index db3af4d..11f786e 100644
 --- a/src/saveload/saveload.h
 +++ b/src/saveload/saveload.h
 @@ -85,9 +85,6 @@ enum SLRefType {
@@ -595,7 +595,7 @@ index db3af4d..0661601 100644
 + * SL_TRUNK is always the current trunk version.
 + */
 +enum SaveLoadVersions {
-+	SL_TRUNK = 163,
++	SL_TRUNK = 166,
 +	SL_RESERVATION = SL_TRUNK + 10,
 +
 +	/** Highest possible savegame version. */
@@ -604,10 +604,10 @@ index db3af4d..0661601 100644
 +
  #endif /* SAVELOAD_H */
 diff --git a/src/saveload/vehicle_sl.cpp b/src/saveload/vehicle_sl.cpp
-index 4dc0a7f..37183a2 100644
+index 1e47094..790b282 100644
 --- a/src/saveload/vehicle_sl.cpp
 +++ b/src/saveload/vehicle_sl.cpp
-@@ -509,6 +509,7 @@ const SaveLoad *GetVehicleDescription(VehicleType vt)
+@@ -595,6 +595,7 @@ const SaveLoad *GetVehicleDescription(VehicleType vt)
  		     SLE_VAR(Vehicle, cargo_cap,             SLE_UINT16),
  		SLEG_CONDVAR(         _cargo_count,          SLE_UINT16,                   0,  67),
  		 SLE_CONDLST(Vehicle, cargo.packets,         REF_CARGO_PACKET,            68, SL_MAX_VERSION),
@@ -616,7 +616,7 @@ index 4dc0a7f..37183a2 100644
  
  		     SLE_VAR(Vehicle, day_counter,           SLE_UINT8),
 diff --git a/src/vehicle.cpp b/src/vehicle.cpp
-index 69c4097..836a98e 100644
+index aa03194..a5af9be 100644
 --- a/src/vehicle.cpp
 +++ b/src/vehicle.cpp
 @@ -716,10 +716,11 @@ void Vehicle::PreDestructor()
@@ -673,10 +673,10 @@ index 69c4097..836a98e 100644
  
  	HideFillingPercent(&this->fill_percent_te_id);
 diff --git a/src/vehicle_base.h b/src/vehicle_base.h
-index e7c8fd3..7650c01 100644
+index 5ac7bd5..31062ab 100644
 --- a/src/vehicle_base.h
 +++ b/src/vehicle_base.h
-@@ -248,6 +248,7 @@ public:
+@@ -250,6 +250,7 @@ public:
  	virtual ~Vehicle();
  
  	void BeginLoading();

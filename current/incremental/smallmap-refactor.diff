@@ -1,5 +1,5 @@
 diff --git a/src/smallmap_gui.cpp b/src/smallmap_gui.cpp
-index 871fff2..b0600f1 100644
+index c8b38f8..779a2bb 100644
 --- a/src/smallmap_gui.cpp
 +++ b/src/smallmap_gui.cpp
 @@ -14,43 +14,19 @@
@@ -66,20 +66,17 @@ index 871fff2..b0600f1 100644
  /** Legend text giving the colours to look for on the minimap */
  static LegendAndColour _legend_land_contours[] = {
  	/* The colours for the following values are set at BuildLandLegend() based on each colour scheme. */
-@@ -582,979 +546,906 @@ static const byte _vehicle_type_colours[6] = {
+@@ -582,987 +546,914 @@ static const byte _vehicle_type_colours[6] = {
  	PC_RED, PC_YELLOW, PC_LIGHT_BLUE, PC_WHITE, PC_BLACK, PC_RED
  };
  
-+/**
-+ * Remap tile to location on this smallmap.
-+ * @param tile_x X coordinate of the tile.
-+ * @param tile_y Y coordinate of the tile.
-+ * @return Position to draw on.
-+ */
-+FORCEINLINE Point SmallMapWindow::RemapTile(int tile_x, int tile_y) const
++FORCEINLINE Point SmallMapWindow::SmallmapRemapCoords(int x, int y) const
 +{
-+	int x_offset = tile_x - this->scroll_x / (int)TILE_SIZE;
-+	int y_offset = tile_y - this->scroll_y / (int)TILE_SIZE;
++	Point pt;
++	pt.x = (y - x) * 2;
++	pt.y = y + x;
++	return pt;
++}
  
 -/** Class managing the smallmap window. */
 -class SmallMapWindow : public Window {
@@ -116,6 +113,14 @@ index 871fff2..b0600f1 100644
 -	static const uint8 FORCE_REFRESH_PERIOD = 0x1F; ///< map is redrawn after that many ticks
 -	uint8 refresh; ///< refresh counter, zeroed every FORCE_REFRESH_PERIOD ticks
 -
+-	FORCEINLINE Point SmallmapRemapCoords(int x, int y) const
+-	{
+-		Point pt;
+-		pt.x = (y - x) * 2;
+-		pt.y = y + x;
+-		return pt;
+-	}
+-
 -	/**
 -	 * Remap tile to location on this smallmap.
 -	 * @param tile_x X coordinate of the tile.
@@ -127,15 +132,25 @@ index 871fff2..b0600f1 100644
 -		int x_offset = tile_x - this->scroll_x / (int)TILE_SIZE;
 -		int y_offset = tile_y - this->scroll_y / (int)TILE_SIZE;
 -
--		if (this->zoom == 1) return RemapCoords(x_offset, y_offset, 0);
+-		if (this->zoom == 1) return SmallmapRemapCoords(x_offset, y_offset);
 -
 -		/* For negative offsets, round towards -inf. */
 -		if (x_offset < 0) x_offset -= this->zoom - 1;
 -		if (y_offset < 0) y_offset -= this->zoom - 1;
--
--		return RemapCoords(x_offset / this->zoom, y_offset / this->zoom, 0);
++/**
++ * Remap tile to location on this smallmap.
++ * @param tile_x X coordinate of the tile.
++ * @param tile_y Y coordinate of the tile.
++ * @return Position to draw on.
++ */
++FORCEINLINE Point SmallMapWindow::RemapTile(int tile_x, int tile_y) const
++{
++	int x_offset = tile_x - this->scroll_x / (int)TILE_SIZE;
++	int y_offset = tile_y - this->scroll_y / (int)TILE_SIZE;
+ 
+-		return SmallmapRemapCoords(x_offset / this->zoom, y_offset / this->zoom);
 -	}
-+	if (this->zoom == 1) return RemapCoords(x_offset, y_offset, 0);
++	if (this->zoom == 1) return SmallmapRemapCoords(x_offset, y_offset);
  
 -	/**
 -	 * Determine the tile relative to the base tile of the smallmap, and the pixel position at
@@ -158,7 +173,7 @@ index 871fff2..b0600f1 100644
 -		 * For each four pixels to the right, move a tile to the right. */
 -		Point pt = {((py >> 1) - (px >> 2)) * this->zoom, ((py >> 1) + (px >> 2)) * this->zoom};
 -		px &= 3;
-+	return RemapCoords(x_offset / this->zoom, y_offset / this->zoom, 0);
++	return SmallmapRemapCoords(x_offset / this->zoom, y_offset / this->zoom);
 +}
  
 -		if (py & 1) { // Odd number of rows, handle the 2 pixel shift.
@@ -453,11 +468,6 @@ index 871fff2..b0600f1 100644
 -			/* Check if the dst pointer points to a pixel inside the screen buffer */
 -			if (dst < _screen.dst_ptr) continue;
 -			if (dst >= dst_ptr_abs_end) continue;
--
--			/* Construct tilearea covered by (xc, yc, xc + this->zoom, yc + this->zoom) such that it is within min_xy limits. */
--			TileArea ta;
--			if (min_xy == 1 && (xc == 0 || yc == 0)) {
--				if (this->zoom == 1) continue; // The tile area is empty, don't draw anything.
 +/**
 + * Draws one column of tiles of the small map in a certain mode onto the screen buffer, skipping the shifted rows in between.
 + *
@@ -477,6 +487,14 @@ index 871fff2..b0600f1 100644
 +	void *dst_ptr_abs_end = blitter->MoveTo(_screen.dst_ptr, 0, _screen.height);
 +	uint min_xy = _settings_game.construction.freeform_edges ? 1 : 0;
  
+-			/* Construct tilearea covered by (xc, yc, xc + this->zoom, yc + this->zoom) such that it is within min_xy limits. */
+-			TileArea ta;
+-			if (min_xy == 1 && (xc == 0 || yc == 0)) {
+-				if (this->zoom == 1) continue; // The tile area is empty, don't draw anything.
++	do {
++		/* Check if the tile (xc,yc) is within the map range */
++		if (xc >= MapMaxX() || yc >= MapMaxY()) continue;
+ 
 -				ta = TileArea(TileXY(max(min_xy, xc), max(min_xy, yc)), this->zoom - (xc == 0), this->zoom - (yc == 0));
 -			} else {
 -				ta = TileArea(TileXY(xc, yc), this->zoom, this->zoom);
@@ -493,9 +511,9 @@ index 871fff2..b0600f1 100644
 -		/* Switch to next tile in the column */
 -		} while (xc += this->zoom, yc += this->zoom, dst = blitter->MoveTo(dst, pitch, 0), --reps != 0);
 -	}
-+	do {
-+		/* Check if the tile (xc,yc) is within the map range */
-+		if (xc >= MapMaxX() || yc >= MapMaxY()) continue;
++		/* Check if the dst pointer points to a pixel inside the screen buffer */
++		if (dst < _screen.dst_ptr) continue;
++		if (dst >= dst_ptr_abs_end) continue;
  
 -	/**
 -	 * Adds vehicles to the smallmap.
@@ -527,10 +545,7 @@ index 871fff2..b0600f1 100644
 -				if (x != dpi->width - 1) continue;
 -				skip = true;
 -			}
-+		/* Check if the dst pointer points to a pixel inside the screen buffer */
-+		if (dst < _screen.dst_ptr) continue;
-+		if (dst >= dst_ptr_abs_end) continue;
- 
+-
 -			/* Calculate pointer to pixel and the colour */
 -			byte colour = (this->map_type == SMT_VEHICLES) ? _vehicle_type_colours[v->type] : PC_WHITE;
 +		/* Construct tilearea covered by (xc, yc, xc + this->zoom, yc + this->zoom) such that it is within min_xy limits. */
@@ -845,17 +860,15 @@ index 871fff2..b0600f1 100644
 -				disable_all_tooltip = STR_SMALLMAP_TOOLTIP_DISABLE_ALL_INDUSTRIES;
 -				plane = 0;
 -				break;
-+	/* Draw vehicles */
-+	if (this->map_type == SMT_CONTOUR || this->map_type == SMT_VEHICLES) this->DrawVehicles(dpi, blitter);
- 
+-
 -			case SMT_OWNER:
 -				legend_tooltip = STR_SMALLMAP_TOOLTIP_COMPANY_SELECTION;
 -				enable_all_tooltip = STR_SMALLMAP_TOOLTIP_ENABLE_ALL_COMPANIES;
 -				disable_all_tooltip = STR_SMALLMAP_TOOLTIP_DISABLE_ALL_COMPANIES;
 -				plane = 0;
 -				break;
-+	/* Draw town names */
-+	if (this->show_towns) this->DrawTowns(dpi);
++	/* Draw vehicles */
++	if (this->map_type == SMT_CONTOUR || this->map_type == SMT_VEHICLES) this->DrawVehicles(dpi, blitter);
  
 -			default:
 -				legend_tooltip = STR_NULL;
@@ -864,7 +877,9 @@ index 871fff2..b0600f1 100644
 -				plane = 1;
 -				break;
 -		}
--
++	/* Draw town names */
++	if (this->show_towns) this->DrawTowns(dpi);
+ 
 -		this->GetWidget<NWidgetCore>(SM_WIDGET_LEGEND)->SetDataTip(STR_NULL, legend_tooltip);
 -		this->GetWidget<NWidgetCore>(SM_WIDGET_ENABLE_ALL)->SetDataTip(STR_SMALLMAP_ENABLE_ALL, enable_all_tooltip);
 -		this->GetWidget<NWidgetCore>(SM_WIDGET_DISABLE_ALL)->SetDataTip(STR_SMALLMAP_DISABLE_ALL, disable_all_tooltip);
@@ -1707,7 +1722,7 @@ index 871fff2..b0600f1 100644
 -	void SetNewScroll(int sx, int sy, int sub)
 -	{
 -		const NWidgetBase *wi = this->GetWidget<NWidgetBase>(SM_WIDGET_MAP);
--		Point hv = InverseRemapCoords(wi->current_x * TILE_SIZE / 2, wi->current_y * TILE_SIZE / 2);
+-		Point hv = InverseRemapCoords(wi->current_x * ZOOM_LVL_BASE * TILE_SIZE / 2, wi->current_y * ZOOM_LVL_BASE * TILE_SIZE / 2);
 -		hv.x *= this->zoom;
 -		hv.y *= this->zoom;
 -
@@ -1744,7 +1759,7 @@ index 871fff2..b0600f1 100644
 +void SmallMapWindow::SetNewScroll(int sx, int sy, int sub)
 +{
 +	const NWidgetBase *wi = this->GetWidget<NWidgetBase>(SM_WIDGET_MAP);
-+	Point hv = InverseRemapCoords(wi->current_x * TILE_SIZE / 2, wi->current_y * TILE_SIZE / 2);
++	Point hv = InverseRemapCoords(wi->current_x * ZOOM_LVL_BASE * TILE_SIZE / 2, wi->current_y * ZOOM_LVL_BASE * TILE_SIZE / 2);
 +	hv.x *= this->zoom;
 +	hv.y *= this->zoom;
 +
@@ -1818,10 +1833,10 @@ index 871fff2..b0600f1 100644
  SmallMapWindow::SmallMapType SmallMapWindow::map_type = SMT_CONTOUR;
  bool SmallMapWindow::show_towns = true;
 diff --git a/src/smallmap_gui.h b/src/smallmap_gui.h
-index 572a175..04b8bb7 100644
+index 572a175..585fa9c 100644
 --- a/src/smallmap_gui.h
 +++ b/src/smallmap_gui.h
-@@ -12,9 +12,174 @@
+@@ -12,9 +12,176 @@
  #ifndef SMALLMAP_GUI_H
  #define SMALLMAP_GUI_H
  
@@ -1905,6 +1920,8 @@ index 572a175..04b8bb7 100644
 +	int zoom;        ///< Zoom level. Bigger number means more zoom-out (further away).
 +
 +	uint8 refresh;   ///< Refresh counter, zeroed every FORCE_REFRESH_PERIOD ticks.
++
++	Point SmallmapRemapCoords(int x, int y) const;
 +
 +	/**
 +	 * Draws vertical part of map indicator

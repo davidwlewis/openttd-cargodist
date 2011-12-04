@@ -58,7 +58,7 @@ index 1e30084..46d7eeb 100644
  
  #endif /* CARGOPACKET_H */
 diff --git a/src/station.cpp b/src/station.cpp
-index a3df6fe..14e8b2a 100644
+index 5fc2bbd..faab866 100644
 --- a/src/station.cpp
 +++ b/src/station.cpp
 @@ -61,6 +61,11 @@ Station::Station(TileIndex tile) :
