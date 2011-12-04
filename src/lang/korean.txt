@@ -1265,7 +1265,6 @@ STR_CONFIG_SETTING_AI_BUILDS_AIRCRAFT                           :{LTBLUE}컴퓨�
 STR_CONFIG_SETTING_AI_BUILDS_SHIPS                              :{LTBLUE}컴퓨터의 선박 사용을 허가하지 않음 : {ORANGE}{STRING}
 
 STR_CONFIG_SETTING_AI_IN_MULTIPLAYER                            :{LTBLUE}멀티플레이에서 AI를 허용: {ORANGE}{STRING}
-STR_CONFIG_SETTING_AI_MAX_OPCODES                               :{LTBLUE}AI가 중지되기 전의 #opcodes: {ORANGE}{STRING}
 
 STR_CONFIG_SETTING_SERVINT_ISPERCENT                            :{LTBLUE}백분율에 의한 점검 주기: {ORANGE}{STRING}
 STR_CONFIG_SETTING_SERVINT_TRAINS                               :{LTBLUE}열차 기본 점검 간격: {ORANGE}{STRING} 일/%
@@ -1358,6 +1357,7 @@ STR_CONFIG_SETTING_VEHICLES_ROUTING                             :{ORANGE}경로�
 STR_CONFIG_SETTING_VEHICLES_TRAINS                              :{ORANGE}열차
 STR_CONFIG_SETTING_ECONOMY_TOWNS                                :{ORANGE}도시
 STR_CONFIG_SETTING_ECONOMY_INDUSTRIES                           :{ORANGE}산업시설
+STR_CONFIG_SETTING_ECONOMY_SCRIPTS                              :{ORANGE}스크립트
 
 STR_CONFIG_SETTING_PATHFINDER_OPF                               :오리지널
 STR_CONFIG_SETTING_PATHFINDER_NPF                               :NPF
@@ -2218,6 +2218,21 @@ STR_LAI_RAIL_DESCRIPTION_TRACK_WITH_EXITSIGNALS                 :{STRING} 선로
 STR_LAI_RAIL_DESCRIPTION_TRACK_WITH_COMBOSIGNALS                :{STRING} 선로(콤보-신호기 설치)
 STR_LAI_RAIL_DESCRIPTION_TRACK_WITH_PBSSIGNALS                  :{STRING} 선로(경로 신호기 설치)
 STR_LAI_RAIL_DESCRIPTION_TRACK_WITH_NOENTRYSIGNALS              :{STRING} 선로(일방통행 경로 신호기 설치)
+STR_LAI_RAIL_DESCRIPTION_TRACK_WITH_NORMAL_PRESIGNALS           :{STRING} 선로(폐색 & 입구 신호기 설치)
+STR_LAI_RAIL_DESCRIPTION_TRACK_WITH_NORMAL_EXITSIGNALS          :{STRING} 선로(폐색 & 출구 신호기 설치)
+STR_LAI_RAIL_DESCRIPTION_TRACK_WITH_NORMAL_COMBOSIGNALS         :{STRING} 선로(폐색 & 콤보 신호기 설치)
+STR_LAI_RAIL_DESCRIPTION_TRACK_WITH_NORMAL_PBSSIGNALS           :{STRING} 선로(폐색 & 경로 신호기 설치)
+STR_LAI_RAIL_DESCRIPTION_TRACK_WITH_NORMAL_NOENTRYSIGNALS       :{STRING} 선로(폐색 & 일방통행 경로 신호기 설치)
+STR_LAI_RAIL_DESCRIPTION_TRACK_WITH_PRE_EXITSIGNALS             :{STRING} 선로(입구 & 출구 신호기 설치)
+STR_LAI_RAIL_DESCRIPTION_TRACK_WITH_PRE_COMBOSIGNALS            :{STRING} 선로(입구 & 콤보 신호기 설치)
+STR_LAI_RAIL_DESCRIPTION_TRACK_WITH_PRE_PBSSIGNALS              :{STRING} 선로(입구 & 경로 신호기 설치)
+STR_LAI_RAIL_DESCRIPTION_TRACK_WITH_PRE_NOENTRYSIGNALS          :{STRING} 선로(입구 & 일방통행 경로 신호기 설치)
+STR_LAI_RAIL_DESCRIPTION_TRACK_WITH_EXIT_COMBOSIGNALS           :{STRING} 선로(출구 & 콤보 신호기 설치)
+STR_LAI_RAIL_DESCRIPTION_TRACK_WITH_EXIT_PBSSIGNALS             :{STRING} 선로(출구 & 경로 신호기 설치)
+STR_LAI_RAIL_DESCRIPTION_TRACK_WITH_EXIT_NOENTRYSIGNALS         :{STRING} 선로(출구 & 일방통행 경로 신호기 설치)
+STR_LAI_RAIL_DESCRIPTION_TRACK_WITH_COMBO_PBSSIGNALS            :{STRING} 선로(콤보 & 경로 신호기 설치)
+STR_LAI_RAIL_DESCRIPTION_TRACK_WITH_COMBO_NOENTRYSIGNALS        :{STRING} 선로(콤보 & 일방통행 경로 신호기 설치)
+STR_LAI_RAIL_DESCRIPTION_TRACK_WITH_PBS_NOENTRYSIGNALS          :{STRING} 선로(경로 & 일방통행 경로 신호기 설치)
 STR_LAI_RAIL_DESCRIPTION_TRAIN_DEPOT                            :{STRING} 차량기지
 
 STR_LAI_ROAD_DESCRIPTION_ROAD                                   :도로
@@ -2525,6 +2540,7 @@ STR_BROKEN_VEHICLE_LENGTH                                       :{WHITE}'{1:COMP
 STR_NEWGRF_BUGGY                                                :{WHITE}NewGRF '{STRING}' 의 정보가 잘못되었습니다
 STR_NEWGRF_BUGGY_ARTICULATED_CARGO                              :{WHITE}{1:ENGINE}을 위한 화물/개조 정보가 건설 후 구매 목록과 다릅니다. 이것은 자동교체에서 개조를 실패를 초래할 수 있습니다.
 STR_NEWGRF_BUGGY_ENDLESS_PRODUCTION_CALLBACK                    :{WHITE}'{1:STRING}' 때문에 결과물 콜백 과정에서 무한 루프가 발생하고 있습니다.
+STR_NEWGRF_BUGGY_UNKNOWN_CALLBACK_RESULT                        :{WHITE}Callback 함수 0x{HEX}가 알 수없는/잘못된 결과값 0x{HEX}을 반환했습니다.
 
 # 'User removed essential NewGRFs'-placeholders for stuff without specs
 STR_NEWGRF_INVALID_CARGO                                        :<인식오류 화물>
@@ -2746,6 +2762,8 @@ STR_COMPANY_VIEW_COMPANY_NAME_QUERY_CAPTION                     :회사 이름
 STR_COMPANY_VIEW_PRESIDENT_S_NAME_QUERY_CAPTION                 :매니저 이름
 
 STR_BUY_COMPANY_MESSAGE                                         :{WHITE}저희 회사를 거두어주실 운송회사를 찾고있습니다.{}{}저희 {COMPANY} 회사를 {CURRENCY_LONG}의 가격으로 인수합병하시겠습니까?
+
+# Company infrastructure window
 
 # Industry directory
 STR_INDUSTRY_DIRECTORY_CAPTION                                  :{WHITE}산업시설
@@ -3376,9 +3394,6 @@ STR_AI_DEBUG_MATCH_CASE_TOOLTIP                                 :{BLACK}AI 로�
 STR_AI_DEBUG_CONTINUE                                           :{BLACK}계속
 STR_AI_DEBUG_CONTINUE_TOOLTIP                                   :{BLACK}AI 재개 및 계속됨
 STR_AI_DEBUG_SELECT_AI_TOOLTIP                                  :{BLACK}이 AI의 디버그된 출력물을 봅니다.
-
-STR_ERROR_NO_AI                                                 :{WHITE}AI 지원 없이 OpenTTD를 빌드합니다...
-STR_ERROR_NO_AI_SUB                                             :{WHITE}... 사용 가능한 AI가 없습니다!
 
 STR_ERROR_AI_NO_AI_FOUND                                        :불러올 인공지능이 없습니다.{}이 인공지능은 불용품이며 아무 기능도 하지 않을 것입니다.{}'온라인 컨텐츠 체크' 기능으로 다른 인공지능을 다운받으세요.
 STR_ERROR_AI_PLEASE_REPORT_CRASH                                :{WHITE}작동중인 인공지능 중 하나가 충돌했습니다. 인공지능 디버그 창에서 스크린샷을 찍어 인공지능 제작자에게 보고하십시오.
@@ -4275,6 +4290,7 @@ STR_TINY_BLACK_COMA                                             :{TINY_FONT}{BLA
 STR_TINY_COMMA                                                  :{TINY_FONT}{COMMA}
 STR_BLUE_COMMA                                                  :{BLUE}{COMMA}
 STR_RED_COMMA                                                   :{RED}{COMMA}
+STR_WHITE_COMMA                                                 :{WHITE}{COMMA}
 STR_TINY_BLACK_DECIMAL                                          :{TINY_FONT}{BLACK}{DECIMAL}
 STR_COMPANY_MONEY                                               :{WHITE}{CURRENCY_LONG}
 STR_BLACK_DATE_LONG                                             :{BLACK}{DATE_LONG}

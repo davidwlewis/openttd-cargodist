@@ -50,6 +50,7 @@
 #include "newgrf_airporttiles.h"
 #include "order_backup.h"
 #include "newgrf_house.h"
+#include "company_gui.h"
 
 #include "table/strings.h"
 
@@ -1218,6 +1219,7 @@ CommandCost CmdBuildRailStation(TileIndex tile_org, DoCommandFlag flags, uint32 
 
 		numtracks_orig = numtracks;
 
+		Company *c = Company::Get(st->owner);
 		do {
 			TileIndex tile = tile_org;
 			int w = plat_len;
@@ -1235,6 +1237,12 @@ CommandCost CmdBuildRailStation(TileIndex tile_org, DoCommandFlag flags, uint32 
 					}
 				}
 
+				/* Railtype can change when overbuilding. */
+				if (IsRailStationTile(tile)) {
+					if (!IsStationTileBlocked(tile)) c->infrastructure.rail[GetRailType(tile)]--;
+					c->infrastructure.station--;
+				}
+
 				/* Remove animation if overbuilding */
 				DeleteAnimatedTile(tile);
 				byte old_specindex = HasStationTileRail(tile) ? GetCustomStationSpecIndex(tile) : 0;
@@ -1245,6 +1253,9 @@ CommandCost CmdBuildRailStation(TileIndex tile_org, DoCommandFlag flags, uint32 
 				SetCustomStationSpecIndex(tile, specindex);
 				SetStationTileRandomBits(tile, GB(Random(), 0, 4));
 				SetAnimationFrame(tile, 0);
+
+				if (!IsStationTileBlocked(tile)) c->infrastructure.rail[rt]++;
+				c->infrastructure.station++;
 
 				if (statspec != NULL) {
 					/* Use a fixed axis for GetPlatformInfo as our platforms / numtracks are always the right way around */
@@ -1287,6 +1298,7 @@ CommandCost CmdBuildRailStation(TileIndex tile_org, DoCommandFlag flags, uint32 
 		InvalidateWindowData(WC_SELECT_STATION, 0, 0);
 		InvalidateWindowData(WC_STATION_LIST, st->owner, 0);
 		SetWindowWidgetDirty(WC_STATION_VIEW, st->index, SVW_TRAINS);
+		DirtyCompanyInfrastructureWindows(st->owner);
 	}
 
 	return cost;
@@ -1409,10 +1421,13 @@ CommandCost RemoveFromRailBaseStation(TileArea ta, SmallVector<T *, 4> &affected
 			}
 
 			bool build_rail = keep_rail && !IsStationTileBlocked(tile);
+			if (!build_rail && !IsStationTileBlocked(tile)) Company::Get(owner)->infrastructure.rail[rt]--;
 
 			DoClearSquare(tile);
 			DeleteNewGRFInspectWindow(GSF_STATIONS, tile);
 			if (build_rail) MakeRailNormal(tile, owner, TrackToTrackBits(track), rt);
+			Company::Get(owner)->infrastructure.station--;
+			DirtyCompanyInfrastructureWindows(owner);
 
 			st->rect.AfterRemoveTile(st, tile);
 			AddTrackToSignalBuffer(tile, track, owner);
@@ -1554,6 +1569,8 @@ CommandCost RemoveRailStation(T *st, DoCommandFlag flags)
 				v = GetTrainForReservation(tile, track);
 				if (v != NULL) FreeTrainTrackReservation(v);
 			}
+			if (!IsStationTileBlocked(tile)) Company::Get(owner)->infrastructure.rail[GetRailType(tile)]--;
+			Company::Get(owner)->infrastructure.station--;
 			DoClearSquare(tile);
 			DeleteNewGRFInspectWindow(GSF_STATIONS, tile);
 			AddTrackToSignalBuffer(tile, track, owner);
@@ -1574,6 +1591,7 @@ CommandCost RemoveRailStation(T *st, DoCommandFlag flags)
 		st->speclist  = NULL;
 		st->cached_anim_triggers = 0;
 
+		DirtyCompanyInfrastructureWindows(st->owner);
 		SetWindowWidgetDirty(WC_STATION_VIEW, st->index, SVW_TRAINS);
 		st->UpdateVirtCoord();
 		DeleteStationIfEmpty(st);
@@ -1779,11 +1797,26 @@ CommandCost CmdBuildRoadStop(TileIndex tile, DoCommandFlag flags, uint32 p1, uin
 
 			RoadStopType rs_type = type ? ROADSTOP_TRUCK : ROADSTOP_BUS;
 			if (is_drive_through) {
+				/* Update company infrastructure counts. If the current tile is a normal
+				 * road tile, count only the new road bits needed to get a full diagonal road. */
+				RoadType rt;
+				FOR_EACH_SET_ROADTYPE(rt, cur_rts | rts) {
+					Company *c = Company::GetIfValid(IsNormalRoadTile(cur_tile) && HasBit(cur_rts, rt) ? GetRoadOwner(cur_tile, rt) : _current_company);
+					if (c != NULL) {
+						c->infrastructure.road[rt] += 2 - (IsNormalRoadTile(cur_tile) ? CountBits(GetRoadBits(cur_tile, rt)) : 0);
+						DirtyCompanyInfrastructureWindows(c->index);
+					}
+				}
+
 				MakeDriveThroughRoadStop(cur_tile, st->owner, road_owner, tram_owner, st->index, rs_type, rts | cur_rts, DiagDirToAxis(ddir));
 				road_stop->MakeDriveThrough();
 			} else {
+				/* Non-drive-through stop never overbuild and always count as two road bits. */
+				Company::Get(st->owner)->infrastructure.road[FIND_FIRST_BIT(rts)] += 2;
 				MakeRoadStop(cur_tile, st->owner, st->index, rs_type, rts, ddir);
 			}
+			Company::Get(st->owner)->infrastructure.station++;
+			DirtyCompanyInfrastructureWindows(st->owner);
 
 			MarkTileDirtyByTile(cur_tile);
 		}
@@ -1871,6 +1904,17 @@ static CommandCost RemoveRoadStop(TileIndex tile, DoCommandFlag flags)
 			pred->next = cur_stop->next;
 		}
 
+		/* Update company infrastructure counts. */
+		RoadType rt;
+		FOR_EACH_SET_ROADTYPE(rt, GetRoadTypes(tile)) {
+			Company *c = Company::GetIfValid(GetRoadOwner(tile, rt));
+			if (c != NULL) {
+				c->infrastructure.road[rt] -= 2;
+				DirtyCompanyInfrastructureWindows(c->index);
+			}
+		}
+		Company::Get(st->owner)->infrastructure.station--;
+
 		if (IsDriveThroughStopTile(tile)) {
 			/* Clears the tile for us */
 			cur_stop->ClearDriveThrough();
@@ -1955,6 +1999,16 @@ CommandCost CmdRemoveRoadStop(TileIndex tile, DoCommandFlag flags, uint32 p1, ui
 		if ((flags & DC_EXEC) && is_drive_through) {
 			MakeRoadNormal(cur_tile, road_bits, rts, ClosestTownFromTile(cur_tile, UINT_MAX)->index,
 					road_owner, tram_owner);
+
+			/* Update company infrastructure counts. */
+			RoadType rt;
+			FOR_EACH_SET_ROADTYPE(rt, rts) {
+				Company *c = Company::GetIfValid(GetRoadOwner(tile, rt));
+				if (c != NULL) {
+					c->infrastructure.road[rt] += CountBits(road_bits);
+					DirtyCompanyInfrastructureWindows(c->index);
+				}
+			}
 		}
 	}
 
@@ -2212,6 +2266,9 @@ CommandCost CmdBuildAirport(TileIndex tile, DoCommandFlag flags, uint32 p1, uint
 
 		UpdateAirplanesOnNewStation(st);
 
+		Company::Get(st->owner)->infrastructure.airport++;
+		DirtyCompanyInfrastructureWindows(st->owner);
+
 		st->UpdateVirtCoord();
 		UpdateStationAcceptance(st, false);
 		st->RecomputeIndustriesNear();
@@ -2295,6 +2352,9 @@ static CommandCost RemoveAirport(TileIndex tile, DoCommandFlag flags)
 		if (_settings_game.economy.station_noise_level) {
 			SetWindowDirty(WC_TOWN_VIEW, st->town->index);
 		}
+
+		Company::Get(st->owner)->infrastructure.airport--;
+		DirtyCompanyInfrastructureWindows(st->owner);
 
 		st->UpdateVirtCoord();
 		st->RecomputeIndustriesNear();
@@ -2436,6 +2496,14 @@ CommandCost CmdBuildDock(TileIndex tile, DoCommandFlag flags, uint32 p1, uint32 
 				tile + ToTileIndexDiff(_dock_tileoffs_chkaround[direction]),
 				_dock_w_chk[direction], _dock_h_chk[direction], StationRect::ADD_TRY);
 
+		/* If the water part of the dock is on a canal, update infrastructure counts.
+		 * This is needed as we've unconditionally cleared that tile before. */
+		if (wc == WATER_CLASS_CANAL) {
+			Company::Get(st->owner)->infrastructure.water++;
+		}
+		Company::Get(st->owner)->infrastructure.station += 2;
+		DirtyCompanyInfrastructureWindows(st->owner);
+
 		MakeDock(tile, st->owner, st->index, direction, wc);
 
 		st->UpdateVirtCoord();
@@ -2478,6 +2546,9 @@ static CommandCost RemoveDock(TileIndex tile, DoCommandFlag flags)
 
 		st->dock_tile = INVALID_TILE;
 		st->facilities &= ~FACIL_DOCK;
+
+		Company::Get(st->owner)->infrastructure.station -= 2;
+		DirtyCompanyInfrastructureWindows(st->owner);
 
 		SetWindowWidgetDirty(WC_STATION_VIEW, st->index, SVW_SHIPS);
 		st->UpdateVirtCoord();
@@ -3492,6 +3563,11 @@ static void ChangeTileOwner_Station(TileIndex tile, Owner old_owner, Owner new_o
 		for (RoadType rt = ROADTYPE_ROAD; rt < ROADTYPE_END; rt++) {
 			/* Update all roadtypes, no matter if they are present */
 			if (GetRoadOwner(tile, rt) == old_owner) {
+				if (HasTileRoadType(tile, rt)) {
+					/* A drive-through road-stop has always two road bits. No need to dirty windows here, we'll redraw the whole screen anyway. */
+					Company::Get(old_owner)->infrastructure.road[rt] -= 2;
+					if (new_owner != INVALID_OWNER) Company::Get(new_owner)->infrastructure.road[rt] += 2;
+				}
 				SetRoadOwner(tile, rt, new_owner == INVALID_OWNER ? OWNER_NONE : new_owner);
 			}
 		}
@@ -3500,6 +3576,25 @@ static void ChangeTileOwner_Station(TileIndex tile, Owner old_owner, Owner new_o
 	if (!IsTileOwner(tile, old_owner)) return;
 
 	if (new_owner != INVALID_OWNER) {
+		/* Update company infrastructure counts. Only do it here
+		 * if the new owner is valid as otherwise the clear
+		 * command will do it for us. No need to dirty windows
+		 * here, we'll redraw the whole screen anyway.*/
+		Company *old_company = Company::Get(old_owner);
+		Company *new_company = Company::Get(new_owner);
+
+		if ((IsRailWaypoint(tile) || IsRailStation(tile)) && !IsStationTileBlocked(tile)) {
+			old_company->infrastructure.rail[GetRailType(tile)]--;
+			new_company->infrastructure.rail[GetRailType(tile)]++;
+		}
+		if (IsRoadStop(tile) && !IsDriveThroughStopTile(tile)) {
+			RoadType rt;
+			FOR_EACH_SET_ROADTYPE(rt, GetRoadTypes(tile)) {
+				old_company->infrastructure.road[rt] -= 2;
+				new_company->infrastructure.road[rt] += 2;
+			}
+		}
+
 		/* for buoys, owner of tile is owner of water, st->owner == OWNER_NONE */
 		SetTileOwner(tile, new_owner);
 		InvalidateWindowClassesData(WC_STATION_LIST, 0);

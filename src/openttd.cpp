@@ -342,27 +342,23 @@ static void LoadIntroGame(bool load_newgrfs = true)
 
 void MakeNewgameSettingsLive()
 {
-#ifdef ENABLE_AI
 	for (CompanyID c = COMPANY_FIRST; c < MAX_COMPANIES; c++) {
 		if (_settings_game.ai_config[c] != NULL) {
 			delete _settings_game.ai_config[c];
 		}
 	}
-#endif /* ENABLE_AI */
 
 	/* Copy newgame settings to active settings.
 	 * Also initialise old settings needed for savegame conversion. */
 	_settings_game = _settings_newgame;
 	_old_vds = _settings_client.company.vehicle;
 
-#ifdef ENABLE_AI
 	for (CompanyID c = COMPANY_FIRST; c < MAX_COMPANIES; c++) {
 		_settings_game.ai_config[c] = NULL;
 		if (_settings_newgame.ai_config[c] != NULL) {
 			_settings_game.ai_config[c] = new AIConfig(_settings_newgame.ai_config[c]);
 		}
 	}
-#endif /* ENABLE_AI */
 }
 
 /** Callback structure of statements to be executed after the NewGRF scan. */
@@ -402,6 +398,9 @@ struct AfterNewGRFScan : NewGRFScanCallback {
 		uint last_newgrf_count = _settings_client.gui.last_newgrf_count;
 		LoadFromConfig();
 		_settings_client.gui.last_newgrf_count = last_newgrf_count;
+		/* Since the default for the palette might have changed due to
+		 * reading the configuration file, recalculate that now. */
+		UpdateNewGRFConfigPalette();
 
 		AI::Uninitialize(true);
 		CheckConfig();
@@ -1119,6 +1118,22 @@ void SwitchToMode(SwitchMode new_mode)
  */
 static void CheckCaches()
 {
+	/* Check company infrastructure cache. */
+	SmallVector<CompanyInfrastructure, 4> old_infrastructure;
+	Company *c;
+	FOR_ALL_COMPANIES(c) MemCpyT(old_infrastructure.Append(), &c->infrastructure);
+
+	extern void AfterLoadCompanyStats();
+	AfterLoadCompanyStats();
+
+	uint i = 0;
+	FOR_ALL_COMPANIES(c) {
+		if (MemCmpT(old_infrastructure.Get(i), &c->infrastructure) != 0) {
+			DEBUG(desync, 2, "infrastructure cache mismatch: company %i", (int)c->index);
+		}
+		i++;
+	}
+
 	/* Return here so it is easy to add checks that are run
 	 * always to aid testing of caches. */
 	if (_debug_desync_level <= 1) return;
