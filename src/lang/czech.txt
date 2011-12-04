@@ -1345,7 +1345,6 @@ STR_CONFIG_SETTING_AI_BUILDS_AIRCRAFT                           :{LTBLUE}Zakáza
 STR_CONFIG_SETTING_AI_BUILDS_SHIPS                              :{LTBLUE}Zakázat počítači lodě: {ORANGE}{STRING}
 
 STR_CONFIG_SETTING_AI_IN_MULTIPLAYER                            :{LTBLUE}Povolit AI v síťové hře: {ORANGE}{STRING}
-STR_CONFIG_SETTING_AI_MAX_OPCODES                               :{LTBLUE}Počet opkódů než se vypne AI: {ORANGE}{STRING}
 
 STR_CONFIG_SETTING_SERVINT_ISPERCENT                            :{LTBLUE}Intervaly servisů v procentech: {ORANGE}{STRING}
 STR_CONFIG_SETTING_SERVINT_TRAINS                               :{LTBLUE}Základní servisní interval pro vlaky: {ORANGE}{STRING} d{P 0:1 en ny ní}
@@ -3428,8 +3427,6 @@ STR_AI_DEBUG_CONTINUE                                           :{BLACK}Pokračo
 STR_AI_DEBUG_CONTINUE_TOOLTIP                                   :{BLACK}Odpauzujte a pokračujte v běhu AI
 STR_AI_DEBUG_SELECT_AI_TOOLTIP                                  :{BLACK}Zobraz debugovací výstup této AI
 
-STR_ERROR_NO_AI                                                 :{WHITE}Hra byla zkompilována bez podpory AI...
-STR_ERROR_NO_AI_SUB                                             :{WHITE}... AI není dostupné!
 
 STR_ERROR_AI_NO_AI_FOUND                                        :Nebyla nalezena žádná AI.{}Tato AI je výchozí a nedělá vůbec nic.{}Spoustu AI ale můžeš stáhnout v "Stahování součástí"
 STR_ERROR_AI_PLEASE_REPORT_CRASH                                :{WHITE}Některá z bežících AI skončila s chybou. Prosím oznamte toto autorovi AI spolu se screenshotem okna Ladění AI

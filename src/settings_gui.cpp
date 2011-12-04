@@ -738,9 +738,7 @@ public:
 			this->InvalidateData();
 
 			if (widget / 3 == 0 &&
-#ifdef ENABLE_AI
 					AI::GetInfoList()->size() == 0 &&
-#endif /* ENABLE_AI */
 					this->opt_mod_temp.difficulty.max_no_competitors != 0) {
 				ShowErrorMessage(STR_WARNING_NO_SUITABLE_AI, INVALID_STRING_ID, WL_CRITICAL);
 			}
@@ -1481,12 +1479,20 @@ static SettingEntry _settings_economy_industries[] = {
 /** Industries sub-page */
 static SettingsPage _settings_economy_industries_page = {_settings_economy_industries, lengthof(_settings_economy_industries)};
 
+static SettingEntry _settings_economy_scripts[] = {
+	SettingEntry("script.script_max_opcode_till_suspend"),
+};
+/** Scripts sub-page */
+static SettingsPage _settings_economy_scripts_page = {_settings_economy_scripts, lengthof(_settings_economy_scripts)};
+
 static SettingEntry _settings_economy[] = {
 	SettingEntry(&_settings_economy_towns_page, STR_CONFIG_SETTING_ECONOMY_TOWNS),
 	SettingEntry(&_settings_economy_industries_page, STR_CONFIG_SETTING_ECONOMY_INDUSTRIES),
+	SettingEntry(&_settings_economy_scripts_page, STR_CONFIG_SETTING_ECONOMY_SCRIPTS),
 	SettingEntry("economy.inflation"),
 	SettingEntry("economy.smooth_economy"),
 	SettingEntry("economy.feeder_payment_share"),
+	SettingEntry("economy.infrastructure_maintenance"),
 };
 /** Economy sub-page */
 static SettingsPage _settings_economy_page = {_settings_economy, lengthof(_settings_economy)};
@@ -1497,7 +1503,6 @@ static SettingEntry _settings_ai_npc[] = {
 	SettingEntry("ai.ai_disable_veh_roadveh"),
 	SettingEntry("ai.ai_disable_veh_aircraft"),
 	SettingEntry("ai.ai_disable_veh_ship"),
-	SettingEntry("ai.ai_max_opcode_till_suspend"),
 };
 /** Computer players sub-page */
 static SettingsPage _settings_ai_npc_page = {_settings_ai_npc, lengthof(_settings_ai_npc)};
