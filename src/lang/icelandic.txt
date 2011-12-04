@@ -1231,7 +1231,6 @@ STR_CONFIG_SETTING_AI_BUILDS_AIRCRAFT                           :{LTBLUE}Útilok
 STR_CONFIG_SETTING_AI_BUILDS_SHIPS                              :{LTBLUE}Útiloka skip frá tölvu: {ORANGE}{STRING}
 
 STR_CONFIG_SETTING_AI_IN_MULTIPLAYER                            :{LTBLUE}Leyfa gervigreind í fjölspilun: {ORANGE}{STRING}
-STR_CONFIG_SETTING_AI_MAX_OPCODES                               :{LTBLUE}Fjöldi aðgerðanúmera áður en slökkt er á gervigreind: {ORANGE}{STRING}
 
 STR_CONFIG_SETTING_SERVINT_ISPERCENT                            :{LTBLUE}Tími milli viðhalds farartækja sýndur í hundraðshlutum: {ORANGE}{STRING}
 STR_CONFIG_SETTING_SERVINT_TRAINS                               :{LTBLUE}Tími milli viðhalds lesta: {ORANGE}{STRING} dagar/%
@@ -3265,8 +3264,6 @@ STR_AI_DEBUG_CONTINUE                                           :{BLACK}Áfram
 STR_AI_DEBUG_CONTINUE_TOOLTIP                                   :{BLACK}Láta gerfigreind halda áfram.
 STR_AI_DEBUG_SELECT_AI_TOOLTIP                                  :{BLACK}Skoða ferlisupplýsingar frá þessari gerfigreind
 
-STR_ERROR_NO_AI                                                 :{WHITE}OpenTTD kemur án gerfigreindar...
-STR_ERROR_NO_AI_SUB                                             :{WHITE}... engar gerfigreindir í boði!
 
 STR_ERROR_AI_NO_AI_FOUND                                        :Engin nothæf gerfigreind fundin.{}Þetta er platgerfigreind sem gerir ekkert.{}Hægt er að ná í gerfigreindir með 'Ná í viðbætur af netinu' valmöguleikanum.
 STR_ERROR_AI_PLEASE_REPORT_CRASH                                :{WHITE}Ein af gervigreindunum hrundi. Vinsamlega gerðu höfundi gervigreindarinnar viðvart og sendu inn mynd af aflúsunarglugga gervigreindarinnar.

@@ -1238,7 +1238,6 @@ STR_CONFIG_SETTING_AI_BUILDS_AIRCRAFT                           :{ORANGE}{STRING
 STR_CONFIG_SETTING_AI_BUILDS_SHIPS                              :{ORANGE}{STRING}{LTBLUE} :מנע הפעלת כלי שייט ע”י שחקני המחשב
 
 STR_CONFIG_SETTING_AI_IN_MULTIPLAYER                            :{ORANGE}{STRING}{LTBLUE} :אפשר שחקני מחשב במשחק רשת
-STR_CONFIG_SETTING_AI_MAX_OPCODES                               :{LTBLUE}#opcodes before AI is suspended: {ORANGE}{STRING}
 
 STR_CONFIG_SETTING_SERVINT_ISPERCENT                            :{ORANGE}{STRING}{LTBLUE} :הצג מרווחי טיפול באחוזים
 STR_CONFIG_SETTING_SERVINT_TRAINS                               :{ORANGE}%/ימים {STRING}{LTBLUE} :מרווח בין טיפולים עבור רכבות
@@ -3230,8 +3229,6 @@ STR_AI_DEBUG_MATCH_CASE_TOOLTIP                                 :{BLACK}בחר �
 STR_AI_DEBUG_CONTINUE                                           :{BLACK}המשך
 STR_AI_DEBUG_CONTINUE_TOOLTIP                                   :{BLACK}בטל הפסקה והמשך את הבינה המלאכותית
 
-STR_ERROR_NO_AI                                                 :{WHITE}המשחק נבנה ללא תמיכה בבינה מלאכותית...
-STR_ERROR_NO_AI_SUB                                             :{WHITE}... אין בינות מלאכותיות זמינות!
 
 STR_ERROR_AI_NO_AI_FOUND                                        :לא נמצאה בינה מלאכותית מתאימה לטעינה.{}בינה מלאכותית זו הינה מדומה ולא תעשה כלום.{}באפשרותך להוריד מספר אלגורתמים של בינה מלאכותית בעזרת מערכת 'תוכן מקוון'.
 STR_ERROR_AI_PLEASE_REPORT_CRASH                                :{WHITE}אחד מאלגורתמי הבינה המלאכותית קרס. אנא דווח זאת ליוצר האלגוריתם וצרף צילום מסך של מסך ה-Debug.
