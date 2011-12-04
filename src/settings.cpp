@@ -946,6 +946,17 @@ static bool RedrawTownAuthority(int32 p1)
 	return true;
 }
 
+/**
+ * Invalidate the company infrastructure details window after a infrastructure maintenance setting change.
+ * @param p1 Unused.
+ * @return Always true.
+ */
+static bool InvalidateCompanyInfrastructureWindow(int32 p1)
+{
+	InvalidateWindowClassesData(WC_COMPANY_INFRASTRUCTURE);
+	return true;
+}
+
 /*
  * A: competitors
  * B: competitor start time. Deprecated since savegame version 110.
@@ -1044,9 +1055,7 @@ static bool DifficultyNoiseChange(int32 i)
 static bool MaxNoAIsChange(int32 i)
 {
 	if (GetGameSettings().difficulty.max_no_competitors != 0 &&
-#ifdef ENABLE_AI
 			AI::GetInfoList()->size() == 0 &&
-#endif /* ENABLE_AI */
 			(!_networking || _network_server)) {
 		ShowErrorMessage(STR_WARNING_NO_SUITABLE_AI, INVALID_STRING_ID, WL_CRITICAL);
 	}
@@ -1314,13 +1323,12 @@ static void NewsDisplayLoadConfig(IniFile *ini, const char *grpname)
 
 static void AILoadConfig(IniFile *ini, const char *grpname)
 {
-#ifdef ENABLE_AI
 	IniGroup *group = ini->GetGroup(grpname);
 	IniItem *item;
 
 	/* Clean any configured AI */
 	for (CompanyID c = COMPANY_FIRST; c < MAX_COMPANIES; c++) {
-		AIConfig::GetConfig(c, AIConfig::AISS_FORCE_NEWGAME)->ChangeAI(NULL);
+		AIConfig::GetConfig(c, AIConfig::SSS_FORCE_NEWGAME)->Change(NULL);
 	}
 
 	/* If no group exists, return */
@@ -1328,18 +1336,17 @@ static void AILoadConfig(IniFile *ini, const char *grpname)
 
 	CompanyID c = COMPANY_FIRST;
 	for (item = group->item; c < MAX_COMPANIES && item != NULL; c++, item = item->next) {
-		AIConfig *config = AIConfig::GetConfig(c, AIConfig::AISS_FORCE_NEWGAME);
+		AIConfig *config = AIConfig::GetConfig(c, AIConfig::SSS_FORCE_NEWGAME);
 
-		config->ChangeAI(item->name);
-		if (!config->HasAI()) {
+		config->Change(item->name);
+		if (!config->HasScript()) {
 			if (strcmp(item->name, "none") != 0) {
-				DEBUG(ai, 0, "The AI by the name '%s' was no longer found, and removed from the list.", item->name);
+				DEBUG(script, 0, "The AI by the name '%s' was no longer found, and removed from the list.", item->name);
 				continue;
 			}
 		}
 		if (item->value != NULL) config->StringToSettings(item->value);
 	}
-#endif /* ENABLE_AI */
 }
 
 /**
@@ -1436,19 +1443,18 @@ static void NewsDisplaySaveConfig(IniFile *ini, const char *grpname)
 
 static void AISaveConfig(IniFile *ini, const char *grpname)
 {
-#ifdef ENABLE_AI
 	IniGroup *group = ini->GetGroup(grpname);
 
 	if (group == NULL) return;
 	group->Clear();
 
 	for (CompanyID c = COMPANY_FIRST; c < MAX_COMPANIES; c++) {
-		AIConfig *config = AIConfig::GetConfig(c, AIConfig::AISS_FORCE_NEWGAME);
+		AIConfig *config = AIConfig::GetConfig(c, AIConfig::SSS_FORCE_NEWGAME);
 		const char *name;
 		char value[1024];
 		config->SettingsToString(value, lengthof(value));
 
-		if (config->HasAI()) {
+		if (config->HasScript()) {
 			name = config->GetName();
 		} else {
 			name = "none";
@@ -1457,7 +1463,6 @@ static void AISaveConfig(IniFile *ini, const char *grpname)
 		IniItem *item = new IniItem(group, name, strlen(name));
 		item->SetValue(value);
 	}
-#endif /* ENABLE_AI */
 }
 
 /**
@@ -1497,24 +1502,26 @@ static void GRFSaveConfig(IniFile *ini, const char *grpname, const GRFConfig *li
 }
 
 /* Common handler for saving/loading variables to the configuration file */
-static void HandleSettingDescs(IniFile *ini, SettingDescProc *proc, SettingDescProcList *proc_list, bool minimal = false)
+static void HandleSettingDescs(IniFile *ini, SettingDescProc *proc, SettingDescProcList *proc_list, bool basic_settings = true, bool other_settings = true)
 {
-	proc(ini, (const SettingDesc*)_misc_settings,    "misc",  NULL);
+	if (basic_settings) {
+		proc(ini, (const SettingDesc*)_misc_settings,    "misc",  NULL);
 #if defined(WIN32) && !defined(DEDICATED)
-	proc(ini, (const SettingDesc*)_win32_settings,   "win32", NULL);
+		proc(ini, (const SettingDesc*)_win32_settings,   "win32", NULL);
 #endif /* WIN32 */
+	}
 
-	if (minimal) return;
-
-	proc(ini, _settings,         "patches",  &_settings_newgame);
-	proc(ini, _currency_settings,"currency", &_custom_currency);
-	proc(ini, _company_settings, "company",  &_settings_client.company);
+	if (other_settings) {
+		proc(ini, _settings,         "patches",  &_settings_newgame);
+		proc(ini, _currency_settings,"currency", &_custom_currency);
+		proc(ini, _company_settings, "company",  &_settings_client.company);
 
 #ifdef ENABLE_NETWORK
-	proc_list(ini, "server_bind_addresses", &_network_bind_list);
-	proc_list(ini, "servers", &_network_host_list);
-	proc_list(ini, "bans",    &_network_ban_list);
+		proc_list(ini, "server_bind_addresses", &_network_bind_list);
+		proc_list(ini, "servers", &_network_host_list);
+		proc_list(ini, "bans",    &_network_ban_list);
 #endif /* ENABLE_NETWORK */
+	}
 }
 
 static IniFile *IniLoadConfig()
@@ -1533,7 +1540,8 @@ void LoadFromConfig(bool minimal)
 	IniFile *ini = IniLoadConfig();
 	if (!minimal) ResetCurrencies(false); // Initialize the array of curencies, without preserving the custom one
 
-	HandleSettingDescs(ini, IniLoadSettings, IniLoadSettingList, minimal);
+	/* Load basic settings only during bootstrap, load other settings not during bootstrap */
+	HandleSettingDescs(ini, IniLoadSettings, IniLoadSettingList, minimal, !minimal);
 
 	if (!minimal) {
 		_grfconfig_newgame = GRFLoadConfig(ini, "newgrf", false);
