@@ -3635,6 +3635,10 @@ static ChangeInfoResult AirportChangeInfo(uint airport, int numinfo, int prop, B
 				_string_to_grf_mapping[&as->name] = _cur.grffile->grfid;
 				break;
 
+			case 0x11: // Maintenance cost factor
+				as->maintenance_cost = buf->ReadWord();
+				break;
+
 			default:
 				ret = CIR_UNKNOWN;
 				break;
@@ -3941,6 +3945,10 @@ static ChangeInfoResult RailTypeChangeInfo(uint id, int numinfo, int prop, ByteR
 				_string_to_grf_mapping[&rti->strings.name] = _cur.grffile->grfid;
 				break;
 
+			case 0x1C: // Maintenance cost factor
+				rti->maintenance_multiplier = buf->ReadWord();
+				break;
+
 			default:
 				ret = CIR_UNKNOWN;
 				break;
@@ -3984,6 +3992,7 @@ static ChangeInfoResult RailTypeReserveInfo(uint id, int numinfo, int prop, Byte
 			case 0x13: // Construction cost
 			case 0x14: // Speed limit
 			case 0x1B: // Name of railtype
+			case 0x1C: // Maintenance cost factor
 				buf->ReadWord();
 				break;
 
@@ -7016,6 +7025,12 @@ static void TranslateGRFStrings(ByteReader *buf)
 		return;
 	}
 
+	/* Since no language id is supplied for with version 7 and lower NewGRFs, this string has
+	 * to be added as a generic string, thus the language id of 0x7F. For this to work
+	 * new_scheme has to be true as well, which will also be implicitly the case for version 8
+	 * and higher. A language id of 0x7F will be overridden by a non-generic id, so this will
+	 * not change anything if a string has been provided specifically for this language. */
+	byte language = _cur.grffile->grf_version >= 8 ? buf->ReadByte() : 0x7F;
 	byte num_strings = buf->ReadByte();
 	uint16 first_id  = buf->ReadWord();
 
@@ -7032,12 +7047,7 @@ static void TranslateGRFStrings(ByteReader *buf)
 			continue;
 		}
 
-		/* Since no language id is supplied this string has to be added as a
-		 * generic string, thus the language id of 0x7F. For this to work
-		 * new_scheme has to be true as well. A language id of 0x7F will be
-		 * overridden by a non-generic id, so this will not change anything if
-		 * a string has been provided specifically for this language. */
-		AddGRFString(grfid, first_id + i, 0x7F, true, true, string, STR_UNDEFINED);
+		AddGRFString(grfid, first_id + i, language, true, true, string, STR_UNDEFINED);
 	}
 }
 

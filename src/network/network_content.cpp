@@ -97,8 +97,11 @@ bool ClientNetworkContentSocketHandler::Receive_SERVER_INFO(Packet *p)
 			break;
 
 		case CONTENT_TYPE_AI:
-		case CONTENT_TYPE_AI_LIBRARY:
 			proc = AI::HasAI; break;
+			break;
+
+		case CONTENT_TYPE_AI_LIBRARY:
+			proc = AI::HasAILibrary; break;
 			break;
 
 		case CONTENT_TYPE_SCENARIO:
@@ -177,10 +180,8 @@ void ClientNetworkContentSocketHandler::RequestContentList(ContentType type)
 		this->RequestContentList(CONTENT_TYPE_BASE_SOUNDS);
 		this->RequestContentList(CONTENT_TYPE_SCENARIO);
 		this->RequestContentList(CONTENT_TYPE_HEIGHTMAP);
-#ifdef ENABLE_AI
 		this->RequestContentList(CONTENT_TYPE_AI);
 		this->RequestContentList(CONTENT_TYPE_AI_LIBRARY);
-#endif /* ENABLE_AI */
 		this->RequestContentList(CONTENT_TYPE_NEWGRF);
 		return;
 	}

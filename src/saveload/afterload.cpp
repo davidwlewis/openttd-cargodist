@@ -2700,9 +2700,23 @@ bool AfterLoadGame()
 	 * which is done by StartupEngines(). */
 	if (gcf_res != GLC_ALL_GOOD) StartupEngines();
 
+	if (IsSavegameVersionBefore(166)) {
+		/* Update cargo acceptance map of towns. */
+		for (TileIndex t = 0; t < map_size; t++) {
+			if (!IsTileType(t, MP_HOUSE)) continue;
+			Town::Get(GetTownIndex(t))->cargo_accepted.Add(t);
+		}
+
+		Town *town;
+		FOR_ALL_TOWNS(town) {
+			UpdateTownCargos(town);
+		}
+	}
+
 	/* Road stops is 'only' updating some caches */
 	AfterLoadRoadStops();
 	AfterLoadLabelMaps();
+	AfterLoadCompanyStats();
 
 	GamelogPrintDebug(1);
 
@@ -2735,12 +2749,16 @@ void ReloadNewGRFData()
 	GroupStatistics::UpdateAfterLoad();
 	/* update station graphics */
 	AfterLoadStations();
+	/* Update company statistics. */
+	AfterLoadCompanyStats();
 	/* Check and update house and town values */
 	UpdateHousesAndTowns();
 	/* Delete news referring to no longer existing entities */
 	DeleteInvalidEngineNews();
 	/* Update livery selection windows */
 	for (CompanyID i = COMPANY_FIRST; i < MAX_COMPANIES; i++) InvalidateWindowData(WC_COMPANY_COLOUR, i);
+	/* Update company infrastructure counts. */
+	InvalidateWindowClassesData(WC_COMPANY_INFRASTRUCTURE);
 	/* redraw the whole screen */
 	MarkWholeScreenDirty();
 	CheckTrainsLengths();
