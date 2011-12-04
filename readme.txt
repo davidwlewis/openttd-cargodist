@@ -1,6 +1,6 @@
 OpenTTD readme
-Last updated:    2011-09-15
-Release version: 1.1.3
+Last updated:    2011-12-05
+Release version: 1.1.4
 ------------------------------------------------------------------------
 
 
@@ -620,7 +620,7 @@ Retired Developers:
   Serge Paquet (vurlix)           - Assistant project manager, coder (0.1 - 0.3.3)
   Dominik Scherer (dominik81)     - Lead programmer, GUI expert (0.3.0 - 0.3.6)
   Benedikt Brüggemeier (skidd13)  - Bug fixer and code reworker
-  Patric Stout (TrueLight)        - Programmer (0.3 - pre0.7), sys op (active)
+  Patric Stout (TrueBrain)        - Programmer (0.3 - pre0.7), sys op (active)
 
 Thanks to:
   Josef Drexler                   - For his great work on TTDPatch.
