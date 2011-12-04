@@ -376,7 +376,6 @@ set_name:;
 			SetDParam(3, t->index);
 			AddNewsItem(STR_MESSAGE_NEWS_FORMAT, NS_COMPANY_NEW, NR_TILE, c->last_build_coordinate, NR_NONE, UINT32_MAX, cni);
 		}
-		AI::BroadcastNewEvent(new AIEventCompanyNew(c->index), c->index);
 		return;
 	}
 bad_town_name:;
@@ -565,6 +564,8 @@ Company *DoStartupNewCompany(bool is_ai, CompanyID company = INVALID_COMPANY)
 
 	if (is_ai && (!_networking || _network_server)) AI::StartNew(c->index);
 
+	AI::BroadcastNewEvent(new ScriptEventCompanyNew(c->index), c->index);
+
 	return c;
 }
 
@@ -574,7 +575,6 @@ void StartupCompanies()
 	_next_competitor_start = 0;
 }
 
-#ifdef ENABLE_AI
 /** Start a new competitor company if possible. */
 static void MaybeStartNewCompany()
 {
@@ -596,7 +596,6 @@ static void MaybeStartNewCompany()
 		DoCommandP(0, 1 | INVALID_COMPANY << 16, 0, CMD_COMPANY_CTRL);
 	}
 }
-#endif /* ENABLE_AI */
 
 /** Initialize the pool of companies. */
 void InitializeCompanies()
@@ -678,7 +677,7 @@ static void HandleBankruptcyTakeover(Company *c)
 
 	c->bankrupt_timeout = TAKE_OVER_TIMEOUT;
 	if (best->is_ai) {
-		AI::NewEvent(best->index, new AIEventCompanyAskMerger(c->index, ClampToI32(c->bankrupt_value)));
+		AI::NewEvent(best->index, new ScriptEventCompanyAskMerger(c->index, ClampToI32(c->bankrupt_value)));
 	} else if (IsInteractiveCompany(best->index)) {
 		ShowBuyCompanyDialog(c->index);
 	}
@@ -695,7 +694,6 @@ void OnTick_Companies()
 		if (c->bankrupt_asked != 0) HandleBankruptcyTakeover(c);
 	}
 
-#ifdef ENABLE_AI
 	if (_next_competitor_start == 0) {
 		_next_competitor_start = AI::GetStartNextTime() * DAY_TICKS;
 	}
@@ -703,7 +701,6 @@ void OnTick_Companies()
 	if (AI::CanStartNew() && _game_mode != GM_MENU && --_next_competitor_start == 0) {
 		MaybeStartNewCompany();
 	}
-#endif /* ENABLE_AI */
 
 	_cur_company_tick_index = (_cur_company_tick_index + 1) % MAX_COMPANIES;
 }
@@ -909,7 +906,7 @@ CommandCost CmdCompanyCtrl(TileIndex tile, DoCommandFlag flags, uint32 p1, uint3
 
 			CompanyID c_index = c->index;
 			delete c;
-			AI::BroadcastNewEvent(new AIEventCompanyBankrupt(c_index));
+			AI::BroadcastNewEvent(new ScriptEventCompanyBankrupt(c_index));
 			CompanyAdminRemove(c_index, (CompanyRemoveReason)reason);
 			break;
 		}
