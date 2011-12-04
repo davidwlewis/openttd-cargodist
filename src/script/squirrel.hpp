@@ -14,15 +14,21 @@
 
 #include <squirrel.h>
 
+/** The type of script we're working with, i.e. for who is it? */
+enum ScriptType {
+	ST_AI, ///< The script is for the AI.
+};
+
 class Squirrel {
 private:
 	typedef void (SQPrintFunc)(bool error_msg, const SQChar *message);
 
-	HSQUIRRELVM vm;          ///< The VirtualMachine instnace for squirrel
+	HSQUIRRELVM vm;          ///< The VirtualMachine instance for squirrel
 	void *global_pointer;    ///< Can be set by who ever initializes Squirrel
 	SQPrintFunc *print_func; ///< Points to either NULL, or a custom print handler
 	bool crashed;            ///< True if the squirrel script made an error.
 	int overdrawn_ops;       ///< The amount of operations we have overdrawn.
+	const char *APIName;     ///< Name of the API used for this squirrel.
 
 	/**
 	 * The internal RunError handler. It looks up the real error and calls RunError with it.
@@ -30,9 +36,9 @@ private:
 	static SQInteger _RunError(HSQUIRRELVM vm);
 
 	/**
-	 * Get the squirrel VM. Try to avoid using this.
+	 * Get the API name.
 	 */
-	HSQUIRRELVM GetVM() { return this->vm; }
+	const char *GetAPIName() { return this->APIName; }
 
 protected:
 	/**
@@ -56,13 +62,13 @@ protected:
 	static void ErrorPrintFunc(HSQUIRRELVM vm, const SQChar *s, ...);
 
 public:
-	friend class AIScanner;
-	friend class AIInstance;
-	friend class AIController;
-	friend void squirrel_register_std(Squirrel *engine);
-
-	Squirrel();
+	Squirrel(const char *APIName);
 	~Squirrel();
+
+	/**
+	 * Get the squirrel VM. Try to avoid using this.
+	 */
+	HSQUIRRELVM GetVM() { return this->vm; }
 
 	/**
 	 * Load a script.
@@ -160,9 +166,10 @@ public:
 	 * @param real_instance The instance to the real class, if it represents a real class.
 	 * @param instance Returning value with the pointer to the instance.
 	 * @param release_hook Optional param to give a release hook.
+	 * @param prepend_API_name Optional parameter; if true, the class_name is prefixed with the current API name.
 	 * @return False if creating failed.
 	 */
-	static bool CreateClassInstanceVM(HSQUIRRELVM vm, const char *class_name, void *real_instance, HSQOBJECT *instance, SQRELEASEHOOK release_hook);
+	static bool CreateClassInstanceVM(HSQUIRRELVM vm, const char *class_name, void *real_instance, HSQOBJECT *instance, SQRELEASEHOOK release_hook, bool prepend_API_name = false);
 
 	/**
 	 * Exactly the same as CreateClassInstanceVM, only callable without instance of Squirrel.

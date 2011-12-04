@@ -521,7 +521,7 @@ static void RoadVehCrash(RoadVehicle *v)
 {
 	uint pass = v->Crash();
 
-	AI::NewEvent(v->owner, new AIEventVehicleCrashed(v->index, v->tile, AIEventVehicleCrashed::CRASH_RV_LEVEL_CROSSING));
+	AI::NewEvent(v->owner, new ScriptEventVehicleCrashed(v->index, v->tile, ScriptEventVehicleCrashed::CRASH_RV_LEVEL_CROSSING));
 
 	SetDParam(0, pass);
 	AddVehicleNewsItem(
@@ -669,7 +669,7 @@ static void RoadVehArrivesAt(const RoadVehicle *v, Station *st)
 				v->index,
 				st->index
 			);
-			AI::NewEvent(v->owner, new AIEventStationFirstVehicle(st->index, v->index));
+			AI::NewEvent(v->owner, new ScriptEventStationFirstVehicle(st->index, v->index));
 		}
 	} else {
 		/* Check if station was ever visited before */
@@ -682,7 +682,7 @@ static void RoadVehArrivesAt(const RoadVehicle *v, Station *st)
 				v->index,
 				st->index
 			);
-			AI::NewEvent(v->owner, new AIEventStationFirstVehicle(st->index, v->index));
+			AI::NewEvent(v->owner, new ScriptEventStationFirstVehicle(st->index, v->index));
 		}
 	}
 }
