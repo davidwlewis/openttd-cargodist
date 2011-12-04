@@ -26,8 +26,9 @@
 #include "../core/backup_type.hpp"
 
 #include "ai.hpp"
-#include "api/ai_log.hpp"
+#include "../script/api/script_log.hpp"
 #include "ai_config.hpp"
+#include "ai_info.hpp"
 #include "ai_instance.hpp"
 
 #include "table/strings.h"
@@ -47,11 +48,11 @@ enum AIListWindowWidgets {
  * Window that let you choose an available AI.
  */
 struct AIListWindow : public Window {
-	const AIInfoList *ai_info_list; ///< The list of AIs.
-	int selected;                   ///< The currently selected AI.
-	CompanyID slot;                 ///< The company we're selecting a new AI for.
-	int line_height;                ///< Height of a row in the matrix widget.
-	Scrollbar *vscroll;             ///< Cache of the vertical scrollbar.
+	const ScriptInfoList *ai_info_list; ///< The list of AIs.
+	int selected;                       ///< The currently selected AI.
+	CompanyID slot;                     ///< The company we're selecting a new AI for.
+	int line_height;                    ///< Height of a row in the matrix widget.
+	Scrollbar *vscroll;                 ///< Cache of the vertical scrollbar.
 
 	/**
 	 * Constructor for the window.
@@ -71,10 +72,10 @@ struct AIListWindow : public Window {
 
 		/* Try if we can find the currently selected AI */
 		this->selected = -1;
-		if (AIConfig::GetConfig(slot)->HasAI()) {
+		if (AIConfig::GetConfig(slot)->HasScript()) {
 			AIInfo *info = AIConfig::GetConfig(slot)->GetInfo();
 			int i = 0;
-			for (AIInfoList::const_iterator it = this->ai_info_list->begin(); it != this->ai_info_list->end(); it++, i++) {
+			for (ScriptInfoList::const_iterator it = this->ai_info_list->begin(); it != this->ai_info_list->end(); it++, i++) {
 				if ((*it).second == info) {
 					this->selected = i;
 					break;
@@ -105,7 +106,7 @@ struct AIListWindow : public Window {
 					DrawString(r.left + WD_MATRIX_LEFT, r.right - WD_MATRIX_LEFT, y + WD_MATRIX_TOP, STR_AI_CONFIG_RANDOM_AI, this->selected == -1 ? TC_WHITE : TC_BLACK);
 					y += this->line_height;
 				}
-				AIInfoList::const_iterator it = this->ai_info_list->begin();
+				ScriptInfoList::const_iterator it = this->ai_info_list->begin();
 				for (int i = 1; it != this->ai_info_list->end(); i++, it++) {
 					if (this->vscroll->IsVisible(i)) {
 						DrawString(r.left + WD_MATRIX_LEFT, r.right - WD_MATRIX_RIGHT, y + WD_MATRIX_TOP, (*it).second->GetName(), (this->selected == i - 1) ? TC_WHITE : TC_BLACK);
@@ -116,9 +117,9 @@ struct AIListWindow : public Window {
 			}
 			case AIL_WIDGET_INFO_BG: {
 				AIInfo *selected_info = NULL;
-				AIInfoList::const_iterator it = this->ai_info_list->begin();
+				ScriptInfoList::const_iterator it = this->ai_info_list->begin();
 				for (int i = 1; selected_info == NULL && it != this->ai_info_list->end(); i++, it++) {
-					if (this->selected == i - 1) selected_info = (*it).second;
+					if (this->selected == i - 1) selected_info = static_cast<AIInfo *>((*it).second);
 				}
 				/* Some info about the currently selected AI. */
 				if (selected_info != NULL) {
@@ -148,11 +149,11 @@ struct AIListWindow : public Window {
 	void ChangeAI()
 	{
 		if (this->selected == -1) {
-			AIConfig::GetConfig(slot)->ChangeAI(NULL);
+			AIConfig::GetConfig(slot)->Change(NULL);
 		} else {
-			AIInfoList::const_iterator it = this->ai_info_list->begin();
+			ScriptInfoList::const_iterator it = this->ai_info_list->begin();
 			for (int i = 0; i < this->selected; i++) it++;
-			AIConfig::GetConfig(slot)->ChangeAI((*it).second->GetName(), (*it).second->GetVersion());
+			AIConfig::GetConfig(slot)->Change((*it).second->GetName(), (*it).second->GetVersion());
 		}
 		SetWindowDirty(WC_GAME_OPTIONS, 0);
 	}
@@ -272,7 +273,7 @@ struct AISettingsWindow : public Window {
 	int clicked_row;                      ///< The clicked row of settings.
 	int line_height;                      ///< Height of a row in the matrix widget.
 	Scrollbar *vscroll;                   ///< Cache of the vertical scrollbar.
-	typedef std::vector<const AIConfigItem *> VisibleSettingsList;
+	typedef std::vector<const ScriptConfigItem *> VisibleSettingsList;
 	VisibleSettingsList visible_settings; ///< List of visible AI settings
 
 	/**
@@ -306,9 +307,9 @@ struct AISettingsWindow : public Window {
 	{
 		visible_settings.clear();
 
-		AIConfigItemList::const_iterator it = this->ai_config->GetConfigList()->begin();
+		ScriptConfigItemList::const_iterator it = this->ai_config->GetConfigList()->begin();
 		for (; it != this->ai_config->GetConfigList()->end(); it++) {
-			bool no_hide = (it->flags & AICONFIG_AI_DEVELOPER) == 0;
+			bool no_hide = (it->flags & SCRIPTCONFIG_DEVELOPER) == 0;
 			if (no_hide || _settings_client.gui.ai_developer_tools) {
 				visible_settings.push_back(&(*it));
 			}
@@ -343,9 +344,9 @@ struct AISettingsWindow : public Window {
 
 		int y = r.top;
 		for (; this->vscroll->IsVisible(i) && it != visible_settings.end(); i++, it++) {
-			const AIConfigItem &config_item = **it;
+			const ScriptConfigItem &config_item = **it;
 			int current_value = config->GetSetting((config_item).name);
-			bool editable = _game_mode == GM_MENU || !Company::IsValidID(this->slot) || (config_item.flags & AICONFIG_INGAME) != 0;
+			bool editable = _game_mode == GM_MENU || !Company::IsValidID(this->slot) || (config_item.flags & SCRIPTCONFIG_INGAME) != 0;
 
 			StringID str;
 			TextColour colour;
@@ -359,7 +360,7 @@ struct AISettingsWindow : public Window {
 				SetDParamStr(idx++, config_item.description);
 			}
 
-			if ((config_item.flags & AICONFIG_BOOLEAN) != 0) {
+			if ((config_item.flags & SCRIPTCONFIG_BOOLEAN) != 0) {
 				DrawFrameRect(buttons_left, y  + 2, buttons_left + 19, y + 10, (current_value != 0) ? COLOUR_GREEN : COLOUR_RED, (current_value != 0) ? FR_LOWERED : FR_NONE);
 				SetDParam(idx++, current_value == 0 ? STR_CONFIG_SETTING_OFF : STR_CONFIG_SETTING_ON);
 			} else {
@@ -403,10 +404,10 @@ struct AISettingsWindow : public Window {
 
 				VisibleSettingsList::const_iterator it = this->visible_settings.begin();
 				for (int i = 0; i < num; i++) it++;
-				const AIConfigItem config_item = **it;
-				if (_game_mode == GM_NORMAL && Company::IsValidID(this->slot) && (config_item.flags & AICONFIG_INGAME) == 0) return;
+				const ScriptConfigItem config_item = **it;
+				if (_game_mode == GM_NORMAL && Company::IsValidID(this->slot) && (config_item.flags & SCRIPTCONFIG_INGAME) == 0) return;
 
-				bool bool_item = (config_item.flags & AICONFIG_BOOLEAN) != 0;
+				bool bool_item = (config_item.flags & SCRIPTCONFIG_BOOLEAN) != 0;
 
 				int x = pt.x - wid->pos_x;
 				if (_current_text_dir == TD_RTL) x = wid->current_x - x;
@@ -462,9 +463,9 @@ struct AISettingsWindow : public Window {
 	virtual void OnQueryTextFinished(char *str)
 	{
 		if (StrEmpty(str)) return;
-		AIConfigItemList::const_iterator it = this->ai_config->GetConfigList()->begin();
+		ScriptConfigItemList::const_iterator it = this->ai_config->GetConfigList()->begin();
 		for (int i = 0; i < this->clicked_row; i++) it++;
-		if (_game_mode == GM_NORMAL && Company::IsValidID(this->slot) && (it->flags & AICONFIG_INGAME) == 0) return;
+		if (_game_mode == GM_NORMAL && Company::IsValidID(this->slot) && (it->flags & SCRIPTCONFIG_INGAME) == 0) return;
 		int32 value = atoi(str);
 		this->ai_config->SetSetting((*it).name, value);
 		this->CheckDifficultyLevel();
@@ -797,7 +798,7 @@ enum AIDebugWindowWidgets {
 };
 
 /**
- * Window with everything an AI prints via AILog.
+ * Window with everything an AI prints via ScriptLog.
  */
 struct AIDebugWindow : public QueryStringBaseWindow {
 	static const int top_offset;    ///< Offset of the text at the top of the AID_WIDGET_LOG_PANEL.
@@ -931,7 +932,7 @@ struct AIDebugWindow : public QueryStringBaseWindow {
 		/* If there are no active companies, don't display anything else. */
 		if (ai_debug_company == INVALID_COMPANY) return;
 
-		AILog::LogData *log = (AILog::LogData *)Company::Get(ai_debug_company)->ai_instance->GetLogPointer();
+		ScriptLog::LogData *log = (ScriptLog::LogData *)Company::Get(ai_debug_company)->ai_instance->GetLogPointer();
 
 		int scroll_count = (log == NULL) ? 0 : log->used;
 		if (this->vscroll->GetCount() != scroll_count) {
@@ -984,7 +985,7 @@ struct AIDebugWindow : public QueryStringBaseWindow {
 
 		switch (widget) {
 			case AID_WIDGET_LOG_PANEL: {
-				AILog::LogData *log = (AILog::LogData *)Company::Get(ai_debug_company)->ai_instance->GetLogPointer();
+				ScriptLog::LogData *log = (ScriptLog::LogData *)Company::Get(ai_debug_company)->ai_instance->GetLogPointer();
 				if (log == NULL) return;
 
 				int y = this->top_offset;
@@ -994,11 +995,11 @@ struct AIDebugWindow : public QueryStringBaseWindow {
 
 					TextColour colour;
 					switch (log->type[pos]) {
-						case AILog::LOG_SQ_INFO:  colour = TC_BLACK;  break;
-						case AILog::LOG_SQ_ERROR: colour = TC_RED;    break;
-						case AILog::LOG_INFO:     colour = TC_BLACK;  break;
-						case AILog::LOG_WARNING:  colour = TC_YELLOW; break;
-						case AILog::LOG_ERROR:    colour = TC_RED;    break;
+						case ScriptLog::LOG_SQ_INFO:  colour = TC_BLACK;  break;
+						case ScriptLog::LOG_SQ_ERROR: colour = TC_RED;    break;
+						case ScriptLog::LOG_INFO:     colour = TC_BLACK;  break;
+						case ScriptLog::LOG_WARNING:  colour = TC_YELLOW; break;
+						case ScriptLog::LOG_ERROR:    colour = TC_RED;    break;
 						default:                  colour = TC_BLACK;  break;
 					}
 
@@ -1025,7 +1026,7 @@ struct AIDebugWindow : public QueryStringBaseWindow {
 		this->RaiseWidget(ai_debug_company + AID_WIDGET_COMPANY_BUTTON_START);
 		ai_debug_company = show_ai;
 
-		AILog::LogData *log = (AILog::LogData *)Company::Get(ai_debug_company)->ai_instance->GetLogPointer();
+		ScriptLog::LogData *log = (ScriptLog::LogData *)Company::Get(ai_debug_company)->ai_instance->GetLogPointer();
 		this->vscroll->SetCount((log == NULL) ? 0 : log->used);
 
 		this->LowerWidget(ai_debug_company + AID_WIDGET_COMPANY_BUTTON_START);
@@ -1124,7 +1125,7 @@ struct AIDebugWindow : public QueryStringBaseWindow {
 		 * This needs to be done in gameloop-scope, so the AI is suspended immediately. */
 		if (!gui_scope && data == ai_debug_company && this->break_check_enabled && !StrEmpty(this->edit_str_buf)) {
 			/* Get the log instance of the active company */
-			AILog::LogData *log = (AILog::LogData *)Company::Get(ai_debug_company)->ai_instance->GetLogPointer();
+			ScriptLog::LogData *log = (ScriptLog::LogData *)Company::Get(ai_debug_company)->ai_instance->GetLogPointer();
 
 			if (log != NULL && case_sensitive_break_check?
 					strstr(log->lines[log->pos], this->edit_str_buf) != 0 :

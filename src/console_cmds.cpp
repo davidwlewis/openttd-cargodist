@@ -1069,7 +1069,6 @@ DEF_CONSOLE_CMD(ConRestart)
 	return true;
 }
 
-#ifdef ENABLE_AI
 /**
  * Print a text buffer line by line to the console. Lines are seperated by '\n'.
  * @param buf The buffer to print.
@@ -1150,8 +1149,8 @@ DEF_CONSOLE_CMD(ConStartAI)
 
 	AIConfig *config = AIConfig::GetConfig((CompanyID)n);
 	if (argc >= 2) {
-		config->ChangeAI(argv[1], -1, true);
-		if (!config->HasAI()) {
+		config->Change(argv[1], -1, true);
+		if (!config->HasScript()) {
 			IConsoleWarning("Failed to load the specified AI");
 			return true;
 		}
@@ -1255,7 +1254,6 @@ DEF_CONSOLE_CMD(ConRescanAI)
 
 	return true;
 }
-#endif /* ENABLE_AI */
 
 DEF_CONSOLE_CMD(ConRescanNewGRF)
 {
@@ -1892,14 +1890,12 @@ void IConsoleStdLibRegister()
 	IConsoleAliasRegister("list_patches", "list_settings %+");
 	IConsoleAliasRegister("developer",    "setting developer %+");
 
-#ifdef ENABLE_AI
 	IConsoleCmdRegister("list_ai_libs", ConListAILibs);
 	IConsoleCmdRegister("list_ai",      ConListAI);
 	IConsoleCmdRegister("reload_ai",    ConReloadAI);
 	IConsoleCmdRegister("rescan_ai",    ConRescanAI);
 	IConsoleCmdRegister("start_ai",     ConStartAI);
 	IConsoleCmdRegister("stop_ai",      ConStopAI);
-#endif /* ENABLE_AI */
 
 	/* networking functions */
 #ifdef ENABLE_NETWORK
