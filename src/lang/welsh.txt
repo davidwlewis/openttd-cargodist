@@ -1264,7 +1264,6 @@ STR_CONFIG_SETTING_AI_BUILDS_AIRCRAFT                           :{LTBLUE}Analluo
 STR_CONFIG_SETTING_AI_BUILDS_SHIPS                              :{LTBLUE}Analluogi llongau ar gyfer y cyfrifiadur: {ORANGE}{STRING}
 
 STR_CONFIG_SETTING_AI_IN_MULTIPLAYER                            :{LTBLUE}Caniatáu AIau mewn gemau amlchwaraewr: {ORANGE}{STRING}
-STR_CONFIG_SETTING_AI_MAX_OPCODES                               :{LTBLUE}#opcodes cyn yr atelir AI: {ORANGE}{STRING}
 
 STR_CONFIG_SETTING_SERVINT_ISPERCENT                            :{LTBLUE}Dangos y cyfnod rhwng gwasanaethau mewn canrannau: {ORANGE}{STRING}
 STR_CONFIG_SETTING_SERVINT_TRAINS                               :{LTBLUE}Cyfnod rhagosodedig rhwng gwasanaethu ar gyfer trenau: {ORANGE}{STRING} diwrnod
@@ -3412,8 +3411,6 @@ STR_AI_DEBUG_CONTINUE                                           :{BLACK}Parhau
 STR_AI_DEBUG_CONTINUE_TOOLTIP                                   :{BLACK}Dadoedi a rhedeg yr AI
 STR_AI_DEBUG_SELECT_AI_TOOLTIP                                  :{BLACK}Gweld allbwn dadnamu'r AI yma
 
-STR_ERROR_NO_AI                                                 :{WHITE}Fe Adeiladwyd OpenTTD heb gynorthwyaeth AI...
-STR_ERROR_NO_AI_SUB                                             :{WHITE}... nid oes unrhyw AI ar gael!
 
 STR_ERROR_AI_NO_AI_FOUND                                        :Ni ganfuwyd AI addas i lwytho.{}AI ffug yw hwn na wnai unrhyw beth.{}Gallwch lawrlwytho sawl AI drwy'r system 'Cynnwys Arlein'
 STR_ERROR_AI_PLEASE_REPORT_CRASH                                :{WHITE}Mae AI a oedd yn rhedeg wedi chwalu. A fyddwch cystad ag adrodd am hyn i awdur yr AI ynghyd â sgrin-gipiad o'r Ffenestr Ddadnamu AI

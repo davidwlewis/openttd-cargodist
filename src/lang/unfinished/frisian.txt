@@ -1253,7 +1253,6 @@ STR_CONFIG_SETTING_AI_BUILDS_AIRCRAFT                           :{LTBLUE}Ferbied
 STR_CONFIG_SETTING_AI_BUILDS_SHIPS                              :{LTBLUE}Ferbied skippen foar computerspiler: {ORANGE}{STRING}
 
 STR_CONFIG_SETTING_AI_IN_MULTIPLAYER                            :{LTBLUE}Stea AIs ta yn multiplayer: {ORANGE}{STRING}
-STR_CONFIG_SETTING_AI_MAX_OPCODES                               :{LTBLUE}#opcodes Foardat AI Slúten wurdt: {ORANGE}{STRING}
 
 STR_CONFIG_SETTING_SERVINT_ISPERCENT                            :{LTBLUE}reperaasje skemas binne yn procenten: {ORANGE}{STRING}
 STR_CONFIG_SETTING_SERVINT_TRAINS                               :{LTBLUE}Standaard skema foar ûnderhald treinen: {ORANGE}{STRING} dei{P 0:1 "" s}/%
@@ -2411,8 +2410,6 @@ STR_AI_DEBUG_SETTINGS                                           :{BLACK}AI ynste
 STR_AI_DEBUG_CONTINUE                                           :{BLACK}Trjochgean
 STR_AI_DEBUG_SELECT_AI_TOOLTIP                                  :{BLACK}Lit debug output fan dizze AI sjen
 
-STR_ERROR_NO_AI                                                 :{WHITE}OpenTTD is bout sûnder AI ûndersteuning...
-STR_ERROR_NO_AI_SUB                                             :{WHITE}... gjin AIs beskikber!
 
 STR_ERROR_AI_NO_AI_FOUND                                        :Gjin geskikte compjûterspiler fûn.{}Disse compjûterspiler is in dummy en docht neat.{}Jo kinne compjûterspilers delhelje fan 'Online Inhâld' ôf.
 
