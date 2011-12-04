@@ -2,7 +2,7 @@
 
 VPATH=.:./.git/refs/heads/
 
-gitmake-all: cdo cd
+gitmake-all: cd
 	touch gitmake-all
 	git checkout patches
 	mv patches/current/*.diff current/
@@ -44,15 +44,9 @@ gitmake: gitmake-origin
 	git merge master
 	[ ! -e gitmake-build ] || make -j`cat gitmake-build`
 
-smallmap-zoom-in: gitmake 
-
-cdo: station-gui smallmap-stats ext-rating
-
 ext-rating: cargomap
 
 station-gui: cargomap
-
-smallmap-stats: smallmap-zoom-in cargomap
 
 texteff: gitmake 
 
@@ -88,6 +82,6 @@ smallmap-overlay: linkgraph-overlay smallmap-refactor
 
 viewport-overlay: overlay-legend
 
-push: master gitmake patches cd ext-rating station-gui smallmap-stats flowmapping-core mcf demands components capacities smallmap-zoom-in texteff cargomap multimap reservation moving-average selfaware-stationcargo linkgraph-overlay smallmap-refactor smallmap-overlay viewport-overlay overlay-legend cdo
+push: master gitmake patches cd ext-rating station-gui flowmapping-core mcf demands components capacities texteff cargomap multimap reservation moving-average selfaware-stationcargo linkgraph-overlay smallmap-refactor smallmap-overlay viewport-overlay overlay-legend
 	git push github $(^F)
 
