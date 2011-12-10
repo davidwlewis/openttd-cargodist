@@ -20,7 +20,7 @@
 #include "saveload/saveload.h"
 #include "company_func.h"
 #include "strings_func.h"
-#include "gui.h"
+#include "error.h"
 #include "window_gui.h"
 #include "window_func.h"
 #include "tile_map.h"
@@ -725,7 +725,7 @@ static bool MakeSmallScreenshot()
 {
 	const ScreenshotFormat *sf = _screenshot_formats + _cur_screenshot_format;
 	return sf->proc(MakeScreenshotName(SCREENSHOT_NAME, sf->extension), CurrentScreenCallback, NULL, _screen.width, _screen.height,
-			BlitterFactoryBase::GetCurrentBlitter()->GetScreenDepth(), _cur_palette);
+			BlitterFactoryBase::GetCurrentBlitter()->GetScreenDepth(), _cur_palette.palette);
 }
 
 /** Make a zoomed-in screenshot of the currently visible area. */
@@ -747,7 +747,7 @@ static bool MakeZoomedInScreenshot()
 
 	const ScreenshotFormat *sf = _screenshot_formats + _cur_screenshot_format;
 	return sf->proc(MakeScreenshotName(SCREENSHOT_NAME, sf->extension), LargeWorldCallback, &vp, vp.width, vp.height,
-			BlitterFactoryBase::GetCurrentBlitter()->GetScreenDepth(), _cur_palette);
+			BlitterFactoryBase::GetCurrentBlitter()->GetScreenDepth(), _cur_palette.palette);
 }
 
 /** Make a screenshot of the whole map. */
@@ -774,7 +774,7 @@ static bool MakeWorldScreenshot()
 
 	sf = _screenshot_formats + _cur_screenshot_format;
 	return sf->proc(MakeScreenshotName(SCREENSHOT_NAME, sf->extension), LargeWorldCallback, &vp, vp.width, vp.height,
-			BlitterFactoryBase::GetCurrentBlitter()->GetScreenDepth(), _cur_palette);
+			BlitterFactoryBase::GetCurrentBlitter()->GetScreenDepth(), _cur_palette.palette);
 }
 
 /**

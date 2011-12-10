@@ -19,6 +19,7 @@
 #include "linkgraph/linkgraph_type.h"
 #include "newgrf_storage.h"
 #include "moving_average.h"
+#include "town.h"
 #include <map>
 #include <set>
 
@@ -543,5 +544,35 @@ public:
 };
 
 #define FOR_ALL_STATIONS(var) FOR_ALL_BASE_STATIONS_OF_TYPE(Station, var)
+
+/** Iterator to iterate over all tiles belonging to an airport. */
+class AirportTileIterator : public OrthogonalTileIterator {
+private:
+	const Station *st; ///< The station the airport is a part of.
+
+public:
+	/**
+	 * Construct the iterator.
+	 * @param ta Area, i.e. begin point and width/height of to-be-iterated area.
+	 */
+	AirportTileIterator(const Station *st) : OrthogonalTileIterator(st->airport), st(st)
+	{
+		if (!st->TileBelongsToAirport(this->tile)) ++(*this);
+	}
+
+	FORCEINLINE TileIterator& operator ++()
+	{
+		(*this).OrthogonalTileIterator::operator++();
+		while (this->tile != INVALID_TILE && !st->TileBelongsToAirport(this->tile)) {
+			(*this).OrthogonalTileIterator::operator++();
+		}
+		return *this;
+	}
+
+	virtual TileIterator *Clone() const
+	{
+		return new AirportTileIterator(*this);
+	}
+};
 
 #endif /* STATION_BASE_H */
