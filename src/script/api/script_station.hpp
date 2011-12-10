@@ -89,9 +89,19 @@ public:
 	/**
 	 * Get the coverage radius of this type of station.
 	 * @param station_type The type of station.
+	 * @pre station_type != STATION_AIRPORT.
 	 * @return The radius in tiles.
+	 * @note Coverage radius of airports needs to be requested via ScriptAirport::GetAirportCoverageRadius(), as it requires AirportType.
 	 */
 	static int32 GetCoverageRadius(ScriptStation::StationType station_type);
+
+	/**
+	 * Get the coverage radius of this station.
+	 * @param station_id The station to get the coverage radius of.
+	 * @pre IsValidStation(station_id).
+	 * @return The radius in tiles.
+	 */
+	static int32 GetStationCoverageRadius(StationID station_id);
 
 	/**
 	 * Get the manhattan distance from the tile to the ScriptStation::GetLocation()
