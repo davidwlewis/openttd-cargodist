@@ -41,7 +41,7 @@
 #include "../string_func.h"
 #include "../engine_base.h"
 #include "../fios.h"
-#include "../gui.h"
+#include "../error.h"
 
 #include "table/strings.h"
 
@@ -2287,7 +2287,8 @@ static const SaveLoadFormat *GetSavegameFormat(char *s, byte *compression_level)
 					char *end;
 					long level = strtol(complevel, &end, 10);
 					if (end == complevel || level != Clamp(level, slf->min_compression, slf->max_compression)) {
-						ShowInfoF("Compression level '%s' is not valid.", complevel);
+						SetDParamStr(0, complevel);
+						ShowErrorMessage(STR_CONFIG_ERROR, STR_CONFIG_ERROR_INVALID_SAVEGAME_COMPRESSION_LEVEL, WL_CRITICAL);
 					} else {
 						*compression_level = level;
 					}
@@ -2296,7 +2297,9 @@ static const SaveLoadFormat *GetSavegameFormat(char *s, byte *compression_level)
 			}
 		}
 
-		ShowInfoF("Savegame format '%s' is not available. Reverting to '%s'.", s, def->name);
+		SetDParamStr(0, s);
+		SetDParamStr(1, def->name);
+		ShowErrorMessage(STR_CONFIG_ERROR, STR_CONFIG_ERROR_INVALID_SAVEGAME_COMPRESSION_ALGORITHM, WL_CRITICAL);
 
 		/* Restore the string by adding the : back */
 		if (complevel != NULL) *complevel = ':';
