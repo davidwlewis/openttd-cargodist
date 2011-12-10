@@ -1000,6 +1000,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\..\src\error.h"
+				>
+			</File>
+			<File
 				RelativePath=".\..\src\fileio_func.h"
 				>
 			</File>
@@ -1913,6 +1917,10 @@
 			</File>
 			<File
 				RelativePath=".\..\src\engine_gui.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\..\src\error_gui.cpp"
 				>
 			</File>
 			<File
