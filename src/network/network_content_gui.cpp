@@ -14,7 +14,7 @@
 #include "../strings_func.h"
 #include "../gfx_func.h"
 #include "../window_func.h"
-#include "../gui.h"
+#include "../error.h"
 #include "../ai/ai.hpp"
 #include "../base_media_base.h"
 #include "../sortlist_type.h"
@@ -197,8 +197,14 @@ public:
 	virtual void OnClick(Point pt, int widget, int click_count)
 	{
 		if (widget == NCDSWW_CANCELOK) {
-			if (this->downloaded_bytes != this->total_bytes) _network_content_client.Close();
-			delete this;
+			if (this->downloaded_bytes != this->total_bytes) {
+				_network_content_client.Close();
+				delete this;
+			} else {
+				/* If downloading succeeded, close the online content window. This will close
+				 * the current window as well. */
+				DeleteWindowById(WC_NETWORK_WINDOW, 1);
+			}
 		}
 	}
 
@@ -252,6 +258,7 @@ class NetworkContentListWindow : public QueryStringBaseWindow, ContentCallback {
 	static GUIContentList::SortFunction * const sorter_funcs[];   ///< Sorter functions
 	static GUIContentList::FilterFunction * const filter_funcs[]; ///< Filter functions.
 	GUIContentList content;      ///< List with content
+	bool auto_select;            ///< Automatically select all content when the meta-data becomes available
 
 	const ContentInfo *selected; ///< The selected content info
 	int list_pos;                ///< Our position in the list
@@ -367,6 +374,7 @@ public:
 	 */
 	NetworkContentListWindow(const WindowDesc *desc, bool select_all) :
 			QueryStringBaseWindow(EDITBOX_MAX_SIZE),
+			auto_select(select_all),
 			selected(NULL),
 			list_pos(0)
 	{
@@ -754,6 +762,7 @@ public:
 
 	virtual void OnReceiveContentInfo(const ContentInfo *rci)
 	{
+		if (this->auto_select && !rci->IsSelected()) _network_content_client.ToggleSelectedState(rci);
 		this->content.ForceRebuild();
 		this->InvalidateData();
 	}
