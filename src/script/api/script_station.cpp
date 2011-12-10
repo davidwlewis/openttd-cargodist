@@ -50,11 +50,9 @@
 
 /* static */ int32 ScriptStation::GetCoverageRadius(ScriptStation::StationType station_type)
 {
-	if (station_type == STATION_AIRPORT) {
-		DEBUG(script, 0, "GetCoverageRadius(): coverage radius of airports needs to be requested via ScriptAirport::GetAirportCoverageRadius(), as it requires AirportType");
-		return -1;
-	}
+	if (station_type == STATION_AIRPORT) return -1;
 	if (!HasExactlyOneBit(station_type)) return -1;
+
 	if (!_settings_game.station.modified_catchment) return CA_UNMODIFIED;
 
 	switch (station_type) {
@@ -64,6 +62,13 @@
 		case STATION_DOCK:       return CA_DOCK;
 		default:                 return CA_NONE;
 	}
+}
+
+/* static */ int32 ScriptStation::GetStationCoverageRadius(StationID station_id)
+{
+	if (!IsValidStation(station_id)) return -1;
+
+	return Station::Get(station_id)->GetCatchmentRadius();
 }
 
 /* static */ int32 ScriptStation::GetDistanceManhattanToTile(StationID station_id, TileIndex tile)

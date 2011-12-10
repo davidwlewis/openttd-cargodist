@@ -20,7 +20,7 @@
 #include "station_base.h"
 #include "company_base.h"
 #include "news_func.h"
-#include "gui.h"
+#include "error.h"
 #include "object.h"
 #include "genworld.h"
 #include "newgrf_debug.h"
@@ -1896,8 +1896,7 @@ bool GenerateTowns(TownLayout layout)
 
 	/* If there are no towns at all and we are generating new game, bail out */
 	if (Town::GetNumItems() == 0 && _game_mode != GM_EDITOR) {
-		extern StringID _switch_mode_errorstr;
-		_switch_mode_errorstr = STR_ERROR_COULD_NOT_CREATE_TOWN;
+		ShowErrorMessage(STR_ERROR_COULD_NOT_CREATE_TOWN, INVALID_STRING_ID, WL_CRITICAL);
 	}
 
 	return false;  // we are still without a town? we failed, simply
