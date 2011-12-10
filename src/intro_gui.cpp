@@ -10,6 +10,7 @@
 /** @file intro_gui.cpp The main menu GUI. */
 
 #include "stdafx.h"
+#include "error.h"
 #include "gui.h"
 #include "window_gui.h"
 #include "textbuf_gui.h"
@@ -332,7 +333,10 @@ void AskExitGame()
 
 static void AskExitToGameMenuCallback(Window *w, bool confirmed)
 {
-	if (confirmed) _switch_mode = SM_MENU;
+	if (confirmed) {
+		_switch_mode = SM_MENU;
+		ClearErrorMessages();
+	}
 }
 
 void AskExitToGameMenu()
