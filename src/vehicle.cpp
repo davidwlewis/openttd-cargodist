@@ -10,7 +10,7 @@
 /** @file vehicle.cpp Base implementations of all vehicles. */
 
 #include "stdafx.h"
-#include "gui.h"
+#include "error.h"
 #include "roadveh.h"
 #include "ship.h"
 #include "spritecache.h"
@@ -2020,6 +2020,9 @@ void Vehicle::RefreshNextHopsStats()
 			i->second += v->cargo_cap;
 		}
 	}
+	
+	/* If orders were deleted while loading, we're done here.*/
+	if (this->orders.list == NULL) return;
 
 	uint hops = 0;
 	const Order *first = this->orders.list->GetNextStoppingOrder(this,
