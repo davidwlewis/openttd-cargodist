@@ -1157,6 +1157,7 @@ STR_CONFIG_SETTING_STOP_ON_COMPETITOR_ROAD                      :{LTBLUE}경쟁�
 STR_CONFIG_SETTING_ADJACENT_STATIONS                            :{LTBLUE}정거장 근처에 건물 짓기 허용: {ORANGE}{STRING}
 STR_CONFIG_SETTING_DYNAMIC_ENGINES                              :{LTBLUE}여러 개의 NewGRF 엔진 세트를 허용: {ORANGE}{STRING}
 STR_CONFIG_SETTING_DYNAMIC_ENGINES_EXISTING_VEHICLES            :{WHITE}이미 차량이 존재하면 이 설정을 변경하실 수 없습니다.
+STR_CONFIG_SETTING_INFRASTRUCTURE_MAINTENANCE                   :{LTBLUE}인프라 유지비: {ORANGE}{STRING}
 
 STR_CONFIG_SETTING_NEVER_EXPIRE_AIRPORTS                        :{LTBLUE}공항이 사라지지 않게 함: {ORANGE}{STRING}
 
@@ -1265,6 +1266,7 @@ STR_CONFIG_SETTING_AI_BUILDS_AIRCRAFT                           :{LTBLUE}컴퓨�
 STR_CONFIG_SETTING_AI_BUILDS_SHIPS                              :{LTBLUE}컴퓨터의 선박 사용을 허가하지 않음 : {ORANGE}{STRING}
 
 STR_CONFIG_SETTING_AI_IN_MULTIPLAYER                            :{LTBLUE}멀티플레이에서 AI를 허용: {ORANGE}{STRING}
+STR_CONFIG_SETTING_SCRIPT_MAX_OPCODES                           :{LTBLUE}스크립트가 일시 중지되기 전의 #opcodes: {ORANGE}{STRING}
 
 STR_CONFIG_SETTING_SERVINT_ISPERCENT                            :{LTBLUE}백분율에 의한 점검 주기: {ORANGE}{STRING}
 STR_CONFIG_SETTING_SERVINT_TRAINS                               :{LTBLUE}열차 기본 점검 간격: {ORANGE}{STRING} 일/%
@@ -2540,7 +2542,7 @@ STR_BROKEN_VEHICLE_LENGTH                                       :{WHITE}'{1:COMP
 STR_NEWGRF_BUGGY                                                :{WHITE}NewGRF '{STRING}' 의 정보가 잘못되었습니다
 STR_NEWGRF_BUGGY_ARTICULATED_CARGO                              :{WHITE}{1:ENGINE}을 위한 화물/개조 정보가 건설 후 구매 목록과 다릅니다. 이것은 자동교체에서 개조를 실패를 초래할 수 있습니다.
 STR_NEWGRF_BUGGY_ENDLESS_PRODUCTION_CALLBACK                    :{WHITE}'{1:STRING}' 때문에 결과물 콜백 과정에서 무한 루프가 발생하고 있습니다.
-STR_NEWGRF_BUGGY_UNKNOWN_CALLBACK_RESULT                        :{WHITE}Callback 함수 0x{HEX}가 알 수없는/잘못된 결과값 0x{HEX}을 반환했습니다.
+STR_NEWGRF_BUGGY_UNKNOWN_CALLBACK_RESULT                        :{WHITE}Callback 함수 {1:HEX}가 알 수없는/잘못된 결과값 {2:HEX}을 반환했습니다.
 
 # 'User removed essential NewGRFs'-placeholders for stuff without specs
 STR_NEWGRF_INVALID_CARGO                                        :<인식오류 화물>
@@ -2585,6 +2587,9 @@ STR_TOWN_VIEW_MAIL_LAST_MONTH_MAX                               :{BLACK}지난�
 STR_TOWN_VIEW_CARGO_FOR_TOWNGROWTH                              :{BLACK}도시가 성장하기 위해 필요한 화물:
 STR_TOWN_VIEW_CARGO_FOR_TOWNGROWTH_REQUIRED_GENERAL             :{ORANGE}{STRING}{RED}{G 0 "이" "가"} 필요함
 STR_TOWN_VIEW_CARGO_FOR_TOWNGROWTH_REQUIRED_WINTER              :냉대 기후에서 {ORANGE}{STRING}{BLACK}가 필요합니다.
+STR_TOWN_VIEW_CARGO_FOR_TOWNGROWTH_DELIVERED_GENERAL            :{ORANGE}{STRING}{GREEN} 배달됨
+STR_TOWN_VIEW_CARGO_FOR_TOWNGROWTH_REQUIRED                     :{ORANGE}{CARGO_TINY} / {CARGO_LONG}{RED} (화물이 더 필요함)
+STR_TOWN_VIEW_CARGO_FOR_TOWNGROWTH_DELIVERED                    :{ORANGE}{CARGO_TINY} / {CARGO_LONG}{GREEN} (배달됨)
 STR_TOWN_VIEW_TOWN_GROWS_EVERY                                  :{BLACK}도시는 {ORANGE}{COMMA}{BLACK}일마다 1번씩 성장중입니다.
 STR_TOWN_VIEW_TOWN_GROWS_EVERY_FUNDED                           :{BLACK}도시는 {ORANGE}{COMMA}{BLACK}일마다 1번씩 성장중입니다.(도시에 투자중)
 STR_TOWN_VIEW_TOWN_GROW_STOPPED                                 :{BLACK}도시는 {RED}성장하지 않고{BLACK} 있습니다.
@@ -2721,6 +2726,7 @@ STR_FINANCES_BORROW_BUTTON                                      :{BLACK}{CURRENC
 STR_FINANCES_BORROW_TOOLTIP                                     :{BLACK}돈을 빌립니다. Ctrl+클릭하면 빌릴 수 있는만큼 빌립니다
 STR_FINANCES_REPAY_BUTTON                                       :{BLACK}{CURRENCY_LONG} 갚기
 STR_FINANCES_REPAY_TOOLTIP                                      :{BLACK}돈을 갚습니다. Ctrl+클릭하시면 갚을 수 있는 만큼 갚습니다
+STR_FINANCES_INFRASTRUCTURE_BUTTON                              :{BLACK}회사 인프라
 
 # Company view
 STR_COMPANY_VIEW_CAPTION                                        :{WHITE}{COMPANY} {BLACK}{COMPANY_NUM}
@@ -2736,6 +2742,13 @@ STR_COMPANY_VIEW_SHIPS                                          :{WHITE}선박 {
 STR_COMPANY_VIEW_VEHICLES_NONE                                  :{WHITE}없음
 STR_COMPANY_VIEW_COMPANY_VALUE                                  :{GOLD}회사가치: {WHITE}{CURRENCY_LONG}
 STR_COMPANY_VIEW_SHARES_OWNED_BY                                :{WHITE}({COMMA}% {COMPANY}의 소유)
+STR_COMPANY_VIEW_INFRASTRUCTURE                                 :{GOLD}인프라:
+STR_COMPANY_VIEW_INFRASTRUCTURE_RAIL                            :{WHITE}{COMMA}타일의 철도
+STR_COMPANY_VIEW_INFRASTRUCTURE_ROAD                            :{WHITE}{COMMA}타일의 도로
+STR_COMPANY_VIEW_INFRASTRUCTURE_WATER                           :{WHITE}{COMMA}타일의 운하
+STR_COMPANY_VIEW_INFRASTRUCTURE_STATION                         :{WHITE}{COMMA}타일의 역
+STR_COMPANY_VIEW_INFRASTRUCTURE_AIRPORT                         :{WHITE}{COMMA}개의 공항
+STR_COMPANY_VIEW_INFRASTRUCTURE_NONE                            :{WHITE}없음
 
 STR_COMPANY_VIEW_BUILD_HQ_BUTTON                                :{BLACK}본사(HQ) 건설
 STR_COMPANY_VIEW_BUILD_HQ_TOOLTIP                               :{BLACK}회사 지부 건설
@@ -2743,6 +2756,8 @@ STR_COMPANY_VIEW_VIEW_HQ_BUTTON                                 :{BLACK}본사 �
 STR_COMPANY_VIEW_VIEW_HQ_TOOLTIP                                :{BLACK}회사 지부 보기.
 STR_COMPANY_VIEW_RELOCATE_HQ                                    :{BLACK}본사 재위치
 STR_COMPANY_VIEW_RELOCATE_COMPANY_HEADQUARTERS                  :{BLACK}회사가치의 1% 가격으로 본사를 다른 위치에 재건축합니다. SHIFT+클릭으로 예상 가격을 볼 수 있습니다.
+STR_COMPANY_VIEW_INFRASTRUCTURE_BUTTON                          :{BLACK}상세정보
+STR_COMPANY_VIEW_INFRASTRUCTURE_TOOLTIP                         :{BLACK}상세한 회사 인프라의 총계 보기
 
 STR_COMPANY_VIEW_NEW_FACE_BUTTON                                :{BLACK}새 얼굴
 STR_COMPANY_VIEW_NEW_FACE_TOOLTIP                               :{BLACK}매니저의 얼굴을 선택합니다.
@@ -2764,6 +2779,19 @@ STR_COMPANY_VIEW_PRESIDENT_S_NAME_QUERY_CAPTION                 :매니저 이�
 STR_BUY_COMPANY_MESSAGE                                         :{WHITE}저희 회사를 거두어주실 운송회사를 찾고있습니다.{}{}저희 {COMPANY} 회사를 {CURRENCY_LONG}의 가격으로 인수합병하시겠습니까?
 
 # Company infrastructure window
+STR_COMPANY_INFRASTRUCTURE_VIEW_CAPTION                         :{WHITE}{COMPANY}의 인프라 총계
+STR_COMPANY_INFRASTRUCTURE_VIEW_RAIL_SECT                       :{GOLD}철도 인프라:
+STR_COMPANY_INFRASTRUCTURE_VIEW_SIGNALS                         :{WHITE}신호기
+STR_COMPANY_INFRASTRUCTURE_VIEW_ROAD_SECT                       :{GOLD}도로 인프라:
+STR_COMPANY_INFRASTRUCTURE_VIEW_ROAD                            :{WHITE}도로
+STR_COMPANY_INFRASTRUCTURE_VIEW_TRAMWAY                         :{WHITE}전찻길
+STR_COMPANY_INFRASTRUCTURE_VIEW_WATER_SECT                      :{GOLD}해운 인프라:
+STR_COMPANY_INFRASTRUCTURE_VIEW_CANALS                          :{WHITE}운하
+STR_COMPANY_INFRASTRUCTURE_VIEW_STATION_SECT                    :{GOLD}정거장 인프라:
+STR_COMPANY_INFRASTRUCTURE_VIEW_STATIONS                        :{WHITE}정류장, 역
+STR_COMPANY_INFRASTRUCTURE_VIEW_AIRPORTS                        :{WHITE}공항
+STR_COMPANY_INFRASTRUCTURE_VIEW_COST                            :{WHITE}{1:CURRENCY_LONG}/년 ({0:COMMA})
+STR_COMPANY_INFRASTRUCTURE_VIEW_TOTAL                           :{WHITE}{CURRENCY_LONG}/년
 
 # Industry directory
 STR_INDUSTRY_DIRECTORY_CAPTION                                  :{WHITE}산업시설
@@ -3220,6 +3248,10 @@ STR_ORDER_TOOLTIP_UNLOAD                                        :{BLACK}선택�
 
 STR_ORDER_REFIT                                                 :{BLACK}개조
 STR_ORDER_REFIT_TOOLTIP                                         :{BLACK}이 경로에서 어떤 화물을 받을 것인지 선택하십시오. CTRL+클릭은 제거입니다.
+STR_ORDER_REFIT_AUTO                                            :{G=f}{BLACK}자동 개조
+STR_ORDER_REFIT_AUTO_TOOLTIP                                    :{BLACK}이 명령으로 자동 개조할 화물 종류를 선택하세요. Ctrl+Click은 제거입니다. 자동 개조 기능은 이 기능을 지원하는 차량에서만 사용가능합니다.
+STR_ORDER_DROP_REFIT_AUTO                                       :화물 종류 고정
+STR_ORDER_DROP_REFIT_AUTO_ANY                                   :이용가능한 화물
 
 STR_ORDER_SERVICE                                               :{BLACK}점검
 STR_ORDER_DROP_GO_ALWAYS_DEPOT                                  :항상 감
@@ -3308,7 +3340,20 @@ STR_ORDER_NO_UNLOAD_FULL_LOAD                                   :(내리지 않�
 STR_ORDER_NO_UNLOAD_FULL_LOAD_ANY                               :(내리지 않고 아무 화물이나 가득 찰 때까지 기다림)
 STR_ORDER_NO_UNLOAD_NO_LOAD                                     :(적재와 하차 없음)
 
+STR_ORDER_AUTO_REFIT                                            :({STRING}{G 0 "으" ""}로 자동 개조)
+STR_ORDER_FULL_LOAD_REFIT                                       :({STRING}{G 0 "으" ""}로 자동 개조하면서 모든 화물을 가득 싣기)
+STR_ORDER_FULL_LOAD_ANY_REFIT                                   :({STRING}{G 0 "으" ""}로 자동 개조하면서 아무 화물이나 가득 싣기)
+STR_ORDER_UNLOAD_REFIT                                          :({STRING}{G 0 "으" ""}로 자동 개조하면서 화물 하차 후 적재)
+STR_ORDER_UNLOAD_FULL_LOAD_REFIT                                :({STRING}{G 0 "으" ""}로 자동 개조하면서 화물 하차 후 모든 화물을 싣고 출발)
+STR_ORDER_UNLOAD_FULL_LOAD_ANY_REFIT                            :({STRING}{G 0 "으" ""}로 자동 개조하면서 화물 하차 후 아무 화물이나 가득 싣기)
+STR_ORDER_TRANSFER_REFIT                                        :({STRING}{G 0 "으" ""}로 자동 개조하면서 환승 후 화물 받음)
+STR_ORDER_TRANSFER_FULL_LOAD_REFIT                              :({STRING}{G 0 "으" ""}로 자동 개조하면서 환승 후 모든 화물 적재)
+STR_ORDER_TRANSFER_FULL_LOAD_ANY_REFIT                          :({STRING}{G 0 "으" ""}로 자동 개조하면서 환승 후 아무 화물이나 가득 싣기)
+STR_ORDER_NO_UNLOAD_REFIT                                       :({STRING}{G 0 "으" ""}로 자동 개조하면서 내리지 않고 화물을 받음)
+STR_ORDER_NO_UNLOAD_FULL_LOAD_REFIT                             :({STRING}{G 0 "으" ""}로 자동 개조하면서 내리지 않고 가득 찰 때까지 기다림)
+STR_ORDER_NO_UNLOAD_FULL_LOAD_ANY_REFIT                         :({STRING}{G 0 "으" ""}로 자동 개조하면서 내리지 않고 아무 화물이나 가득 찰 때까지 기다림)
 
+STR_ORDER_AUTO_REFIT_ANY                                        :{G=m}이용가능한 화물
 
 STR_ORDER_STOP_LOCATION_NEAR_END                                :[가까운쪽]
 STR_ORDER_STOP_LOCATION_MIDDLE                                  :[중간]
