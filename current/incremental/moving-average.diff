@@ -1,8 +1,8 @@
 diff --git a/projects/openttd_vs100.vcxproj b/projects/openttd_vs100.vcxproj
-index 85ea55a..231d095 100644
+index 783bf2e..498c56a 100644
 --- a/projects/openttd_vs100.vcxproj
 +++ b/projects/openttd_vs100.vcxproj
-@@ -460,6 +460,8 @@
+@@ -461,6 +461,8 @@
      <ClInclude Include="..\src\map_func.h" />
      <ClInclude Include="..\src\map_type.h" />
      <ClInclude Include="..\src\mixer.h" />
@@ -12,10 +12,10 @@ index 85ea55a..231d095 100644
      <ClInclude Include="..\src\network\network_admin.h" />
      <ClInclude Include="..\src\network\network_base.h" />
 diff --git a/projects/openttd_vs100.vcxproj.filters b/projects/openttd_vs100.vcxproj.filters
-index 43bb5b6..b964511 100644
+index 0ccd7e7..c62d98b 100644
 --- a/projects/openttd_vs100.vcxproj.filters
 +++ b/projects/openttd_vs100.vcxproj.filters
-@@ -603,6 +603,12 @@
+@@ -606,6 +606,12 @@
      <ClInclude Include="..\src\mixer.h">
        <Filter>Header Files</Filter>
      </ClInclude>
@@ -29,10 +29,10 @@ index 43bb5b6..b964511 100644
        <Filter>Header Files</Filter>
      </ClInclude>
 diff --git a/projects/openttd_vs80.vcproj b/projects/openttd_vs80.vcproj
-index 896e14b..b206d45 100644
+index 5e183e8..c83da19 100644
 --- a/projects/openttd_vs80.vcproj
 +++ b/projects/openttd_vs80.vcproj
-@@ -1115,6 +1115,14 @@
+@@ -1119,6 +1119,14 @@
  				>
  			</File>
  			<File
@@ -48,10 +48,10 @@ index 896e14b..b206d45 100644
  				>
  			</File>
 diff --git a/projects/openttd_vs90.vcproj b/projects/openttd_vs90.vcproj
-index d17c076..8cc7b5e 100644
+index f5a0558..4d7e596 100644
 --- a/projects/openttd_vs90.vcproj
 +++ b/projects/openttd_vs90.vcproj
-@@ -1112,6 +1112,14 @@
+@@ -1116,6 +1116,14 @@
  				>
  			</File>
  			<File
@@ -67,10 +67,10 @@ index d17c076..8cc7b5e 100644
  				>
  			</File>
 diff --git a/source.list b/source.list
-index 4a395c4..7cbad61 100644
+index 628153d..e54aded 100644
 --- a/source.list
 +++ b/source.list
-@@ -193,6 +193,8 @@ livery.h
+@@ -194,6 +194,8 @@ livery.h
  map_func.h
  map_type.h
  mixer.h

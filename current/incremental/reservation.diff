@@ -560,7 +560,7 @@ index 9fa2e11..8f1eef2 100644
  	}
  
 diff --git a/src/saveload/saveload.cpp b/src/saveload/saveload.cpp
-index c603f58..b033cc8 100644
+index afcd933..8c40849 100644
 --- a/src/saveload/saveload.cpp
 +++ b/src/saveload/saveload.cpp
 @@ -232,7 +232,7 @@
@@ -616,7 +616,7 @@ index 1e47094..790b282 100644
  
  		     SLE_VAR(Vehicle, day_counter,           SLE_UINT8),
 diff --git a/src/vehicle.cpp b/src/vehicle.cpp
-index aa03194..a5af9be 100644
+index d584418..2534bb3 100644
 --- a/src/vehicle.cpp
 +++ b/src/vehicle.cpp
 @@ -716,10 +716,11 @@ void Vehicle::PreDestructor()
