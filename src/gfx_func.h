@@ -64,12 +64,10 @@ extern bool _right_button_clicked;
 extern DrawPixelInfo _screen;
 extern bool _screen_disable_anim;   ///< Disable palette animation (important for 32bpp-anim blitter during giant screenshot)
 
-extern int _pal_first_dirty;
-extern int _pal_count_dirty;
 extern int _num_resolutions;
 extern Dimension _resolutions[32];
 extern Dimension _cur_resolution;
-extern Colour _cur_palette[256]; ///< Current palette. Entry 0 has to be always fully transparent!
+extern Palette _cur_palette; ///< Current palette
 
 void HandleKeypress(uint32 key);
 void HandleCtrlChanged();
@@ -127,7 +125,7 @@ Dimension GetStringBoundingBox(StringID strid);
 uint32 FormatStringLinebreaks(char *str, const char *last, int maxw, FontSize start_fontsize = FS_NORMAL);
 int GetStringHeight(StringID str, int maxw);
 Dimension GetStringMultiLineBoundingBox(StringID str, const Dimension &suggestion);
-void LoadStringWidthTable();
+void LoadStringWidthTable(bool monospace = false);
 
 void DrawDirtyBlocks();
 void SetDirtyBlocks(int left, int top, int right, int bottom);
