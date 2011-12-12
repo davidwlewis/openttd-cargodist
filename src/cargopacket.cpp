@@ -601,9 +601,10 @@ uint StationCargoList::TakeFrom(VehicleCargoList *source, uint max_unload, Order
 
 	for (VehicleCargoList::Iterator c = source->packets.begin(); c != source->packets.end() && remaining_unload > 0;) {
 		StationID cargo_source = (*c)->source;
-		FlowStat &flows = dest->flows[cargo_source];
-		StationID via = flows.GetVia();
-		if (via != INVALID_STATION) {
+		FlowStatMap::const_iterator flows_it = dest->flows.find(cargo_source);
+		StationID via = INVALID_STATION;
+		if (flows_it != dest->flows.end()) {
+			via = flows_it->second.GetVia();
 			/* use cargodist unloading*/
 			action = this->WillUnloadCargoDist(flags, next, via, cargo_source);
 		} else {
@@ -618,11 +619,9 @@ uint StationCargoList::TakeFrom(VehicleCargoList *source, uint max_unload, Order
 				break;
 			case UL_TRANSFER:
 				/* TransferPacket may split the packet and return the transferred part */
-				if (via == this->station->index) {
-					if (flows.GetShares()->size() > 1) {
-						while (via == this->station->index) {
-							via = flows.GetVia();
-						}
+				while (via == this->station->index) {
+					if (flows_it->second.GetShares()->size() > 1) {
+						via = flows_it->second.GetVia();
 					} else {
 						via = INVALID_STATION;
 					}
