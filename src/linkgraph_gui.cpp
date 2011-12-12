@@ -132,7 +132,7 @@ void LinkGraphOverlay::AddLinks(const Station *from, const Station *to)
 	FOR_EACH_SET_CARGO_ID(c, this->cargo_mask) {
 		if (!CargoSpec::Get(c)->IsValid()) continue;
 		const GoodsEntry &ge = from->goods[c];
-		FlowStat sum_flows = ge.GetSumFlowVia(to->index);
+		uint sum_flows = ge.GetSumFlowVia(to->index);
 		const LinkStatMap &ls_map = ge.link_stats;
 		LinkStatMap::const_iterator i = ls_map.find(to->index);
 		if (i != ls_map.end()) {
@@ -145,14 +145,13 @@ void LinkGraphOverlay::AddLinks(const Station *from, const Station *to)
 /**
  * Add information from a given pair of link stat and flow stat to the given link properties.
  * @param orig_link Link stat to read the information from.
- * @param orig_flow Flow stat to read the information from.
+ * @param new_plan Planned flow for the link.
  * @param cargo LinkProperties to write the information to.
  */
-/* static */ void LinkGraphOverlay::AddStats(const LinkStat &orig_link, const FlowStat &orig_flow, LinkProperties &cargo)
+/* static */ void LinkGraphOverlay::AddStats(const LinkStat &orig_link, uint new_plan, LinkProperties &cargo)
 {
 	uint new_cap = orig_link.Capacity();
 	uint new_usg = orig_link.Usage();
-	uint new_plan = orig_flow.Planned();
 
 	/* multiply the numbers by 32 in order to avoid comparing to 0 too often. */
 	if (cargo.capacity == 0 ||
