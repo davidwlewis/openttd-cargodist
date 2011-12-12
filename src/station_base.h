@@ -12,6 +12,7 @@
 #ifndef STATION_BASE_H
 #define STATION_BASE_H
 
+#include "core/random_func.hpp"
 #include "base_station_base.h"
 #include "newgrf_airport.h"
 #include "cargopacket.h"
@@ -21,7 +22,6 @@
 #include "moving_average.h"
 #include "town.h"
 #include <map>
-#include <set>
 
 typedef Pool<BaseStation, StationID, 32, 64000> StationPool;
 extern StationPool _station_pool;
@@ -152,122 +152,50 @@ public:
 };
 
 /**
- * Flow statistics telling how much flow should be and was sent along a link.
+ * Flow statistics telling how much flow should be sent along a link. This is
+ * done by creating "flow shares" and using std::map's upper_bound() method to
+ * look them up with a random number. A flow share is the difference between a
+ * key in a map and the previous key. So one key in the map doesn't actually
+ * mean anything by itself.
  */
-class FlowStat : private MovingAverage<uint> {
-private:
-	uint planned;  ///< Cargo planned to be sent along a link each "month" (30 units of time, determined by moving average).
-	uint sent;     ///< Moving average of cargo being sent.
-	StationID via; ///< Other end of the link. Can be this station, then it means "deliver here".
-
+class FlowStat {
 public:
+	typedef std::map<uint32, StationID> SharesMap;
+
 	friend const SaveLoad *GetFlowStatDesc();
+	
+	FORCEINLINE FlowStat() : sum_shares(0) {}
 
 	/**
-	 * Create a flow stat.
-	 * @param distance Distance to be used as length of moving average.
+	 * Add some flow.
 	 * @param st Remote station.
-	 * @param planned Cargo planned to be sent along this link.
-	 * @param sent Cargo already sent along this link.
+	 * @param flow Amount of flow to be added.
 	 */
-	FORCEINLINE FlowStat(uint distance = 1, StationID st = INVALID_STATION, uint planned = 0, uint sent = 0) :
-		MovingAverage<uint>(distance), planned(planned), sent(sent), via(st) {}
-
-	/**
-	 * Clone an existing flow stat, changing the plan.
-	 * @param prev Flow stat to be cloned.
-	 * @param new_plan New value for planned.
-	 */
-	FORCEINLINE FlowStat(const FlowStat &prev, uint new_plan) :
-		MovingAverage<uint>(prev.length), planned(new_plan), sent(prev.sent), via(prev.via) {}
-
-	/**
-	 * Prevents one copy operation when moving a flowstat from one set to another and decreasing it at the same time.
-	 */
-	FORCEINLINE FlowStat GetDecreasedCopy() const
+	FORCEINLINE void AddShare(StationID st, uint flow)
 	{
-		FlowStat ret(this->length, this->via, this->planned, this->sent);
-		this->MovingAverage<uint>::Decrease(ret.sent);
-		return ret;
+		assert(flow > 0);
+		this->sum_shares += flow;
+		this->shares[this->sum_shares] = st;
 	}
+	
+	uint GetShare(StationID st = INVALID_STATION) const;
+	
+	void EraseShare(StationID st);
+	
+	FORCEINLINE const SharesMap *GetShares() const {return &this->shares;}
 
 	/**
-	 * Increase the sent value.
-	 * @param sent Amount to be added to sent.
-	 */
-	FORCEINLINE void Increase(uint sent)
+	 * Get a station a package can be routed to. This done by drawing a
+	 * random number between 0 and sum_shares and then looking that up in 
+	 * the map with lower_bound. So each share gets selected with a
+	 * probability dependent on its flow.
+         * @return A station ID from the shares map.
+         */
+	FORCEINLINE StationID GetVia() const
 	{
-		this->sent += sent;
-	}
-
-	/**
-	 * Get an estimate of cargo sent along this link during the last 30 time units.
-	 * @return Cargo sent along this link.
-	 */
-	FORCEINLINE uint Sent() const
-	{
-		return this->MovingAverage<uint>::Monthly(sent);
-	}
-
-	/**
-	 * Get the amount of cargo planned to be sent along this link in 30 time units.
-	 * @return Cargo planned to be sent.
-	 */
-	FORCEINLINE uint Planned() const
-	{
-		return this->planned;
-	}
-
-	/**
-	 * Get the station this link is connected to.
-	 * @return Remote station.
-	 */
-	FORCEINLINE StationID Via() const
-	{
-		return this->via;
-	}
-
-	/**
-	 * Comparator for two flow stats for ordering them in a way that makes
-	 * the next flow stat to sent cargo for show up as first element.
-	 */
-	struct Comparator {
-		/**
-		 * Comparator function. Decides by planned - sent or via, if those
-		 * are equal.
-		 * @param x First flow stat.
-		 * @param y Second flow stat.
-		 * @return True if x.planned - x.sent is greater than y.planned - y.sent.
-		 */
-		bool operator()(const FlowStat &x, const FlowStat &y) const
-		{
-			int diff_x = (int)x.Planned() - (int)x.Sent();
-			int diff_y = (int)y.Planned() - (int)y.Sent();
-			if (diff_x != diff_y) {
-				return diff_x > diff_y;
-			} else {
-				return x.Via() > y.Via();
-			}
-		}
-	};
-
-	/**
-	 * Add up two flow stats' planned and sent figures and assign via from the other one to this one.
-	 * @param other Flow stat to add to this one.
-	 * @return This flow stat.
-	 */
-	FORCEINLINE FlowStat &operator+=(const FlowStat &other)
-	{
-		assert(this->via == INVALID_STATION || other.via == INVALID_STATION || this->via == other.via);
-		if (other.via != INVALID_STATION) this->via = other.via;
-		this->planned += other.planned;
-		uint sent = this->sent + other.sent;
-		if (sent > 0) {
-			this->length = (this->length * this->sent + other.length * other.sent) / sent;
-			assert(this->length > 0);
-		}
-		this->sent = sent;
-		return *this;
+		uint rand = RandomRange(this->sum_shares - 1);
+		SharesMap::const_iterator it = this->shares.upper_bound(rand);
+		return it->second;
 	}
 
 	/**
@@ -275,16 +203,17 @@ public:
 	 */
 	FORCEINLINE void Clear()
 	{
-		this->planned = 0;
-		this->sent = 0;
-		this->via = INVALID_STATION;
+		this->shares.clear();
+		this->sum_shares = 0;
 	}
+
+private:
+	SharesMap shares; ///< Shares of flow to be sent via specified station (or consumed locally).
+	uint32 sum_shares;     ///< Sum of flow shares.
 };
 
-typedef std::set<FlowStat, FlowStat::Comparator> FlowStatSet; ///< Percentage of flow to be sent via specified station (or consumed locally).
-
 typedef std::map<StationID, LinkStat> LinkStatMap;
-typedef std::map<StationID, FlowStatSet> FlowStatMap; ///< Flow descriptions by origin stations.
+typedef std::map<StationID, FlowStat> FlowStatMap; ///< Flow descriptions by origin stations.
 
 uint GetMovingAverageLength(const Station *from, const Station *to);
 
@@ -325,7 +254,7 @@ struct GoodsEntry {
 	FlowStatMap flows;      ///< Planned flows through this station.
 	LinkStatMap link_stats; ///< Capacities and usage statistics for outgoing links.
 	LinkGraphComponentID last_component; ///< Component this station was last part of in this cargo's link graph.
-	FlowStat GetSumFlowVia(StationID via) const;
+	uint GetSumFlowVia(StationID via) const;
 };
 
 /** All airport-related information. Only valid if tile != INVALID_TILE. */
