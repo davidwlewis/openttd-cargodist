@@ -1327,15 +1327,14 @@ struct StationViewWindow : public Window {
 		for (FlowStatMap::const_iterator it = flows.begin(); it != flows.end(); ++it) {
 			StationID from = it->first;
 			CargoDataEntry *source_entry = cargo_entry->InsertOrRetrieve(from);
-			const FlowStatSet &flow_set = it->second;
-			for (FlowStatSet::const_iterator flow_it = flow_set.begin(); flow_it != flow_set.end(); ++flow_it) {
-				const FlowStat &stat = *flow_it;
-				StationID via = stat.Via();
+			const FlowStat::SharesMap *shares = it->second.GetShares();
+			for (FlowStat::SharesMap::const_iterator flow_it = shares->begin(); flow_it != shares->end(); ++flow_it) {
+				StationID via = flow_it->second;
 				CargoDataEntry *via_entry = source_entry->InsertOrRetrieve(via);
 				if (via == this->window_number) {
-					via_entry->InsertOrRetrieve(via)->Update(stat.Planned());
+					via_entry->InsertOrRetrieve(via)->Update(flow_it->first);
 				} else {
-					EstimateDestinations(i, from, via, stat.Planned(), via_entry);
+					EstimateDestinations(i, from, via, flow_it->first, via_entry);
 				}
 			}
 		}
@@ -1357,9 +1356,9 @@ struct StationViewWindow : public Window {
 			const FlowStatMap &flowmap = Station::Get(next)->goods[cargo].flows;
 			FlowStatMap::const_iterator map_it = flowmap.find(source);
 			if (map_it != flowmap.end()) {
-				const FlowStatSet &flows = map_it->second;
-				for (FlowStatSet::const_iterator i = flows.begin(); i != flows.end(); ++i) {
-					tmp.InsertOrRetrieve(i->Via())->Update(i->Planned());
+				const FlowStat::SharesMap *shares = map_it->second.GetShares();
+				for (FlowStat::SharesMap::const_iterator i = shares->begin(); i != shares->end(); ++i) {
+					tmp.InsertOrRetrieve(i->second)->Update(i->first);
 				}
 			}
 
@@ -1407,13 +1406,12 @@ struct StationViewWindow : public Window {
 		for (FlowStatMap::const_iterator it = flows.begin(); it != flows.end(); ++it) {
 			StationID from = it->first;
 			const CargoDataEntry *source_entry = source_dest->Retrieve(from);
-			const FlowStatSet &flow_set = it->second;
-			for (FlowStatSet::const_iterator flow_it = flow_set.begin(); flow_it != flow_set.end(); ++flow_it) {
-				const FlowStat &stat = *flow_it;
-				const CargoDataEntry *via_entry = source_entry->Retrieve(stat.Via());
+			const FlowStat::SharesMap *shares = it->second.GetShares();
+			for (FlowStat::SharesMap::const_iterator flow_it = shares->begin(); flow_it != shares->end(); ++flow_it) {
+				const CargoDataEntry *via_entry = source_entry->Retrieve(flow_it->second);
 				for (CargoDataSet::iterator dest_it = via_entry->Begin(); dest_it != via_entry->End(); ++dest_it) {
 					CargoDataEntry *dest_entry = *dest_it;
-					ShowCargo(cargo, i, from, stat.Via(), dest_entry->GetStation(), dest_entry->GetCount());
+					ShowCargo(cargo, i, from, flow_it->second, dest_entry->GetStation(), dest_entry->GetCount());
 				}
 			}
 		}
