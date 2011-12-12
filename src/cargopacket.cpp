@@ -601,9 +601,8 @@ uint StationCargoList::TakeFrom(VehicleCargoList *source, uint max_unload, Order
 
 	for (VehicleCargoList::Iterator c = source->packets.begin(); c != source->packets.end() && remaining_unload > 0;) {
 		StationID cargo_source = (*c)->source;
-		FlowStatSet &flows = dest->flows[cargo_source];
-		FlowStatSet::iterator begin = flows.begin();
-		StationID via = (begin != flows.end() ? begin->Via() : INVALID_STATION);
+		FlowStat &flows = dest->flows[cargo_source];
+		StationID via = flows.GetVia();
 		if (via != INVALID_STATION) {
 			/* use cargodist unloading*/
 			action = this->WillUnloadCargoDist(flags, next, via, cargo_source);
@@ -615,35 +614,24 @@ uint StationCargoList::TakeFrom(VehicleCargoList *source, uint max_unload, Order
 		switch (action) {
 			case UL_DELIVER:
 				unloaded = source->DeliverPacket(c, remaining_unload, payment);
-				if (via != INVALID_STATION) {
-					if (via == this->station->index) {
-						dest->UpdateFlowStats(flows, begin, unloaded);
-					} else {
-						dest->UpdateFlowStats(flows, unloaded, this->station->index);
-					}
-				}
 				remaining_unload -= unloaded;
 				break;
 			case UL_TRANSFER:
 				/* TransferPacket may split the packet and return the transferred part */
 				if (via == this->station->index) {
-					via = (++begin != flows.end()) ? begin->Via() : INVALID_STATION;
+					if (flows.GetShares()->size() > 1) {
+						while (via == this->station->index) {
+							via = flows.GetVia();
+						}
+					} else {
+						via = INVALID_STATION;
+					}
 				}
 				unloaded = source->TransferPacket(c, remaining_unload, this, payment, via);
-				if (via != INVALID_STATION) {
-					dest->UpdateFlowStats(flows, begin, unloaded);
-				}
 				remaining_unload -= unloaded;
 				break;
 			case UL_KEEP:
 				unloaded = source->KeepPacket(c);
-				if (via != INVALID_STATION && next != INVALID_STATION && !has_stopped) {
-					if (via == next) {
-						dest->UpdateFlowStats(flows, begin, unloaded);
-					} else {
-						dest->UpdateFlowStats(flows, unloaded, next);
-					}
-				}
 				break;
 			default:
 				NOT_REACHED();
@@ -814,7 +802,7 @@ void StationCargoList::RerouteStalePackets(StationID to)
 	for (Iterator it(range.first); it != range.second && it.GetKey() == to;) {
 		CargoPacket *packet = *it;
 		it = this->packets.erase(it);
-		StationID next = this->station->goods[this->cargo].UpdateFlowStatsTransfer(packet->source, packet->count, this->station->index);
+		StationID next = this->station->goods[this->cargo].flows[packet->source].GetVia();
 		assert(next != to);
 
 		/* legal, as insert doesn't invalidate iterators in the MultiMap, however

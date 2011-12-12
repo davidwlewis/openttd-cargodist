@@ -3254,16 +3254,9 @@ void DeleteStaleFlows(StationID at, CargoID c_id, StationID to)
 {
 	FlowStatMap &flows = Station::Get(at)->goods[c_id].flows;
 	for (FlowStatMap::iterator f_it = flows.begin(); f_it != flows.end();) {
-		FlowStatSet &s_flows = f_it->second;
-		for (FlowStatSet::iterator s_it = s_flows.begin(); s_it != s_flows.end();) {
-			if (s_it->Via() == to) {
-				s_flows.erase(s_it++);
-				break; // There can only be one flow stat for this remote station in each set.
-			} else {
-				++s_it;
-			}
-		}
-		if (s_flows.empty()) {
+		FlowStat &s_flows = f_it->second;
+		s_flows.EraseShare(to);
+		if (s_flows.GetShares()->empty()) {
 			flows.erase(f_it++);
 		} else {
 			++f_it;
@@ -3287,7 +3280,6 @@ uint GetMovingAverageLength(const Station *from, const Station *to)
  */
 void Station::RunAverages()
 {
-	FlowStatSet new_flows;
 	for (int goods_index = 0; goods_index < NUM_CARGO; ++goods_index) {
 		LinkStatMap &links = this->goods[goods_index].link_stats;
 		for (LinkStatMap::iterator i = links.begin(); i != links.end();) {
@@ -3311,24 +3303,6 @@ void Station::RunAverages()
 
 		if (_settings_game.linkgraph.GetDistributionType(goods_index) == DT_MANUAL) {
 			this->goods[goods_index].flows.clear();
-			continue;
-		}
-
-		FlowStatMap &flows = this->goods[goods_index].flows;
-		for (FlowStatMap::iterator i = flows.begin(); i != flows.end();) {
-			if (!Station::IsValidID(i->first)) {
-				flows.erase(i++);
-			} else {
-				FlowStatSet &flow_set = i->second;
-				for (FlowStatSet::iterator j = flow_set.begin(); j != flow_set.end(); ++j) {
-					if (Station::IsValidID(j->Via())) {
-						new_flows.insert(j->GetDecreasedCopy());
-					}
-				}
-				flow_set.swap(new_flows);
-				new_flows.clear();
-				++i;
-			}
 		}
 	}
 }
@@ -3462,13 +3436,7 @@ static uint UpdateStationWaiting(Station *st, CargoID type, uint amount, SourceT
 	if (amount == 0) return 0;
 
 	StationID id = st->index;
-	StationID next = INVALID_STATION;
-	FlowStatSet &flow_stats = ge.flows[id];
-	FlowStatSet::iterator i = flow_stats.begin();
-	if (i != flow_stats.end()) {
-		next = i->Via();
-		ge.UpdateFlowStats(flow_stats, i, amount);
-	}
+	StationID next = ge.flows[id].GetVia();
 
 	ge.cargo.Append(next, new CargoPacket(st->index, st->xy, amount, source_type, source_id));
 	ge.supply_new += amount;
@@ -3870,74 +3838,35 @@ static CommandCost TerraformTile_Station(TileIndex tile, DoCommandFlag flags, in
 }
 
 /**
- * Update the flow stats for a specific entry.
- * @param flow_stats Flow stats to update.
- * @param flow_it Iterator pointing to an entry in flow_stats.
- * @param count Amount by which the flow should be increased.
- */
-void GoodsEntry::UpdateFlowStats(FlowStatSet &flow_stats, FlowStatSet::iterator flow_it, uint count)
+ * Get flow for a station.
+ * @param st Station to get flow for.
+ * @return Flow for st.
+ */	
+uint FlowStat::GetShare(StationID st) const
 {
-	FlowStat fs = *flow_it;
-	fs.Increase(count);
-	flow_stats.erase(flow_it);
-	flow_stats.insert(fs);
+	uint share = 0;
+	for (SharesMap::const_iterator it = this->shares.begin(); it != this->shares.end(); ++it) {
+		if (it->second == st) share += it->first;
+	}
+	return share;
 }
-
+	
 /**
- * Update the flow stats for a specific next station.
- * @param flow_stats Flow stats to update.
- * @param count Amount by which the flow should be increased.
- * @param next Next hop for which the flow stats should be updated.
+ * Erase shares for specified station.
+ * @param st Next Hop to be removed.
  */
-void GoodsEntry::UpdateFlowStats(FlowStatSet &flow_stats, uint count, StationID next)
+void FlowStat::EraseShare(StationID st)
 {
-	FlowStatSet::iterator flow_it = flow_stats.begin();
-	while (flow_it != flow_stats.end()) {
-		StationID via = flow_it->Via();
-		if (via == next) { //usually the first one is the correct one
-			this->UpdateFlowStats(flow_stats, flow_it, count);
-			return;
+	uint32 removed_shares = 0;
+	SharesMap new_shares;
+	for (SharesMap::iterator it(this->shares.begin()); it != this->shares.end();) {
+		if (it->second == st) {
+			removed_shares += it->first;
 		} else {
-			++flow_it;
+			new_shares[it->first - removed_shares] = st;
 		}
 	}
-}
-
-/**
- * Update the flow stats for "count" cargo from "source" sent to "next".
- * @param source ID of station the cargo is from.
- * @param count Amount of cargo.
- * @param next ID of the station the cargo is travelling to.
- */
-void GoodsEntry::UpdateFlowStats(StationID source, uint count, StationID next)
-{
-	if (source == INVALID_STATION || next == INVALID_STATION || this->flows.empty()) return;
-	FlowStatSet &flow_stats = this->flows[source];
-	this->UpdateFlowStats(flow_stats, count, next);
-}
-
-/**
- * Update the flow stats for "count" cargo that cannot be delivered here.
- * @param source ID of station where the cargo is from.
- * @param count Amount of cargo.
- * @param curr ID of station where it is stored for now.
- * @return ID of the station where the cargo is sent next.
- */
-StationID GoodsEntry::UpdateFlowStatsTransfer(StationID source, uint count, StationID curr)
-{
-	if (source == INVALID_STATION || this->flows.empty()) return INVALID_STATION;
-	FlowStatSet &flow_stats = this->flows[source];
-	FlowStatSet::iterator flow_it = flow_stats.begin();
-	while (flow_it != flow_stats.end()) {
-		StationID via = flow_it->Via();
-		if (via != curr) {
-			this->UpdateFlowStats(flow_stats, flow_it, count);
-			return via;
-		} else {
-			++flow_it;
-		}
-	}
-	return INVALID_STATION;
+	this->shares.swap(new_shares);
 }
 
 /**
@@ -3945,17 +3874,11 @@ StationID GoodsEntry::UpdateFlowStatsTransfer(StationID source, uint count, Stat
  * @param via Remote station to look for.
  * @return a FlowStat with all flows for 'via' added up.
  */
-FlowStat GoodsEntry::GetSumFlowVia(StationID via) const
+uint GoodsEntry::GetSumFlowVia(StationID via) const
 {
-	FlowStat ret(1, via);
+	uint ret = 0;
 	for (FlowStatMap::const_iterator i = this->flows.begin(); i != this->flows.end(); ++i) {
-		const FlowStatSet &flow_set = i->second;
-		for (FlowStatSet::const_iterator j = flow_set.begin(); j != flow_set.end(); ++j) {
-			const FlowStat &flow = *j;
-			if (flow.Via() == via) {
-				ret += flow;
-			}
-		}
+		ret += i->second.GetShare(via);
 	}
 	return ret;
 }
