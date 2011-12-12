@@ -193,6 +193,7 @@ public:
          */
 	FORCEINLINE StationID GetVia() const
 	{
+		assert(this->sum_shares > 0);
 		uint rand = RandomRange(this->sum_shares - 1);
 		SharesMap::const_iterator it = this->shares.upper_bound(rand);
 		return it->second;
