@@ -256,6 +256,15 @@ struct GoodsEntry {
 	LinkStatMap link_stats; ///< Capacities and usage statistics for outgoing links.
 	LinkGraphComponentID last_component; ///< Component this station was last part of in this cargo's link graph.
 	uint GetSumFlowVia(StationID via) const;
+	FORCEINLINE StationID GetVia(StationID source) const
+	{
+		FlowStatMap::const_iterator flow_it = this->flows.find(source);
+		if (flow_it != this->flows.end()) {
+			return flow_it->second.GetVia();
+		} else {
+			return INVALID_STATION;
+		}
+	}
 };
 
 /** All airport-related information. Only valid if tile != INVALID_TILE. */

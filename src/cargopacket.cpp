@@ -602,12 +602,13 @@ uint StationCargoList::TakeFrom(VehicleCargoList *source, uint max_unload, Order
 	for (VehicleCargoList::Iterator c = source->packets.begin(); c != source->packets.end() && remaining_unload > 0;) {
 		StationID cargo_source = (*c)->source;
 		FlowStatMap::const_iterator flows_it = dest->flows.find(cargo_source);
-		StationID via = INVALID_STATION;
+		StationID via;
 		if (flows_it != dest->flows.end()) {
 			via = flows_it->second.GetVia();
 			/* use cargodist unloading*/
 			action = this->WillUnloadCargoDist(flags, next, via, cargo_source);
 		} else {
+			via  = INVALID_STATION;
 			/* there is no plan: use normal unloading */
 			action = this->WillUnloadOld(flags, cargo_source);
 		}
@@ -801,7 +802,7 @@ void StationCargoList::RerouteStalePackets(StationID to)
 	for (Iterator it(range.first); it != range.second && it.GetKey() == to;) {
 		CargoPacket *packet = *it;
 		it = this->packets.erase(it);
-		StationID next = this->station->goods[this->cargo].flows[packet->source].GetVia();
+		StationID next = this->station->goods[this->cargo].GetVia(packet->source);
 		assert(next != to);
 
 		/* legal, as insert doesn't invalidate iterators in the MultiMap, however

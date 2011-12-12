@@ -3435,8 +3435,7 @@ static uint UpdateStationWaiting(Station *st, CargoID type, uint amount, SourceT
 	/* No new "real" cargo item yet. */
 	if (amount == 0) return 0;
 
-	StationID id = st->index;
-	StationID next = ge.flows[id].GetVia();
+	StationID next = ge.GetVia(st->index);
 
 	ge.cargo.Append(next, new CargoPacket(st->index, st->xy, amount, source_type, source_id));
 	ge.supply_new += amount;
