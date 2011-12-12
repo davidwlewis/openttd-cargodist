@@ -53,7 +53,7 @@ public:
 	void ExportFlows(CargoID cargo);
 
 private:
-	void ExportNewFlows(FlowMap::iterator &it, FlowStatSet &via_set, CargoID cargo);
+	void ExportFlows(FlowMap::iterator &it, FlowStat &stat, CargoID cargo);
 };
 
 /**

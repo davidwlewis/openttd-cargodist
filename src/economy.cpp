@@ -1169,14 +1169,6 @@ void PrepareUnload(Vehicle *front_v)
 		StationID next_station_id = front_v->GetNextStoppingStation();
 		if (next_station_id == INVALID_STATION) {
 			return;
-		} else {
-			for (Vehicle *v = front_v; v != NULL; v = v->Next()) {
-				const CargoPacketList *packets = v->cargo.Packets();
-				for (VehicleCargoList::ConstIterator i(packets->begin()); i != packets->end(); ++i) {
-					curr_station->goods[v->cargo_type].UpdateFlowStats(
-							(*i)->SourceStation(), (*i)->Count(), next_station_id);
-				}
-			}
 		}
 	} else {
 		for (Vehicle *v = front_v; v != NULL; v = v->Next()) {
