@@ -88,7 +88,7 @@ protected:
 	bool IsPointVisible(Point pt, const DrawPixelInfo *dpi, int padding = 0) const;
 	void GetWidgetDpi(DrawPixelInfo *dpi) const;
 
-	static void AddStats(const LinkStat &orig_link, const FlowStat &orig_flow, LinkProperties &cargo);
+	static void AddStats(const LinkStat &orig_link, uint new_flow, LinkProperties &cargo);
 	static void DrawVertex(int x, int y, int size, int colour, int border_colour);
 };
 
