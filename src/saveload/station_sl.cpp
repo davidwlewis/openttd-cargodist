@@ -269,18 +269,28 @@ const SaveLoad *GetFlowStatDesc()
 {
 	static const SaveLoad _flowstat_desc[] = {
 		SLEG_CONDVAR(             _station_id,         SLE_UINT16,         SL_FLOWMAP, SL_MAX_VERSION),
-		 SLE_CONDVAR(FlowStat,    via,                 SLE_UINT16,         SL_FLOWMAP, SL_MAX_VERSION),
-		 SLE_CONDVAR(FlowStat,    length,              SLE_UINT32,         SL_FLOWMAP, SL_MAX_VERSION),
-		 SLE_CONDVAR(FlowStat,    planned,             SLE_UINT32,         SL_FLOWMAP, SL_MAX_VERSION),
-		 SLE_CONDVAR(FlowStat,    sent,                SLE_UINT32,         SL_FLOWMAP, SL_MAX_VERSION),
+		 SLE_CONDVAR(FlowStat,    sum_shares,          SLE_UINT32,         SL_FLOWMAP, SL_MAX_VERSION),
 		 SLE_END()
 	};
 
 	return _flowstat_desc;
 }
 
+
 std::list<CargoPacket *> _packets;
 uint32 _num_dests;
+
+struct FlowSaveLoad {
+	FlowSaveLoad() : via(0), share(0) {}
+	StationID via;
+	uint32 share;
+};
+
+static const SaveLoad _flow_desc[] = {
+	SLE_CONDVAR(FlowSaveLoad, via,                SLE_UINT16,         SL_FLOWMAP, SL_MAX_VERSION),
+	SLE_CONDVAR(FlowSaveLoad, share,              SLE_UINT32,         SL_FLOWMAP, SL_MAX_VERSION),
+	SLE_END()
+};
 
 /**
  * Wrapper function to get the GoodsEntry's internal structure while
@@ -499,7 +509,7 @@ static void RealSave_STNN(BaseStation *bst)
 			_num_links = (uint16)st->goods[i].link_stats.size();
 			_num_flows = 0;
 			for (FlowStatMap::const_iterator it(st->goods[i].flows.begin()); it != st->goods[i].flows.end(); ++it) {
-				_num_flows += (uint32)it->second.size();
+				_num_flows += (uint32)it->second.GetShares()->size();
 			}
 			SlObject(&st->goods[i], GetGoodsDesc());
 			for (LinkStatMap::const_iterator it(st->goods[i].link_stats.begin()); it != st->goods[i].link_stats.end(); ++it) {
@@ -509,9 +519,16 @@ static void RealSave_STNN(BaseStation *bst)
 			}
 			for (FlowStatMap::const_iterator outer_it(st->goods[i].flows.begin()); outer_it != st->goods[i].flows.end(); ++outer_it) {
 				_station_id = outer_it->first;
-				for (FlowStatSet::const_iterator inner_it(outer_it->second.begin()); inner_it != outer_it->second.end(); ++inner_it) {
-					FlowStat fs(*inner_it); // make a copy to avoid constness problems
-					SlObject(&fs, GetFlowStatDesc());
+				FlowStat fs(outer_it->second); // make a copy to avoid constness problems
+				SlObject(&fs, GetFlowStatDesc());
+				const FlowStat::SharesMap *shares = fs.GetShares();
+				uint32 sum_shares = 0;
+				FlowSaveLoad flow;
+				for (FlowStat::SharesMap::const_iterator inner_it(shares->begin()); inner_it != shares->end(); ++inner_it) {
+					flow.via = inner_it->second;
+					flow.share = inner_it->first - sum_shares;
+					sum_shares += inner_it->first;
+					SlObject(&flow, _flow_desc);
 				}
 			}
 			for (StationCargoPacketMap::ConstMapIterator it(st->goods[i].cargo.Packets()->begin()); it != st->goods[i].cargo.Packets()->end(); ++it) {
@@ -564,10 +581,12 @@ static void Load_STNN()
 					assert(ls.IsValid());
 					st->goods[i].link_stats.insert(std::make_pair(_station_id, ls));
 				}
-				FlowStat fs;
+				FlowStat *fs = &st->goods[i].flows[_station_id];
+				SlObject(fs, GetFlowStatDesc());
+				FlowSaveLoad flow;
 				for (uint32 j = 0; j < _num_flows; ++j) {
-					SlObject(&fs, GetFlowStatDesc());
-					st->goods[i].flows[_station_id].insert(fs);
+					SlObject(&flow, _flow_desc);
+					fs->AddShare(flow.via, flow.share);
 				}
 				if (IsSavegameVersionBefore(SL_CARGOMAP -1)) {
 					SwapPackets(&st->goods[i]);
