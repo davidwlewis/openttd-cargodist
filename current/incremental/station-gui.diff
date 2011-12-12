@@ -45,7 +45,7 @@ index f54cfd0..acc428c 100644
  ############ range for rating starts
  STR_CARGO_RATING_APPALLING                                      :Appalling
 diff --git a/src/linkgraph/linkgraph.cpp b/src/linkgraph/linkgraph.cpp
-index 3195b2e..d288c5a 100644
+index e2d34c1..ffc737b 100644
 --- a/src/linkgraph/linkgraph.cpp
 +++ b/src/linkgraph/linkgraph.cpp
 @@ -13,6 +13,8 @@
@@ -57,7 +57,7 @@ index 3195b2e..d288c5a 100644
  #include "../moving_average.h"
  #include "linkgraph.h"
  #include "demands.h"
-@@ -399,6 +401,7 @@ void LinkGraph::Join()
+@@ -369,6 +371,7 @@ void LinkGraph::Join()
  		Node &node = this->GetNode(node_id);
  		if (Station::IsValidID(node.station)) {
  			node.ExportFlows(this->cargo);
