@@ -1,5 +1,5 @@
 diff --git a/src/economy.cpp b/src/economy.cpp
-index 9fa2e11..8b69202 100644
+index 5af0d78..6441d07 100644
 --- a/src/economy.cpp
 +++ b/src/economy.cpp
 @@ -1083,21 +1083,23 @@ CargoPayment::~CargoPayment()
@@ -63,10 +63,10 @@ index 742d018..60b0964 100644
  	/* Unsaved variables */
  	Company *owner;            ///< The owner of the vehicle
 diff --git a/src/lang/english.txt b/src/lang/english.txt
-index d3fb8e8..e4a7809 100644
+index 565568f..ea7f40c 100644
 --- a/src/lang/english.txt
 +++ b/src/lang/english.txt
-@@ -3508,6 +3508,10 @@ STR_INCOME_FLOAT_INCOME_SMALL                                   :{TINY_FONT}{GRE
+@@ -3520,6 +3520,10 @@ STR_INCOME_FLOAT_INCOME_SMALL                                   :{TINY_FONT}{GRE
  STR_INCOME_FLOAT_INCOME                                         :{GREEN}Income: {CURRENCY_LONG}
  STR_FEEDER_TINY                                                 :{TINY_FONT}{YELLOW}Transfer: {CURRENCY_LONG}
  STR_FEEDER                                                      :{YELLOW}Transfer: {CURRENCY_LONG}
