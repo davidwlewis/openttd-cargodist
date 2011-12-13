@@ -310,9 +310,9 @@ void LinkGraphComponent::Init(LinkGraphComponentID id)
  * @param cargo Cargo we're exporting flows for (used to check if the link stats for the new
  *        flows still exist).
  */
-void Node::ExportFlows(FlowMap::iterator &it, FlowStat &dest, CargoID cargo)
+void Node::ExportFlows(FlowMap::iterator &it, FlowStatMap &station_flows, CargoID cargo)
 {
-	dest.Clear();
+	FlowStat *dest = NULL;
 	StationID source = it->first;
 	FlowViaMap &source_flows = it->second;
 	if (!Station::IsValidID(source)) {
@@ -326,18 +326,20 @@ void Node::ExportFlows(FlowMap::iterator &it, FlowStat &dest, CargoID cargo)
 
 			Station *via = Station::GetIfValid(next);
 			if (planned > 0 && via != NULL) {
-				if (next != this->station) {
-					const LinkStatMap &ls = curr_station->goods[cargo].link_stats;
-					if (ls.find(next) != ls.end()) {
-						dest.AddShare(next, planned);
+				if (next == this->station || 
+						curr_station->goods[cargo].link_stats.find(next) !=
+						curr_station->goods[cargo].link_stats.end()) {
+					if (dest == NULL) {
+						dest = &(station_flows.insert(std::make_pair(it->first, FlowStat(next, planned))).first->second);
+					} else {
+						dest->AddShare(next, planned);
 					}
-				} else {
-					dest.AddShare(next, planned);
 				}
 			}
 			source_flows.erase(update++);
 		}
 	}
+	
 	assert(source_flows.empty());
 
 	this->flows.erase(it++);
@@ -350,10 +352,11 @@ void Node::ExportFlows(FlowMap::iterator &it, FlowStat &dest, CargoID cargo)
 void Node::ExportFlows(CargoID cargo)
 {
 	FlowStatMap &station_flows = Station::Get(this->station)->goods[cargo].flows;
+	station_flows.clear();
 
 	/* loop over remaining flows (for other sources) in the node's map and insert them into the station */
 	for (FlowMap::iterator it(this->flows.begin()); it != this->flows.end();) {
-		ExportFlows(it, station_flows[it->first], cargo);
+		ExportFlows(it, station_flows, cargo);
 	}
 	assert(this->flows.empty());
 }
