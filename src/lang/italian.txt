@@ -1198,6 +1198,7 @@ STR_CONFIG_SETTING_ERRMSG_DURATION                              :{LTBLUE}Durata 
 STR_CONFIG_SETTING_HOVER_DELAY                                  :{LTBLUE}Mostra suggerimenti: {ORANGE}Al passaggio del mouse dopo {STRING} second{P 0:1 o i}
 STR_CONFIG_SETTING_HOVER_DELAY_DISABLED                         :{LTBLUE}Mostra suggerimenti: {ORANGE}Al clic col pulsante destro
 STR_CONFIG_SETTING_POPULATION_IN_LABEL                          :{LTBLUE}Mostra la popolazione di una città nell'etichetta del nome: {ORANGE}{STRING}
+STR_CONFIG_SETTING_GRAPH_LINE_THICKNESS                         :{LTBLUE}Spessore delle linee nei grafici: {ORANGE}{STRING}
 
 STR_CONFIG_SETTING_LAND_GENERATOR                               :{LTBLUE}Generatore terreno: {ORANGE}{STRING}
 STR_CONFIG_SETTING_LAND_GENERATOR_ORIGINAL                      :Originale
@@ -1394,6 +1395,21 @@ STR_CONFIG_SETTING_PATHFINDER_FOR_SHIPS                         :{LTBLUE}Pathfin
 STR_CONFIG_SETTING_REVERSE_AT_SIGNALS                           :{LTBLUE}Inversione automatica ai segnali: {ORANGE}{STRING}
 
 STR_CONFIG_SETTING_QUERY_CAPTION                                :{WHITE}Cambia impostazione
+
+# Config errors
+STR_CONFIG_ERROR                                                :{WHITE}Errore nel file di configurazione...
+STR_CONFIG_ERROR_ARRAY                                          :{WHITE}... errore nell'array '{STRING}'
+STR_CONFIG_ERROR_INVALID_VALUE                                  :{WHITE}... valore '{STRING}' non valido per '{STRING}'
+STR_CONFIG_ERROR_TRAILING_CHARACTERS                            :{WHITE}... caratteri aggiuntivi alla fine dell'impostazione '{STRING}'
+STR_CONFIG_ERROR_DUPLICATE_GRFID                                :{WHITE}... ignorato NewGRF '{STRING}': GRF ID in conflitto con '{STRING}'
+STR_CONFIG_ERROR_INVALID_GRF                                    :{WHITE}... ignorato NewGRF non valido '{STRING}': {STRING}
+STR_CONFIG_ERROR_INVALID_GRF_NOT_FOUND                          :non trovato
+STR_CONFIG_ERROR_INVALID_GRF_UNSAFE                             :non sicuro per uso continuato
+STR_CONFIG_ERROR_INVALID_GRF_SYSTEM                             :NewGRF di sistema
+STR_CONFIG_ERROR_INVALID_GRF_INCOMPATIBLE                       :non compatibile con questa versione di OpenTTD
+STR_CONFIG_ERROR_INVALID_GRF_UNKNOWN                            :motivo sconosciuto
+STR_CONFIG_ERROR_INVALID_SAVEGAME_COMPRESSION_LEVEL             :{WHITE}... il livello di compressione '{STRING}' non è valido
+STR_CONFIG_ERROR_INVALID_SAVEGAME_COMPRESSION_ALGORITHM         :{WHITE}... formato di salvataggio '{STRING}' non disponibile. Ritorno a '{STRING}'
 
 # Intro window
 STR_INTRO_CAPTION                                               :{WHITE}OpenTTD {REV}
@@ -1864,6 +1880,8 @@ STR_CONTENT_SELECT_UPDATES_CAPTION_TOOLTIP                      :{BLACK}Include 
 STR_CONTENT_UNSELECT_ALL_CAPTION                                :{BLACK}Deseleziona tutti
 STR_CONTENT_UNSELECT_ALL_CAPTION_TOOLTIP                        :{BLACK}Esclude dal download tutti gli elementi
 STR_CONTENT_FILTER_TITLE                                        :{BLACK}Filtra per nome/tag:
+STR_CONTENT_OPEN_URL                                            :{BLACK}Visita sito web
+STR_CONTENT_OPEN_URL_TOOLTIP                                    :{BLACK}Visita il sito web di questo contenuto
 STR_CONTENT_DOWNLOAD_CAPTION                                    :{BLACK}Scarica
 STR_CONTENT_DOWNLOAD_CAPTION_TOOLTIP                            :{BLACK}Avvia il download dei contenuti selezionati
 STR_CONTENT_TOTAL_DOWNLOAD_SIZE                                 :{SILVER}Dimensione totale download: {WHITE}{BYTES}
@@ -3246,7 +3264,7 @@ STR_ORDERS_TIMETABLE_VIEW_TOOLTIP                               :{BLACK}Passa al
 
 STR_ORDERS_LIST_TOOLTIP                                         :{BLACK}Lista degli ordini - fare clic su un ordine per selezionarlo e CTRL+clic per portarsi sulla destinazione corrispondente
 STR_ORDER_INDEX                                                 :{COMMA}:{NBSP}
-STR_ORDER_TEXT                                                  :{STRING} {STRING}
+STR_ORDER_TEXT                                                  :{STRING} {STRING} {STRING}
 
 STR_ORDERS_END_OF_ORDERS                                        :- - Fine degli ordini - -
 STR_ORDERS_END_OF_SHARED_ORDERS                                 :- - Fine degli ordini condivisi - -

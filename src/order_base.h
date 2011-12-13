@@ -80,6 +80,15 @@ public:
 	void MakeImplicit(StationID destination);
 
 	/**
+	 * Is this a 'goto' order with a real destination?
+	 * @return True if the type is either #OT_GOTO_WAYPOINT, #OT_GOTO_DEPOT or #OT_GOTO_STATION.
+	 */
+	inline bool IsGotoOrder() const
+	{
+		return IsType(OT_GOTO_WAYPOINT) || IsType(OT_GOTO_DEPOT) || IsType(OT_GOTO_STATION);
+	}
+
+	/**
 	 * Gets the destination of this order.
 	 * @pre IsType(OT_GOTO_WAYPOINT) || IsType(OT_GOTO_DEPOT) || IsType(OT_GOTO_STATION).
 	 * @return the destination of the order.
@@ -169,7 +178,7 @@ public:
 	bool CanLoadOrUnload() const;
 	bool CanLeaveWithCargo(bool has_cargo) const;
 
-	TileIndex GetLocation(const Vehicle *v) const;
+	TileIndex GetLocation(const Vehicle *v, bool airport = false) const;
 
 	/** Checks if this order has travel_time and if needed wait_time set. */
 	inline bool IsCompletelyTimetabled() const
