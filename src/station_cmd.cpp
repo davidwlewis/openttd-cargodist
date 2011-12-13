@@ -3877,11 +3877,15 @@ static CommandCost TerraformTile_Station(TileIndex tile, DoCommandFlag flags, in
  */	
 uint FlowStat::GetShare(StationID st) const
 {
-	uint share = 0;
+	uint32 prev = 0;
 	for (SharesMap::const_iterator it = this->shares.begin(); it != this->shares.end(); ++it) {
-		if (it->second == st) share += it->first;
+		if (it->second == st) {
+			return it->first - prev;
+		} else {
+			prev = it->first;
+		}
 	}
-	return share;
+	return 0;
 }
 	
 /**
@@ -3891,15 +3895,20 @@ uint FlowStat::GetShare(StationID st) const
 void FlowStat::EraseShare(StationID st)
 {
 	uint32 removed_shares = 0;
+	uint32 last_share = 0;
 	SharesMap new_shares;
-	for (SharesMap::iterator it(this->shares.begin()); it != this->shares.end();) {
+	for (SharesMap::iterator it(this->shares.begin()); it != this->shares.end(); ++it) {
 		if (it->second == st) {
-			removed_shares += it->first;
+			removed_shares += it->first - last_share;
 		} else {
-			new_shares[it->first - removed_shares] = st;
+			new_shares[it->first - removed_shares] = it->second;
 		}
+		last_share = it->first;
 	}
 	this->shares.swap(new_shares);
+	for (SharesMap::iterator it(this->shares.begin()); it != this->shares.end(); ++it) {
+		assert(it->second != st);
+	}
 }
 
 /**

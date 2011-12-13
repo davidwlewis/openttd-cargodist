@@ -164,7 +164,7 @@ public:
 
 	FORCEINLINE FlowStat() {NOT_REACHED();}
 	
-	FORCEINLINE FlowStat(StationID st, uint flow) : sum_shares(flow)
+	FORCEINLINE FlowStat(StationID st, uint flow)
 	{
 		assert(flow > 0);
 		this->shares[flow] = st;
@@ -178,8 +178,7 @@ public:
 	FORCEINLINE void AddShare(StationID st, uint flow)
 	{
 		assert(flow > 0);
-		this->sum_shares += flow;
-		this->shares[this->sum_shares] = st;
+		this->shares[(--this->shares.end())->first + flow] = st;
 	}
 	
 	uint GetShare(StationID st) const;
@@ -197,15 +196,15 @@ public:
          */
 	FORCEINLINE StationID GetVia() const
 	{
-		assert(this->sum_shares > 0);
-		uint rand = RandomRange(this->sum_shares - 1);
+		assert(!this->shares.empty());
+		uint rand = RandomRange((--this->shares.end())->first - 1);
 		SharesMap::const_iterator it = this->shares.upper_bound(rand);
+		assert(it != this->shares.end());
 		return it->second;
 	}
 
 private:
 	SharesMap shares;  ///< Shares of flow to be sent via specified station (or consumed locally).
-	uint32 sum_shares; ///< "Sum" of flow shares.
 };
 
 typedef std::map<StationID, LinkStat> LinkStatMap;
