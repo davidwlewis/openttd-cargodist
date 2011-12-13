@@ -164,7 +164,13 @@ public:
 
 	friend const SaveLoad *GetFlowStatDesc();
 	
-	FORCEINLINE FlowStat() : sum_shares(0) {}
+	FORCEINLINE FlowStat() {NOT_REACHED();}
+	
+	FORCEINLINE FlowStat(StationID st, uint flow) : sum_shares(flow)
+	{
+		assert(flow > 0);
+		this->shares[flow] = st;
+	}
 
 	/**
 	 * Add some flow.
@@ -178,7 +184,7 @@ public:
 		this->shares[this->sum_shares] = st;
 	}
 	
-	uint GetShare(StationID st = INVALID_STATION) const;
+	uint GetShare(StationID st) const;
 	
 	void EraseShare(StationID st);
 	
@@ -199,18 +205,9 @@ public:
 		return it->second;
 	}
 
-	/**
-	 * Clear this flow stat.
-	 */
-	FORCEINLINE void Clear()
-	{
-		this->shares.clear();
-		this->sum_shares = 0;
-	}
-
 private:
-	SharesMap shares; ///< Shares of flow to be sent via specified station (or consumed locally).
-	uint32 sum_shares;     ///< Sum of flow shares.
+	SharesMap shares;  ///< Shares of flow to be sent via specified station (or consumed locally).
+	uint32 sum_shares; ///< "Sum" of flow shares.
 };
 
 typedef std::map<StationID, LinkStat> LinkStatMap;
@@ -256,6 +253,12 @@ struct GoodsEntry {
 	LinkStatMap link_stats; ///< Capacities and usage statistics for outgoing links.
 	LinkGraphComponentID last_component; ///< Component this station was last part of in this cargo's link graph.
 	uint GetSumFlowVia(StationID via) const;
+
+	FORCEINLINE StationID GetVia(StationID source) const
+	{
+		FlowStatMap::const_iterator flow_it(this->flows.find(source));
+		return flow_it != this->flows.end() ? flow_it->second.GetVia() : INVALID_STATION;
+	}
 };
 
 /** All airport-related information. Only valid if tile != INVALID_TILE. */
