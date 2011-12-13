@@ -162,8 +162,6 @@ class FlowStat {
 public:
 	typedef std::map<uint32, StationID> SharesMap;
 
-	friend const SaveLoad *GetFlowStatDesc();
-	
 	FORCEINLINE FlowStat() {NOT_REACHED();}
 	
 	FORCEINLINE FlowStat(StationID st, uint flow) : sum_shares(flow)
