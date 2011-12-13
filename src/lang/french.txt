@@ -1175,6 +1175,7 @@ STR_CONFIG_SETTING_ERRMSG_DURATION                              :{LTBLUE}Temps d
 STR_CONFIG_SETTING_HOVER_DELAY                                  :{LTBLUE}Affichage des infobulles{NBSP}: {ORANGE}survoler pendant {STRING} seconde{P 0:1 "" s}
 STR_CONFIG_SETTING_HOVER_DELAY_DISABLED                         :{LTBLUE}Affichage des infobulles{NBSP}: {ORANGE}clic droit
 STR_CONFIG_SETTING_POPULATION_IN_LABEL                          :{LTBLUE}Afficher la population d'une ville dans son label{NBSP}: {ORANGE}{STRING}
+STR_CONFIG_SETTING_GRAPH_LINE_THICKNESS                         :{LTBLUE}Épaisseur des lignes dans les graphiques{NBSP}: {ORANGE}{STRING}
 
 STR_CONFIG_SETTING_LAND_GENERATOR                               :{LTBLUE}Générateur de terrain{NBSP}: {ORANGE}{STRING}
 STR_CONFIG_SETTING_LAND_GENERATOR_ORIGINAL                      :Original
@@ -1371,6 +1372,21 @@ STR_CONFIG_SETTING_PATHFINDER_FOR_SHIPS                         :{LTBLUE}Recherc
 STR_CONFIG_SETTING_REVERSE_AT_SIGNALS                           :{LTBLUE}Demi-tour automatique aux signaux{NBSP}: {ORANGE}{STRING}
 
 STR_CONFIG_SETTING_QUERY_CAPTION                                :{WHITE}Changer valeur du paramètre
+
+# Config errors
+STR_CONFIG_ERROR                                                :{WHITE}Erreur dans le fichier de configuration...
+STR_CONFIG_ERROR_ARRAY                                          :{WHITE}... erreur dans le tableau '{STRING}'
+STR_CONFIG_ERROR_INVALID_VALUE                                  :{WHITE}... valeur '{STRING}' invalide pour '{STRING}'
+STR_CONFIG_ERROR_TRAILING_CHARACTERS                            :{WHITE}... caractères superflus à la fin du paramètre '{STRING}'
+STR_CONFIG_ERROR_DUPLICATE_GRFID                                :{WHITE}... NewGRF '{STRING}' ignoré{NBSP}: GRF ID en doublon avec '{STRING}'
+STR_CONFIG_ERROR_INVALID_GRF                                    :{WHITE}... NewGRF '{STRING}' invalide ignoré{NBSP}: {STRING}
+STR_CONFIG_ERROR_INVALID_GRF_NOT_FOUND                          :non trouvé
+STR_CONFIG_ERROR_INVALID_GRF_UNSAFE                             :dangereux pour un usage statique
+STR_CONFIG_ERROR_INVALID_GRF_SYSTEM                             :NewGRF système
+STR_CONFIG_ERROR_INVALID_GRF_INCOMPATIBLE                       :incompatible avec cette version d'OpenTTD
+STR_CONFIG_ERROR_INVALID_GRF_UNKNOWN                            :inconnu
+STR_CONFIG_ERROR_INVALID_SAVEGAME_COMPRESSION_LEVEL             :{WHITE}... le niveau de compression '{STRING}' n'est pas valide
+STR_CONFIG_ERROR_INVALID_SAVEGAME_COMPRESSION_ALGORITHM         :{WHITE}... le format de sauvegarde '{STRING}' n'est pas disponible. Retour à '{STRING}'
 
 # Intro window
 STR_INTRO_CAPTION                                               :{WHITE}OpenTTD {REV}
@@ -1841,6 +1857,8 @@ STR_CONTENT_SELECT_UPDATES_CAPTION_TOOLTIP                      :{BLACK}Marquer 
 STR_CONTENT_UNSELECT_ALL_CAPTION                                :{BLACK}Désélectionner tout
 STR_CONTENT_UNSELECT_ALL_CAPTION_TOOLTIP                        :{BLACK}Marquer tous les contenus pour ne pas être téléchargés
 STR_CONTENT_FILTER_TITLE                                        :{BLACK}Filtre sur tag/nom{NBSP}:
+STR_CONTENT_OPEN_URL                                            :{BLACK}Visiter le site web
+STR_CONTENT_OPEN_URL_TOOLTIP                                    :{BLACK}Visiter le site web pour ce contenu
 STR_CONTENT_DOWNLOAD_CAPTION                                    :{BLACK}Télécharger
 STR_CONTENT_DOWNLOAD_CAPTION_TOOLTIP                            :{BLACK}Démarrer le téléchargement du contenu choisi
 STR_CONTENT_TOTAL_DOWNLOAD_SIZE                                 :{SILVER}Taille de téléchargement total{NBSP}: {WHITE}{BYTES}
@@ -3219,7 +3237,7 @@ STR_ORDERS_TIMETABLE_VIEW_TOOLTIP                               :{BLACK}Basculer
 
 STR_ORDERS_LIST_TOOLTIP                                         :{BLACK}Liste d'ordres - cliquer sur un ordre pour le sélectionner. Ctrl-clic pour déplacer la vue sur la destination de l'ordre
 STR_ORDER_INDEX                                                 :{COMMA}:{NBSP}
-STR_ORDER_TEXT                                                  :{STRING} {STRING}
+STR_ORDER_TEXT                                                  :{STRING} {STRING} {STRING}
 
 STR_ORDERS_END_OF_ORDERS                                        :- - Fin des ordres - -
 STR_ORDERS_END_OF_SHARED_ORDERS                                 :- - Fin des ordres partagés - -

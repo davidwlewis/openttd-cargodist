@@ -546,7 +546,7 @@ extern bool _do_autosave;
  * SL_TRUNK is always the current trunk version.
  */
 enum SaveLoadVersions {
-	SL_TRUNK = 166,
+	SL_TRUNK = 167,
 	SL_RESERVATION = SL_TRUNK + 10,
 
 	/** Highest possible savegame version. */
