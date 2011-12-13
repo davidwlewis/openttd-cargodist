@@ -231,8 +231,9 @@
  *  164   23290
  *  165   23304
  *  166   23415
+ *  167   23504
  */
-extern const uint16 SAVEGAME_VERSION = 166; ///< Current savegame version of OpenTTD.
+extern const uint16 SAVEGAME_VERSION = 167; ///< Current savegame version of OpenTTD.
 
 SavegameType _savegame_type; ///< type of savegame we are loading
 
@@ -2700,6 +2701,7 @@ SaveOrLoadResult SaveOrLoad(const char *filename, int mode, Subdirectory sb, boo
 		/* Make it a little easier to load savegames from the console */
 		if (fh == NULL && mode != SL_SAVE) fh = FioFOpenFile(filename, "rb", SAVE_DIR);
 		if (fh == NULL && mode != SL_SAVE) fh = FioFOpenFile(filename, "rb", BASE_DIR);
+		if (fh == NULL && mode != SL_SAVE) fh = FioFOpenFile(filename, "rb", SCENARIO_DIR);
 
 		if (fh == NULL) {
 			SlError(mode == SL_SAVE ? STR_GAME_SAVELOAD_ERROR_FILE_NOT_WRITEABLE : STR_GAME_SAVELOAD_ERROR_FILE_NOT_READABLE);
