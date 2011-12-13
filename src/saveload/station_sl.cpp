@@ -510,7 +510,8 @@ static void RealSave_STNN(BaseStation *bst)
 				for (FlowStat::SharesMap::const_iterator inner_it(shares->begin()); inner_it != shares->end(); ++inner_it) {
 					flow.via = inner_it->second;
 					flow.share = inner_it->first - sum_shares;
-					sum_shares += inner_it->first;
+					sum_shares = inner_it->first;
+					assert(flow.share > 0);
 					SlObject(&flow, _flow_desc);
 				}
 			}
