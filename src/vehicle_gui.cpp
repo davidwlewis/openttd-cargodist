@@ -210,70 +210,77 @@ static void DrawVehicleProfitButton(const Vehicle *v, int x, int y)
 static const uint MAX_REFIT_CYCLE = 256;
 
 /**
- * Get the best fitting subtype when 'cloning'/'replacing' v_from with v_for.
- * Assuming they are going to carry the same cargo ofcourse!
+ * Get the best fitting subtype when 'cloning'/'replacing' \a v_from with \a v_for.
+ * All articulated parts of both vehicles are tested to find a possibly shared subtype.
+ * For \a v_for only vehicle refittable to \a dest_cargo_type are considered.
  * @param v_from the vehicle to match the subtype from
  * @param v_for  the vehicle to get the subtype for
- * @param dest_cargo_type Destination cargo type, taken from #v_from if set to #INVALID_CARGO.
+ * @param dest_cargo_type Destination cargo type.
  * @return the best sub type
  */
 byte GetBestFittingSubType(Vehicle *v_from, Vehicle *v_for, CargoID dest_cargo_type)
 {
-	const Engine *e_from = v_from->GetEngine();
-	const Engine *e_for  = v_for->GetEngine();
+	v_from = v_from->GetFirstEnginePart();
+	v_for = v_for->GetFirstEnginePart();
 
-	/* If one them doesn't carry cargo, there's no need to find a sub type */
-	if (!e_from->CanCarryCargo() || !e_for->CanCarryCargo()) return 0;
-
-	if (!HasBit(e_from->info.callback_mask, CBM_VEHICLE_CARGO_SUFFIX) ||
-			!HasBit(e_for->info.callback_mask,  CBM_VEHICLE_CARGO_SUFFIX)) {
-		/* One of the engines doesn't have cargo suffixes, i.e. sub types. */
-		return 0;
+	/* Create a list of subtypes used by the various parts of v_for */
+	static SmallVector<StringID, 4> subtypes;
+	subtypes.Clear();
+	for (; v_from != NULL; v_from = v_from->HasArticulatedPart() ? v_from->GetNextArticulatedPart() : NULL) {
+		const Engine *e_from = v_from->GetEngine();
+		if (!e_from->CanCarryCargo() || !HasBit(e_from->info.callback_mask, CBM_VEHICLE_CARGO_SUFFIX)) continue;
+		subtypes.Include(GetCargoSubtypeText(v_from));
 	}
 
-	if (dest_cargo_type == INVALID_CARGO) dest_cargo_type = v_from->cargo_type;
-
-	/* It has to be possible for v_for to carry the cargo of v_from. */
-	if (!HasBit(e_for->info.refit_mask, dest_cargo_type)) return 0;
-
-	StringID expected_string = GetCargoSubtypeText(v_from);
-
-	CargoID old_cargo_type = v_for->cargo_type;
-	byte old_cargo_subtype = v_for->cargo_subtype;
 	byte ret_refit_cyc = 0;
+	bool success = false;
+	if (subtypes.Length() > 0) {
+		/* Check whether any articulated part is refittable to 'dest_cargo_type' with a subtype listed in 'subtypes' */
+		for (Vehicle *v = v_for; v != NULL; v = v->HasArticulatedPart() ? v->GetNextArticulatedPart() : NULL) {
+			const Engine *e = v->GetEngine();
+			if (!e->CanCarryCargo() || !HasBit(e->info.callback_mask, CBM_VEHICLE_CARGO_SUFFIX)) continue;
+			if (!HasBit(e->info.refit_mask, dest_cargo_type) && v->cargo_type != dest_cargo_type) continue;
 
-	/* Set the 'destination' cargo */
-	v_for->cargo_type = dest_cargo_type;
+			CargoID old_cargo_type = v->cargo_type;
+			byte old_cargo_subtype = v->cargo_subtype;
 
-	/* Cycle through the refits */
-	for (uint refit_cyc = 0; refit_cyc < MAX_REFIT_CYCLE; refit_cyc++) {
-		v_for->cargo_subtype = refit_cyc;
+			/* Set the 'destination' cargo */
+			v->cargo_type = dest_cargo_type;
 
-		/* Make sure we don't pick up anything cached. */
-		v_for->First()->InvalidateNewGRFCache();
-		v_for->InvalidateNewGRFCache();
-		uint16 callback = GetVehicleCallback(CBID_VEHICLE_CARGO_SUFFIX, 0, 0, v_for->engine_type, v_for);
+			/* Cycle through the refits */
+			for (uint refit_cyc = 0; refit_cyc < MAX_REFIT_CYCLE; refit_cyc++) {
+				v->cargo_subtype = refit_cyc;
 
-		if (callback != CALLBACK_FAILED) {
-			if (callback > 0x400) ErrorUnknownCallbackResult(v_for->GetGRFID(), CBID_VEHICLE_CARGO_SUFFIX, callback);
-			if (callback >= 0x400 || (v_for->GetGRF()->grf_version < 8 && callback == 0xFF)) callback = CALLBACK_FAILED;
+				/* Make sure we don't pick up anything cached. */
+				v->First()->InvalidateNewGRFCache();
+				v->InvalidateNewGRFCache();
+				uint16 callback = GetVehicleCallback(CBID_VEHICLE_CARGO_SUFFIX, 0, 0, v->engine_type, v);
+
+				if (callback != CALLBACK_FAILED) {
+					if (callback > 0x400) ErrorUnknownCallbackResult(v->GetGRFID(), CBID_VEHICLE_CARGO_SUFFIX, callback);
+					if (callback >= 0x400 || (v->GetGRF()->grf_version < 8 && callback == 0xFF)) callback = CALLBACK_FAILED;
+				}
+				if (callback == CALLBACK_FAILED) break;
+
+				if (!subtypes.Contains(GetCargoSubtypeText(v))) continue;
+
+				/* We found something matching. */
+				ret_refit_cyc = refit_cyc;
+				success = true;
+				break;
+			}
+
+			/* Reset the vehicle's cargo type */
+			v->cargo_type    = old_cargo_type;
+			v->cargo_subtype = old_cargo_subtype;
+
+			/* Make sure we don't taint the vehicle. */
+			v->First()->InvalidateNewGRFCache();
+			v->InvalidateNewGRFCache();
+
+			if (success) break;
 		}
-		if (callback == CALLBACK_FAILED) break;
-
-		if (GetCargoSubtypeText(v_for) != expected_string) continue;
-
-		/* We found something matching. */
-		ret_refit_cyc = refit_cyc;
-		break;
 	}
-
-	/* Reset the vehicle's cargo type */
-	v_for->cargo_type    = old_cargo_type;
-	v_for->cargo_subtype = old_cargo_subtype;
-
-	/* Make sure we don't taint the vehicle. */
-	v_for->First()->InvalidateNewGRFCache();
-	v_for->InvalidateNewGRFCache();
 
 	return ret_refit_cyc;
 }
@@ -1989,7 +1996,12 @@ struct VehicleDetailsWindow : Window {
 					}
 				} else {
 					SetDParam(0, v->GetDisplayMaxSpeed());
-					string = STR_VEHICLE_INFO_MAX_SPEED;
+					if (v->type == VEH_AIRCRAFT && Aircraft::From(v)->GetRange() > 0) {
+						SetDParam(1, Aircraft::From(v)->GetRange());
+						string = STR_VEHICLE_INFO_MAX_SPEED_RANGE;
+					} else {
+						string = STR_VEHICLE_INFO_MAX_SPEED;
+					}
 				}
 				DrawString(r.left + WD_FRAMERECT_LEFT, r.right - WD_FRAMERECT_RIGHT, y, string);
 				y += FONT_HEIGHT_NORMAL;
@@ -2470,6 +2482,8 @@ public:
 			}
 		} else if (v->type == VEH_TRAIN && HasBit(Train::From(v)->flags, VRF_TRAIN_STUCK) && !v->current_order.IsType(OT_LOADING)) {
 			str = STR_VEHICLE_STATUS_TRAIN_STUCK;
+		} else if (v->type == VEH_AIRCRAFT && HasBit(Aircraft::From(v)->flags, VAF_DEST_TOO_FAR) && !v->current_order.IsType(OT_LOADING)) {
+			str = STR_VEHICLE_STATUS_AIRCRAFT_TOO_FAR;
 		} else { // vehicle is in a "normal" state, show current order
 			switch (v->current_order.GetType()) {
 				case OT_GOTO_STATION: {
@@ -2671,8 +2685,7 @@ bool VehicleClicked(const Vehicle *v)
 	v = v->First();
 	if (!v->IsPrimaryVehicle()) return false;
 
-	_thd.GetCallbackWnd()->OnVehicleSelect(v);
-	return true;
+	return _thd.GetCallbackWnd()->OnVehicleSelect(v);
 }
 
 void StopGlobalFollowVehicle(const Vehicle *v)
