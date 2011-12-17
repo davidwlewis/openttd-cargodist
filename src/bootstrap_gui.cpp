@@ -27,6 +27,8 @@
 #include "window_func.h"
 #include "window_gui.h"
 
+#include "widgets/bootstrap_widget.h"
+
 #include "table/strings.h"
 
 /** Widgets for the background window to prevent smearing. */
@@ -50,7 +52,7 @@ public:
 	BootstrapBackground() : Window()
 	{
 		this->InitNested(&_background_desc, 0);
-		CLRBITS(this->flags4, WF_WHITE_BORDER_MASK);
+		CLRBITS(this->flags, WF_WHITE_BORDER);
 		ResizeWindow(this, _screen.width, _screen.height);
 	}
 
@@ -64,7 +66,7 @@ public:
 /** Nested widgets for the download window. */
 static const NWidgetPart _nested_boostrap_download_status_window_widgets[] = {
 	NWidget(WWT_CAPTION, COLOUR_GREY), SetDataTip(STR_CONTENT_DOWNLOAD_TITLE, STR_TOOLTIP_WINDOW_TITLE_DRAG_THIS),
-	NWidget(WWT_PANEL, COLOUR_GREY, NCDSWW_BACKGROUND),
+	NWidget(WWT_PANEL, COLOUR_GREY, WID_NCDS_BACKGROUND),
 		NWidget(NWID_SPACER), SetMinimalSize(350, 0), SetMinimalTextLines(3, WD_FRAMERECT_TOP + WD_FRAMERECT_BOTTOM + 30),
 	EndContainer(),
 };
@@ -100,23 +102,16 @@ public:
 	}
 };
 
-/** Widgets in the query window. */
-enum BootstrapAskForDownloadWidgets {
-	BAFDW_QUESTION, ///< The question whether to download.
-	BAFDW_YES,      ///< An affirmative answer to the question.
-	BAFDW_NO,       ///< An negative answer to the question.
-};
-
 /** The widgets for the query. It has no close box as that sprite does not exist yet. */
 static const NWidgetPart _bootstrap_query_widgets[] = {
 	NWidget(NWID_HORIZONTAL),
 		NWidget(WWT_CAPTION, COLOUR_GREY), SetDataTip(STR_MISSING_GRAPHICS_SET_CAPTION, STR_TOOLTIP_WINDOW_TITLE_DRAG_THIS),
 	EndContainer(),
 	NWidget(WWT_PANEL, COLOUR_GREY),
-		NWidget(WWT_PANEL, COLOUR_GREY, BAFDW_QUESTION), EndContainer(),
+		NWidget(WWT_PANEL, COLOUR_GREY, WID_BAFD_QUESTION), EndContainer(),
 		NWidget(NWID_HORIZONTAL),
-			NWidget(WWT_PUSHTXTBTN, COLOUR_GREY, BAFDW_YES), SetDataTip(STR_MISSING_GRAPHICS_YES_DOWNLOAD, STR_NULL),
-			NWidget(WWT_PUSHTXTBTN, COLOUR_GREY, BAFDW_NO), SetDataTip(STR_MISSING_GRAPHICS_NO_QUIT, STR_NULL),
+			NWidget(WWT_PUSHTXTBTN, COLOUR_GREY, WID_BAFD_YES), SetDataTip(STR_MISSING_GRAPHICS_YES_DOWNLOAD, STR_NULL),
+			NWidget(WWT_PUSHTXTBTN, COLOUR_GREY, WID_BAFD_NO), SetDataTip(STR_MISSING_GRAPHICS_NO_QUIT, STR_NULL),
 		EndContainer(),
 	EndContainer(),
 };
@@ -157,14 +152,14 @@ public:
 		}
 
 		switch (widget) {
-			case BAFDW_QUESTION:
+			case WID_BAFD_QUESTION:
 				/* The question is twice as wide as the buttons, and determine the height based on the width. */
 				size->width = this->button_size.width * 2;
 				size->height = GetStringHeight(STR_MISSING_GRAPHICS_SET_MESSAGE, size->width - WD_FRAMETEXT_LEFT - WD_FRAMETEXT_RIGHT) + WD_FRAMETEXT_BOTTOM + WD_FRAMETEXT_TOP;
 				break;
 
-			case BAFDW_YES:
-			case BAFDW_NO:
+			case WID_BAFD_YES:
+			case WID_BAFD_NO:
 				*size = this->button_size;
 				break;
 		}
@@ -180,12 +175,12 @@ public:
 	virtual void OnClick(Point pt, int widget, int click_count)
 	{
 		switch (widget) {
-			case BAFDW_YES:
+			case WID_BAFD_YES:
 				/* We got permission to connect! Yay! */
 				_network_content_client.Connect();
 				break;
 
-			case BAFDW_NO:
+			case WID_BAFD_NO:
 				_exit_game = true;
 				break;
 
