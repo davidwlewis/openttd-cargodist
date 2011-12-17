@@ -19,32 +19,13 @@
 #include "cargo_type.h"
 #include <set>
 
-/** Enum for StationView, referring to _station_view_widgets and _station_view_expanded_widgets */
-enum StationViewWidgets {
-	SVW_CAPTION    =  0, ///< Caption of the window
-	SVW_SORT_ORDER =  1, ///< 'Sort order' button
-	SVW_SORT_BY    =  2, ///< 'Sort by' button
-	SVW_GROUP      =  3, ///< label for "group by"
-	SVW_GROUP_BY   =  4, ///< 'Group by' button
-	SVW_WAITING    =  5, ///< List of waiting cargo
-	SVW_SCROLLBAR  =  6, ///< Scrollbar
-	SVW_ACCEPTLIST =  7, ///< List of accepted cargos
-	SVW_RATINGLIST =  7, ///< Ratings of cargos
-	SVW_LOCATION   =  8, ///< 'Location' button
-	SVW_RATINGS    =  9, ///< 'Ratings' button
-	SVW_ACCEPTS    =  9, ///< 'Accepts' button
-	SVW_RENAME     = 10, ///< 'Rename' button
-	SVW_TRAINS     = 11, ///< List of scheduled trains button
-	SVW_ROADVEHS,        ///< List of scheduled road vehs button
-	SVW_SHIPS,           ///< List of scheduled ships button
-	SVW_PLANES,          ///< List of scheduled planes button
-};
+#include "widgets/station_widget.h"
 
 /** Types of cargo to display for station coverage. */
 enum StationCoverageType {
-	SCT_PASSENGERS_ONLY,     ///< Draw only passenger class cargos.
-	SCT_NON_PASSENGERS_ONLY, ///< Draw all non-passenger class cargos.
-	SCT_ALL,                 ///< Draw all cargos.
+	SCT_PASSENGERS_ONLY,     ///< Draw only passenger class cargoes.
+	SCT_NON_PASSENGERS_ONLY, ///< Draw all non-passenger class cargoes.
+	SCT_ALL,                 ///< Draw all cargoes.
 };
 
 int DrawStationCoverageAreaText(int left, int right, int top, StationCoverageType sct, int rad, bool supplies);
