@@ -228,7 +228,7 @@ static int GetRefitCostFactor(const Vehicle *v, EngineID engine_type, CargoID ne
 	}
 
 	*auto_refit_allowed = e->info.refit_cost == 0;
-	return e->info.refit_cost;
+	return (v->cargo_type != new_cid) ? e->info.refit_cost : 0;
 }
 
 /**
@@ -335,17 +335,15 @@ static CommandCost RefitVehicle(Vehicle *v, bool only_this, uint8 num_vehicles, 
 		v->cargo_type = temp_cid;
 		v->cargo_subtype = temp_subtype;
 
-		if (new_cid != v->cargo_type) {
-			bool auto_refit_allowed;
-			CommandCost refit_cost = GetRefitCost(v, v->engine_type, new_cid, new_subtype, &auto_refit_allowed);
-			if (auto_refit && !auto_refit_allowed) {
-				/* Sorry, auto-refitting not allowed, subtract the cargo amount again from the total. */
-				total_capacity -= amount;
-				total_mail_capacity -= mail_capacity;
-				continue;
-			}
-			cost.AddCost(refit_cost);
+		bool auto_refit_allowed;
+		CommandCost refit_cost = GetRefitCost(v, v->engine_type, new_cid, new_subtype, &auto_refit_allowed);
+		if (auto_refit && !auto_refit_allowed) {
+			/* Sorry, auto-refitting not allowed, subtract the cargo amount again from the total. */
+			total_capacity -= amount;
+			total_mail_capacity -= mail_capacity;
+			continue;
 		}
+		cost.AddCost(refit_cost);
 
 		if (flags & DC_EXEC) {
 			v->refit_cap = (v->cargo_type == new_cid) ? min(amount, v->cargo_cap) : 0;
@@ -525,7 +523,7 @@ CommandCost CmdStartStopVehicle(TileIndex tile, DoCommandFlag flags, uint32 p1, 
 		v->vehstatus ^= VS_STOPPED;
 		if (v->type != VEH_TRAIN) v->cur_speed = 0; // trains can stop 'slowly'
 		v->MarkDirty();
-		SetWindowWidgetDirty(WC_VEHICLE_VIEW, v->index, VVW_WIDGET_START_STOP_VEH);
+		SetWindowWidgetDirty(WC_VEHICLE_VIEW, v->index, WID_VV_START_STOP);
 		SetWindowDirty(WC_VEHICLE_DEPOT, v->tile);
 		SetWindowClassesDirty(GetWindowClassForVehicleType(v->type));
 	}

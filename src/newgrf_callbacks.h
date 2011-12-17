@@ -311,7 +311,7 @@ enum HouseCallbackMask {
 	CBM_HOUSE_ANIMATION_NEXT_FRAME      =  1, ///< decides next animation frame
 	CBM_HOUSE_ANIMATION_START_STOP      =  2, ///< periodically start/stop the animation
 	CBM_HOUSE_CONSTRUCTION_STATE_CHANGE =  3, ///< change animation when construction state changes
-	CBM_HOUSE_COLOUR                    =  4, ///< decide the color of the building
+	CBM_HOUSE_COLOUR                    =  4, ///< decide the colour of the building
 	CBM_HOUSE_CARGO_ACCEPTANCE          =  5, ///< decides amount of cargo acceptance
 	CBM_HOUSE_ANIMATION_SPEED           =  6, ///< decides animation speed
 	CBM_HOUSE_DESTRUCTION               =  7, ///< trigger destruction of building
@@ -330,7 +330,7 @@ enum CanalCallbackMask {
 };
 
 /**
- * Callback masks for cargos.
+ * Callback masks for cargoes.
  */
 enum CargoCallbackMask {
 	CBM_CARGO_PROFIT_CALC         = 0, ///< custom profit calculation
@@ -353,8 +353,8 @@ enum IndustryCallbackMask {
 	CBM_IND_SPECIAL_EFFECT            =  9, ///< control special effects
 	CBM_IND_REFUSE_CARGO              = 10, ///< option out of accepting cargo
 	CBM_IND_DECIDE_COLOUR             = 11, ///< give a custom colour to newly build industries
-	CBM_IND_INPUT_CARGO_TYPES         = 12, ///< customize the cargos the industry requires
-	CBM_IND_OUTPUT_CARGO_TYPES        = 13, ///< customize the cargos the industry produces
+	CBM_IND_INPUT_CARGO_TYPES         = 12, ///< customize the cargoes the industry requires
+	CBM_IND_OUTPUT_CARGO_TYPES        = 13, ///< customize the cargoes the industry produces
 };
 
 /**
@@ -377,7 +377,7 @@ enum ObjectCallbackMask {
 	CBM_OBJ_SLOPE_CHECK               =  0, ///< decides slope suitability
 	CBM_OBJ_ANIMATION_NEXT_FRAME      =  1, ///< decides next animation frame
 	CBM_OBJ_ANIMATION_SPEED           =  2, ///< decides animation speed
-	CBM_OBJ_COLOUR                    =  3, ///< decide the color of the building
+	CBM_OBJ_COLOUR                    =  3, ///< decide the colour of the building
 	CBM_OBJ_FUND_MORE_TEXT            =  4, ///< additional text in fund window
 	CBM_OBJ_AUTOSLOPE                 =  5, ///< decides allowance of autosloping
 };
