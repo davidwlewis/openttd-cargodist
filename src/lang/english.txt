@@ -1946,7 +1946,7 @@ STR_TRANSPARENT_CATENARY_TOOLTIP                                :{BLACK}Toggle t
 STR_TRANSPARENT_LOADING_TOOLTIP                                 :{BLACK}Toggle transparency for loading indicators. Ctrl+Click to lock
 STR_TRANSPARENT_INVISIBLE_TOOLTIP                               :{BLACK}Set objects invisible instead of transparent
 
-# Linkgraph legend window
+# Linkgraph legend window and linkgraph legend in smallmap
 STR_LINKGRAPH_LEGEND_CAPTION                                    :{BLACK}Link graph legend
 STR_LINKGRAPH_LEGEND_ALL                                        :{BLACK}All
 STR_LINKGRAPH_LEGEND_NONE                                       :{BLACK}None
