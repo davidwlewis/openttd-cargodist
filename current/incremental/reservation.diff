@@ -620,7 +620,7 @@ index 9c8f258..235528c 100644
  
  		     SLE_VAR(Vehicle, day_counter,           SLE_UINT8),
 diff --git a/src/vehicle.cpp b/src/vehicle.cpp
-index d584418..2534bb3 100644
+index 1d162d5..98e7d60 100644
 --- a/src/vehicle.cpp
 +++ b/src/vehicle.cpp
 @@ -716,10 +716,11 @@ void Vehicle::PreDestructor()
