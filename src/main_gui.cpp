@@ -34,6 +34,8 @@
 
 #include "saveload/saveload.h"
 
+#include "widgets/main_widget.h"
+
 #include "network/network.h"
 #include "network/network_func.h"
 #include "network/network_gui.h"
@@ -199,13 +201,8 @@ void ZoomInOrOutToCursorWindow(bool in, Window *w)
 	}
 }
 
-/** Widgets of the main window. */
-enum MainWindowWidgets {
-	MW_VIEWPORT, ///< Main window viewport.
-};
-
 static const struct NWidgetPart _nested_main_window_widgets[] = {
-	NWidget(NWID_VIEWPORT, INVALID_COLOUR, MW_VIEWPORT), SetResize(1, 1),
+	NWidget(NWID_VIEWPORT, INVALID_COLOUR, WID_M_VIEWPORT), SetResize(1, 1),
 };
 
 static const WindowDesc _main_window_desc(
@@ -244,10 +241,10 @@ struct MainWindow : Window
 	MainWindow() : Window()
 	{
 		this->InitNested(&_main_window_desc, 0);
-		CLRBITS(this->flags4, WF_WHITE_BORDER_MASK);
+		CLRBITS(this->flags, WF_WHITE_BORDER);
 		ResizeWindow(this, _screen.width, _screen.height);
 
-		NWidgetViewport *nvp = this->GetWidget<NWidgetViewport>(MW_VIEWPORT);
+		NWidgetViewport *nvp = this->GetWidget<NWidgetViewport>(WID_M_VIEWPORT);
 		nvp->InitializeViewport(this, TileXY(32, 32), ZOOM_LVL_VIEWPORT);
 	}
 
@@ -426,7 +423,7 @@ struct MainWindow : Window
 	virtual void OnResize()
 	{
 		if (this->viewport != NULL) {
-			NWidgetViewport *nvp = this->GetWidget<NWidgetViewport>(MW_VIEWPORT);
+			NWidgetViewport *nvp = this->GetWidget<NWidgetViewport>(WID_M_VIEWPORT);
 			nvp->UpdateViewportCoordinates(this);
 		}
 	}
