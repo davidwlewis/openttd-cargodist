@@ -1944,10 +1944,10 @@ STR_TRANSPARENT_CATENARY_TOOLTIP                                :{BLACK}Toggle t
 STR_TRANSPARENT_LOADING_TOOLTIP                                 :{BLACK}Toggle transparency for loading indicators. Ctrl+Click to lock
 STR_TRANSPARENT_INVISIBLE_TOOLTIP                               :{BLACK}Set objects invisible instead of transparent
 
-# Linkgraph legend window
-STR_LINKGRAPH_LEGEND_UNUSED                                     :{TINYFONT}{BLACK}unused
-STR_LINKGRAPH_LEGEND_SATURATED                                  :{TINYFONT}{BLACK}saturated
-STR_LINKGRAPH_LEGEND_OVERLOADED                                 :{TINYFONT}{BLACK}overloaded
+# Linkgraph legend window and linkgraph legend in smallmap
+STR_LINKGRAPH_LEGEND_UNUSED                                     :{TINY_FONT}{BLACK}unused
+STR_LINKGRAPH_LEGEND_SATURATED                                  :{TINY_FONT}{BLACK}saturated
+STR_LINKGRAPH_LEGEND_OVERLOADED                                 :{TINY_FONT}{BLACK}overloaded
 
 # Base for station construction window(s)
 STR_STATION_BUILD_COVERAGE_AREA_TITLE                           :{BLACK}Coverage area highlight
