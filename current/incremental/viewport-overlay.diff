@@ -1,8 +1,8 @@
 diff --git a/src/linkgraph_gui.cpp b/src/linkgraph_gui.cpp
-index 828483d..5b33025 100644
+index 48c4f1a..9efc276 100644
 --- a/src/linkgraph_gui.cpp
 +++ b/src/linkgraph_gui.cpp
-@@ -262,15 +262,15 @@ void LinkGraphOverlay::DrawStationDots(const DrawPixelInfo *dpi) const
+@@ -263,15 +263,15 @@ void LinkGraphOverlay::DrawStationDots(const DrawPixelInfo *dpi) const
   * @return Middle point of the station in the current window.
   */
  Point LinkGraphOverlay::GetStationMiddle(const Station *st) const {
@@ -22,7 +22,7 @@ index 828483d..5b33025 100644
  }
  
  /**
-@@ -409,7 +409,7 @@ LinkGraphLegendWindow::LinkGraphLegendWindow(const WindowDesc *desc, int window_
+@@ -393,7 +393,7 @@ LinkGraphLegendWindow::LinkGraphLegendWindow(const WindowDesc *desc, int window_
  {
  	this->InitNested(desc, window_number);
  	this->InvalidateData(0);
@@ -32,7 +32,7 @@ index 828483d..5b33025 100644
  
  /**
 diff --git a/src/main_gui.cpp b/src/main_gui.cpp
-index 04dbd35..a56e254 100644
+index 04dbd35..2aa2143 100644
 --- a/src/main_gui.cpp
 +++ b/src/main_gui.cpp
 @@ -29,6 +29,7 @@
@@ -60,7 +60,7 @@ index 04dbd35..a56e254 100644
  		NWidgetViewport *nvp = this->GetWidget<NWidgetViewport>(WID_M_VIEWPORT);
  		nvp->InitializeViewport(this, TileXY(32, 32), ZOOM_LVL_VIEWPORT);
 +
-+		this->viewport->overlay = new LinkGraphOverlay(this, MW_VIEWPORT, 0, 0, 3);
++		this->viewport->overlay = new LinkGraphOverlay(this, WID_M_VIEWPORT, 0, 0, 3);
 +		this->refresh = LINKGRAPH_DELAY;
 +	}
 +
@@ -68,7 +68,7 @@ index 04dbd35..a56e254 100644
 +	{
 +		if (--refresh == 0) {
 +			this->viewport->overlay->RebuildCache();
-+			this->GetWidget<NWidgetBase>(MW_VIEWPORT)->SetDirty(this);
++			this->GetWidget<NWidgetBase>(WID_M_VIEWPORT)->SetDirty(this);
 +			this->refresh = LINKGRAPH_REFRESH_PERIOD;
 +		}
  	}
