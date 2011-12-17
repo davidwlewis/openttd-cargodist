@@ -16,6 +16,7 @@
 #include "window_gui.h"
 #include "strings_func.h"
 #include "blitter/factory.hpp"
+#include "widgets/smallmap_widget.h"
 
 void BuildIndustriesLegend();
 void ShowSmallMap();
@@ -34,32 +35,10 @@ struct LegendAndColour {
 	bool col_break;            ///< Perform a column break and go further at the next column.
 };
 
-/** Widget numbers of the small map window. */
-enum SmallMapWindowWidgets {
-	SM_WIDGET_CAPTION,           ///< Caption widget.
-	SM_WIDGET_MAP_BORDER,        ///< Border around the smallmap.
-	SM_WIDGET_MAP,               ///< Panel containing the smallmap.
-	SM_WIDGET_LEGEND,            ///< Bottom panel to display smallmap legends.
-	SM_WIDGET_ZOOM_IN,           ///< Button to zoom in one step.
-	SM_WIDGET_ZOOM_OUT,          ///< Button to zoom out one step.
-	SM_WIDGET_CONTOUR,           ///< Button to select the contour view (height map).
-	SM_WIDGET_VEHICLES,          ///< Button to select the vehicles view.
-	SM_WIDGET_INDUSTRIES,        ///< Button to select the industries view.
-	SM_WIDGET_ROUTES,            ///< Button to select the routes view.
-	SM_WIDGET_VEGETATION,        ///< Button to select the vegetation view.
-	SM_WIDGET_OWNERS,            ///< Button to select the owners view.
-	SM_WIDGET_CENTERMAP,         ///< Button to move smallmap center to main window center.
-	SM_WIDGET_TOGGLETOWNNAME,    ///< Toggle button to display town names.
-	SM_WIDGET_SELECT_BUTTONS,    ///< Selection widget for the buttons present in some smallmap modes.
-	SM_WIDGET_ENABLE_ALL,        ///< Button to enable display of all legend entries.
-	SM_WIDGET_DISABLE_ALL,       ///< Button to disable display of all legend entries.
-	SM_WIDGET_SHOW_HEIGHT,       ///< Show heightmap toggle button.
-};
-
 /** Class managing the smallmap window. */
 class SmallMapWindow : public Window {
 protected:
-	/** Types of legends in the #SM_WIDGET_LEGEND widget. */
+	/** Types of legends in the #WID_SM_LEGEND widget. */
 	enum SmallMapType {
 		SMT_CONTOUR,
 		SMT_VEHICLES,
@@ -79,12 +58,12 @@ protected:
 	static SmallMapType map_type; ///< Currently displayed legends.
 	static bool show_towns;       ///< Display town names in the smallmap.
 
-	static const uint LEGEND_BLOB_WIDTH = 8;              ///< Width of the coloured blob in front of a line text in the #SM_WIDGET_LEGEND widget.
-	static const uint INDUSTRY_MIN_NUMBER_OF_COLUMNS = 2; ///< Minimal number of columns in the #SM_WIDGET_LEGEND widget for the #SMT_INDUSTRY legend.
+	static const uint LEGEND_BLOB_WIDTH = 8;              ///< Width of the coloured blob in front of a line text in the #WID_SM_LEGEND widget.
+	static const uint INDUSTRY_MIN_NUMBER_OF_COLUMNS = 2; ///< Minimal number of columns in the #WID_SM_LEGEND widget for the #SMT_INDUSTRY legend.
 	static const uint8 FORCE_REFRESH_PERIOD = 0x1F; ///< map is redrawn after that many ticks
 
 	uint min_number_of_fixed_rows; ///< Minimal number of rows in the legends for the fixed layouts only (all except #SMT_INDUSTRY).
-	uint column_width;             ///< Width of a column in the #SM_WIDGET_LEGEND widget.
+	uint column_width;             ///< Width of a column in the #WID_SM_LEGEND widget.
 
 	int32 scroll_x;  ///< Horizontal world coordinate of the base tile left of the top-left corner of the smallmap display.
 	int32 scroll_y;  ///< Vertical world coordinate of the base tile left of the top-left corner of the smallmap display.
