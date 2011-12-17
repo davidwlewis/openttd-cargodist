@@ -19,7 +19,8 @@ enum CmdFlags {
 };
 DECLARE_ENUM_AS_BIT_SET(CmdFlags)
 
-typedef void (*ParseCmdProc)(char *buf, int value);
+struct Buffer;
+typedef void (*ParseCmdProc)(Buffer *buffer, char *buf, int value);
 
 struct CmdStruct {
 	const char *cmd;
@@ -29,16 +30,16 @@ struct CmdStruct {
 	CmdFlags flags;
 };
 
-static void EmitSingleChar(char *buf, int value);
-static void EmitPlural(char *buf, int value);
-static void EmitGender(char *buf, int value);
+static void EmitSingleChar(Buffer *buffer, char *buf, int value);
+static void EmitPlural(Buffer *buffer, char *buf, int value);
+static void EmitGender(Buffer *buffer, char *buf, int value);
 
 static const CmdStruct _cmd_structs[] = {
 	/* Font size */
 	{"TINY_FONT",         EmitSingleChar, SCC_TINYFONT,           0, C_NONE},
 	{"BIG_FONT",          EmitSingleChar, SCC_BIGFONT,            0, C_NONE},
 
-	/* Colors */
+	/* Colours */
 	{"BLUE",              EmitSingleChar, SCC_BLUE,               0, C_NONE},
 	{"SILVER",            EmitSingleChar, SCC_SILVER,             0, C_NONE},
 	{"GOLD",              EmitSingleChar, SCC_GOLD,               0, C_NONE},
