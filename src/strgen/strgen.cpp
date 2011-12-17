@@ -18,6 +18,7 @@
 #include "../table/control_codes.h"
 
 #include <stdarg.h>
+#include <exception>
 
 #if (!defined(WIN32) && !defined(WIN64)) || defined(__CYGWIN__)
 #include <unistd.h>
@@ -39,45 +40,210 @@
 
 /* Compiles a list of strings into a compiled string list */
 
-struct Case {
-	int caseidx;
-	char *string;
-	Case *next;
-};
-
-static bool _masterlang;                     ///< Whether we are loading the master language
 static bool _translated;                     ///< Whether the current language is not the master language
 static bool _translation;                    ///< Is the current file actually a translation or not
 static const char *_file = "(unknown file)"; ///< The filename of the input, so we can refer to it in errors/warnings
-static FILE *_output_file = NULL;            ///< The file we are currently writing output to
-static const char *_output_filename = NULL;  ///< The filename of the output, so we can delete it if compilation fails
 static int _cur_line;                        ///< The current line we're parsing in the input file
 static int _errors, _warnings, _show_todo;
 
 static const ptrdiff_t MAX_COMMAND_PARAM_SIZE = 100; ///< Maximum size of every command block, not counting the name of the command itself
+static const CmdStruct *ParseCommandString(const char **str, char *param, int *argno, int *casei);
 
-struct LangString {
-	char *name;            // Name of the string
-	char *english;         // English text
-	char *translated;      // Translated text
-	uint16 hash_next;      // next hash entry
-	uint16 index;
-	int line;              // line of string in source-file
-	Case *translated_case; // cases for foreign
+/** Container for the different cases of a string. */
+struct Case {
+	int caseidx;  ///< The index of the case.
+	char *string; ///< The translation of the case.
+	Case *next;   ///< The next, chained, case.
+
+	/**
+	 * Create a new case.
+	 * @param caseidx The index of the case.
+	 * @param string  The translation of the case.
+	 * @param next    The next chained case.
+	 */
+	Case(int caseidx, const char *string, Case *next) :
+			caseidx(caseidx), string(strdup(string)), next(next)
+	{
+	}
+
+	/** Free everything we allocated. */
+	~Case()
+	{
+		free(this->string);
+		delete this->next;
+	}
 };
 
-static LangString *_strings[65536];
+/** Information about a single string. */
+struct LangString {
+	char *name;            ///< Name of the string.
+	char *english;         ///< English text.
+	char *translated;      ///< Translated text.
+	uint16 hash_next;      ///< Next hash entry.
+	uint16 index;          ///< The index in the language file.
+	int line;              ///< Line of string in source-file.
+	Case *translated_case; ///< Cases of the translation.
+
+	/**
+	 * Create a new string.
+	 * @param name    The name of the string.
+	 * @param english The english "translation" of the string.
+	 * @param index   The index in the string table.
+	 * @param line    The line this string was found on.
+	 */
+	LangString(const char *name, const char *english, int index, int line) :
+			name(strdup(name)), english(strdup(english)), translated(NULL),
+			hash_next(0), index(index), line(line), translated_case(NULL)
+	{
+	}
+
+	/** Free everything we allocated. */
+	~LangString()
+	{
+		free(this->name);
+		free(this->english);
+		free(this->translated);
+		delete this->translated_case;
+	}
+};
+
+/** Information about the currently known strings. */
+struct StringData {
+	static const uint STRINGS_IN_TAB = 2048;
+
+	LangString **strings; ///< Array of all known strings.
+	uint16 *hash_heads;   ///< Hash table for the strings.
+	size_t tabs;          ///< The number of 'tabs' of strings.
+	size_t max_strings;   ///< The maxmimum number of strings.
+	int next_string_id;   ///< The next string ID to allocate.
+
+	/**
+	 * Create a new string data container.
+	 * @param max_strings The maximum number of strings.
+	 */
+	StringData(size_t tabs = 32) : tabs(tabs), max_strings(tabs * STRINGS_IN_TAB)
+	{
+		this->strings = CallocT<LangString *>(max_strings);
+		this->hash_heads = CallocT<uint16>(max_strings);
+		this->next_string_id = 0;
+	}
+
+	/** Free everything we allocated. */
+	~StringData()
+	{
+		for (size_t i = 0; i < this->max_strings; i++) delete this->strings[i];
+		free(this->strings);
+		free(this->hash_heads);
+	}
+
+	/**
+	 * Create a hash of the string for finding them back quickly.
+	 * @param s The string to hash.
+	 * @return The hashed string.
+	 */
+	uint HashStr(const char *s) const
+	{
+		uint hash = 0;
+		for (; *s != '\0'; s++) hash = ROL(hash, 3) ^ *s;
+		return hash % this->max_strings;
+	}
+
+	/**
+	 * Add a newly created LangString.
+	 * @param s  The name of the string.
+	 * @param ls The string to add.
+	 */
+	void Add(const char *s, LangString *ls)
+	{
+		uint hash = this->HashStr(s);
+		ls->hash_next = this->hash_heads[hash];
+		/* Off-by-one for hash find. */
+		this->hash_heads[hash] = ls->index + 1;
+		this->strings[ls->index] = ls;
+	}
+
+	/**
+	 * Find a LangString based on the string name.
+	 * @param s The string name to search on.
+	 * @return The LangString or NULL if it is not known.
+	 */
+	LangString *Find(const char *s)
+	{
+		int idx = this->hash_heads[this->HashStr(s)];
+
+		while (--idx >= 0) {
+			LangString *ls = this->strings[idx];
+
+			if (strcmp(ls->name, s) == 0) return ls;
+			idx = ls->hash_next;
+		}
+		return NULL;
+	}
+
+	/**
+	 * Create a compound hash.
+	 * @param hash The hash to add the string hash to.
+	 * @param s    The string hash.
+	 * @return The new hash.
+	 */
+	uint VersionHashStr(uint hash, const char *s) const
+	{
+		for (; *s != '\0'; s++) {
+			hash = ROL(hash, 3) ^ *s;
+			hash = (hash & 1 ? hash >> 1 ^ 0xDEADBEEF : hash >> 1);
+		}
+		return hash;
+	}
+
+	/**
+	 * Make a hash of the file to get a unique "version number"
+	 * @return The version number.
+	 */
+	uint Version() const
+	{
+		uint hash = 0;
+
+		for (size_t i = 0; i < this->max_strings; i++) {
+			const LangString *ls = this->strings[i];
+
+			if (ls != NULL) {
+				const CmdStruct *cs;
+				const char *s;
+				char buf[MAX_COMMAND_PARAM_SIZE];
+				int argno;
+				int casei;
+
+				s = ls->name;
+				hash ^= i * 0x717239;
+				hash = (hash & 1 ? hash >> 1 ^ 0xDEADBEEF : hash >> 1);
+				hash = this->VersionHashStr(hash, s + 1);
+
+				s = ls->english;
+				while ((cs = ParseCommandString(&s, buf, &argno, &casei)) != NULL) {
+					if (cs->flags & C_DONTCOUNT) continue;
+
+					hash ^= (cs - _cmd_structs) * 0x1234567;
+					hash = (hash & 1 ? hash >> 1 ^ 0xF00BAA4 : hash >> 1);
+				}
+			}
+		}
+
+		return hash;
+	}
+
+	/**
+	 * Count the number of tab elements that are in use.
+	 * @param tab The tab to count the elements of.
+	 */
+	uint CountInUse(uint tab) const
+	{
+		int i;
+		for (i = STRINGS_IN_TAB; --i >= 0;) if (this->strings[(tab * STRINGS_IN_TAB) + i] != NULL) break;
+		return i + 1;
+	}
+};
+
 static LanguagePackHeader _lang; ///< Header information about a language.
-
-
-#define HASH_SIZE 32767
-static uint16 _hash_head[HASH_SIZE];
-
-static byte _put_buf[4096];
-static uint _put_pos;
-static int _next_string_id;
-
-static uint32 _hash;
 
 static const char *_cur_ident;
 
@@ -95,33 +261,6 @@ struct ParsedCommandStruct {
 /* Used when generating some advanced commands. */
 static ParsedCommandStruct _cur_pcs;
 static int _cur_argidx;
-
-static uint HashStr(const char *s)
-{
-	uint hash = 0;
-	for (; *s != '\0'; s++) hash = ROL(hash, 3) ^ *s;
-	return hash % HASH_SIZE;
-}
-
-static void HashAdd(const char *s, LangString *ls)
-{
-	uint hash = HashStr(s);
-	ls->hash_next = _hash_head[hash];
-	_hash_head[hash] = ls->index + 1;
-}
-
-static LangString *HashFind(const char *s)
-{
-	int idx = _hash_head[HashStr(s)];
-
-	while (--idx >= 0) {
-		LangString *ls = _strings[idx];
-
-		if (strcmp(ls->name, s) == 0) return ls;
-		idx = ls->hash_next;
-	}
-	return NULL;
-}
 
 #ifdef _MSC_VER
 # define LINE_NUM_FMT(s) "%s (%d): warning: %s (" s ")\n"
@@ -166,42 +305,45 @@ void NORETURN CDECL error(const char *s, ...)
 #ifdef _MSC_VER
 	fprintf(stderr, LINE_NUM_FMT("warning"), _file, _cur_line, "language is not compiled");
 #endif
-	/* We were writing output to a file, remove it. */
-	if (_output_file != NULL) {
-		fclose(_output_file);
-		unlink(_output_filename);
+	throw std::exception();
+}
+
+/** The buffer for writing a single string. */
+struct Buffer : SmallVector<byte, 256> {
+	/**
+	 * Conveniance method for adding a byte.
+	 * @param value The value to add.
+	 */
+	void AppendByte(byte value)
+	{
+		*this->Append() = value;
 	}
-	exit(1);
-}
 
-static void PutByte(byte c)
-{
-	if (_put_pos >= lengthof(_put_buf)) error("Put buffer too small");
-	_put_buf[_put_pos++] = c;
-}
-
-
-static void PutUtf8(uint32 value)
-{
-	if (value < 0x80) {
-		PutByte(value);
-	} else if (value < 0x800) {
-		PutByte(0xC0 + GB(value,  6, 5));
-		PutByte(0x80 + GB(value,  0, 6));
-	} else if (value < 0x10000) {
-		PutByte(0xE0 + GB(value, 12, 4));
-		PutByte(0x80 + GB(value,  6, 6));
-		PutByte(0x80 + GB(value,  0, 6));
-	} else if (value < 0x110000) {
-		PutByte(0xF0 + GB(value, 18, 3));
-		PutByte(0x80 + GB(value, 12, 6));
-		PutByte(0x80 + GB(value,  6, 6));
-		PutByte(0x80 + GB(value,  0, 6));
-	} else {
-		strgen_warning("Invalid unicode value U+0x%X", value);
+	/**
+	 * Add an Unicode character encoded in UTF-8 to the buffer.
+	 * @param value The character to add.
+	 */
+	void AppendUtf8(uint32 value)
+	{
+		if (value < 0x80) {
+			*this->Append() = value;
+		} else if (value < 0x800) {
+			*this->Append() = 0xC0 + GB(value,  6, 5);
+			*this->Append() = 0x80 + GB(value,  0, 6);
+		} else if (value < 0x10000) {
+			*this->Append() = 0xE0 + GB(value, 12, 4);
+			*this->Append() = 0x80 + GB(value,  6, 6);
+			*this->Append() = 0x80 + GB(value,  0, 6);
+		} else if (value < 0x110000) {
+			*this->Append() = 0xF0 + GB(value, 18, 3);
+			*this->Append() = 0x80 + GB(value, 12, 6);
+			*this->Append() = 0x80 + GB(value,  6, 6);
+			*this->Append() = 0x80 + GB(value,  0, 6);
+		} else {
+			strgen_warning("Invalid unicode value U+0x%X", value);
+		}
 	}
-}
-
+};
 
 size_t Utf8Validate(const char *s)
 {
@@ -228,10 +370,10 @@ size_t Utf8Validate(const char *s)
 }
 
 
-static void EmitSingleChar(char *buf, int value)
+static void EmitSingleChar(Buffer *buffer, char *buf, int value)
 {
 	if (*buf != '\0') strgen_warning("Ignoring trailing letters in command");
-	PutUtf8(value);
+	buffer->AppendUtf8(value);
 }
 
 
@@ -307,17 +449,17 @@ char *ParseWord(char **buf)
 /* Forward declaration */
 static int TranslateArgumentIdx(int arg, int offset = 0);
 
-static void EmitWordList(const char * const *words, uint nw)
+static void EmitWordList(Buffer *buffer, const char * const *words, uint nw)
 {
-	PutByte(nw);
-	for (uint i = 0; i < nw; i++) PutByte(strlen(words[i]) + 1);
+	buffer->AppendByte(nw);
+	for (uint i = 0; i < nw; i++) buffer->AppendByte(strlen(words[i]) + 1);
 	for (uint i = 0; i < nw; i++) {
-		for (uint j = 0; words[i][j] != '\0'; j++) PutByte(words[i][j]);
-		PutByte(0);
+		for (uint j = 0; words[i][j] != '\0'; j++) buffer->AppendByte(words[i][j]);
+		buffer->AppendByte(0);
 	}
 }
 
-static void EmitPlural(char *buf, int value)
+static void EmitPlural(Buffer *buffer, char *buf, int value)
 {
 	int argidx = _cur_argidx;
 	int offset = 0;
@@ -353,14 +495,14 @@ static void EmitPlural(char *buf, int value)
 		}
 	}
 
-	PutUtf8(SCC_PLURAL_LIST);
-	PutByte(_lang.plural_form);
-	PutByte(TranslateArgumentIdx(argidx, offset));
-	EmitWordList(words, nw);
+	buffer->AppendUtf8(SCC_PLURAL_LIST);
+	buffer->AppendByte(_lang.plural_form);
+	buffer->AppendByte(TranslateArgumentIdx(argidx, offset));
+	EmitWordList(buffer, words, nw);
 }
 
 
-static void EmitGender(char *buf, int value)
+static void EmitGender(Buffer *buffer, char *buf, int value)
 {
 	int argidx = _cur_argidx;
 	int offset = 0;
@@ -374,8 +516,8 @@ static void EmitGender(char *buf, int value)
 		if (nw >= MAX_NUM_GENDERS) error("G argument '%s' invalid", buf);
 
 		/* now nw contains the gender index */
-		PutUtf8(SCC_GENDER_INDEX);
-		PutByte(nw);
+		buffer->AppendUtf8(SCC_GENDER_INDEX);
+		buffer->AppendByte(nw);
 	} else {
 		const char *words[MAX_NUM_GENDERS];
 
@@ -395,9 +537,9 @@ static void EmitGender(char *buf, int value)
 		if (nw != _lang.num_genders) error("Bad # of arguments for gender command");
 
 		assert(IsInsideBS(cmd->value, SCC_CONTROL_START, UINT8_MAX));
-		PutUtf8(SCC_GENDER_LIST);
-		PutByte(TranslateArgumentIdx(argidx, offset));
-		EmitWordList(words, nw);
+		buffer->AppendUtf8(SCC_GENDER_LIST);
+		buffer->AppendByte(TranslateArgumentIdx(argidx, offset));
+		EmitWordList(buffer, words, nw);
 	}
 }
 
@@ -501,10 +643,10 @@ static const CmdStruct *ParseCommandString(const char **str, char *param, int *a
 }
 
 
-static void HandlePragma(char *str, bool master)
+static void HandlePragma(StringData &data, char *str, bool master)
 {
 	if (!memcmp(str, "id ", 3)) {
-		_next_string_id = strtoul(str + 3, NULL, 0);
+		data.next_string_id = strtoul(str + 3, NULL, 0);
 	} else if (!memcmp(str, "name ", 5)) {
 		strecpy(_lang.name, str + 5, lastof(_lang.name));
 	} else if (!memcmp(str, "ownname ", 8)) {
@@ -681,10 +823,10 @@ static bool CheckCommandsMatch(char *a, char *b, const char *name)
 	return result;
 }
 
-static void HandleString(char *str, bool master)
+static void HandleString(StringData &data, char *str, bool master)
 {
 	if (*str == '#') {
-		if (str[1] == '#' && str[2] != '#') HandlePragma(str + 2, master);
+		if (str[1] == '#' && str[2] != '#') HandlePragma(data, str + 2, master);
 		return;
 	}
 
@@ -727,7 +869,7 @@ static void HandleString(char *str, bool master)
 	if (casep != NULL) *casep++ = '\0';
 
 	/* Check if this string already exists.. */
-	LangString *ent = HashFind(str);
+	LangString *ent = data.Find(str);
 
 	if (master) {
 		if (casep != NULL) {
@@ -740,21 +882,13 @@ static void HandleString(char *str, bool master)
 			return;
 		}
 
-		if (_strings[_next_string_id]) {
-			strgen_error("String ID 0x%X for '%s' already in use by '%s'", _next_string_id, str, _strings[_next_string_id]->name);
+		if (data.strings[data.next_string_id] != NULL) {
+			strgen_error("String ID 0x%X for '%s' already in use by '%s'", data.next_string_id, str, data.strings[data.next_string_id]->name);
 			return;
 		}
 
 		/* Allocate a new LangString */
-		ent = CallocT<LangString>(1);
-		_strings[_next_string_id] = ent;
-		ent->index = _next_string_id++;
-		ent->name = strdup(str);
-		ent->line = _cur_line;
-
-		HashAdd(str, ent);
-
-		ent->english = strdup(s);
+		data.Add(str, new LangString(str, s, data.next_string_id++, _cur_line));
 	} else {
 		if (ent == NULL) {
 			strgen_warning("String name '%s' does not exist in master file", str);
@@ -770,12 +904,7 @@ static void HandleString(char *str, bool master)
 		if (!CheckCommandsMatch(s, ent->english, str)) return;
 
 		if (casep != NULL) {
-			Case *c = MallocT<Case>(1);
-
-			c->caseidx = ResolveCaseName(casep, strlen(casep));
-			c->string = strdup(s);
-			c->next = ent->translated_case;
-			ent->translated_case = c;
+			ent->translated_case = new Case(ResolveCaseName(casep, strlen(casep)), s, ent->translated_case);
 		} else {
 			ent->translated = strdup(s);
 			/* If the string was translated, use the line from the
@@ -795,7 +924,7 @@ static void rstrip(char *buf)
 }
 
 
-static void ParseFile(const char *file, bool english)
+static void ParseFile(StringData &data, const char *file, bool english)
 {
 	FILE *in;
 	char buf[2048];
@@ -817,7 +946,7 @@ static void ParseFile(const char *file, bool english)
 	_cur_line = 1;
 	while (fgets(buf, sizeof(buf), in) != NULL) {
 		rstrip(buf);
-		HandleString(buf, english);
+		HandleString(data, buf, english);
 		_cur_line++;
 	}
 	fclose(in);
@@ -826,60 +955,6 @@ static void ParseFile(const char *file, bool english)
 		error("Language must include ##name, ##ownname and ##isocode");
 	}
 }
-
-
-static uint32 MyHashStr(uint32 hash, const char *s)
-{
-	for (; *s != '\0'; s++) {
-		hash = ROL(hash, 3) ^ *s;
-		hash = (hash & 1 ? hash >> 1 ^ 0xDEADBEEF : hash >> 1);
-	}
-	return hash;
-}
-
-
-/* make a hash of the file to get a unique "version number" */
-static void MakeHashOfStrings()
-{
-	uint32 hash = 0;
-	uint i;
-
-	for (i = 0; i != lengthof(_strings); i++) {
-		const LangString *ls = _strings[i];
-
-		if (ls != NULL) {
-			const CmdStruct *cs;
-			const char *s;
-			char buf[MAX_COMMAND_PARAM_SIZE];
-			int argno;
-			int casei;
-
-			s = ls->name;
-			hash ^= i * 0x717239;
-			hash = (hash & 1 ? hash >> 1 ^ 0xDEADBEEF : hash >> 1);
-			hash = MyHashStr(hash, s + 1);
-
-			s = ls->english;
-			while ((cs = ParseCommandString(&s, buf, &argno, &casei)) != NULL) {
-				if (cs->flags & C_DONTCOUNT) continue;
-
-				hash ^= (cs - _cmd_structs) * 0x1234567;
-				hash = (hash & 1 ? hash >> 1 ^ 0xF00BAA4 : hash >> 1);
-			}
-		}
-	}
-	_hash = hash;
-}
-
-
-static uint CountInUse(uint grp)
-{
-	int i;
-
-	for (i = 0x800; --i >= 0;) if (_strings[(grp << 11) + i] != NULL) break;
-	return i + 1;
-}
-
 
 bool CompareFiles(const char *n1, const char *n2)
 {
@@ -908,59 +983,137 @@ bool CompareFiles(const char *n1, const char *n2)
 	return true;
 }
 
+/** Base class for writing data to disk. */
+struct FileWriter {
+	FILE *fh;             ///< The file handle we're writing to.
+	const char *filename; ///< The file name we're writing to.
 
-static void WriteStringsH(const char *filename)
-{
-	int next = -1;
+	/**
+	 * Open a file to write to.
+	 * @param filename The file to open.
+	 */
+	FileWriter(const char *filename)
+	{
+		this->filename = strdup(filename);
+		this->fh = fopen(this->filename, "wb");
 
-	_output_filename = "tmp.xxx";
-	_output_file = fopen(_output_filename, "w");
-	if (_output_file == NULL) error("can't open tmp.xxx");
-
-	fprintf(_output_file, "/* This file is automatically generated. Do not modify */\n\n");
-	fprintf(_output_file, "#ifndef TABLE_STRINGS_H\n");
-	fprintf(_output_file, "#define TABLE_STRINGS_H\n");
-
-	for (int i = 0; i != lengthof(_strings); i++) {
-		if (_strings[i] != NULL) {
-			if (next != i) fprintf(_output_file, "\n");
-			fprintf(_output_file, "static const StringID %s = 0x%X;\n", _strings[i]->name, i);
-			next = i + 1;
+		if (this->fh == NULL) {
+			error("Could not open %s", this->filename);
 		}
 	}
 
-	fprintf(_output_file, "\nstatic const StringID STR_LAST_STRINGID = 0x%X;\n\n", next - 1);
-
-	/* Find the plural form with the most amount of cases. */
-	int max_plural_forms = 0;
-	for (uint i = 0; i < lengthof(_plural_forms); i++) {
-		max_plural_forms = max(max_plural_forms, _plural_forms[i].plural_count);
+	/** Finalise the writing. */
+	void Finalise()
+	{
+		fclose(this->fh);
+		this->fh = NULL;
 	}
 
-	fprintf(_output_file,
-		"static const uint LANGUAGE_PACK_VERSION     = 0x%X;\n"
-		"static const uint LANGUAGE_MAX_PLURAL       = %d;\n"
-		"static const uint LANGUAGE_MAX_PLURAL_FORMS = %d;\n\n",
-		(uint)_hash, (uint)lengthof(_plural_forms), max_plural_forms
-	);
-
-	fprintf(_output_file, "#endif /* TABLE_STRINGS_H */\n");
-
-	fclose(_output_file);
-	_output_file = NULL;
-
-	if (CompareFiles(_output_filename, filename)) {
-		/* files are equal. tmp.xxx is not needed */
-		unlink(_output_filename);
-	} else {
-		/* else rename tmp.xxx into filename */
-#if defined(WIN32) || defined(WIN64)
-		unlink(filename);
-#endif
-		if (rename(_output_filename, filename) == -1) error("rename() failed");
+	/** Make sure the file is closed. */
+	virtual ~FileWriter()
+	{
+		/* If we weren't closed an exception was thrown, so remove the termporary file. */
+		if (fh != NULL) {
+			fclose(this->fh);
+			unlink(this->filename);
+		}
+		free(this->filename);
 	}
-	_output_filename = NULL;
-}
+};
+
+/** Base class for writing the header. */
+struct HeaderWriter {
+	/**
+	 * Write the string ID.
+	 * @param name     The name of the string.
+	 * @param stringid The ID of the string.
+	 */
+	virtual void WriteStringID(const char *name, int stringid) = 0;
+
+	/**
+	 * Finalise writing the file.
+	 * @param data The data about the string.
+	 */
+	virtual void Finalise(const StringData &data) = 0;
+
+	/** Especially destroy the subclasses. */
+	virtual ~HeaderWriter() {};
+
+	/**
+	 * Write the header information.
+	 * @param data The data about the string.
+	 */
+	void WriteHeader(const StringData &data)
+	{
+		int last = 0;
+		for (size_t i = 0; i < data.max_strings; i++) {
+			if (data.strings[i] != NULL) {
+				this->WriteStringID(data.strings[i]->name, i);
+				last = i;
+			}
+		}
+
+		this->WriteStringID("STR_LAST_STRINGID", last);
+	}
+};
+
+struct HeaderFileWriter : HeaderWriter, FileWriter {
+	/** The real file name we eventually want to write to. */
+	const char *real_filename;
+	/** The previous string ID that was printed. */
+	int prev;
+
+	/**
+	 * Open a file to write to.
+	 * @param filename The file to open.
+	 */
+	HeaderFileWriter(const char *filename) : FileWriter("tmp.xxx"),
+		real_filename(strdup(filename)), prev(0)
+	{
+		fprintf(this->fh, "/* This file is automatically generated. Do not modify */\n\n");
+		fprintf(this->fh, "#ifndef TABLE_STRINGS_H\n");
+		fprintf(this->fh, "#define TABLE_STRINGS_H\n");
+	}
+
+	void WriteStringID(const char *name, int stringid)
+	{
+		if (prev + 1 != stringid) fprintf(this->fh, "\n");
+		fprintf(this->fh, "static const StringID %s = 0x%X;\n", name, stringid);
+		prev = stringid;
+	}
+
+	void Finalise(const StringData &data)
+	{
+		/* Find the plural form with the most amount of cases. */
+		int max_plural_forms = 0;
+		for (uint i = 0; i < lengthof(_plural_forms); i++) {
+			max_plural_forms = max(max_plural_forms, _plural_forms[i].plural_count);
+		}
+
+		fprintf(this->fh,
+			"\n"
+			"static const uint LANGUAGE_PACK_VERSION     = 0x%X;\n"
+			"static const uint LANGUAGE_MAX_PLURAL       = %d;\n"
+			"static const uint LANGUAGE_MAX_PLURAL_FORMS = %d;\n\n",
+			(uint)data.Version(), (uint)lengthof(_plural_forms), max_plural_forms
+		);
+
+		fprintf(this->fh, "#endif /* TABLE_STRINGS_H */\n");
+
+		this->FileWriter::Finalise();
+
+		if (CompareFiles(this->filename, this->real_filename)) {
+			/* files are equal. tmp.xxx is not needed */
+			unlink(this->filename);
+		} else {
+			/* else rename tmp.xxx into filename */
+	#if defined(WIN32) || defined(WIN64)
+			unlink(this->real_filename);
+	#endif
+			if (rename(this->filename, this->real_filename) == -1) error("rename() failed");
+		}
+	}
+};
 
 static int TranslateArgumentIdx(int argidx, int offset)
 {
@@ -987,21 +1140,21 @@ static int TranslateArgumentIdx(int argidx, int offset)
 	return sum + offset;
 }
 
-static void PutArgidxCommand()
+static void PutArgidxCommand(Buffer *buffer)
 {
-	PutUtf8(SCC_ARG_INDEX);
-	PutByte(TranslateArgumentIdx(_cur_argidx));
+	buffer->AppendUtf8(SCC_ARG_INDEX);
+	buffer->AppendByte(TranslateArgumentIdx(_cur_argidx));
 }
 
 
-static void PutCommandString(const char *str)
+static void PutCommandString(Buffer *buffer, const char *str)
 {
 	_cur_argidx = 0;
 
 	while (*str != '\0') {
 		/* Process characters as they are until we encounter a { */
 		if (*str != '{') {
-			PutByte(*str++);
+			buffer->AppendByte(*str++);
 			continue;
 		}
 
@@ -1012,8 +1165,8 @@ static void PutCommandString(const char *str)
 		if (cs == NULL) break;
 
 		if (casei != -1) {
-			PutUtf8(SCC_SET_CASE); // {SET_CASE}
-			PutByte(casei);
+			buffer->AppendUtf8(SCC_SET_CASE); // {SET_CASE}
+			buffer->AppendByte(casei);
 		}
 
 		/* For params that consume values, we need to handle the argindex properly */
@@ -1021,7 +1174,7 @@ static void PutCommandString(const char *str)
 			/* Check if we need to output a move-param command */
 			if (argno != -1 && argno != _cur_argidx) {
 				_cur_argidx = argno;
-				PutArgidxCommand();
+				PutArgidxCommand(buffer);
 			}
 
 			/* Output the one from the master string... it's always accurate. */
@@ -1031,134 +1184,187 @@ static void PutCommandString(const char *str)
 			}
 		}
 
-		cs->proc(param, cs->value);
+		cs->proc(buffer, param, cs->value);
 	}
 }
 
-static void WriteLength(FILE *f, uint length)
-{
-	if (length < 0xC0) {
-		fputc(length, f);
-	} else if (length < 0x4000) {
-		fputc((length >> 8) | 0xC0, f);
-		fputc(length & 0xFF, f);
-	} else {
-		error("string too long");
+/** Base class for all language writers. */
+struct LanguageWriter {
+	/**
+	 * Write the header metadata. The multi-byte integers are already converted to
+	 * the little endian format.
+	 * @param header The header to write.
+	 */
+	virtual void WriteHeader(const LanguagePackHeader *header) = 0;
+
+	/**
+	 * Write a number of bytes.
+	 * @param buffer The buffer to write.
+	 * @param length The amount of byte to write.
+	 */
+	virtual void Write(const byte *buffer, size_t length) = 0;
+
+	/**
+	 * Finalise writing the file.
+	 */
+	virtual void Finalise() = 0;
+
+	/** Especially destroy the subclasses. */
+	virtual ~LanguageWriter() {}
+
+	/**
+	 * Write the length as a simple gamma.
+	 * @param length The number to write.
+	 */
+	void WriteLength(uint length)
+	{
+		char buffer[2];
+		int offs = 0;
+		if (length >= 0x4000) {
+			error("string too long");
+		}
+
+		if (length >= 0xC0) {
+			buffer[offs++] = (length >> 8) | 0xC0;
+		}
+		buffer[offs++] = length & 0xFF;
+		this->Write((byte*)buffer, offs);
 	}
-}
 
+	/**
+	 * Actually write the language.
+	 * @param data The data about the string.
+	 */
+	void WriteLang(const StringData &data)
+	{
+		uint in_use[data.tabs];
+		for (size_t tab = 0; tab < data.tabs; tab++) {
+			uint n = data.CountInUse(tab);
 
-static void WriteLangfile(const char *filename)
-{
-	uint in_use[32];
+			in_use[tab] = n;
+			_lang.offsets[tab] = TO_LE16(n);
 
-	_output_filename = filename;
-	_output_file = fopen(filename, "wb");
-	if (_output_file == NULL) error("can't open %s", filename);
+			for (uint j = 0; j != in_use[tab]; j++) {
+				const LangString *ls = data.strings[(tab * StringData::STRINGS_IN_TAB) + j];
+				if (ls != NULL && ls->translated == NULL) _lang.missing++;
+			}
+		}
 
-	for (int i = 0; i != 32; i++) {
-		uint n = CountInUse(i);
+		_lang.ident = TO_LE32(LanguagePackHeader::IDENT);
+		_lang.version = TO_LE32(data.Version());
+		_lang.missing = TO_LE16(_lang.missing);
+		_lang.winlangid = TO_LE16(_lang.winlangid);
 
-		in_use[i] = n;
-		_lang.offsets[i] = TO_LE16(n);
+		this->WriteHeader(&_lang);
+		Buffer buffer;
 
-		for (uint j = 0; j != in_use[i]; j++) {
-			const LangString *ls = _strings[(i << 11) + j];
-			if (ls != NULL && ls->translated == NULL) _lang.missing++;
+		for (size_t tab = 0; tab < data.tabs; tab++) {
+			for (uint j = 0; j != in_use[tab]; j++) {
+				const LangString *ls = data.strings[(tab * StringData::STRINGS_IN_TAB) + j];
+				const Case *casep;
+				const char *cmdp;
+
+				/* For undefined strings, just set that it's an empty string */
+				if (ls == NULL) {
+					this->WriteLength(0);
+					continue;
+				}
+
+				_cur_ident = ls->name;
+				_cur_line = ls->line;
+
+				/* Produce a message if a string doesn't have a translation. */
+				if (_show_todo > 0 && ls->translated == NULL) {
+					if ((_show_todo & 2) != 0) {
+						strgen_warning("'%s' is untranslated", ls->name);
+					}
+					if ((_show_todo & 1) != 0) {
+						const char *s = "<TODO> ";
+						while (*s != '\0') buffer.AppendByte(*s++);
+					}
+				}
+
+				/* Extract the strings and stuff from the english command string */
+				ExtractCommandString(&_cur_pcs, ls->english, false);
+
+				if (ls->translated_case != NULL || ls->translated != NULL) {
+					casep = ls->translated_case;
+					cmdp = ls->translated;
+				} else {
+					casep = NULL;
+					cmdp = ls->english;
+				}
+
+				_translated = cmdp != ls->english;
+
+				if (casep != NULL) {
+					const Case *c;
+					uint num;
+
+					/* Need to output a case-switch.
+					 * It has this format
+					 * <0x9E> <NUM CASES> <CASE1> <LEN1> <STRING1> <CASE2> <LEN2> <STRING2> <CASE3> <LEN3> <STRING3> <STRINGDEFAULT>
+					 * Each LEN is printed using 2 bytes in big endian order. */
+					buffer.AppendUtf8(SCC_SWITCH_CASE);
+					/* Count the number of cases */
+					for (num = 0, c = casep; c; c = c->next) num++;
+					buffer.AppendByte(num);
+
+					/* Write each case */
+					for (c = casep; c != NULL; c = c->next) {
+						buffer.AppendByte(c->caseidx);
+						/* Make some space for the 16-bit length */
+						size_t pos = buffer.Length();
+						buffer.AppendByte(0);
+						buffer.AppendByte(0);
+						/* Write string */
+						PutCommandString(&buffer, c->string);
+						buffer.AppendByte(0); // terminate with a zero
+						/* Fill in the length */
+						size_t size = buffer.Length() - (pos + 2);
+						buffer[pos + 0] = GB(size, 8, 8);
+						buffer[pos + 1] = GB(size, 0, 8);
+					}
+				}
+
+				if (cmdp != NULL) PutCommandString(&buffer, cmdp);
+
+				this->WriteLength(buffer.Length());
+				this->Write(buffer.Begin(), buffer.Length());
+				buffer.Clear();
+			}
 		}
 	}
+};
 
-	_lang.ident = TO_LE32(LanguagePackHeader::IDENT);
-	_lang.version = TO_LE32(_hash);
-	_lang.missing = TO_LE16(_lang.missing);
-	_lang.winlangid = TO_LE16(_lang.winlangid);
-
-	fwrite(&_lang, sizeof(_lang), 1, _output_file);
-
-	for (int i = 0; i != 32; i++) {
-		for (uint j = 0; j != in_use[i]; j++) {
-			const LangString *ls = _strings[(i << 11) + j];
-			const Case *casep;
-			const char *cmdp;
-
-			/* For undefined strings, just set that it's an empty string */
-			if (ls == NULL) {
-				WriteLength(_output_file, 0);
-				continue;
-			}
-
-			_cur_ident = ls->name;
-			_cur_line = ls->line;
-
-			/* Produce a message if a string doesn't have a translation. */
-			if (_show_todo > 0 && ls->translated == NULL) {
-				if ((_show_todo & 2) != 0) {
-					strgen_warning("'%s' is untranslated", ls->name);
-				}
-				if ((_show_todo & 1) != 0) {
-					const char *s = "<TODO> ";
-					while (*s != '\0') PutByte(*s++);
-				}
-			}
-
-			/* Extract the strings and stuff from the english command string */
-			ExtractCommandString(&_cur_pcs, ls->english, false);
-
-			if (ls->translated_case != NULL || ls->translated != NULL) {
-				casep = ls->translated_case;
-				cmdp = ls->translated;
-			} else {
-				casep = NULL;
-				cmdp = ls->english;
-			}
-
-			_translated = _masterlang || (cmdp != ls->english);
-
-			if (casep != NULL) {
-				const Case *c;
-				uint num;
-
-				/* Need to output a case-switch.
-				 * It has this format
-				 * <0x9E> <NUM CASES> <CASE1> <LEN1> <STRING1> <CASE2> <LEN2> <STRING2> <CASE3> <LEN3> <STRING3> <STRINGDEFAULT>
-				 * Each LEN is printed using 2 bytes in big endian order. */
-				PutUtf8(SCC_SWITCH_CASE);
-				/* Count the number of cases */
-				for (num = 0, c = casep; c; c = c->next) num++;
-				PutByte(num);
-
-				/* Write each case */
-				for (c = casep; c != NULL; c = c->next) {
-					uint pos;
-
-					PutByte(c->caseidx);
-					/* Make some space for the 16-bit length */
-					pos = _put_pos;
-					PutByte(0);
-					PutByte(0);
-					/* Write string */
-					PutCommandString(c->string);
-					PutByte(0); // terminate with a zero
-					/* Fill in the length */
-					_put_buf[pos + 0] = GB(_put_pos - (pos + 2), 8, 8);
-					_put_buf[pos + 1] = GB(_put_pos - (pos + 2), 0, 8);
-				}
-			}
-
-			if (cmdp != NULL) PutCommandString(cmdp);
-
-			WriteLength(_output_file, _put_pos);
-			fwrite(_put_buf, 1, _put_pos, _output_file);
-			_put_pos = 0;
-		}
+/** Class for writing a language to disk. */
+struct LanguageFileWriter : LanguageWriter, FileWriter {
+	/**
+	 * Open a file to write to.
+	 * @param filename The file to open.
+	 */
+	LanguageFileWriter(const char *filename) : FileWriter(filename)
+	{
 	}
 
-	fputc(0, _output_file);
-	fclose(_output_file);
+	void WriteHeader(const LanguagePackHeader *header)
+	{
+		this->Write((const byte *)header, sizeof(*header));
+	}
 
-	_output_file = NULL;
-	_output_filename = NULL;
-}
+	void Finalise()
+	{
+		fputc(0, this->fh);
+		this->FileWriter::Finalise();
+	}
+
+	void Write(const byte *buffer, size_t length)
+	{
+		if (fwrite(buffer, sizeof(*buffer), length, this->fh) != length) {
+			error("Could not write to %s", this->filename);
+		}
+	}
+};
 
 /** Multi-OS mkdirectory function */
 static inline void ottd_mkdir(const char *directory)
@@ -1315,51 +1521,59 @@ int CDECL main(int argc, char *argv[])
 
 	if (dest_dir == NULL) dest_dir = src_dir; // if dest_dir is not specified, it equals src_dir
 
-	/* strgen has two modes of operation. If no (free) arguments are passed
-	 * strgen generates strings.h to the destination directory. If it is supplied
-	 * with a (free) parameter the program will translate that language to destination
-	 * directory. As input english.txt is parsed from the source directory */
-	if (mgo.numleft == 0) {
-		mkpath(pathbuf, lengthof(pathbuf), src_dir, "english.txt");
+	try {
+		/* strgen has two modes of operation. If no (free) arguments are passed
+		* strgen generates strings.h to the destination directory. If it is supplied
+		* with a (free) parameter the program will translate that language to destination
+		* directory. As input english.txt is parsed from the source directory */
+		if (mgo.numleft == 0) {
+			mkpath(pathbuf, lengthof(pathbuf), src_dir, "english.txt");
 
-		/* parse master file */
-		_masterlang = true;
-		ParseFile(pathbuf, true);
-		MakeHashOfStrings();
-		if (_errors != 0) return 1;
+			StringData data;
+			/* parse master file */
+			ParseFile(data, pathbuf, true);
+			if (_errors != 0) return 1;
 
-		/* write strings.h */
-		ottd_mkdir(dest_dir);
-		mkpath(pathbuf, lengthof(pathbuf), dest_dir, "strings.h");
-		WriteStringsH(pathbuf);
-	} else if (mgo.numleft == 1) {
-		char *r;
+			/* write strings.h */
+			ottd_mkdir(dest_dir);
+			mkpath(pathbuf, lengthof(pathbuf), dest_dir, "strings.h");
 
-		mkpath(pathbuf, lengthof(pathbuf), src_dir, "english.txt");
+			HeaderFileWriter writer(pathbuf);
+			writer.WriteHeader(data);
+			writer.Finalise(data);
+		} else if (mgo.numleft == 1) {
+			char *r;
 
-		/* parse master file and check if target file is correct */
-		_masterlang = false;
-		ParseFile(pathbuf, true);
-		MakeHashOfStrings();
-		ParseFile(replace_pathsep(mgo.argv[0]), false); // target file
-		if (_errors != 0) return 1;
+			mkpath(pathbuf, lengthof(pathbuf), src_dir, "english.txt");
 
-		/* get the targetfile, strip any directories and append to destination path */
-		r = strrchr(mgo.argv[0], PATHSEPCHAR);
-		mkpath(pathbuf, lengthof(pathbuf), dest_dir, (r != NULL) ? &r[1] : mgo.argv[0]);
+			StringData data;
+			/* parse master file and check if target file is correct */
+			ParseFile(data, pathbuf, true);
+			ParseFile(data, replace_pathsep(mgo.argv[0]), false); // target file
+			if (_errors != 0) return 1;
 
-		/* rename the .txt (input-extension) to .lng */
-		r = strrchr(pathbuf, '.');
-		if (r == NULL || strcmp(r, ".txt") != 0) r = strchr(pathbuf, '\0');
-		ttd_strlcpy(r, ".lng", (size_t)(r - pathbuf));
-		WriteLangfile(pathbuf);
+			/* get the targetfile, strip any directories and append to destination path */
+			r = strrchr(mgo.argv[0], PATHSEPCHAR);
+			mkpath(pathbuf, lengthof(pathbuf), dest_dir, (r != NULL) ? &r[1] : mgo.argv[0]);
 
-		/* if showing warnings, print a summary of the language */
-		if ((_show_todo & 2) != 0) {
-			fprintf(stdout, "%d warnings and %d errors for %s\n", _warnings, _errors, pathbuf);
+			/* rename the .txt (input-extension) to .lng */
+			r = strrchr(pathbuf, '.');
+			if (r == NULL || strcmp(r, ".txt") != 0) r = strchr(pathbuf, '\0');
+			ttd_strlcpy(r, ".lng", (size_t)(r - pathbuf));
+
+			LanguageFileWriter writer(pathbuf);
+			writer.WriteLang(data);
+			writer.Finalise();
+
+			/* if showing warnings, print a summary of the language */
+			if ((_show_todo & 2) != 0) {
+				fprintf(stdout, "%d warnings and %d errors for %s\n", _warnings, _errors, pathbuf);
+			}
+		} else {
+			fprintf(stderr, "Invalid arguments\n");
 		}
-	} else {
-		fprintf(stderr, "Invalid arguments\n");
+	} catch (...) {
+		return 2;
 	}
 
 	return 0;
