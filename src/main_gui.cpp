@@ -253,7 +253,7 @@ struct MainWindow : Window
 		NWidgetViewport *nvp = this->GetWidget<NWidgetViewport>(WID_M_VIEWPORT);
 		nvp->InitializeViewport(this, TileXY(32, 32), ZOOM_LVL_VIEWPORT);
 
-		this->viewport->overlay = new LinkGraphOverlay(this, MW_VIEWPORT, 0, 0, 3);
+		this->viewport->overlay = new LinkGraphOverlay(this, WID_M_VIEWPORT, 0, 0, 3);
 		this->refresh = LINKGRAPH_DELAY;
 	}
 
@@ -261,7 +261,7 @@ struct MainWindow : Window
 	{
 		if (--refresh == 0) {
 			this->viewport->overlay->RebuildCache();
-			this->GetWidget<NWidgetBase>(MW_VIEWPORT)->SetDirty(this);
+			this->GetWidget<NWidgetBase>(WID_M_VIEWPORT)->SetDirty(this);
 			this->refresh = LINKGRAPH_REFRESH_PERIOD;
 		}
 	}
