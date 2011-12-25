@@ -58,7 +58,7 @@ public:
 	 * Adds the given cost to the cost of the command.
 	 * @param cost the cost to add
 	 */
-	FORCEINLINE void AddCost(const Money &cost)
+	inline void AddCost(const Money &cost)
 	{
 		this->cost += cost;
 	}
@@ -69,7 +69,7 @@ public:
 	 * Multiplies the cost of the command by the given factor.
 	 * @param factor factor to multiply the costs with
 	 */
-	FORCEINLINE void MultiplyCost(int factor)
+	inline void MultiplyCost(int factor)
 	{
 		this->cost *= factor;
 	}
@@ -78,7 +78,7 @@ public:
 	 * The costs as made up to this moment
 	 * @return the costs
 	 */
-	FORCEINLINE Money GetCost() const
+	inline Money GetCost() const
 	{
 		return this->cost;
 	}
@@ -87,7 +87,7 @@ public:
 	 * The expense type of the cost
 	 * @return the expense type
 	 */
-	FORCEINLINE ExpensesType GetExpensesType() const
+	inline ExpensesType GetExpensesType() const
 	{
 		return this->expense_type;
 	}
@@ -137,7 +137,7 @@ public:
 	 * Did this command succeed?
 	 * @return true if and only if it succeeded
 	 */
-	FORCEINLINE bool Succeeded() const
+	inline bool Succeeded() const
 	{
 		return this->success;
 	}
@@ -146,7 +146,7 @@ public:
 	 * Did this command fail?
 	 * @return true if and only if it failed
 	 */
-	FORCEINLINE bool Failed() const
+	inline bool Failed() const
 	{
 		return !this->success;
 	}
@@ -248,6 +248,9 @@ enum Commands {
 	CMD_FOUND_TOWN,                   ///< found a town
 	CMD_RENAME_TOWN,                  ///< rename a town
 	CMD_DO_TOWN_ACTION,               ///< do a action from the town detail window (like advertises or bribe)
+	CMD_TOWN_CARGO_GOAL,              ///< set the goal of a cargo for a town
+	CMD_TOWN_GROWTH_RATE,             ///< set the town growth rate
+	CMD_TOWN_SET_TEXT,                ///< set the custom text of a town
 	CMD_EXPAND_TOWN,                  ///< expand a town
 	CMD_DELETE_TOWN,                  ///< delete a town
 
@@ -258,7 +261,11 @@ enum Commands {
 	CMD_MONEY_CHEAT,                  ///< do the money cheat
 	CMD_BUILD_CANAL,                  ///< build a canal
 
+	CMD_CREATE_SUBSIDY,               ///< create a new subsidy
 	CMD_COMPANY_CTRL,                 ///< used in multiplayer to create a new companies etc.
+	CMD_CUSTOM_NEWS_ITEM,             ///< create a custom news message
+	CMD_CREATE_GOAL,                  ///< create a new goal
+	CMD_REMOVE_GOAL,                  ///< remove a goal
 	CMD_LEVEL_LAND,                   ///< level land
 
 	CMD_BUILD_LOCK,                   ///< build a lock
@@ -293,7 +300,7 @@ enum Commands {
 	CMD_AUTOFILL_TIMETABLE,           ///< autofill the timetable
 	CMD_SET_TIMETABLE_START,          ///< set the date that a timetable should start
 
-	CMD_END                           ///< Must ALWAYS be on the end of this list!! (period)
+	CMD_END,                          ///< Must ALWAYS be on the end of this list!! (period)
 };
 
 /**
@@ -346,15 +353,18 @@ enum FlaggedCommands {
  * This enumeration defines flags for the _command_proc_table.
  */
 enum CommandFlags {
-	CMD_SERVER    = 0x01, ///< the command can only be initiated by the server
-	CMD_SPECTATOR = 0x02, ///< the command may be initiated by a spectator
-	CMD_OFFLINE   = 0x04, ///< the command cannot be executed in a multiplayer game; single-player only
-	CMD_AUTO      = 0x08, ///< set the DC_AUTO flag on this command
-	CMD_ALL_TILES = 0x10, ///< allow this command also on MP_VOID tiles
-	CMD_NO_TEST   = 0x20, ///< the command's output may differ between test and execute due to town rating changes etc.
-	CMD_NO_WATER  = 0x40, ///< set the DC_NO_WATER flag on this command
-	CMD_CLIENT_ID = 0x80, ///< set p2 with the ClientID of the sending client.
+	CMD_SERVER    = 0x001, ///< the command can only be initiated by the server
+	CMD_SPECTATOR = 0x002, ///< the command may be initiated by a spectator
+	CMD_OFFLINE   = 0x004, ///< the command cannot be executed in a multiplayer game; single-player only
+	CMD_AUTO      = 0x008, ///< set the DC_AUTO flag on this command
+	CMD_ALL_TILES = 0x010, ///< allow this command also on MP_VOID tiles
+	CMD_NO_TEST   = 0x020, ///< the command's output may differ between test and execute due to town rating changes etc.
+	CMD_NO_WATER  = 0x040, ///< set the DC_NO_WATER flag on this command
+	CMD_CLIENT_ID = 0x080, ///< set p2 with the ClientID of the sending client.
+	CMD_DEITY     = 0x100, ///< the command may be executed by COMPANY_DEITY
+	CMD_STR_CTRL  = 0x200, ///< the command's string may contain control strings
 };
+DECLARE_ENUM_AS_BIT_SET(CommandFlags)
 
 /** Types of commands we have. */
 enum CommandType {
@@ -406,10 +416,10 @@ typedef CommandCost CommandProc(TileIndex tile, DoCommandFlag flags, uint32 p1, 
  * the #CMD_AUTO, #CMD_OFFLINE and #CMD_SERVER values.
  */
 struct Command {
-	CommandProc *proc; ///< The procedure to actually executing
-	const char *name;  ///< A human readable name for the procedure
-	byte flags;        ///< The (command) flags to that apply to this command
-	CommandType type;  ///< The type of command.
+	CommandProc *proc;  ///< The procedure to actually executing
+	const char *name;   ///< A human readable name for the procedure
+	CommandFlags flags; ///< The (command) flags to that apply to this command
+	CommandType type;   ///< The type of command.
 };
 
 /**
