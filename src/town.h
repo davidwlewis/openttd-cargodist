@@ -37,6 +37,7 @@ static const uint INVALID_TOWN = 0xFFFF;
 
 static const uint TOWN_GROWTH_WINTER = 0xFFFFFFFE; ///< The town only needs this cargo in the winter (any amount)
 static const uint TOWN_GROWTH_DESERT = 0xFFFFFFFF; ///< The town needs the cargo for growth when on desert (any amount)
+static const uint16 TOWN_GROW_RATE_CUSTOM = 0x8000; ///< If this mask is applied to Town::grow_counter, the grow_counter will not be calculated by the system (but assumed to be set by scripts)
 
 typedef Pool<Town, TownID, 64, 64000> TownPool;
 extern TownPool _town_pool;
@@ -76,6 +77,8 @@ struct Town : TownPool::PoolItem<&_town_pool> {
 	TransportedCargoStat<uint32> supplied[NUM_CARGO]; ///< Cargo statistics about supplied cargo.
 	TransportedCargoStat<uint16> received[NUM_TE];    ///< Cargo statistics about received cargotypes.
 	uint32 goal[NUM_TE];                              ///< Amount of cargo required for the town to grow.
+
+	char *text; ///< General text with additional information.
 
 	inline byte GetPercentTransported(CargoID cid) const { return this->supplied[cid].old_act * 256 / (this->supplied[cid].old_max + 1); }
 
@@ -130,7 +133,7 @@ struct Town : TownPool::PoolItem<&_town_pool> {
 
 	void UpdateVirtCoord();
 
-	static FORCEINLINE Town *GetByTile(TileIndex tile)
+	static inline Town *GetByTile(TileIndex tile)
 	{
 		return Town::Get(GetTownIndex(tile));
 	}
@@ -165,7 +168,7 @@ enum TownRatingCheckType {
 enum TownFlags {
 	TOWN_IS_FUNDED      = 0,   ///< Town has received some funds for
 	TOWN_HAS_CHURCH     = 1,   ///< There can be only one church by town.
-	TOWN_HAS_STADIUM    = 2    ///< There can be only one stadium by town.
+	TOWN_HAS_STADIUM    = 2,   ///< There can be only one stadium by town.
 };
 
 CommandCost CheckforTownRating(DoCommandFlag flags, Town *t, TownRatingCheckType type);

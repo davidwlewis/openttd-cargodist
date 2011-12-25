@@ -26,7 +26,10 @@
 
 /* static */ ScriptCompany::CompanyID ScriptCompany::ResolveCompanyID(ScriptCompany::CompanyID company)
 {
-	if (company == COMPANY_SELF) return (CompanyID)((byte)_current_company);
+	if (company == COMPANY_SELF) {
+		if (!::Company::IsValidID((::CompanyID)_current_company)) return COMPANY_INVALID;
+		return (CompanyID)((byte)_current_company);
+	}
 
 	return ::Company::IsValidID((::CompanyID)company) ? company : COMPANY_INVALID;
 }
@@ -36,12 +39,16 @@
 	return ResolveCompanyID(company) == ResolveCompanyID(COMPANY_SELF);
 }
 
-/* static */ bool ScriptCompany::SetName(const char *name)
+/* static */ bool ScriptCompany::SetName(Text *name)
 {
-	EnforcePrecondition(false, !::StrEmpty(name));
-	EnforcePreconditionCustomError(false, ::Utf8StringLength(name) < MAX_LENGTH_COMPANY_NAME_CHARS, ScriptError::ERR_PRECONDITION_STRING_TOO_LONG);
+	CCountedPtr<Text> counter(name);
 
-	return ScriptObject::DoCommand(0, 0, 0, CMD_RENAME_COMPANY, name);
+	EnforcePrecondition(false, name != NULL);
+	const char *text = name->GetEncodedText();
+	EnforcePrecondition(false, !::StrEmpty(text));
+	EnforcePreconditionCustomError(false, ::Utf8StringLength(text) < MAX_LENGTH_COMPANY_NAME_CHARS, ScriptError::ERR_PRECONDITION_STRING_TOO_LONG);
+
+	return ScriptObject::DoCommand(0, 0, 0, CMD_RENAME_COMPANY, text);
 }
 
 /* static */ char *ScriptCompany::GetName(ScriptCompany::CompanyID company)
@@ -57,11 +64,15 @@
 	return company_name;
 }
 
-/* static */ bool ScriptCompany::SetPresidentName(const char *name)
+/* static */ bool ScriptCompany::SetPresidentName(Text *name)
 {
-	EnforcePrecondition(false, !::StrEmpty(name));
+	CCountedPtr<Text> counter(name);
 
-	return ScriptObject::DoCommand(0, 0, 0, CMD_RENAME_PRESIDENT, name);
+	EnforcePrecondition(false, name != NULL);
+	const char *text = name->GetEncodedText();
+	EnforcePrecondition(false, !::StrEmpty(text));
+
+	return ScriptObject::DoCommand(0, 0, 0, CMD_RENAME_PRESIDENT, text);
 }
 
 /* static */ char *ScriptCompany::GetPresidentName(ScriptCompany::CompanyID company)
@@ -170,7 +181,10 @@
 
 /* static */ Money ScriptCompany::GetLoanAmount()
 {
-	return ::Company::Get(_current_company)->current_loan;
+	ScriptCompany::CompanyID company = ResolveCompanyID(COMPANY_SELF);
+	if (company == COMPANY_INVALID) return -1;
+
+	return ::Company::Get(company)->current_loan;
 }
 
 /* static */ Money ScriptCompany::GetMaxLoanAmount()
@@ -185,6 +199,7 @@
 
 /* static */ bool ScriptCompany::SetLoanAmount(int32 loan)
 {
+	EnforcePrecondition(false, ScriptObject::GetCompany() != OWNER_DEITY);
 	EnforcePrecondition(false, loan >= 0);
 	EnforcePrecondition(false, (loan % GetLoanInterval()) == 0);
 	EnforcePrecondition(false, loan <= GetMaxLoanAmount());
@@ -199,6 +214,7 @@
 
 /* static */ bool ScriptCompany::SetMinimumLoanAmount(int32 loan)
 {
+	EnforcePrecondition(false, ScriptObject::GetCompany() != OWNER_DEITY);
 	EnforcePrecondition(false, loan >= 0);
 
 	int32 over_interval = loan % GetLoanInterval();
@@ -213,6 +229,7 @@
 
 /* static */ bool ScriptCompany::BuildCompanyHQ(TileIndex tile)
 {
+	EnforcePrecondition(false, ScriptObject::GetCompany() != OWNER_DEITY);
 	EnforcePrecondition(false, ::IsValidTile(tile));
 
 	return ScriptObject::DoCommand(tile, OBJECT_HQ, 0, CMD_BUILD_OBJECT);

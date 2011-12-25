@@ -320,6 +320,7 @@
     <ClCompile Include="..\src\genworld.cpp" />
     <ClCompile Include="..\src\gfx.cpp" />
     <ClCompile Include="..\src\gfxinit.cpp" />
+    <ClCompile Include="..\src\goal.cpp" />
     <ClCompile Include="..\src\ground_vehicle.cpp" />
     <ClCompile Include="..\src\heightmap.cpp" />
     <ClCompile Include="..\src\highscore.cpp" />
@@ -357,6 +358,7 @@
     <ClCompile Include="..\src\sprite.cpp" />
     <ClCompile Include="..\src\spritecache.cpp" />
     <ClCompile Include="..\src\station.cpp" />
+    <ClCompile Include="..\src\strgen\strgen_base.cpp" />
     <ClCompile Include="..\src\string.cpp" />
     <ClCompile Include="..\src\strings.cpp" />
     <ClCompile Include="..\src\subsidy.cpp" />
@@ -439,6 +441,8 @@
     <ClInclude Include="..\src\gfx_func.h" />
     <ClInclude Include="..\src\gfx_type.h" />
     <ClInclude Include="..\src\gfxinit.h" />
+    <ClInclude Include="..\src\goal_base.h" />
+    <ClInclude Include="..\src\goal_type.h" />
     <ClInclude Include="..\src\graph_gui.h" />
     <ClInclude Include="..\src\ground_vehicle.hpp" />
     <ClInclude Include="..\src\group.h" />
@@ -557,6 +561,7 @@
     <ClInclude Include="..\src\station_type.h" />
     <ClInclude Include="..\src\statusbar_gui.h" />
     <ClInclude Include="..\src\stdafx.h" />
+    <ClInclude Include="..\src\strgen\strgen.h" />
     <ClInclude Include="..\src\string_func.h" />
     <ClInclude Include="..\src\string_type.h" />
     <ClInclude Include="..\src\strings_func.h" />
@@ -651,6 +656,7 @@
     <ClCompile Include="..\src\error_gui.cpp" />
     <ClCompile Include="..\src\fios_gui.cpp" />
     <ClCompile Include="..\src\genworld_gui.cpp" />
+    <ClCompile Include="..\src\goal_gui.cpp" />
     <ClCompile Include="..\src\graph_gui.cpp" />
     <ClCompile Include="..\src\group_gui.cpp" />
     <ClCompile Include="..\src\highscore_gui.cpp" />
@@ -708,6 +714,7 @@
     <ClInclude Include="..\src\widgets\error_widget.h" />
     <ClInclude Include="..\src\widgets\fios_widget.h" />
     <ClInclude Include="..\src\widgets\genworld_widget.h" />
+    <ClInclude Include="..\src\widgets\goal_widget.h" />
     <ClInclude Include="..\src\widgets\graph_widget.h" />
     <ClInclude Include="..\src\widgets\group_widget.h" />
     <ClInclude Include="..\src\widgets\highscore_widget.h" />
@@ -780,7 +787,9 @@
     <ClCompile Include="..\src\saveload\depot_sl.cpp" />
     <ClCompile Include="..\src\saveload\economy_sl.cpp" />
     <ClCompile Include="..\src\saveload\engine_sl.cpp" />
+    <ClCompile Include="..\src\saveload\game_sl.cpp" />
     <ClCompile Include="..\src\saveload\gamelog_sl.cpp" />
+    <ClCompile Include="..\src\saveload\goal_sl.cpp" />
     <ClCompile Include="..\src\saveload\group_sl.cpp" />
     <ClCompile Include="..\src\saveload\industry_sl.cpp" />
     <ClCompile Include="..\src\saveload\labelmaps_sl.cpp" />
@@ -914,7 +923,21 @@
     <ClCompile Include="..\src\ai\ai_scanner.cpp" />
     <ClInclude Include="..\src\ai\ai_scanner.hpp" />
     <ClInclude Include="..\src\script\api\ai_changelog.hpp" />
+    <ClInclude Include="..\src\script\api\game_changelog.hpp" />
+    <ClInclude Include="..\src\game\game.hpp" />
+    <ClCompile Include="..\src\game\game_config.cpp" />
+    <ClInclude Include="..\src\game\game_config.hpp" />
+    <ClCompile Include="..\src\game\game_core.cpp" />
+    <ClCompile Include="..\src\game\game_info.cpp" />
+    <ClInclude Include="..\src\game\game_info.hpp" />
+    <ClCompile Include="..\src\game\game_instance.cpp" />
+    <ClInclude Include="..\src\game\game_instance.hpp" />
+    <ClCompile Include="..\src\game\game_scanner.cpp" />
+    <ClInclude Include="..\src\game\game_scanner.hpp" />
+    <ClCompile Include="..\src\game\game_text.cpp" />
+    <ClInclude Include="..\src\game\game_text.hpp" />
     <ClInclude Include="..\src\script\api\script_accounting.hpp" />
+    <ClInclude Include="..\src\script\api\script_admin.hpp" />
     <ClInclude Include="..\src\script\api\script_airport.hpp" />
     <ClInclude Include="..\src\script\api\script_base.hpp" />
     <ClInclude Include="..\src\script\api\script_basestation.hpp" />
@@ -923,6 +946,7 @@
     <ClInclude Include="..\src\script\api\script_cargo.hpp" />
     <ClInclude Include="..\src\script\api\script_cargolist.hpp" />
     <ClInclude Include="..\src\script\api\script_company.hpp" />
+    <ClInclude Include="..\src\script\api\script_companymode.hpp" />
     <ClInclude Include="..\src\script\api\script_controller.hpp" />
     <ClInclude Include="..\src\script\api\script_date.hpp" />
     <ClInclude Include="..\src\script\api\script_depotlist.hpp" />
@@ -932,7 +956,9 @@
     <ClInclude Include="..\src\script\api\script_event.hpp" />
     <ClInclude Include="..\src\script\api\script_event_types.hpp" />
     <ClInclude Include="..\src\script\api\script_execmode.hpp" />
+    <ClInclude Include="..\src\script\api\script_game.hpp" />
     <ClInclude Include="..\src\script\api\script_gamesettings.hpp" />
+    <ClInclude Include="..\src\script\api\script_goal.hpp" />
     <ClInclude Include="..\src\script\api\script_group.hpp" />
     <ClInclude Include="..\src\script\api\script_grouplist.hpp" />
     <ClInclude Include="..\src\script\api\script_industry.hpp" />
@@ -945,6 +971,7 @@
     <ClInclude Include="..\src\script\api\script_log.hpp" />
     <ClInclude Include="..\src\script\api\script_map.hpp" />
     <ClInclude Include="..\src\script\api\script_marine.hpp" />
+    <ClInclude Include="..\src\script\api\script_news.hpp" />
     <ClInclude Include="..\src\script\api\script_object.hpp" />
     <ClInclude Include="..\src\script\api\script_order.hpp" />
     <ClInclude Include="..\src\script\api\script_rail.hpp" />
@@ -957,6 +984,7 @@
     <ClInclude Include="..\src\script\api\script_subsidy.hpp" />
     <ClInclude Include="..\src\script\api\script_subsidylist.hpp" />
     <ClInclude Include="..\src\script\api\script_testmode.hpp" />
+    <ClInclude Include="..\src\script\api\script_text.hpp" />
     <ClInclude Include="..\src\script\api\script_tile.hpp" />
     <ClInclude Include="..\src\script\api\script_tilelist.hpp" />
     <ClInclude Include="..\src\script\api\script_town.hpp" />
@@ -965,9 +993,12 @@
     <ClInclude Include="..\src\script\api\script_types.hpp" />
     <ClInclude Include="..\src\script\api\script_vehicle.hpp" />
     <ClInclude Include="..\src\script\api\script_vehiclelist.hpp" />
+    <ClInclude Include="..\src\script\api\script_viewport.hpp" />
     <ClInclude Include="..\src\script\api\script_waypoint.hpp" />
     <ClInclude Include="..\src\script\api\script_waypointlist.hpp" />
+    <ClInclude Include="..\src\script\api\script_window.hpp" />
     <ClCompile Include="..\src\script\api\script_accounting.cpp" />
+    <ClCompile Include="..\src\script\api\script_admin.cpp" />
     <ClCompile Include="..\src\script\api\script_airport.cpp" />
     <ClCompile Include="..\src\script\api\script_base.cpp" />
     <ClCompile Include="..\src\script\api\script_basestation.cpp" />
@@ -976,6 +1007,7 @@
     <ClCompile Include="..\src\script\api\script_cargo.cpp" />
     <ClCompile Include="..\src\script\api\script_cargolist.cpp" />
     <ClCompile Include="..\src\script\api\script_company.cpp" />
+    <ClCompile Include="..\src\script\api\script_companymode.cpp" />
     <ClCompile Include="..\src\script\api\script_controller.cpp" />
     <ClCompile Include="..\src\script\api\script_date.cpp" />
     <ClCompile Include="..\src\script\api\script_depotlist.cpp" />
@@ -985,7 +1017,9 @@
     <ClCompile Include="..\src\script\api\script_event.cpp" />
     <ClCompile Include="..\src\script\api\script_event_types.cpp" />
     <ClCompile Include="..\src\script\api\script_execmode.cpp" />
+    <ClCompile Include="..\src\script\api\script_game.cpp" />
     <ClCompile Include="..\src\script\api\script_gamesettings.cpp" />
+    <ClCompile Include="..\src\script\api\script_goal.cpp" />
     <ClCompile Include="..\src\script\api\script_group.cpp" />
     <ClCompile Include="..\src\script\api\script_grouplist.cpp" />
     <ClCompile Include="..\src\script\api\script_industry.cpp" />
@@ -997,6 +1031,7 @@
     <ClCompile Include="..\src\script\api\script_log.cpp" />
     <ClCompile Include="..\src\script\api\script_map.cpp" />
     <ClCompile Include="..\src\script\api\script_marine.cpp" />
+    <ClCompile Include="..\src\script\api\script_news.cpp" />
     <ClCompile Include="..\src\script\api\script_object.cpp" />
     <ClCompile Include="..\src\script\api\script_order.cpp" />
     <ClCompile Include="..\src\script\api\script_rail.cpp" />
@@ -1009,6 +1044,7 @@
     <ClCompile Include="..\src\script\api\script_subsidy.cpp" />
     <ClCompile Include="..\src\script\api\script_subsidylist.cpp" />
     <ClCompile Include="..\src\script\api\script_testmode.cpp" />
+    <ClCompile Include="..\src\script\api\script_text.cpp" />
     <ClCompile Include="..\src\script\api\script_tile.cpp" />
     <ClCompile Include="..\src\script\api\script_tilelist.cpp" />
     <ClCompile Include="..\src\script\api\script_town.cpp" />
@@ -1016,8 +1052,10 @@
     <ClCompile Include="..\src\script\api\script_tunnel.cpp" />
     <ClCompile Include="..\src\script\api\script_vehicle.cpp" />
     <ClCompile Include="..\src\script\api\script_vehiclelist.cpp" />
+    <ClCompile Include="..\src\script\api\script_viewport.cpp" />
     <ClCompile Include="..\src\script\api\script_waypoint.cpp" />
     <ClCompile Include="..\src\script\api\script_waypointlist.cpp" />
+    <ClCompile Include="..\src\script\api\script_window.cpp" />
     <ClCompile Include="..\src\blitter\32bpp_anim.cpp" />
     <ClInclude Include="..\src\blitter\32bpp_anim.hpp" />
     <ClCompile Include="..\src\blitter\32bpp_base.cpp" />
