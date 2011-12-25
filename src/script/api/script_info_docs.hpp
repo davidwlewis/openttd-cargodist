@@ -22,7 +22,7 @@
  *       the information here can be used for libraries, but the information
  *       will not be shown in the GUI except for error/debug messages.
  *
- * @api ai
+ * @api ai game
  */
 class ScriptInfo {
 public:
@@ -130,6 +130,19 @@ public:
 	bool UseAsRandomAI();
 
 	/**
+	 * Can a non-developer select Script for a new game.
+	 *
+	 * The idea behind this function is to 'forbid' using your script with a new
+	 *  game if you for example specificly wrote it for a certain scenario.
+	 *
+	 * @return True if the Script can be selected from the GUI as non-developer.
+	 * @note This function is optional. Default is false.
+	 *
+	 * @api -ai
+	 */
+	bool IsDeveloperOnly();
+
+	/**
 	 * Gets the name of main class of the Script so OpenTTD knows
 	 * what class to instantiate.
 	 *
@@ -151,13 +164,12 @@ public:
 	 * and not the bugfix number as valid return for this function.
 	 *
 	 * Valid return values are:
-	 * - "0.7"
-	 * - "1.0"
-	 * - "1.1"
-	 * - "1.2"
+	 * - "0.7" (for AI only)
+	 * - "1.0" (for AI only)
+	 * - "1.1" (for AI only)
+	 * - "1.2" (for both AI and GS)
 	 *
 	 * @return The version this Script is compatible with.
-	 * @note This function is optional.
 	 */
 	string GetAPIVersion();
 

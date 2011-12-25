@@ -19,21 +19,31 @@
 #include "../../string_func.h"
 #include "../../strings_func.h"
 #include "../../tile_map.h"
-#include "../../company_func.h"
 
 /* static */ bool ScriptSign::IsValidSign(SignID sign_id)
 {
 	const Sign *si = ::Sign::GetIfValid(sign_id);
-	return si != NULL && si->owner == _current_company;
+	return si != NULL && (si->owner == ScriptObject::GetCompany() || si->owner == OWNER_DEITY);
 }
 
-/* static */ bool ScriptSign::SetName(SignID sign_id, const char *name)
+/* static */ ScriptCompany::CompanyID ScriptSign::GetOwner(SignID sign_id)
 {
-	EnforcePrecondition(false, IsValidSign(sign_id));
-	EnforcePrecondition(false, !::StrEmpty(name));
-	EnforcePreconditionCustomError(false, ::Utf8StringLength(name) < MAX_LENGTH_SIGN_NAME_CHARS, ScriptError::ERR_PRECONDITION_STRING_TOO_LONG);
+	if (!IsValidSign(sign_id)) return ScriptCompany::COMPANY_INVALID;
 
-	return ScriptObject::DoCommand(0, sign_id, 0, CMD_RENAME_SIGN, name);
+	return static_cast<ScriptCompany::CompanyID>((int)::Sign::Get(sign_id)->owner);
+}
+
+/* static */ bool ScriptSign::SetName(SignID sign_id, Text *name)
+{
+	CCountedPtr<Text> counter(name);
+
+	EnforcePrecondition(false, IsValidSign(sign_id));
+	EnforcePrecondition(false, name != NULL);
+	const char *text = name->GetEncodedText();
+	EnforcePrecondition(false, !::StrEmpty(text));
+	EnforcePreconditionCustomError(false, ::Utf8StringLength(text) < MAX_LENGTH_SIGN_NAME_CHARS, ScriptError::ERR_PRECONDITION_STRING_TOO_LONG);
+
+	return ScriptObject::DoCommand(0, sign_id, 0, CMD_RENAME_SIGN, text);
 }
 
 /* static */ char *ScriptSign::GetName(SignID sign_id)
@@ -63,9 +73,13 @@
 	return ScriptObject::DoCommand(0, sign_id, 0, CMD_RENAME_SIGN, "");
 }
 
-/* static */ SignID ScriptSign::BuildSign(TileIndex location, const char *text)
+/* static */ SignID ScriptSign::BuildSign(TileIndex location, Text *name)
 {
+	CCountedPtr<Text> counter(name);
+
 	EnforcePrecondition(INVALID_SIGN, ::IsValidTile(location));
+	EnforcePrecondition(INVALID_SIGN, name != NULL);
+	const char *text = name->GetEncodedText();
 	EnforcePrecondition(INVALID_SIGN, !::StrEmpty(text));
 	EnforcePreconditionCustomError(INVALID_SIGN, ::Utf8StringLength(text) < MAX_LENGTH_SIGN_NAME_CHARS, ScriptError::ERR_PRECONDITION_STRING_TOO_LONG);
 

@@ -391,7 +391,7 @@ public:
 		}
 
 		if (HasBit(this->town->flags, TOWN_IS_FUNDED)) {
-			SetDParam(0, (this->town->growth_rate * TOWN_GROWTH_TICKS + DAY_TICKS) / DAY_TICKS);
+			SetDParam(0, ((this->town->growth_rate & (~TOWN_GROW_RATE_CUSTOM)) * TOWN_GROWTH_TICKS + DAY_TICKS) / DAY_TICKS);
 			DrawString(r.left + WD_FRAMERECT_LEFT, r.right - WD_FRAMERECT_LEFT, y += FONT_HEIGHT_NORMAL, this->town->fund_buildings_months == 0 ? STR_TOWN_VIEW_TOWN_GROWS_EVERY : STR_TOWN_VIEW_TOWN_GROWS_EVERY_FUNDED);
 		} else {
 			DrawString(r.left + WD_FRAMERECT_LEFT, r.right - WD_FRAMERECT_LEFT, y += FONT_HEIGHT_NORMAL, STR_TOWN_VIEW_TOWN_GROW_STOPPED);
@@ -402,6 +402,11 @@ public:
 			SetDParam(0, this->town->noise_reached);
 			SetDParam(1, this->town->MaxTownNoise());
 			DrawString(r.left + WD_FRAMERECT_LEFT, r.right - WD_FRAMERECT_LEFT, y += FONT_HEIGHT_NORMAL, STR_TOWN_VIEW_NOISE_IN_TOWN);
+		}
+
+		if (this->town->text != NULL) {
+			SetDParamStr(0, this->town->text);
+			DrawStringMultiLine(r.left + WD_FRAMERECT_LEFT, r.right - WD_FRAMERECT_LEFT, y += FONT_HEIGHT_NORMAL, UINT16_MAX, STR_JUST_RAW_STRING, TC_BLACK);
 		}
 	}
 
@@ -448,7 +453,7 @@ public:
 	{
 		switch (widget) {
 			case WID_TV_INFO:
-				size->height = GetDesiredInfoHeight();
+				size->height = GetDesiredInfoHeight(size->width);
 				break;
 		}
 	}
@@ -457,7 +462,7 @@ public:
 	 * Gets the desired height for the information panel.
 	 * @return the desired height in pixels.
 	 */
-	uint GetDesiredInfoHeight() const
+	uint GetDesiredInfoHeight(int width) const
 	{
 		uint aimed_height = 3 * FONT_HEIGHT_NORMAL + WD_FRAMERECT_TOP + WD_FRAMERECT_BOTTOM;
 
@@ -477,13 +482,18 @@ public:
 
 		if (_settings_game.economy.station_noise_level) aimed_height += FONT_HEIGHT_NORMAL;
 
+		if (this->town->text != NULL) {
+			SetDParamStr(0, this->town->text);
+			aimed_height += GetStringHeight(STR_JUST_RAW_STRING, width);
+		}
+
 		return aimed_height;
 	}
 
 	void ResizeWindowAsNeeded()
 	{
 		const NWidgetBase *nwid_info = this->GetWidget<NWidgetBase>(WID_TV_INFO);
-		uint aimed_height = GetDesiredInfoHeight();
+		uint aimed_height = GetDesiredInfoHeight(nwid_info->current_x);
 		if (aimed_height > nwid_info->current_y || (aimed_height < nwid_info->current_y && nwid_info->current_y > nwid_info->smallest_y)) {
 			this->ReInit();
 		}

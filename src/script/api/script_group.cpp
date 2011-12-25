@@ -24,7 +24,7 @@
 /* static */ bool ScriptGroup::IsValidGroup(GroupID group_id)
 {
 	const Group *g = ::Group::GetIfValid(group_id);
-	return g != NULL && g->owner == _current_company;
+	return g != NULL && g->owner == ScriptObject::GetCompany();
 }
 
 /* static */ ScriptGroup::GroupID ScriptGroup::CreateGroup(ScriptVehicle::VehicleType vehicle_type)
@@ -49,13 +49,17 @@
 	return (ScriptVehicle::VehicleType)((::VehicleType)::Group::Get(group_id)->vehicle_type);
 }
 
-/* static */ bool ScriptGroup::SetName(GroupID group_id, const char *name)
+/* static */ bool ScriptGroup::SetName(GroupID group_id, Text *name)
 {
-	EnforcePrecondition(false, IsValidGroup(group_id));
-	EnforcePrecondition(false, !::StrEmpty(name));
-	EnforcePreconditionCustomError(false, ::Utf8StringLength(name) < MAX_LENGTH_GROUP_NAME_CHARS, ScriptError::ERR_PRECONDITION_STRING_TOO_LONG);
+	CCountedPtr<Text> counter(name);
 
-	return ScriptObject::DoCommand(0, group_id, 0, CMD_RENAME_GROUP, name);
+	EnforcePrecondition(false, IsValidGroup(group_id));
+	EnforcePrecondition(false, name != NULL);
+	const char *text = name->GetEncodedText();
+	EnforcePrecondition(false, !::StrEmpty(text));
+	EnforcePreconditionCustomError(false, ::Utf8StringLength(text) < MAX_LENGTH_GROUP_NAME_CHARS, ScriptError::ERR_PRECONDITION_STRING_TOO_LONG);
+
+	return ScriptObject::DoCommand(0, group_id, 0, CMD_RENAME_GROUP, text);
 }
 
 /* static */ char *ScriptGroup::GetName(GroupID group_id)
@@ -88,7 +92,7 @@
 {
 	if (!IsValidGroup(group_id) && group_id != GROUP_DEFAULT && group_id != GROUP_ALL) return -1;
 
-	return GetGroupNumEngines(_current_company, group_id, engine_id);
+	return GetGroupNumEngines(ScriptObject::GetCompany(), group_id, engine_id);
 }
 
 /* static */ bool ScriptGroup::MoveVehicle(GroupID group_id, VehicleID vehicle_id)
@@ -108,7 +112,7 @@
 
 /* static */ bool ScriptGroup::HasWagonRemoval()
 {
-	return ::Company::Get(_current_company)->settings.renew_keep_length;
+	return ::Company::Get(ScriptObject::GetCompany())->settings.renew_keep_length;
 }
 
 /* static */ bool ScriptGroup::SetAutoReplace(GroupID group_id, EngineID engine_id_old, EngineID engine_id_new)
@@ -123,7 +127,7 @@
 {
 	if (!IsValidGroup(group_id) && group_id != GROUP_DEFAULT && group_id != GROUP_ALL) return ::INVALID_ENGINE;
 
-	return ::EngineReplacementForCompany(Company::Get(_current_company), engine_id, group_id);
+	return ::EngineReplacementForCompany(Company::Get(ScriptObject::GetCompany()), engine_id, group_id);
 }
 
 /* static */ bool ScriptGroup::StopAutoReplace(GroupID group_id, EngineID engine_id)

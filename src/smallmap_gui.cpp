@@ -546,7 +546,7 @@ static const byte _vehicle_type_colours[6] = {
 	PC_RED, PC_YELLOW, PC_LIGHT_BLUE, PC_WHITE, PC_BLACK, PC_RED
 };
 
-FORCEINLINE Point SmallMapWindow::SmallmapRemapCoords(int x, int y) const
+inline Point SmallMapWindow::SmallmapRemapCoords(int x, int y) const
 {
 	Point pt;
 	pt.x = (y - x) * 2;
@@ -560,7 +560,7 @@ FORCEINLINE Point SmallMapWindow::SmallmapRemapCoords(int x, int y) const
  * @param tile_y Y coordinate of the tile.
  * @return Position to draw on.
  */
-FORCEINLINE Point SmallMapWindow::RemapTile(int tile_x, int tile_y) const
+inline Point SmallMapWindow::RemapTile(int tile_x, int tile_y) const
 {
 	int x_offset = tile_x - this->scroll_x / (int)TILE_SIZE;
 	int y_offset = tile_y - this->scroll_y / (int)TILE_SIZE;
@@ -584,7 +584,7 @@ FORCEINLINE Point SmallMapWindow::RemapTile(int tile_x, int tile_y) const
  * @return Tile being displayed at the given position relative to #scroll_x and #scroll_y.
  * @note The #subscroll offset is already accounted for.
  */
-FORCEINLINE Point SmallMapWindow::PixelToTile(int px, int py, int *sub, bool add_sub) const
+inline Point SmallMapWindow::PixelToTile(int px, int py, int *sub, bool add_sub) const
 {
 	if (add_sub) px += this->subscroll;  // Total horizontal offset.
 
@@ -1155,7 +1155,7 @@ void SmallMapWindow::DrawWidget(const Rect &r, int widget) const
  * @param columns Number of columns in the legend.
  * @return Number of rows needed for everything to fit in.
  */
-FORCEINLINE uint SmallMapWindow::GetNumberRowsLegend(uint columns) const
+inline uint SmallMapWindow::GetNumberRowsLegend(uint columns) const
 {
 	uint num_rows = CeilDiv(max(_smallmap_industry_count,_smallmap_company_count), columns);
 	return max(this->min_number_of_fixed_rows, num_rows);
