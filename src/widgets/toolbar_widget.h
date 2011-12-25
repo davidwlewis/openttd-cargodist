@@ -12,7 +12,7 @@
 #ifndef WIDGETS_TOOLBAR_WIDGET_H
 #define WIDGETS_TOOLBAR_WIDGET_H
 
-/** Widgets of the WC_MAIN_TOOLBAR, when in normal game mode. */
+/** Widgets of the #MainToolbarWindow class. */
 enum ToolbarNormalWidgets {
 	WID_TN_PAUSE,         ///< Pause the game.
 	WID_TN_FAST_FORWARD,  ///< Fast forward the game.
@@ -43,10 +43,10 @@ enum ToolbarNormalWidgets {
 	WID_TN_MESSAGES,      ///< Messages menu.
 	WID_TN_HELP,          ///< Help menu.
 	WID_TN_SWITCH_BAR,    ///< Only available when toolbar has been split to switch between different subsets.
-	WID_TN_END            ///< Helper for knowing the amount of widgets.
+	WID_TN_END,           ///< Helper for knowing the amount of widgets.
 };
 
-/** Widgets of the WC_MAIN_TOOLBAR, when in scenario editor. */
+/** Widgets of the #ScenarioEditorToolbarWindow class. */
 enum ToolbarEditorWidgets {
 	WID_TE_PAUSE,         ///< Pause the game.
 	WID_TE_FAST_FORWARD,  ///< Fast forward the game.

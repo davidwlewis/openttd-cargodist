@@ -47,6 +47,7 @@
 #include "object_map.h"
 #include "object_base.h"
 #include "ai/ai.hpp"
+#include "game/game.hpp"
 
 #include "table/strings.h"
 #include "table/town_land.h"
@@ -61,6 +62,7 @@ INSTANTIATE_POOL_METHODS(Town)
 Town::~Town()
 {
 	free(this->name);
+	free(this->text);
 
 	if (CleaningPool()) return;
 
@@ -762,7 +764,7 @@ static void TownTickHandler(Town *t)
 		int i = t->grow_counter - 1;
 		if (i < 0) {
 			if (GrowTown(t)) {
-				i = t->growth_rate;
+				i = t->growth_rate & (~TOWN_GROW_RATE_CUSTOM);
 			} else {
 				i = 0;
 			}
@@ -1698,6 +1700,7 @@ CommandCost CmdFoundTown(TileIndex tile, DoCommandFlag flags, uint32 p1, uint32 
 
 			AddNewsItem(STR_NEWS_NEW_TOWN, NS_INDUSTRY_OPEN, NR_TILE, tile, NR_NONE, UINT32_MAX, cn);
 			AI::BroadcastNewEvent(new ScriptEventTownFounded(t->index));
+			Game::NewEvent(new ScriptEventTownFounded(t->index));
 		}
 	}
 	return cost;
@@ -2434,31 +2437,126 @@ const CargoSpec *FindFirstCargoWithTownEffect(TownEffect effect)
 	return NULL;
 }
 
+static void UpdateTownGrowRate(Town *t);
+
+/**
+ * Change the cargo goal of a town.
+ * @param tile Unused.
+ * @param flags Type of operation.
+ * @param p1 various bitstuffed elements
+ * - p1 = (bit  0 - 15) - Town ID to cargo game of.
+ * - p1 = (bit 16 - 23) - TownEffect to change the game of.
+ * @param p2 The new goal value.
+ * @param text Unused.
+ * @return Empty cost or an error.
+ */
+CommandCost CmdTownCargoGoal(TileIndex tile, DoCommandFlag flags, uint32 p1, uint32 p2, const char *text)
+{
+	if (_current_company != OWNER_DEITY) return CMD_ERROR;
+
+	TownEffect te = (TownEffect)GB(p1, 16, 8);
+	if (te < TE_BEGIN || te > TE_END) return CMD_ERROR;
+
+	uint16 index = GB(p1, 0, 16);
+	Town *t = Town::GetIfValid(index);
+	if (t == NULL) return CMD_ERROR;
+
+	/* Validate if there is a cargo which is the requested TownEffect */
+	const CargoSpec *cargo = FindFirstCargoWithTownEffect(te);
+	if (cargo == NULL) return CMD_ERROR;
+
+	if (flags & DC_EXEC) {
+		t->goal[te] = p2;
+		UpdateTownGrowRate(t);
+		InvalidateWindowData(WC_TOWN_VIEW, index);
+	}
+
+	return CommandCost();
+}
+
+/**
+ * Set a custom text in the Town window.
+ * @param tile Unused.
+ * @param flags Type of operation.
+ * @param p1 Town ID to change the text of.
+ * @param p2 Unused.
+ * @param text The new text (empty to remove the text).
+ * @return Empty cost or an error.
+ */
+CommandCost CmdTownSetText(TileIndex tile, DoCommandFlag flags, uint32 p1, uint32 p2, const char *text)
+{
+	if (_current_company != OWNER_DEITY) return CMD_ERROR;
+	Town *t = Town::GetIfValid(p1);
+	if (t == NULL) return CMD_ERROR;
+
+	if (flags & DC_EXEC) {
+		free(t->text);
+		t->text = StrEmpty(text) ? NULL : strdup(text);
+		InvalidateWindowData(WC_TOWN_VIEW, p1);
+	}
+
+	return CommandCost();
+}
+
+/**
+ * Change the growth rate of the town.
+ * @param tile Unused.
+ * @param flags Type of operation.
+ * @param p1 Town ID to cargo game of.
+ * @param p2 Amount of days between growth.
+ * @param text Unused.
+ * @return Empty cost or an error.
+ */
+CommandCost CmdTownGrowthRate(TileIndex tile, DoCommandFlag flags, uint32 p1, uint32 p2, const char *text)
+{
+	if (_current_company != OWNER_DEITY) return CMD_ERROR;
+	if ((p2 & TOWN_GROW_RATE_CUSTOM) != 0) return CMD_ERROR;
+	if (GB(p2, 16, 16) != 0) return CMD_ERROR;
+
+	Town *t = Town::GetIfValid(p1);
+	if (t == NULL) return CMD_ERROR;
+
+	if (flags & DC_EXEC) {
+		t->growth_rate = (p2 == 0) ? 0 : p2 | TOWN_GROW_RATE_CUSTOM;
+		UpdateTownGrowRate(t);
+		InvalidateWindowData(WC_TOWN_VIEW, p1);
+	}
+
+	return CommandCost();
+}
+
 /**
  * Expand a town (scenario editor only).
  * @param tile Unused.
  * @param flags Type of operation.
  * @param p1 Town ID to expand.
- * @param p2 Unused.
+ * @param p2 Amount to grow, or 0 to grow a random size up to the current amount of houses.
  * @param text Unused.
  * @return Empty cost or an error.
  */
 CommandCost CmdExpandTown(TileIndex tile, DoCommandFlag flags, uint32 p1, uint32 p2, const char *text)
 {
-	if (_game_mode != GM_EDITOR) return CMD_ERROR;
+	if (_game_mode != GM_EDITOR && _current_company != OWNER_DEITY) return CMD_ERROR;
 	Town *t = Town::GetIfValid(p1);
 	if (t == NULL) return CMD_ERROR;
 
 	if (flags & DC_EXEC) {
 		/* The more houses, the faster we grow */
-		uint amount = RandomRange(ClampToU16(t->num_houses / 10)) + 3;
-		t->num_houses += amount;
-		UpdateTownRadius(t);
+		if (p2 == 0) {
+			uint amount = RandomRange(ClampToU16(t->num_houses / 10)) + 3;
+			t->num_houses += amount;
+			UpdateTownRadius(t);
 
-		uint n = amount * 10;
-		do GrowTown(t); while (--n);
+			uint n = amount * 10;
+			do GrowTown(t); while (--n);
 
-		t->num_houses -= amount;
+			t->num_houses -= amount;
+		} else {
+			for (; p2 > 0; p2--) {
+				/* Try several times to grow, as we are really suppose to grow */
+				for (uint i = 0; i < 25; i++) if (GrowTown(t)) break;
+			}
+		}
 		UpdateTownRadius(t);
 
 		UpdateTownMaxPass(t);
@@ -2876,6 +2974,12 @@ static void UpdateTownGrowRate(Town *t)
 		}
 	}
 
+	if ((t->growth_rate & TOWN_GROW_RATE_CUSTOM) != 0) {
+		SetBit(t->flags, TOWN_IS_FUNDED);
+		SetWindowDirty(WC_TOWN_VIEW, t->index);
+		return;
+	}
+
 	/**
 	 * Towns are processed every TOWN_GROWTH_TICKS ticks, and this is the
 	 * number of times towns are processed before a new building is built.
@@ -2900,7 +3004,6 @@ static void UpdateTownGrowRate(Town *t)
 
 	if (t->fund_buildings_months != 0) {
 		m = _grow_count_values[0][min(n, 5)];
-		t->fund_buildings_months--;
 	} else {
 		m = _grow_count_values[1][min(n, 5)];
 		if (n == 0 && !Chance16(1, 12)) return;
@@ -2926,6 +3029,7 @@ static void UpdateTownAmounts(Town *t)
 {
 	for (CargoID i = 0; i < NUM_CARGO; i++) t->supplied[i].NewMonth();
 	for (int i = TE_BEGIN; i < TE_END; i++) t->received[i].NewMonth();
+	if (t->fund_buildings_months != 0) t->fund_buildings_months--;
 
 	SetWindowDirty(WC_TOWN_VIEW, t->index);
 }
