@@ -96,7 +96,7 @@ public:
 	 * @param to Destination node.
 	 * @return Edge between from and to.
 	 */
-	FORCEINLINE Edge &GetEdge(NodeID from, NodeID to)
+	inline Edge &GetEdge(NodeID from, NodeID to)
 	{
 		return this->edges[from][to];
 	}
@@ -106,7 +106,7 @@ public:
 	 * @param num ID of the node.
 	 * @return the Requested node.
 	 */
-	FORCEINLINE Node &GetNode(NodeID num)
+	inline Node &GetNode(NodeID num)
 	{
 		return this->nodes[num];
 	}
@@ -115,7 +115,7 @@ public:
 	 * Get the current size of the component.
 	 * @return Size.
 	 */
-	FORCEINLINE uint GetSize() const
+	inline uint GetSize() const
 	{
 		return this->num_nodes;
 	}
@@ -130,7 +130,7 @@ public:
 	 * Get the ID of this component.
 	 * @return ID.
 	 */
-	FORCEINLINE LinkGraphComponentID GetIndex() const
+	inline LinkGraphComponentID GetIndex() const
 	{
 		return this->index;
 	}
@@ -139,7 +139,7 @@ public:
 	 * Get the cargo ID this component's link graph refers to.
 	 * @return Cargo ID.
 	 */
-	FORCEINLINE CargoID GetCargo() const
+	inline CargoID GetCargo() const
 	{
 		return this->cargo;
 	}
@@ -148,7 +148,7 @@ public:
 	 * Get the link graph settings for this component.
 	 * @return Settings.
 	 */
-	FORCEINLINE const LinkGraphSettings &GetSettings() const
+	inline const LinkGraphSettings &GetSettings() const
 	{
 		return this->settings;
 	}
@@ -158,12 +158,12 @@ public:
 	 * @param from ID of the source node
 	 * @return ID of the destination node
 	 */
-	FORCEINLINE NodeID GetFirstEdge(NodeID from) {return edges[from][from].next_edge;}
+	inline NodeID GetFirstEdge(NodeID from) {return edges[from][from].next_edge;}
 
 	/**
 	 * Set the number of nodes to 0 to mark this component as done.
 	 */
-	FORCEINLINE void Clear()
+	inline void Clear()
 	{
 		this->num_nodes = 0;
 	}
@@ -282,45 +282,45 @@ public:
 	Path(NodeID n, bool source = false);
 
 	/** Get the node this leg passes. */
-	FORCEINLINE NodeID GetNode() const {return this->node;}
+	inline NodeID GetNode() const {return this->node;}
 
 	/** Get the overall origin of the path. */
-	FORCEINLINE NodeID GetOrigin() const {return this->origin;}
+	inline NodeID GetOrigin() const {return this->origin;}
 
 	/** Get the parent leg of this one. */
-	FORCEINLINE Path *GetParent() {return this->parent;}
+	inline Path *GetParent() {return this->parent;}
 
 	/** Get the overall capacity of the path. */
-	FORCEINLINE uint GetCapacity() const {return this->capacity;}
+	inline uint GetCapacity() const {return this->capacity;}
 
 	/** Get the free capacity of the path. */
-	FORCEINLINE int GetFreeCapacity() const {return this->free_capacity;}
+	inline int GetFreeCapacity() const {return this->free_capacity;}
 
 	/**
 	 * Get ratio of free * 16 (so that we get fewer 0) /
 	 * overall capacity + 1 (so that we don't divide by 0).
 	 */
-	FORCEINLINE int GetCapacityRatio() const {return (this->free_capacity << 4) / (this->capacity + 1);}
+	inline int GetCapacityRatio() const {return (this->free_capacity << 4) / (this->capacity + 1);}
 
 	/** Get the overall distance of the path. */
-	FORCEINLINE uint GetDistance() const {return this->distance;}
+	inline uint GetDistance() const {return this->distance;}
 
 	/** Reduce the flow on this leg only by the specified amount. */
-	FORCEINLINE void ReduceFlow(uint f) {this->flow -= f;}
+	inline void ReduceFlow(uint f) {this->flow -= f;}
 
 	/** Increase the flow on this leg only by the specified amount. */
-	FORCEINLINE void AddFlow(uint f) {this->flow += f;}
+	inline void AddFlow(uint f) {this->flow += f;}
 
 	/** Get the flow on this leg. */
-	FORCEINLINE uint GetFlow() const {return this->flow;}
+	inline uint GetFlow() const {return this->flow;}
 
 	/** Get the number of "forked off" child legs of this one. */
-	FORCEINLINE uint GetNumChildren() const {return this->num_children;}
+	inline uint GetNumChildren() const {return this->num_children;}
 
 	/**
 	 * Detach this path from its parent.
 	 */
-	FORCEINLINE void Detach()
+	inline void Detach()
 	{
 		if (this->parent != NULL) {
 			this->parent->num_children--;

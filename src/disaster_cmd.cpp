@@ -40,6 +40,7 @@
 #include "effectvehicle_func.h"
 #include "roadveh.h"
 #include "ai/ai.hpp"
+#include "game/game.hpp"
 #include "company_base.h"
 #include "core/random_func.hpp"
 #include "core/backup_type.hpp"
@@ -133,7 +134,7 @@ static void DisasterVehicleUpdateImage(DisasterVehicle *v)
  * Initialize a disaster vehicle. These vehicles are of type VEH_DISASTER, are unclickable
  * and owned by nobody
  */
-static void InitializeDisasterVehicle(DisasterVehicle *v, int x, int y, byte z, Direction direction, byte subtype)
+static void InitializeDisasterVehicle(DisasterVehicle *v, int x, int y, int z, Direction direction, byte subtype)
 {
 	v->x_pos = x;
 	v->y_pos = y;
@@ -152,7 +153,7 @@ static void InitializeDisasterVehicle(DisasterVehicle *v, int x, int y, byte z, 
 	MarkSingleVehicleDirty(v);
 }
 
-static void SetDisasterVehiclePos(DisasterVehicle *v, int x, int y, byte z)
+static void SetDisasterVehiclePos(DisasterVehicle *v, int x, int y, int z)
 {
 	v->x_pos = x;
 	v->y_pos = y;
@@ -168,9 +169,9 @@ static void SetDisasterVehiclePos(DisasterVehicle *v, int x, int y, byte z)
 		int safe_y = Clamp(y - 1, 0, MapMaxY() * TILE_SIZE);
 
 		u->x_pos = x;
-		u->y_pos = y - 1 - (max(z - GetSlopeZ(safe_x, safe_y), 0U) >> 3);
+		u->y_pos = y - 1 - (max(z - GetSlopePixelZ(safe_x, safe_y), 0) >> 3);
 		safe_y = Clamp(u->y_pos, 0, MapMaxY() * TILE_SIZE);
-		u->z_pos = GetSlopeZ(safe_x, safe_y);
+		u->z_pos = GetSlopePixelZ(safe_x, safe_y);
 		u->direction = v->direction;
 
 		DisasterVehicleUpdateImage(u);
@@ -221,7 +222,7 @@ static bool DisasterTick_Zeppeliner(DisasterVehicle *v)
 				AddVehicleNewsItem(STR_NEWS_DISASTER_ZEPPELIN,
 					NS_ACCIDENT,
 					v->index); // Delete the news, when the zeppelin is gone
-				AI::NewEvent(GetTileOwner(v->tile), new AIEventDisasterZeppelinerCrashed(GetStationIndex(v->tile)));
+				AI::NewEvent(GetTileOwner(v->tile), new ScriptEventDisasterZeppelinerCrashed(GetStationIndex(v->tile)));
 			}
 		}
 
@@ -239,7 +240,7 @@ static bool DisasterTick_Zeppeliner(DisasterVehicle *v)
 		if (IsValidTile(v->tile) && IsAirportTile(v->tile)) {
 			Station *st = Station::GetByTile(v->tile);
 			CLRBITS(st->airport.flags, RUNWAY_IN_block);
-			AI::NewEvent(GetTileOwner(v->tile), new AIEventDisasterZeppelinerCleared(st->index));
+			AI::NewEvent(GetTileOwner(v->tile), new ScriptEventDisasterZeppelinerCleared(st->index));
 		}
 
 		SetDisasterVehiclePos(v, v->x_pos, v->y_pos, v->z_pos);
@@ -249,7 +250,7 @@ static bool DisasterTick_Zeppeliner(DisasterVehicle *v)
 
 	int x = v->x_pos;
 	int y = v->y_pos;
-	byte z = GetSlopeZ(x, y);
+	int z = GetSlopePixelZ(x, y);
 	if (z < v->z_pos) z = v->z_pos - 1;
 	SetDisasterVehiclePos(v, x, y, z);
 
@@ -344,7 +345,7 @@ static bool DisasterTick_Ufo(DisasterVehicle *v)
 		v->direction = GetDirectionTowards(v, u->x_pos, u->y_pos);
 		GetNewVehiclePosResult gp = GetNewVehiclePos(v);
 
-		byte z = v->z_pos;
+		int z = v->z_pos;
 		if (dist <= TILE_SIZE && z > u->z_pos) z--;
 		SetDisasterVehiclePos(v, gp.x, gp.y, z);
 
@@ -357,7 +358,8 @@ static bool DisasterTick_Ufo(DisasterVehicle *v)
 					NS_ACCIDENT,
 					u->index); // delete the news, when the roadvehicle is gone
 
-				AI::NewEvent(u->owner, new AIEventVehicleCrashed(u->index, u->tile, AIEventVehicleCrashed::CRASH_RV_UFO));
+				AI::NewEvent(u->owner, new ScriptEventVehicleCrashed(u->index, u->tile, ScriptEventVehicleCrashed::CRASH_RV_UFO));
+				Game::NewEvent(new ScriptEventVehicleCrashed(u->index, u->tile, ScriptEventVehicleCrashed::CRASH_RV_UFO));
 			}
 		}
 
@@ -376,7 +378,7 @@ static bool DisasterTick_Ufo(DisasterVehicle *v)
 static void DestructIndustry(Industry *i)
 {
 	for (TileIndex tile = 0; tile != MapSize(); tile++) {
-		if (IsTileType(tile, MP_INDUSTRY) && GetIndustryIndex(tile) == i->index) {
+		if (i->TileBelongsToIndustry(tile)) {
 			ResetIndustryConstructionStage(tile);
 			MarkTileDirtyByTile(tile);
 		}
@@ -509,7 +511,7 @@ static bool DisasterTick_Big_Ufo(DisasterVehicle *v)
 			return false;
 		}
 
-		byte z = GetSlopeZ(v->x_pos, v->y_pos);
+		int z = GetSlopePixelZ(v->x_pos, v->y_pos);
 		if (z < v->z_pos) {
 			SetDisasterVehiclePos(v, v->x_pos, v->y_pos, v->z_pos - 1);
 			return true;
