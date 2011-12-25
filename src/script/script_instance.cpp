@@ -64,11 +64,11 @@ ScriptInstance::ScriptInstance(const char *APIName) :
 	this->engine->SetPrintFunction(&PrintFunc);
 }
 
-void ScriptInstance::Initialize(const char *main_script, const char *instance_name)
+void ScriptInstance::Initialize(const char *main_script, const char *instance_name, CompanyID company)
 {
 	ScriptObject::ActiveInstance active(this);
 
-	this->controller = new ScriptController();
+	this->controller = new ScriptController(company);
 
 	/* Register the API functions and classes */
 	this->engine->SetGlobalPointer(this->engine);
@@ -149,6 +149,8 @@ void ScriptInstance::GameLoop()
 	if (this->suspend   < -1) this->suspend++; // Multiplayer suspend, increase up to -1.
 	if (this->suspend   < 0)  return;          // Multiplayer suspend, wait for Continue().
 	if (--this->suspend > 0)  return;          // Singleplayer suspend, decrease to 0.
+
+	_current_company = ScriptObject::GetCompany();
 
 	/* If there is a callback to call, call that first */
 	if (this->callback != NULL) {
@@ -245,6 +247,11 @@ void ScriptInstance::CollectGarbage() const
 	instance->engine->InsertResult(ScriptObject::GetNewGroupID());
 }
 
+/* static */ void ScriptInstance::DoCommandReturnGoalID(ScriptInstance *instance)
+{
+	instance->engine->InsertResult(ScriptObject::GetNewGoalID());
+}
+
 ScriptStorage *ScriptInstance::GetStorage()
 {
 	return this->storage;
@@ -297,12 +304,10 @@ static const SaveLoad _script_byte[] = {
 	SLE_END()
 };
 
-static const uint SCRIPTSAVE_MAX_DEPTH = 25; ///< The maximum recursive depth for items stored in the savegame.
-
 /* static */ bool ScriptInstance::SaveObject(HSQUIRRELVM vm, SQInteger index, int max_depth, bool test)
 {
 	if (max_depth == 0) {
-		ScriptLog::Error("Savedata can only be nested to 25 deep. No data saved.");
+		ScriptLog::Error("Savedata can only be nested to 25 deep. No data saved."); // SQUIRREL_MAX_DEPTH = 25
 		return false;
 	}
 
@@ -439,7 +444,7 @@ void ScriptInstance::Save()
 		_script_sl_byte = 1;
 		SlObject(NULL, _script_byte);
 		/* Save the data that was just loaded. */
-		SaveObject(vm, -1, SCRIPTSAVE_MAX_DEPTH, false);
+		SaveObject(vm, -1, SQUIRREL_MAX_DEPTH, false);
 	} else if (!this->is_started) {
 		SaveEmpty();
 		return;
@@ -478,10 +483,10 @@ void ScriptInstance::Save()
 			return;
 		}
 		sq_pushobject(vm, savedata);
-		if (SaveObject(vm, -1, SCRIPTSAVE_MAX_DEPTH, true)) {
+		if (SaveObject(vm, -1, SQUIRREL_MAX_DEPTH, true)) {
 			_script_sl_byte = 1;
 			SlObject(NULL, _script_byte);
-			SaveObject(vm, -1, SCRIPTSAVE_MAX_DEPTH, false);
+			SaveObject(vm, -1, SQUIRREL_MAX_DEPTH, false);
 			this->is_save_data_on_stack = true;
 		} else {
 			SaveEmpty();

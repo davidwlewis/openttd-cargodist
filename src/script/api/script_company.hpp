@@ -13,10 +13,11 @@
 #define SCRIPT_COMPANY_HPP
 
 #include "script_object.hpp"
+#include "script_text.hpp"
 
 /**
  * Class that handles all company related functions.
- * @api ai
+ * @api ai game
  */
 class ScriptCompany : public ScriptObject {
 public:
@@ -58,18 +59,18 @@ public:
 	 * Check if a CompanyID is your CompanyID, to ease up checks.
 	 * @param company The company index to check.
 	 * @return True if and only if this company is your CompanyID.
+	 * @api -game
 	 */
 	static bool IsMine(CompanyID company);
 
 	/**
 	 * Set the name of your company.
-	 * @param name The new name of the company.
-	 * @pre 'name' must have at least one character.
-	 * @pre 'name' must have at most 30 characters.
+	 * @param name The new name of the company (can be either a raw string, or a ScriptText object).
+	 * @pre name != NULL && len(name) != 0.
 	 * @exception ScriptError::ERR_NAME_IS_NOT_UNIQUE
 	 * @return True if the name was changed.
 	 */
-	static bool SetName(const char *name);
+	static bool SetName(Text *name);
 
 	/**
 	 * Get the name of the given company.
@@ -81,12 +82,12 @@ public:
 
 	/**
 	 * Set the name of your president.
-	 * @param name The new name of the president.
-	 * @pre 'name' must have at least one character.
+	 * @param name The new name of the president (can be either a raw string, or a ScriptText object).
+	 * @pre name != NULL && len(name) != 0.
 	 * @exception ScriptError::ERR_NAME_IS_NOT_UNIQUE
 	 * @return True if the name was changed.
 	 */
-	static bool SetPresidentName(const char *name);
+	static bool SetPresidentName(Text *name);
 
 	/**
 	 * Get the name of the president of the given company.
@@ -102,6 +103,7 @@ public:
 	 * @pre GetPresidentGender(ScriptCompany.COMPANY_SELF) != gender.
 	 * @return True if the gender was changed.
 	 * @note When successful a random face will be created.
+	 * @api -game
 	 */
 	static bool SetPresidentGender(Gender gender);
 
@@ -119,6 +121,7 @@ public:
 	 * @pre GetLoanInterval() must be a multiplier of 'loan'.
 	 * @pre 'loan' must be below GetMaxLoanAmount().
 	 * @pre 'loan' - GetLoanAmount() + GetBankBalance() must be non-negative.
+	 * @game @pre Valid ScriptCompanyMode active in scope.
 	 * @return True if the loan could be set to your requested amount.
 	 */
 	static bool SetLoanAmount(int32 loan);
@@ -128,6 +131,7 @@ public:
 	 * @param loan The amount to loan (any positive number).
 	 * @pre 'loan' must be non-negative.
 	 * @pre 'loan' must be below GetMaxLoanAmount().
+	 * @game @pre Valid ScriptCompanyMode active in scope.
 	 * @return True if we could allocate a minimum of 'loan' loan.
 	 */
 	static bool SetMinimumLoanAmount(int32 loan);
@@ -217,6 +221,7 @@ public:
 	 * Build your company's HQ on the given tile.
 	 * @param tile The tile to build your HQ on, this tile is the most nothern tile of your HQ.
 	 * @pre ScriptMap::IsValidTile(tile).
+	 * @game @pre Valid ScriptCompanyMode active in scope.
 	 * @exception ScriptError::ERR_AREA_NOT_CLEAR
 	 * @exception ScriptError::ERR_FLAT_LAND_REQUIRED
 	 * @return True if the HQ could be build.
@@ -238,6 +243,7 @@ public:
 	 * Set whether autorenew is enabled for your company.
 	 * @param autorenew The new autorenew status.
 	 * @return True if autorenew status has been modified.
+	 * @api -game
 	 */
 	static bool SetAutoRenewStatus(bool autorenew);
 
@@ -253,6 +259,7 @@ public:
 	 * Set the number of months before/after max age to autorenew an engine for your company.
 	 * @param months The new months between autorenew.
 	 * @return True if autorenew months has been modified.
+	 * @api -game
 	 */
 	static bool SetAutoRenewMonths(int16 months);
 
@@ -268,6 +275,7 @@ public:
 	 * Set the minimum money needed to autorenew an engine for your company.
 	 * @param money The new minimum required money for autorenew to work.
 	 * @return True if autorenew money has been modified.
+	 * @api -game
 	 */
 	static bool SetAutoRenewMoney(uint32 money);
 

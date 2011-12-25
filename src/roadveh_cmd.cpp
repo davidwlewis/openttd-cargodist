@@ -27,6 +27,7 @@
 #include "vehicle_func.h"
 #include "sound_func.h"
 #include "ai/ai.hpp"
+#include "game/game.hpp"
 #include "depot_map.h"
 #include "effectvehicle_func.h"
 #include "roadstop_base.h"
@@ -416,7 +417,7 @@ void RoadVehicle::UpdateDeltaXY(Direction direction)
  * Calculates the maximum speed of the vehicle under its current conditions.
  * @return Maximum speed of the vehicle.
  */
-FORCEINLINE int RoadVehicle::GetCurrentMaxSpeed() const
+inline int RoadVehicle::GetCurrentMaxSpeed() const
 {
 	if (_settings_game.vehicle.roadveh_acceleration_model == AM_ORIGINAL) return this->vcache.cached_max_speed;
 
@@ -522,6 +523,7 @@ static void RoadVehCrash(RoadVehicle *v)
 	uint pass = v->Crash();
 
 	AI::NewEvent(v->owner, new ScriptEventVehicleCrashed(v->index, v->tile, ScriptEventVehicleCrashed::CRASH_RV_LEVEL_CROSSING));
+	Game::NewEvent(new ScriptEventVehicleCrashed(v->index, v->tile, ScriptEventVehicleCrashed::CRASH_RV_LEVEL_CROSSING));
 
 	SetDParam(0, pass);
 	AddVehicleNewsItem(
@@ -670,6 +672,7 @@ static void RoadVehArrivesAt(const RoadVehicle *v, Station *st)
 				st->index
 			);
 			AI::NewEvent(v->owner, new ScriptEventStationFirstVehicle(st->index, v->index));
+			Game::NewEvent(new ScriptEventStationFirstVehicle(st->index, v->index));
 		}
 	} else {
 		/* Check if station was ever visited before */
@@ -683,6 +686,7 @@ static void RoadVehArrivesAt(const RoadVehicle *v, Station *st)
 				st->index
 			);
 			AI::NewEvent(v->owner, new ScriptEventStationFirstVehicle(st->index, v->index));
+			Game::NewEvent(new ScriptEventStationFirstVehicle(st->index, v->index));
 		}
 	}
 }
