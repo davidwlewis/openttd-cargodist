@@ -21,6 +21,8 @@ BEGIN {
 	skip_function_body = "false"
 	skip_function_par = 0
 	RS = "\r|\n"
+	apis = tolower(api)
+	if (apis == "gs") apis = "game"
 }
 
 {
@@ -43,7 +45,7 @@ BEGIN {
 }
 
 /@file/ {
-	gsub(/script/, tolower(api))
+	gsub(/script/, apis)
 }
 
 /^([	 ]*)\* @api/ {
@@ -62,9 +64,9 @@ BEGIN {
 		api_selected = "false"
 	} else if ($0 == "-all") {
 		api_selected = "false"
-	} else if (match($0, "-" tolower(api))) {
+	} else if (match($0, "-" apis)) {
 		api_selected = "false"
-	} else if (match($0, tolower(api))) {
+	} else if (match($0, apis)) {
 		api_selected = "true"
 	}
 
@@ -116,8 +118,8 @@ BEGIN {
 /^(	*)private/   { if (cls_level == 1) comment_buffer = ""; public = "false"; next; }
 
 # Ignore special doxygen blocks
-/^#ifndef DOXYGEN_API/          { doxygen_skip = "next"; next; }
-/^#ifdef DOXYGEN_API/           { doxygen_skip = "true"; next; }
+/^#ifndef DOXYGEN_API/          { doxygen_skip = "true"; next; }
+/^#ifdef DOXYGEN_API/           { doxygen_skip = "next"; next; }
 /^#endif \/\* DOXYGEN_API \*\// { doxygen_skip = "false"; next; }
 /^#else/                         {
 	if (doxygen_skip == "next") {
@@ -142,6 +144,10 @@ BEGIN {
 {
 	if (comment == "true" && !match($0, /@api/))
 	{
+		if (match($0, /@game /) && api != "GS") next;
+		if (match($0, /@ai /) && api != "AI") next;
+		gsub("@game ", "", $0);
+		gsub("@ai ", "", $0);
 		comment_buffer = comment_buffer $0 "\n"; next;
 	}
 }

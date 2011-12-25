@@ -43,56 +43,62 @@
     <Filter Include="AI API">
       <UniqueIdentifier>{c76ff9f1-1e62-46d8-8d55-000000000013}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Script API">
+    <Filter Include="Game API">
       <UniqueIdentifier>{c76ff9f1-1e62-46d8-8d55-000000000014}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Script API Implementation">
+    <Filter Include="Game Core">
       <UniqueIdentifier>{c76ff9f1-1e62-46d8-8d55-000000000015}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Blitters">
+    <Filter Include="Script API">
       <UniqueIdentifier>{c76ff9f1-1e62-46d8-8d55-000000000016}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Drivers">
+    <Filter Include="Script API Implementation">
       <UniqueIdentifier>{c76ff9f1-1e62-46d8-8d55-000000000017}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Sprite loaders">
+    <Filter Include="Blitters">
       <UniqueIdentifier>{c76ff9f1-1e62-46d8-8d55-000000000018}</UniqueIdentifier>
     </Filter>
-    <Filter Include="NewGRF">
+    <Filter Include="Drivers">
       <UniqueIdentifier>{c76ff9f1-1e62-46d8-8d55-000000000019}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Map Accessors">
+    <Filter Include="Sprite loaders">
       <UniqueIdentifier>{c76ff9f1-1e62-46d8-8d55-000000000020}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Misc">
+    <Filter Include="NewGRF">
       <UniqueIdentifier>{c76ff9f1-1e62-46d8-8d55-000000000021}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Network Core">
+    <Filter Include="Map Accessors">
       <UniqueIdentifier>{c76ff9f1-1e62-46d8-8d55-000000000022}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Pathfinder">
+    <Filter Include="Misc">
       <UniqueIdentifier>{c76ff9f1-1e62-46d8-8d55-000000000023}</UniqueIdentifier>
     </Filter>
-    <Filter Include="NPF">
+    <Filter Include="Network Core">
       <UniqueIdentifier>{c76ff9f1-1e62-46d8-8d55-000000000024}</UniqueIdentifier>
     </Filter>
-    <Filter Include="YAPF">
+    <Filter Include="Pathfinder">
       <UniqueIdentifier>{c76ff9f1-1e62-46d8-8d55-000000000025}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Video">
+    <Filter Include="NPF">
       <UniqueIdentifier>{c76ff9f1-1e62-46d8-8d55-000000000026}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Music">
+    <Filter Include="YAPF">
       <UniqueIdentifier>{c76ff9f1-1e62-46d8-8d55-000000000027}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Sound">
+    <Filter Include="Video">
       <UniqueIdentifier>{c76ff9f1-1e62-46d8-8d55-000000000028}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Windows files">
+    <Filter Include="Music">
       <UniqueIdentifier>{c76ff9f1-1e62-46d8-8d55-000000000029}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Threading">
+    <Filter Include="Sound">
       <UniqueIdentifier>{c76ff9f1-1e62-46d8-8d55-000000000030}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Windows files">
+      <UniqueIdentifier>{c76ff9f1-1e62-46d8-8d55-000000000031}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Threading">
+      <UniqueIdentifier>{c76ff9f1-1e62-46d8-8d55-000000000032}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -181,6 +187,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\src\gfxinit.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\goal.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\src\ground_vehicle.cpp">
@@ -304,6 +313,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\src\station.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\strgen\strgen_base.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\src\string.cpp">
@@ -550,6 +562,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\src\gfxinit.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\goal_base.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\goal_type.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\src\graph_gui.h">
@@ -927,6 +945,9 @@
     <ClInclude Include="..\src\stdafx.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\strgen\strgen.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="..\src\string_func.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -1209,6 +1230,9 @@
     <ClCompile Include="..\src\genworld_gui.cpp">
       <Filter>GUI Source Code</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\goal_gui.cpp">
+      <Filter>GUI Source Code</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\graph_gui.cpp">
       <Filter>GUI Source Code</Filter>
     </ClCompile>
@@ -1378,6 +1402,9 @@
       <Filter>Widgets</Filter>
     </ClInclude>
     <ClInclude Include="..\src\widgets\genworld_widget.h">
+      <Filter>Widgets</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\widgets\goal_widget.h">
       <Filter>Widgets</Filter>
     </ClInclude>
     <ClInclude Include="..\src\widgets\graph_widget.h">
@@ -1596,7 +1623,13 @@
     <ClCompile Include="..\src\saveload\engine_sl.cpp">
       <Filter>Save/Load handlers</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\saveload\game_sl.cpp">
+      <Filter>Save/Load handlers</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\saveload\gamelog_sl.cpp">
+      <Filter>Save/Load handlers</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\saveload\goal_sl.cpp">
       <Filter>Save/Load handlers</Filter>
     </ClCompile>
     <ClCompile Include="..\src\saveload\group_sl.cpp">
@@ -2001,7 +2034,49 @@
     <ClInclude Include="..\src\script\api\ai_changelog.hpp">
       <Filter>AI API</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\script\api\game_changelog.hpp">
+      <Filter>Game API</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\game\game.hpp">
+      <Filter>Game Core</Filter>
+    </ClInclude>
+    <ClCompile Include="..\src\game\game_config.cpp">
+      <Filter>Game Core</Filter>
+    </ClCompile>
+    <ClInclude Include="..\src\game\game_config.hpp">
+      <Filter>Game Core</Filter>
+    </ClInclude>
+    <ClCompile Include="..\src\game\game_core.cpp">
+      <Filter>Game Core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\game\game_info.cpp">
+      <Filter>Game Core</Filter>
+    </ClCompile>
+    <ClInclude Include="..\src\game\game_info.hpp">
+      <Filter>Game Core</Filter>
+    </ClInclude>
+    <ClCompile Include="..\src\game\game_instance.cpp">
+      <Filter>Game Core</Filter>
+    </ClCompile>
+    <ClInclude Include="..\src\game\game_instance.hpp">
+      <Filter>Game Core</Filter>
+    </ClInclude>
+    <ClCompile Include="..\src\game\game_scanner.cpp">
+      <Filter>Game Core</Filter>
+    </ClCompile>
+    <ClInclude Include="..\src\game\game_scanner.hpp">
+      <Filter>Game Core</Filter>
+    </ClInclude>
+    <ClCompile Include="..\src\game\game_text.cpp">
+      <Filter>Game Core</Filter>
+    </ClCompile>
+    <ClInclude Include="..\src\game\game_text.hpp">
+      <Filter>Game Core</Filter>
+    </ClInclude>
     <ClInclude Include="..\src\script\api\script_accounting.hpp">
+      <Filter>Script API</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\script\api\script_admin.hpp">
       <Filter>Script API</Filter>
     </ClInclude>
     <ClInclude Include="..\src\script\api\script_airport.hpp">
@@ -2026,6 +2101,9 @@
       <Filter>Script API</Filter>
     </ClInclude>
     <ClInclude Include="..\src\script\api\script_company.hpp">
+      <Filter>Script API</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\script\api\script_companymode.hpp">
       <Filter>Script API</Filter>
     </ClInclude>
     <ClInclude Include="..\src\script\api\script_controller.hpp">
@@ -2055,7 +2133,13 @@
     <ClInclude Include="..\src\script\api\script_execmode.hpp">
       <Filter>Script API</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\script\api\script_game.hpp">
+      <Filter>Script API</Filter>
+    </ClInclude>
     <ClInclude Include="..\src\script\api\script_gamesettings.hpp">
+      <Filter>Script API</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\script\api\script_goal.hpp">
       <Filter>Script API</Filter>
     </ClInclude>
     <ClInclude Include="..\src\script\api\script_group.hpp">
@@ -2094,6 +2178,9 @@
     <ClInclude Include="..\src\script\api\script_marine.hpp">
       <Filter>Script API</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\script\api\script_news.hpp">
+      <Filter>Script API</Filter>
+    </ClInclude>
     <ClInclude Include="..\src\script\api\script_object.hpp">
       <Filter>Script API</Filter>
     </ClInclude>
@@ -2130,6 +2217,9 @@
     <ClInclude Include="..\src\script\api\script_testmode.hpp">
       <Filter>Script API</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\script\api\script_text.hpp">
+      <Filter>Script API</Filter>
+    </ClInclude>
     <ClInclude Include="..\src\script\api\script_tile.hpp">
       <Filter>Script API</Filter>
     </ClInclude>
@@ -2154,13 +2244,22 @@
     <ClInclude Include="..\src\script\api\script_vehiclelist.hpp">
       <Filter>Script API</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\script\api\script_viewport.hpp">
+      <Filter>Script API</Filter>
+    </ClInclude>
     <ClInclude Include="..\src\script\api\script_waypoint.hpp">
       <Filter>Script API</Filter>
     </ClInclude>
     <ClInclude Include="..\src\script\api\script_waypointlist.hpp">
       <Filter>Script API</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\script\api\script_window.hpp">
+      <Filter>Script API</Filter>
+    </ClInclude>
     <ClCompile Include="..\src\script\api\script_accounting.cpp">
+      <Filter>Script API Implementation</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\script\api\script_admin.cpp">
       <Filter>Script API Implementation</Filter>
     </ClCompile>
     <ClCompile Include="..\src\script\api\script_airport.cpp">
@@ -2185,6 +2284,9 @@
       <Filter>Script API Implementation</Filter>
     </ClCompile>
     <ClCompile Include="..\src\script\api\script_company.cpp">
+      <Filter>Script API Implementation</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\script\api\script_companymode.cpp">
       <Filter>Script API Implementation</Filter>
     </ClCompile>
     <ClCompile Include="..\src\script\api\script_controller.cpp">
@@ -2214,7 +2316,13 @@
     <ClCompile Include="..\src\script\api\script_execmode.cpp">
       <Filter>Script API Implementation</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\script\api\script_game.cpp">
+      <Filter>Script API Implementation</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\script\api\script_gamesettings.cpp">
+      <Filter>Script API Implementation</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\script\api\script_goal.cpp">
       <Filter>Script API Implementation</Filter>
     </ClCompile>
     <ClCompile Include="..\src\script\api\script_group.cpp">
@@ -2248,6 +2356,9 @@
       <Filter>Script API Implementation</Filter>
     </ClCompile>
     <ClCompile Include="..\src\script\api\script_marine.cpp">
+      <Filter>Script API Implementation</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\script\api\script_news.cpp">
       <Filter>Script API Implementation</Filter>
     </ClCompile>
     <ClCompile Include="..\src\script\api\script_object.cpp">
@@ -2286,6 +2397,9 @@
     <ClCompile Include="..\src\script\api\script_testmode.cpp">
       <Filter>Script API Implementation</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\script\api\script_text.cpp">
+      <Filter>Script API Implementation</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\script\api\script_tile.cpp">
       <Filter>Script API Implementation</Filter>
     </ClCompile>
@@ -2307,10 +2421,16 @@
     <ClCompile Include="..\src\script\api\script_vehiclelist.cpp">
       <Filter>Script API Implementation</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\script\api\script_viewport.cpp">
+      <Filter>Script API Implementation</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\script\api\script_waypoint.cpp">
       <Filter>Script API Implementation</Filter>
     </ClCompile>
     <ClCompile Include="..\src\script\api\script_waypointlist.cpp">
+      <Filter>Script API Implementation</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\script\api\script_window.cpp">
       <Filter>Script API Implementation</Filter>
     </ClCompile>
     <ClCompile Include="..\src\blitter\32bpp_anim.cpp">

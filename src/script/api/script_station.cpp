@@ -17,13 +17,19 @@
 #include "../../debug.h"
 #include "../../station_base.h"
 #include "../../roadstop_base.h"
-#include "../../company_func.h"
 #include "../../town.h"
 
 /* static */ bool ScriptStation::IsValidStation(StationID station_id)
 {
 	const Station *st = ::Station::GetIfValid(station_id);
-	return st != NULL && (st->owner == _current_company || st->owner == OWNER_NONE);
+	return st != NULL && (st->owner == ScriptObject::GetCompany() || ScriptObject::GetCompany() == OWNER_DEITY || st->owner == OWNER_NONE);
+}
+
+/* static */ ScriptCompany::CompanyID ScriptStation::GetOwner(StationID station_id)
+{
+	if (!IsValidStation(station_id)) return ScriptCompany::COMPANY_INVALID;
+
+	return static_cast<ScriptCompany::CompanyID>((int)::Station::Get(station_id)->owner);
 }
 
 /* static */ StationID ScriptStation::GetStationID(TileIndex tile)

@@ -26,6 +26,9 @@
 #include "ai_info.hpp"
 #include "ai_instance.hpp"
 
+/* Manually include the Text glue. */
+#include "../script/api/template/template_text.hpp.sq"
+
 /* Convert all AI related classes to Squirrel data.
  * Note: this line is a marker in squirrel_export.sh. Do not change! */
 #include "../script/api/ai/ai_accounting.hpp.sq"
@@ -94,7 +97,7 @@ void AIInstance::Initialize(AIInfo *info)
 	/* Register the AIController (including the "import" command) */
 	SQAIController_Register(this->engine);
 
-	ScriptInstance::Initialize(info->GetMainScript(), info->GetInstanceName());
+	ScriptInstance::Initialize(info->GetMainScript(), info->GetInstanceName(), _current_company);
 }
 
 void AIInstance::RegisterAPI()
