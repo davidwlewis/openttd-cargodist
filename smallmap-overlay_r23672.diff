@@ -479,7 +479,7 @@ index ea4124e..a6c0bfc 100644
  	}
  
 diff --git a/src/cargopacket.cpp b/src/cargopacket.cpp
-index 0b92de0..6340118 100644
+index 0b92de0..32ffa3d 100644
 --- a/src/cargopacket.cpp
 +++ b/src/cargopacket.cpp
 @@ -10,7 +10,9 @@
@@ -1092,7 +1092,7 @@ index 0b92de0..6340118 100644
   * Ages the all cargo in this list.
   */
  void VehicleCargoList::AgeCargo()
-@@ -389,22 +702,188 @@ void VehicleCargoList::AgeCargo()
+@@ -389,22 +702,177 @@ void VehicleCargoList::AgeCargo()
  	}
  }
  
@@ -1210,42 +1210,31 @@ index 0b92de0..6340118 100644
 +
 +/**
 + * Truncate where each destination loses roughly the same percentage of its cargo.
-+ * This is done by randomizing the selection of packets to be removed. Also count
-+ * the cargo by origin station.
-+ * @param max_remaining Maximum amount of cargo to keep in the station.
-+ * @param cargo_per_source Container for counting the cargo by origin list.
++ * This is done by randomizing the selection of packets to be removed.
++ * @param max_remaining maximum amount of cargo to keep in the list.
 + */
-+void StationCargoList::CountAndTruncate(uint max_remaining, StationCargoAmountMap &cargo_per_source)
++void StationCargoList::RandomTruncate(uint max_remaining)
 +{
 +	uint prev_count = this->count;
-+	uint loop = 0;
 +	while (this->count > max_remaining) {
 +		for (Iterator it(this->packets.begin()); it != this->packets.end();) {
-+			CargoPacket *packet = *it;
-+			if (loop == 0) cargo_per_source[packet->source] += packet->count;
-+
 +			if (RandomRange(prev_count) < max_remaining) {
 +				++it;
 +				continue;
 +			}
-+
++			CargoPacket *packet = *it;
 +			uint diff = this->count - max_remaining;
 +			if (packet->count > diff) {
 +				packet->count -= diff;
 +				this->count = max_remaining;
 +				this->cargo_days_in_transit -= packet->days_in_transit * diff;
-+				if (loop > 0) {
-+					return;
-+				} else {
-+					++it;
-+				}
++				return;
 +			} else {
 +				it = this->packets.erase(it);
 +				this->RemoveFromCache(packet);
 +				delete packet;
 +			}
 +		}
-+		loop++;
 +	}
 +}
 +
@@ -1292,7 +1281,7 @@ index 0b92de0..6340118 100644
 +template class CargoList<VehicleCargoList, CargoPacketList>;
 +template class CargoList<StationCargoList, StationCargoPacketMap>;
 diff --git a/src/cargopacket.h b/src/cargopacket.h
-index 7964ea7..370dd65 100644
+index 7964ea7..453b1e3 100644
 --- a/src/cargopacket.h
 +++ b/src/cargopacket.h
 @@ -15,8 +15,11 @@
@@ -1546,12 +1535,11 @@ index 7964ea7..370dd65 100644
  	/**
  	 * Are two the two CargoPackets mergeable in the context of
  	 * a list of CargoPackets for a Vehicle?
-@@ -303,16 +373,21 @@ public:
+@@ -303,16 +373,20 @@ public:
  	}
  };
  
 +typedef MultiMap<StationID, CargoPacket *> StationCargoPacketMap;
-+typedef std::map<StationID, uint> StationCargoAmountMap;
 +
  /**
   * CargoList that is used for stations.
@@ -1570,7 +1558,7 @@ index 7964ea7..370dd65 100644
  	/**
  	 * Are two the two CargoPackets mergeable in the context of
  	 * a list of CargoPackets for a Vehicle?
-@@ -327,6 +402,40 @@ public:
+@@ -327,6 +401,40 @@ public:
  				cp1->source_type     == cp2->source_type &&
  				cp1->source_id       == cp2->source_id;
  	}
@@ -1583,7 +1571,7 @@ index 7964ea7..370dd65 100644
 +
 +	void RerouteStalePackets(StationID to);
 +
-+	void CountAndTruncate(uint max_remaining, StationCargoAmountMap &cargo_per_source);
++	void RandomTruncate(uint max_remaining);
 +
 +	/**
 +	 * Returns source of the first cargo packet in this list.
@@ -1611,34 +1599,6 @@ index 7964ea7..370dd65 100644
  };
  
  #endif /* CARGOPACKET_H */
-diff --git a/src/company_cmd.cpp b/src/company_cmd.cpp
-index d462707..244b836 100644
---- a/src/company_cmd.cpp
-+++ b/src/company_cmd.cpp
-@@ -83,6 +83,7 @@ void Company::PostDestructor(size_t index)
- 	InvalidateWindowData(WC_GRAPH_LEGEND, 0, (int)index);
- 	InvalidateWindowData(WC_PERFORMANCE_DETAIL, 0, (int)index);
- 	InvalidateWindowData(WC_COMPANY_LEAGUE, 0, 0);
-+	InvalidateWindowData(WC_LINKGRAPH_LEGEND, 0);
- 	/* If the currently shown error message has this company in it, then close it. */
- 	InvalidateWindowData(WC_ERRMSG, 0);
- }
-@@ -558,6 +559,7 @@ Company *DoStartupNewCompany(bool is_ai, CompanyID company = INVALID_COMPANY)
- 	SetWindowDirty(WC_GRAPH_LEGEND, 0);
- 	SetWindowClassesDirty(WC_CLIENT_LIST_POPUP);
- 	SetWindowDirty(WC_CLIENT_LIST, 0);
-+	InvalidateWindowData(WC_LINKGRAPH_LEGEND, 0);
- 	BuildOwnerLegend();
- 	InvalidateWindowData(WC_SMALLMAP, 0, 1);
- 
-@@ -1029,6 +1031,7 @@ CommandCost CmdSetCompanyColour(TileIndex tile, DoCommandFlag flags, uint32 p1,
- 		InvalidateWindowData(WC_DELIVERED_CARGO, 0);
- 		InvalidateWindowData(WC_PERFORMANCE_HISTORY, 0);
- 		InvalidateWindowData(WC_COMPANY_VALUE, 0);
-+		InvalidateWindowData(WC_LINKGRAPH_LEGEND, 0);
- 		/* The smallmap owner view also stores the company colours. */
- 		BuildOwnerLegend();
- 		InvalidateWindowData(WC_SMALLMAP, 0, 1);
 diff --git a/src/core/math_func.cpp b/src/core/math_func.cpp
 index 2b8ca33..8c136c0 100644
 --- a/src/core/math_func.cpp
@@ -2568,26 +2528,10 @@ index deff47b..a388d94 100644
 +	OnTick_LinkGraph();
  }
 diff --git a/src/lang/english.txt b/src/lang/english.txt
-index e28d328..47d92e9 100644
+index e28d328..9b0b8f6 100644
 --- a/src/lang/english.txt
 +++ b/src/lang/english.txt
-@@ -220,6 +220,7 @@ STR_UNITS_HEIGHT_SI                                             :{COMMA} m
- STR_LIST_FILTER_OSKTITLE                                        :{BLACK}Enter filter string
- STR_LIST_FILTER_TOOLTIP                                         :{BLACK}Enter a keyword to filter the list for
- 
-+STR_TOOLTIP_GROUP_ORDER                                         :{BLACK}Select grouping order
- STR_TOOLTIP_SORT_ORDER                                          :{BLACK}Select sorting order (descending/ascending)
- STR_TOOLTIP_SORT_CRITERIA                                       :{BLACK}Select sorting criteria
- STR_TOOLTIP_FILTER_CRITERIA                                     :{BLACK}Select filtering criteria
-@@ -373,6 +374,7 @@ STR_FILE_MENU_EXIT                                              :Exit
- ############ range for map menu starts
- STR_MAP_MENU_MAP_OF_WORLD                                       :Map of world
- STR_MAP_MENU_EXTRA_VIEW_PORT                                    :Extra viewport
-+STR_MAP_MENU_LINGRAPH_LEGEND                                    :Link graph legend
- STR_MAP_MENU_SIGN_LIST                                          :Sign list
- ############ range for town menu starts, yet the town directory is shown in the map menu in the scenario editor
- STR_TOWN_MENU_TOWN_DIRECTORY                                    :Town directory
-@@ -657,17 +659,20 @@ STR_SMALLMAP_CAPTION                                            :{WHITE}Map - {S
+@@ -657,17 +657,20 @@ STR_SMALLMAP_CAPTION                                            :{WHITE}Map - {S
  STR_SMALLMAP_TYPE_CONTOURS                                      :Contours
  STR_SMALLMAP_TYPE_VEHICLES                                      :Vehicles
  STR_SMALLMAP_TYPE_INDUSTRIES                                    :Industries
@@ -2608,7 +2552,7 @@ index e28d328..47d92e9 100644
  
  STR_SMALLMAP_LEGENDA_ROADS                                      :{TINY_FONT}{BLACK}Roads
  STR_SMALLMAP_LEGENDA_RAILROADS                                  :{TINY_FONT}{BLACK}Railways
-@@ -701,6 +706,7 @@ STR_SMALLMAP_LEGENDA_SNOW                                       :{TINY_FONT}{BLA
+@@ -701,6 +704,7 @@ STR_SMALLMAP_LEGENDA_SNOW                                       :{TINY_FONT}{BLA
  STR_SMALLMAP_TOOLTIP_TOGGLE_TOWN_NAMES_ON_OFF                   :{BLACK}Toggle town names on/off on map
  STR_SMALLMAP_CENTER                                             :{BLACK}Centre the smallmap on the current position
  STR_SMALLMAP_INDUSTRY                                           :{TINY_FONT}{STRING} ({NUM})
@@ -2616,7 +2560,7 @@ index e28d328..47d92e9 100644
  STR_SMALLMAP_COMPANY                                            :{TINY_FONT}{COMPANY}
  STR_SMALLMAP_TOWN                                               :{TINY_FONT}{WHITE}{TOWN}
  STR_SMALLMAP_DISABLE_ALL                                        :{BLACK}Disable all
-@@ -711,6 +717,8 @@ STR_SMALLMAP_TOOLTIP_ENABLE_ALL_INDUSTRIES                      :{BLACK}Display
+@@ -711,6 +715,8 @@ STR_SMALLMAP_TOOLTIP_ENABLE_ALL_INDUSTRIES                      :{BLACK}Display
  STR_SMALLMAP_TOOLTIP_SHOW_HEIGHT                                :{BLACK}Toggle display of heightmap
  STR_SMALLMAP_TOOLTIP_DISABLE_ALL_COMPANIES                      :{BLACK}Display no company property on the map
  STR_SMALLMAP_TOOLTIP_ENABLE_ALL_COMPANIES                       :{BLACK}Display all company property on the map
@@ -2625,7 +2569,7 @@ index e28d328..47d92e9 100644
  
  # Status bar messages
  STR_STATUSBAR_TOOLTIP_SHOW_LAST_NEWS                            :{BLACK}Show last message or news report
-@@ -1347,11 +1355,25 @@ STR_CONFIG_SETTING_LARGER_TOWNS_DISABLED                        :{LTBLUE}Proport
+@@ -1347,11 +1353,25 @@ STR_CONFIG_SETTING_LARGER_TOWNS_DISABLED                        :{LTBLUE}Proport
  STR_CONFIG_SETTING_CITY_SIZE_MULTIPLIER                         :{LTBLUE}Initial city size multiplier: {ORANGE}{STRING1}
  STR_CONFIG_SETTING_MODIFIED_ROAD_REBUILD                        :{LTBLUE}Remove absurd road-elements during the road construction: {ORANGE}{STRING1}
  
@@ -2651,15 +2595,11 @@ index e28d328..47d92e9 100644
  STR_CONFIG_SETTING_AI                                           :{ORANGE}Competitors
  STR_CONFIG_SETTING_DISPLAY_OPTIONS                              :{ORANGE}Display options
  STR_CONFIG_SETTING_INTERACTION                                  :{ORANGE}Interaction
-@@ -1931,6 +1953,15 @@ STR_TRANSPARENT_CATENARY_TOOLTIP                                :{BLACK}Toggle t
+@@ -1931,6 +1951,11 @@ STR_TRANSPARENT_CATENARY_TOOLTIP                                :{BLACK}Toggle t
  STR_TRANSPARENT_LOADING_TOOLTIP                                 :{BLACK}Toggle transparency for loading indicators. Ctrl+Click to lock
  STR_TRANSPARENT_INVISIBLE_TOOLTIP                               :{BLACK}Set objects invisible instead of transparent
  
 +# Linkgraph legend window and linkgraph legend in smallmap
-+STR_LINKGRAPH_LEGEND_CAPTION                                    :{BLACK}Link graph legend
-+STR_LINKGRAPH_LEGEND_ALL                                        :{BLACK}All
-+STR_LINKGRAPH_LEGEND_NONE                                       :{BLACK}None
-+STR_LINKGRAPH_LEGEND_SELECT_COMPANIES                           :{BLACK}Select companies to be displayed
 +STR_LINKGRAPH_LEGEND_UNUSED                                     :{TINY_FONT}{BLACK}unused
 +STR_LINKGRAPH_LEGEND_SATURATED                                  :{TINY_FONT}{BLACK}saturated
 +STR_LINKGRAPH_LEGEND_OVERLOADED                                 :{TINY_FONT}{BLACK}overloaded
@@ -2667,41 +2607,7 @@ index e28d328..47d92e9 100644
  # Base for station construction window(s)
  STR_STATION_BUILD_COVERAGE_AREA_TITLE                           :{BLACK}Coverage area highlight
  STR_STATION_BUILD_COVERAGE_OFF                                  :{BLACK}Off
-@@ -2700,8 +2731,32 @@ STR_STATION_VIEW_ACCEPTS_CARGO                                  :{BLACK}Accepts:
- 
- STR_STATION_VIEW_RATINGS_BUTTON                                 :{BLACK}Ratings
- STR_STATION_VIEW_RATINGS_TOOLTIP                                :{BLACK}Show station ratings
--STR_STATION_VIEW_CARGO_RATINGS_TITLE                            :{BLACK}Local rating of transport service:
-+STR_STATION_VIEW_CARGO_RATINGS_TITLE                            :{BLACK}Monthly supply and local rating:
- STR_STATION_VIEW_CARGO_RATING                                   :{WHITE}{STRING}: {YELLOW}{STRING} ({COMMA}%)
-+STR_STATION_VIEW_CARGO_SUPPLY_RATING                            :{WHITE}{STRING}: {YELLOW}{COMMA} / {STRING} ({COMMA}%)
-+
-+STR_STATION_VIEW_GROUP                                          :{BLACK}Group by
-+STR_STATION_VIEW_WAITING_STATION                                :Station: Waiting
-+STR_STATION_VIEW_WAITING_AMOUNT                                 :Amount: Waiting
-+STR_STATION_VIEW_PLANNED_STATION                                :Station: Planned
-+STR_STATION_VIEW_PLANNED_AMOUNT                                 :Amount: Planned
-+STR_STATION_VIEW_FROM                                           :{YELLOW}{CARGO_SHORT} from {STATION}
-+STR_STATION_VIEW_VIA                                            :{YELLOW}{CARGO_SHORT} via {STATION}
-+STR_STATION_VIEW_TO                                             :{YELLOW}{CARGO_SHORT} to {STATION}
-+STR_STATION_VIEW_FROM_ANY                                       :{RED}{CARGO_SHORT} from unknown station
-+STR_STATION_VIEW_TO_ANY                                         :{RED}{CARGO_SHORT} to any station
-+STR_STATION_VIEW_VIA_ANY                                        :{RED}{CARGO_SHORT} via any station
-+STR_STATION_VIEW_FROM_HERE                                      :{GREEN}{CARGO_SHORT} from this station
-+STR_STATION_VIEW_VIA_HERE                                       :{GREEN}{CARGO_SHORT} stopping at this station
-+STR_STATION_VIEW_TO_HERE                                        :{GREEN}{CARGO_SHORT} to this station
-+STR_STATION_VIEW_NONSTOP                                        :{YELLOW}{CARGO_SHORT} non-stop
-+
-+STR_STATION_VIEW_GROUP_S_V_D                                    :Source-Via-Destination
-+STR_STATION_VIEW_GROUP_S_D_V                                    :Source-Destination-Via
-+STR_STATION_VIEW_GROUP_V_S_D                                    :Via-Source-Destination
-+STR_STATION_VIEW_GROUP_V_D_S                                    :Via-Destination-Source
-+STR_STATION_VIEW_GROUP_D_S_V                                    :Destination-Source-Via
-+STR_STATION_VIEW_GROUP_D_V_S                                    :Destination-Via-Source
- 
- ############ range for rating starts
- STR_CARGO_RATING_APPALLING                                      :Appalling
-@@ -3551,6 +3606,10 @@ STR_INCOME_FLOAT_INCOME_SMALL                                   :{TINY_FONT}{GRE
+@@ -3551,6 +3576,10 @@ STR_INCOME_FLOAT_INCOME_SMALL                                   :{TINY_FONT}{GRE
  STR_INCOME_FLOAT_INCOME                                         :{GREEN}Income: {CURRENCY_LONG}
  STR_FEEDER_TINY                                                 :{TINY_FONT}{YELLOW}Transfer: {CURRENCY_LONG}
  STR_FEEDER                                                      :{YELLOW}Transfer: {CURRENCY_LONG}
@@ -3165,10 +3071,10 @@ index 0000000..a2b6bc0
 +#endif /* FLOWMAPPER_H_ */
 diff --git a/src/linkgraph/linkgraph.cpp b/src/linkgraph/linkgraph.cpp
 new file mode 100644
-index 0000000..f4e6d43
+index 0000000..4520236
 --- /dev/null
 +++ b/src/linkgraph/linkgraph.cpp
-@@ -0,0 +1,530 @@
+@@ -0,0 +1,527 @@
 +/* $Id$ */
 +
 +/*
@@ -3184,8 +3090,6 @@ index 0000000..f4e6d43
 +#include "../map_func.h"
 +#include "../core/bitmath_func.hpp"
 +#include "../debug.h"
-+#include "../window_func.h"
-+#include "../window_gui.h"
 +#include "../moving_average.h"
 +#include "linkgraph.h"
 +#include "demands.h"
@@ -3545,7 +3449,6 @@ index 0000000..f4e6d43
 +		Node &node = this->GetNode(node_id);
 +		if (Station::IsValidID(node.station)) {
 +			node.ExportFlows(this->cargo);
-+			InvalidateWindowData(WC_STATION_VIEW, node.station, this->GetCargo());
 +		}
 +	}
 +
@@ -4655,10 +4558,10 @@ index 0000000..60e0fac
 +#endif /* MCF_H_ */
 diff --git a/src/linkgraph_gui.cpp b/src/linkgraph_gui.cpp
 new file mode 100644
-index 0000000..0d2f4f8
+index 0000000..41d411b
 --- /dev/null
 +++ b/src/linkgraph_gui.cpp
-@@ -0,0 +1,520 @@
+@@ -0,0 +1,295 @@
 +/* $Id$ */
 +
 +/*
@@ -4671,15 +4574,12 @@ index 0000000..0d2f4f8
 +/** @file linkgraph_gui.cpp Implementation of linkgraph overlay GUI. */
 +
 +#include "stdafx.h"
-+#include "window_func.h"
 +#include "window_gui.h"
 +#include "company_base.h"
-+#include "company_gui.h"
 +#include "date_func.h"
 +#include "viewport_func.h"
 +#include "linkgraph_gui.h"
 +#include "smallmap_gui.h"
-+#include "widgets/link_graph_legend_widget.h"
 +
 +/**
 + * Colours for the various "load" states of links. Ordered from "unused" to
@@ -4926,7 +4826,10 @@ index 0000000..0d2f4f8
 + */
 +Point LinkGraphOverlay::GetStationMiddle(const Station *st) const {
 +	if (this->window->viewport != NULL) {
-+		return GetViewportStationMiddle(this->window->viewport, st);
++		//	return GetViewportStationMiddle(this->window->viewport, st);
++		Point dummy;
++		dummy.x = dummy.y = 0;
++		return dummy;
 +	} else {
 +		/* assume this is a smallmap */
 +		return static_cast<const SmallMapWindow *>(this->window)->GetStationMiddle(st);
@@ -4954,237 +4857,12 @@ index 0000000..0d2f4f8
 +	this->RebuildCache();
 +	this->window->GetWidget<NWidgetBase>(this->widget_id)->SetDirty(this->window);
 +}
-+
-+/** Make a number of rows with buttons for each company for the linkgraph legend window. */
-+NWidgetBase *MakeCompanyButtonRowsLinkGraphGUI(int *biggest_index)
-+{
-+	return MakeCompanyButtonRows(biggest_index, WID_LGL_COMPANY_FIRST, WID_LGL_COMPANY_LAST, 3, STR_LINKGRAPH_LEGEND_SELECT_COMPANIES);
-+}
-+
-+NWidgetBase *MakeSaturationLegendLinkGraphGUI(int *biggest_index)
-+{
-+	NWidgetVertical *panel = new NWidgetVertical();
-+	for (uint i = 0; i < lengthof(LinkGraphOverlay::LINK_COLOURS); ++i) {
-+		NWidgetBackground * wid = new NWidgetBackground(WWT_PANEL, COLOUR_DARK_GREEN, i + WID_LGL_SATURATION_FIRST);
-+		wid->SetMinimalSize(50, FONT_HEIGHT_SMALL);
-+		wid->SetFill(0, 1);
-+		wid->SetResize(0, 1);
-+		panel->Add(wid);
-+	}
-+	*biggest_index = WID_LGL_SATURATION_LAST;
-+	return panel;
-+}
-+
-+NWidgetBase *MakeCargoesLegendLinkGraphGUI(int *biggest_index)
-+{
-+	static const uint ENTRIES_PER_ROW = CeilDiv(NUM_CARGO, 5);
-+	NWidgetVertical *panel = new NWidgetVertical();
-+	NWidgetHorizontal *row = NULL;
-+	for (uint i = 0; i < NUM_CARGO; ++i) {
-+		if (i % ENTRIES_PER_ROW == 0) {
-+			if (row) panel->Add(row);
-+			row = new NWidgetHorizontal();
-+		}
-+		NWidgetBackground * wid = new NWidgetBackground(WWT_PANEL, COLOUR_GREY, i + WID_LGL_CARGO_FIRST);
-+		wid->SetMinimalSize(25, FONT_HEIGHT_SMALL);
-+		wid->SetFill(0, 1);
-+		wid->SetResize(0, 1);
-+		row->Add(wid);
-+	}
-+	panel->Add(row);
-+	*biggest_index = WID_LGL_CARGO_LAST;
-+	return panel;
-+}
-+
-+
-+static const NWidgetPart _nested_linkgraph_legend_widgets[] = {
-+	NWidget(NWID_HORIZONTAL),
-+		NWidget(WWT_CLOSEBOX, COLOUR_DARK_GREEN),
-+		NWidget(WWT_CAPTION, COLOUR_DARK_GREEN, WID_LGL_CAPTION), SetDataTip(STR_LINKGRAPH_LEGEND_CAPTION, STR_TOOLTIP_WINDOW_TITLE_DRAG_THIS),
-+		NWidget(WWT_SHADEBOX, COLOUR_DARK_GREEN),
-+		NWidget(WWT_STICKYBOX, COLOUR_DARK_GREEN),
-+	EndContainer(),
-+	NWidget(WWT_PANEL, COLOUR_DARK_GREEN),
-+		NWidget(NWID_HORIZONTAL),
-+			NWidget(WWT_PANEL, COLOUR_DARK_GREEN, WID_LGL_SATURATION),
-+				SetPadding(WD_FRAMERECT_TOP, 0, WD_FRAMERECT_BOTTOM, WD_CAPTIONTEXT_LEFT),
-+				SetMinimalSize(50, 100),
-+				NWidgetFunction(MakeSaturationLegendLinkGraphGUI),
-+			EndContainer(),
-+			NWidget(WWT_PANEL, COLOUR_DARK_GREEN, WID_LGL_COMPANIES),
-+				SetPadding(WD_FRAMERECT_TOP, 0, WD_FRAMERECT_BOTTOM, WD_CAPTIONTEXT_LEFT),
-+				NWidget(NWID_VERTICAL, NC_EQUALSIZE),
-+					SetMinimalSize(100, 100),
-+					NWidgetFunction(MakeCompanyButtonRowsLinkGraphGUI),
-+					NWidget(WWT_PUSHTXTBTN, COLOUR_GREY, WID_LGL_COMPANIES_ALL), SetDataTip(STR_LINKGRAPH_LEGEND_ALL, STR_NULL),
-+					NWidget(WWT_PUSHTXTBTN, COLOUR_GREY, WID_LGL_COMPANIES_NONE), SetDataTip(STR_LINKGRAPH_LEGEND_NONE, STR_NULL),
-+				EndContainer(),
-+			EndContainer(),
-+			NWidget(WWT_PANEL, COLOUR_DARK_GREEN, WID_LGL_CARGOES),
-+				SetPadding(WD_FRAMERECT_TOP, WD_FRAMERECT_RIGHT, WD_FRAMERECT_BOTTOM, WD_CAPTIONTEXT_LEFT),
-+				NWidget(NWID_VERTICAL, NC_EQUALSIZE),
-+					SetMinimalSize(150, 100),
-+					NWidgetFunction(MakeCargoesLegendLinkGraphGUI),
-+					NWidget(WWT_PUSHTXTBTN, COLOUR_GREY, WID_LGL_CARGOES_ALL), SetDataTip(STR_LINKGRAPH_LEGEND_ALL, STR_NULL),
-+					NWidget(WWT_PUSHTXTBTN, COLOUR_GREY, WID_LGL_CARGOES_NONE), SetDataTip(STR_LINKGRAPH_LEGEND_NONE, STR_NULL),
-+				EndContainer(),
-+			EndContainer(),
-+		EndContainer(),
-+	EndContainer()
-+};
-+
-+static const WindowDesc _linkgraph_legend_desc(
-+	WDP_MANUAL, 300, 314,
-+	WC_LINKGRAPH_LEGEND, WC_NONE,
-+	WDF_UNCLICK_BUTTONS,
-+	_nested_linkgraph_legend_widgets, lengthof(_nested_linkgraph_legend_widgets)
-+);
-+
-+/**
-+ * Open a link graph legend window.
-+*/
-+void ShowLinkGraphLegend()
-+{
-+	AllocateWindowDescFront<LinkGraphLegendWindow>(&_linkgraph_legend_desc, 0);
-+}
-+
-+LinkGraphLegendWindow::LinkGraphLegendWindow(const WindowDesc *desc, int window_number)
-+{
-+	this->InitNested(desc, window_number);
-+	this->InvalidateData(0);
-+	this->SetOverlay(FindWindowById(WC_MAIN_WINDOW, 0)->viewport->overlay);
-+}
-+
-+/**
-+ * Set the overlay belonging to this menu and import its company/cargo settings.
-+ * @params overlay New overlay for this menu.
-+ */
-+void LinkGraphLegendWindow::SetOverlay(LinkGraphOverlay *overlay) {
-+	this->overlay = overlay;
-+	uint32 companies = this->overlay->GetCompanyMask();
-+	for (uint c = 0; c < MAX_COMPANIES; c++) {
-+		if (!this->IsWidgetDisabled(WID_LGL_COMPANY_FIRST + c)) {
-+			this->SetWidgetLoweredState(WID_LGL_COMPANY_FIRST + c, HasBit(companies, c));
-+		}
-+	}
-+	uint32 cargoes = this->overlay->GetCargoMask();
-+	for (uint c = 0; c < NUM_CARGO; c++) {
-+		if (!this->IsWidgetDisabled(WID_LGL_CARGO_FIRST + c)) {
-+			this->SetWidgetLoweredState(WID_LGL_CARGO_FIRST + c, HasBit(cargoes, c));
-+		}
-+	}
-+}
-+
-+void LinkGraphLegendWindow::DrawWidget(const Rect &r, int widget) const
-+{
-+	const NWidgetBase *wid = this->GetWidget<NWidgetBase>(widget);
-+	if (IsInsideMM(widget, WID_LGL_COMPANY_FIRST, WID_LGL_COMPANY_LAST + 1)) {
-+		if (this->IsWidgetDisabled(widget)) return;
-+		CompanyID cid = (CompanyID)(widget - WID_LGL_COMPANY_FIRST);
-+		Dimension sprite_size = GetSpriteSize(SPR_COMPANY_ICON);
-+		DrawCompanyIcon(cid, (r.left + r.right - sprite_size.width) / 2, (r.top + r.bottom - sprite_size.height) / 2);
-+		return;
-+	}
-+	if (IsInsideMM(widget, WID_LGL_SATURATION_FIRST, WID_LGL_SATURATION_LAST + 1)) {
-+		GfxFillRect(r.left + 1, r.top + 1, r.right - 1, r.bottom - 1, LinkGraphOverlay::LINK_COLOURS[widget - WID_LGL_SATURATION_FIRST]);
-+		if (widget == WID_LGL_SATURATION_FIRST) {
-+			DrawString(wid->pos_x, wid->current_x + wid->pos_x, wid->pos_y, STR_LINKGRAPH_LEGEND_UNUSED, TC_FROMSTRING, SA_HOR_CENTER);
-+		} else if (widget == WID_LGL_SATURATION_LAST) {
-+			DrawString(wid->pos_x, wid->current_x + wid->pos_x, wid->pos_y, STR_LINKGRAPH_LEGEND_OVERLOADED, TC_FROMSTRING, SA_HOR_CENTER);
-+		} else if (widget == (WID_LGL_SATURATION_LAST + WID_LGL_SATURATION_FIRST) / 2) {
-+			DrawString(wid->pos_x, wid->current_x + wid->pos_x, wid->pos_y, STR_LINKGRAPH_LEGEND_SATURATED, TC_FROMSTRING, SA_HOR_CENTER);
-+		}
-+	}
-+	if (IsInsideMM(widget, WID_LGL_CARGO_FIRST, WID_LGL_CARGO_LAST + 1)) {
-+		if (this->IsWidgetDisabled(widget)) return;
-+		CargoSpec *cargo = CargoSpec::Get(widget - WID_LGL_CARGO_FIRST);
-+		GfxFillRect(r.left + 2, r.top + 2, r.right - 2, r.bottom - 2, cargo->legend_colour);
-+		DrawString(wid->pos_x, wid->current_x + wid->pos_x, wid->pos_y + 2, cargo->abbrev, TC_BLACK, SA_HOR_CENTER);
-+	}
-+}
-+
-+/**
-+ * Update the overlay with the new company selection.
-+ */
-+void LinkGraphLegendWindow::UpdateOverlayCompanies()
-+{
-+	uint32 mask = 0;
-+	for (uint c = 0; c < MAX_COMPANIES; c++) {
-+		if (this->IsWidgetDisabled(c + WID_LGL_COMPANY_FIRST)) continue;
-+		if (!this->IsWidgetLowered(c + WID_LGL_COMPANY_FIRST)) continue;
-+		SetBit(mask, c);
-+	}
-+	this->overlay->SetCompanyMask(mask);
-+}
-+
-+/**
-+ * Update the overlay with the new cargo selection.
-+ */
-+void LinkGraphLegendWindow::UpdateOverlayCargoes()
-+{
-+	uint32 mask = 0;
-+	for (uint c = 0; c < NUM_CARGO; c++) {
-+		if (this->IsWidgetDisabled(c + WID_LGL_CARGO_FIRST)) continue;
-+		if (!this->IsWidgetLowered(c + WID_LGL_CARGO_FIRST)) continue;
-+		SetBit(mask, c);
-+	}
-+	this->overlay->SetCargoMask(mask);
-+}
-+
-+void LinkGraphLegendWindow::OnClick(Point pt, int widget, int click_count)
-+{
-+	/* Check which button is clicked */
-+	if (IsInsideMM(widget, WID_LGL_COMPANY_FIRST, WID_LGL_COMPANY_LAST + 1)) {
-+		/* Is it no on disable? */
-+		if (!this->IsWidgetDisabled(widget)) {
-+			this->ToggleWidgetLoweredState(widget);
-+			this->UpdateOverlayCompanies();
-+		}
-+	} else if (widget == WID_LGL_COMPANIES_ALL || widget == WID_LGL_COMPANIES_NONE) {
-+		for (uint c = 0; c < MAX_COMPANIES; c++) {
-+			if (this->IsWidgetDisabled(c + WID_LGL_COMPANY_FIRST)) continue;
-+			this->SetWidgetLoweredState(WID_LGL_COMPANY_FIRST + c, widget == WID_LGL_COMPANIES_ALL);
-+		}
-+		this->UpdateOverlayCompanies();
-+		this->SetDirty();
-+	} else if (IsInsideMM(widget, WID_LGL_CARGO_FIRST, WID_LGL_CARGO_LAST + 1)) {
-+		/* Is it no on disable? */
-+		if (!this->IsWidgetDisabled(widget)) {
-+			this->ToggleWidgetLoweredState(widget);
-+			this->UpdateOverlayCargoes();
-+
-+		}
-+	} else if (widget == WID_LGL_CARGOES_ALL || widget == WID_LGL_CARGOES_NONE) {
-+		for (uint c = 0; c < NUM_CARGO; c++) {
-+			if (this->IsWidgetDisabled(c + WID_LGL_CARGO_FIRST)) continue;
-+			this->SetWidgetLoweredState(WID_LGL_CARGO_FIRST + c, widget == WID_LGL_CARGOES_ALL);
-+		}
-+		this->UpdateOverlayCargoes();
-+	}
-+	this->SetDirty();
-+}
-+
-+/**
-+ * Invalidate the data of this window if the cargoes or companies have changed.
-+ * @param data ignored
-+ * @param gui_scope ignored
-+ */
-+void LinkGraphLegendWindow::OnInvalidateData(int data, bool gui_scope)
-+{
-+	/* Disable the companies who are not active */
-+	for (CompanyID i = COMPANY_FIRST; i < MAX_COMPANIES; i++) {
-+		this->SetWidgetDisabledState(i + WID_LGL_COMPANY_FIRST, !Company::IsValidID(i));
-+	}
-+	for (CargoID i = 0; i < NUM_CARGO; i++) {
-+		this->SetWidgetDisabledState(i + WID_LGL_CARGO_FIRST, !CargoSpec::Get(i)->IsValid());
-+	}
-+}
 diff --git a/src/linkgraph_gui.h b/src/linkgraph_gui.h
 new file mode 100644
-index 0000000..eadd6ba
+index 0000000..4ba8c73
 --- /dev/null
 +++ b/src/linkgraph_gui.h
-@@ -0,0 +1,116 @@
+@@ -0,0 +1,92 @@
 +/* $Id$ */
 +
 +/*
@@ -5202,9 +4880,6 @@ index 0000000..eadd6ba
 +#include "company_func.h"
 +#include "station_base.h"
 +#include "widget_type.h"
-+
-+#include "table/strings.h"
-+
 +#include <map>
 +#include <list>
 +
@@ -5279,87 +4954,7 @@ index 0000000..eadd6ba
 +	static void DrawVertex(int x, int y, int size, int colour, int border_colour);
 +};
 +
-+void ShowLinkGraphLegend();
-+
-+/**
-+ * Menu window to select cargoes and companies to show in a link graph overlay.
-+ */
-+struct LinkGraphLegendWindow : Window {
-+public:
-+	LinkGraphLegendWindow(const WindowDesc *desc, int window_number);
-+	void SetOverlay(LinkGraphOverlay *overlay);
-+
-+	virtual void DrawWidget(const Rect &r, int widget) const;
-+	virtual void OnClick(Point pt, int widget, int click_count);
-+	virtual void OnInvalidateData(int data = 0, bool gui_scope = true);
-+
-+private:
-+	LinkGraphOverlay *overlay;
-+
-+	void UpdateOverlayCompanies();
-+	void UpdateOverlayCargoes();
-+};
-+
 +#endif /* LINKGRAPH_GUI_H_ */
-diff --git a/src/main_gui.cpp b/src/main_gui.cpp
-index 04dbd35..2aa2143 100644
---- a/src/main_gui.cpp
-+++ b/src/main_gui.cpp
-@@ -29,6 +29,7 @@
- #include "company_func.h"
- #include "toolbar_gui.h"
- #include "statusbar_gui.h"
-+#include "linkgraph_gui.h"
- #include "tilehighlight_func.h"
- #include "hotkeys.h"
- 
-@@ -238,6 +239,11 @@ enum {
- 
- struct MainWindow : Window
- {
-+	uint refresh;
-+
-+	static const uint LINKGRAPH_REFRESH_PERIOD = 0xff;
-+	static const uint LINKGRAPH_DELAY = 0xf;
-+
- 	MainWindow() : Window()
- 	{
- 		this->InitNested(&_main_window_desc, 0);
-@@ -246,6 +252,18 @@ struct MainWindow : Window
- 
- 		NWidgetViewport *nvp = this->GetWidget<NWidgetViewport>(WID_M_VIEWPORT);
- 		nvp->InitializeViewport(this, TileXY(32, 32), ZOOM_LVL_VIEWPORT);
-+
-+		this->viewport->overlay = new LinkGraphOverlay(this, WID_M_VIEWPORT, 0, 0, 3);
-+		this->refresh = LINKGRAPH_DELAY;
-+	}
-+
-+	virtual void OnTick()
-+	{
-+		if (--refresh == 0) {
-+			this->viewport->overlay->RebuildCache();
-+			this->GetWidget<NWidgetBase>(WID_M_VIEWPORT)->SetDirty(this);
-+			this->refresh = LINKGRAPH_REFRESH_PERIOD;
-+		}
- 	}
- 
- 	virtual void OnPaint()
-@@ -411,6 +429,7 @@ struct MainWindow : Window
- 		this->viewport->scrollpos_y += ScaleByZoom(delta.y, this->viewport->zoom);
- 		this->viewport->dest_scrollpos_x = this->viewport->scrollpos_x;
- 		this->viewport->dest_scrollpos_y = this->viewport->scrollpos_y;
-+		this->refresh = LINKGRAPH_DELAY;
- 	}
- 
- 	virtual void OnMouseWheel(int wheel)
-@@ -425,6 +444,7 @@ struct MainWindow : Window
- 		if (this->viewport != NULL) {
- 			NWidgetViewport *nvp = this->GetWidget<NWidgetViewport>(WID_M_VIEWPORT);
- 			nvp->UpdateViewportCoordinates(this);
-+			this->refresh = LINKGRAPH_DELAY;
- 		}
- 	}
- 
 diff --git a/src/misc.cpp b/src/misc.cpp
 index 5f05c9f..e4304dc 100644
 --- a/src/misc.cpp
@@ -6071,7 +5666,7 @@ index 2f0bfea..cb156fd 100644
  
  	return true;
 diff --git a/src/saveload/saveload.cpp b/src/saveload/saveload.cpp
-index 0beefba..8fd685b 100644
+index 0beefba..b3f0b15 100644
 --- a/src/saveload/saveload.cpp
 +++ b/src/saveload/saveload.cpp
 @@ -234,7 +234,7 @@
@@ -6079,7 +5674,7 @@ index 0beefba..8fd685b 100644
   *  168   23637
   */
 -extern const uint16 SAVEGAME_VERSION = 168; ///< Current savegame version of OpenTTD.
-+extern const uint16 SAVEGAME_VERSION = SL_EXT_RATING; ///< Current savegame version of OpenTTD.
++extern const uint16 SAVEGAME_VERSION = SL_CARGOMAP; ///< Current savegame version of OpenTTD.
  
  SavegameType _savegame_type; ///< type of savegame we are loading
  
@@ -6100,7 +5695,7 @@ index 0beefba..8fd685b 100644
  	_object_chunk_handlers,
  	_persistent_storage_chunk_handlers,
 diff --git a/src/saveload/saveload.h b/src/saveload/saveload.h
-index c5ffbef..dafb358 100644
+index c5ffbef..a1ced62 100644
 --- a/src/saveload/saveload.h
 +++ b/src/saveload/saveload.h
 @@ -85,9 +85,6 @@ enum SLRefType {
@@ -6113,7 +5708,7 @@ index c5ffbef..dafb358 100644
  /** Flags of a chunk. */
  enum ChunkType {
  	CH_RIFF         =  0,
-@@ -546,4 +543,23 @@ bool SaveloadCrashWithMissingNewGRFs();
+@@ -546,4 +543,22 @@ bool SaveloadCrashWithMissingNewGRFs();
  extern char _savegame_format[8];
  extern bool _do_autosave;
  
@@ -6130,7 +5725,6 @@ index c5ffbef..dafb358 100644
 +	SL_MCF,
 +	SL_FLOWMAP,
 +	SL_CARGOMAP,
-+	SL_EXT_RATING,
 +
 +	/** Highest possible savegame version. */
 +	SL_MAX_VERSION = 255
@@ -6150,7 +5744,7 @@ index 5217db1..476a324 100644
  void UpdateHousesAndTowns();
  
 diff --git a/src/saveload/station_sl.cpp b/src/saveload/station_sl.cpp
-index c26f354..6ca8a0a 100644
+index c26f354..f13d7f2 100644
 --- a/src/saveload/station_sl.cpp
 +++ b/src/saveload/station_sl.cpp
 @@ -225,9 +225,11 @@ static const SaveLoad _old_station_desc[] = {
@@ -6211,7 +5805,7 @@ index c26f354..6ca8a0a 100644
  /**
   * Wrapper function to get the GoodsEntry's internal structure while
   * some of the variables itself are private.
-@@ -259,14 +299,49 @@ const SaveLoad *GetGoodsDesc()
+@@ -259,14 +299,48 @@ const SaveLoad *GetGoodsDesc()
  		SLEG_CONDVAR(            _cargo_feeder_share, SLE_FILE_U32 | SLE_VAR_I64, 14, 64),
  		SLEG_CONDVAR(            _cargo_feeder_share, SLE_INT64,                  65, 67),
  		 SLE_CONDVAR(GoodsEntry, amount_fract,        SLE_UINT8,                 150, SL_MAX_VERSION),
@@ -6224,7 +5818,6 @@ index c26f354..6ca8a0a 100644
 +		SLEG_CONDVAR(            _num_links,          SLE_UINT16,      SL_CAPACITIES, SL_MAX_VERSION),
 +		SLEG_CONDVAR(            _num_flows,          SLE_UINT32,         SL_FLOWMAP, SL_MAX_VERSION),
 +		 SLE_CONDVAR(GoodsEntry, last_component,      SLE_UINT16,      SL_COMPONENTS, SL_MAX_VERSION),
-+		 SLE_CONDVAR(GoodsEntry, max_waiting_cargo,   SLE_UINT32,      SL_EXT_RATING, SL_MAX_VERSION),
  		SLE_END()
  	};
  
@@ -6263,7 +5856,7 @@ index c26f354..6ca8a0a 100644
  
  static void Load_STNS()
  {
-@@ -282,6 +357,7 @@ static void Load_STNS()
+@@ -282,6 +356,7 @@ static void Load_STNS()
  		for (CargoID i = 0; i < num_cargo; i++) {
  			GoodsEntry *ge = &st->goods[i];
  			SlObject(ge, GetGoodsDesc());
@@ -6271,7 +5864,7 @@ index c26f354..6ca8a0a 100644
  			if (IsSavegameVersionBefore(68)) {
  				SB(ge->acceptance_pickup, GoodsEntry::GES_ACCEPTANCE, 1, HasBit(_waiting_acceptance, 15));
  				if (GB(_waiting_acceptance, 0, 12) != 0) {
-@@ -293,7 +369,10 @@ static void Load_STNS()
+@@ -293,7 +368,10 @@ static void Load_STNS()
  					 * savegame versions. As the CargoPacketPool has more than
  					 * 16 million entries; it fits by an order of magnitude. */
  					assert(CargoPacket::CanAllocateItem());
@@ -6283,7 +5876,7 @@ index c26f354..6ca8a0a 100644
  					SB(ge->acceptance_pickup, GoodsEntry::GES_PICKUP, 1, 1);
  				}
  			}
-@@ -319,7 +398,9 @@ static void Ptrs_STNS()
+@@ -319,7 +397,9 @@ static void Ptrs_STNS()
  		if (!IsSavegameVersionBefore(68)) {
  			for (CargoID i = 0; i < NUM_CARGO; i++) {
  				GoodsEntry *ge = &st->goods[i];
@@ -6293,7 +5886,7 @@ index c26f354..6ca8a0a 100644
  			}
  		}
  		SlObject(st, _old_station_desc);
-@@ -410,7 +491,34 @@ static void RealSave_STNN(BaseStation *bst)
+@@ -410,7 +490,34 @@ static void RealSave_STNN(BaseStation *bst)
  	if (!waypoint) {
  		Station *st = Station::From(bst);
  		for (CargoID i = 0; i < NUM_CARGO; i++) {
@@ -6328,7 +5921,7 @@ index c26f354..6ca8a0a 100644
  		}
  	}
  
-@@ -452,6 +560,34 @@ static void Load_STNN()
+@@ -452,6 +559,34 @@ static void Load_STNN()
  
  			for (CargoID i = 0; i < NUM_CARGO; i++) {
  				SlObject(&st->goods[i], GetGoodsDesc());
@@ -6363,7 +5956,7 @@ index c26f354..6ca8a0a 100644
  			}
  		}
  
-@@ -474,7 +610,16 @@ static void Ptrs_STNN()
+@@ -474,7 +609,16 @@ static void Ptrs_STNN()
  	FOR_ALL_STATIONS(st) {
  		for (CargoID i = 0; i < NUM_CARGO; i++) {
  			GoodsEntry *ge = &st->goods[i];
@@ -6413,26 +6006,6 @@ index 19c615a..ff6e231 100644
  		if (IsSavegameVersionBefore(5)) {
  			/* Convert the current_order.type (which is a mix of type and flags, because
  			 *  in those versions, they both were 4 bits big) to type and flags */
-diff --git a/src/screenshot.cpp b/src/screenshot.cpp
-index 9f81742..bae5e38 100644
---- a/src/screenshot.cpp
-+++ b/src/screenshot.cpp
-@@ -743,6 +743,7 @@ static bool MakeZoomedInScreenshot()
- 	vp.width = UnScaleByZoom(vp.virtual_width, vp.zoom);
- 	vp.virtual_height = w->viewport->virtual_height;
- 	vp.height = UnScaleByZoom(vp.virtual_height, vp.zoom);
-+	vp.overlay = NULL;
- 
- 	const ScreenshotFormat *sf = _screenshot_formats + _cur_screenshot_format;
- 	return sf->proc(MakeScreenshotName(SCREENSHOT_NAME, sf->extension), LargeWorldCallback, &vp, vp.width, vp.height,
-@@ -769,6 +770,7 @@ static bool MakeWorldScreenshot()
- 	vp.width = vp.virtual_width;
- 	vp.virtual_height = ((MapMaxX() + MapMaxY()) * TILE_PIXELS >> 1) + extra_height_top - reclaim_height_bottom;
- 	vp.height = vp.virtual_height;
-+	vp.overlay = NULL;
- 
- 	sf = _screenshot_formats + _cur_screenshot_format;
- 	return sf->proc(MakeScreenshotName(SCREENSHOT_NAME, sf->extension), LargeWorldCallback, &vp, vp.width, vp.height,
 diff --git a/src/settings.cpp b/src/settings.cpp
 index 2800093..7ef0bb4 100644
 --- a/src/settings.cpp
@@ -6480,7 +6053,7 @@ index 681b0ca..6332584 100644
  };
  
 diff --git a/src/settings_type.h b/src/settings_type.h
-index 541aad2..87c479e 100644
+index 541aad2..b6e4042 100644
 --- a/src/settings_type.h
 +++ b/src/settings_type.h
 @@ -17,6 +17,8 @@
@@ -6492,18 +6065,7 @@ index 541aad2..87c479e 100644
  #include "zoom_type.h"
  #include "openttd.h"
  
-@@ -119,6 +121,10 @@ struct GUISettings {
- 
- 	uint16 console_backlog_timeout;          ///< the minimum amount of time items should be in the console backlog before they will be removed in ~3 seconds granularity.
- 	uint16 console_backlog_length;           ///< the minimum amount of items in the console backlog before items will be removed.
-+
-+	uint8  station_gui_group_order;          ///< the order of grouping cargo entries in the station gui
-+	uint8  station_gui_sort_by;              ///< sort cargo entries in the station gui by station name or amount
-+	uint8  station_gui_sort_order;           ///< the sort order of entries in the station gui - ascending or descending
- #ifdef ENABLE_NETWORK
- 	uint16 network_chat_box_width;           ///< width of the chat box in pixels
- 	uint8  network_chat_box_height;          ///< height of the chat box in lines
-@@ -420,6 +426,30 @@ struct EconomySettings {
+@@ -420,6 +422,30 @@ struct EconomySettings {
  	bool   infrastructure_maintenance;       ///< enable monthly maintenance fee for owner infrastructure
  };
  
@@ -6534,7 +6096,7 @@ index 541aad2..87c479e 100644
  /** Settings related to stations. */
  struct StationSettings {
  	bool   modified_catchment;               ///< different-size catchment areas
-@@ -460,6 +490,7 @@ struct GameSettings {
+@@ -460,6 +486,7 @@ struct GameSettings {
  	OrderSettings        order;              ///< settings related to orders
  	VehicleSettings      vehicle;            ///< options for vehicles
  	EconomySettings      economy;            ///< settings to change the economy
@@ -8762,7 +8324,7 @@ index 5fc2bbd..3d8b08a 100644
  
  	/* Clear the persistent storage. */
 diff --git a/src/station_base.h b/src/station_base.h
-index d49c649..3e3126d 100644
+index d49c649..e081eaa 100644
 --- a/src/station_base.h
 +++ b/src/station_base.h
 @@ -12,12 +12,16 @@
@@ -8973,7 +8535,7 @@ index d49c649..3e3126d 100644
   * Stores station stats for a single cargo.
   */
  struct GoodsEntry {
-@@ -43,7 +231,11 @@ struct GoodsEntry {
+@@ -43,7 +231,10 @@ struct GoodsEntry {
  		days_since_pickup(255),
  		rating(INITIAL_STATION_RATING),
  		last_speed(0),
@@ -8981,12 +8543,11 @@ index d49c649..3e3126d 100644
 +		last_age(255),
 +		supply(0),
 +		supply_new(0),
-+		last_component(INVALID_LINKGRAPH_COMPONENT),
-+		max_waiting_cargo(0)
++		last_component(INVALID_LINKGRAPH_COMPONENT)
  	{}
  
  	byte acceptance_pickup; ///< Status of this cargo, see #GoodsEntryStatus.
-@@ -53,6 +245,20 @@ struct GoodsEntry {
+@@ -53,6 +244,18 @@ struct GoodsEntry {
  	byte last_age;          ///< Age in years of the last vehicle that picked up this cargo.
  	byte amount_fract;      ///< Fractional part of the amount in the cargo list
  	StationCargoList cargo; ///< The cargo packets of cargo waiting in this station
@@ -8995,8 +8556,6 @@ index d49c649..3e3126d 100644
 +	FlowStatMap flows;      ///< Planned flows through this station.
 +	LinkStatMap link_stats; ///< Capacities and usage statistics for outgoing links.
 +	LinkGraphComponentID last_component; ///< Component this station was last part of in this cargo's link graph.
-+	uint max_waiting_cargo;              ///< Max cargo from this station waiting at any station.
-+
 +	uint GetSumFlowVia(StationID via) const;
 +
 +	inline StationID GetVia(StationID source) const
@@ -9007,7 +8566,7 @@ index d49c649..3e3126d 100644
  };
  
  /** All airport-related information. Only valid if tile != INVALID_TILE. */
-@@ -258,6 +464,8 @@ public:
+@@ -258,6 +461,8 @@ public:
  	/* virtual */ uint32 GetNewGRFVariable(const ResolverObject *object, byte variable, byte parameter, bool *available) const;
  
  	/* virtual */ void GetTileArea(TileArea *ta, StationType type) const;
@@ -9017,7 +8576,7 @@ index d49c649..3e3126d 100644
  
  #define FOR_ALL_STATIONS(var) FOR_ALL_BASE_STATIONS_OF_TYPE(Station, var)
 diff --git a/src/station_cmd.cpp b/src/station_cmd.cpp
-index c2de53b..5781c36 100644
+index c2de53b..9db915f 100644
 --- a/src/station_cmd.cpp
 +++ b/src/station_cmd.cpp
 @@ -46,6 +46,7 @@
@@ -9028,109 +8587,16 @@ index c2de53b..5781c36 100644
  #include "table/airporttile_ids.h"
  #include "newgrf_airporttiles.h"
  #include "order_backup.h"
-@@ -3141,6 +3142,19 @@ static void UpdateStationRating(Station *st)
- 			int rating = 0;
- 			uint waiting = ge->cargo.Count();
- 
-+			/* num_dests is at least 1 if there is any cargo as
-+			 * INVALID_STATION is also a destination.
-+			 */
-+			uint num_dests = (uint)ge->cargo.Packets()->MapSize();
-+
-+			/* Average amount of cargo per next hop, but prefer solitary stations
-+			 * with only one or two next hops. They are allowed to have more
-+			 * cargo waiting per next hop.
-+			 * With manual cargo distribution waiting_avg = waiting / 2 as then
-+			 * INVALID_STATION is the only destination.
-+			 */
-+			uint waiting_avg = waiting / (num_dests + 1);
-+
- 			if (HasBit(cs->callback_mask, CBM_CARGO_STATION_RATING_CALC)) {
- 				/* Perform custom station rating. If it succeeds the speed, days in transit and
- 				 * waiting cargo ratings must not be executed. */
-@@ -3149,7 +3163,7 @@ static void UpdateStationRating(Station *st)
- 				uint last_speed = ge->last_speed;
- 				if (last_speed == 0) last_speed = 0xFF;
- 
--				uint32 var18 = min(ge->days_since_pickup, 0xFF) | (min(waiting, 0xFFFF) << 8) | (min(last_speed, 0xFF) << 24);
-+				uint32 var18 = min(ge->days_since_pickup, 0xFF) | (min(ge->max_waiting_cargo, 0xFFFF) << 8) | (min(last_speed, 0xFF) << 24);
- 				/* Convert to the 'old' vehicle types */
- 				uint32 var10 = (st->last_vehicle_type == VEH_INVALID) ? 0x0 : (st->last_vehicle_type + 0x10);
- 				uint16 callback = GetCargoCallback(CBID_CARGO_STATION_RATING_CALC, var10, var18, cs);
-@@ -3174,11 +3188,11 @@ static void UpdateStationRating(Station *st)
- 				(rating += 45, days > 3) ||
- 				(rating += 35, true);
- 
--				(rating -= 90, waiting > 1500) ||
--				(rating += 55, waiting > 1000) ||
--				(rating += 35, waiting > 600) ||
--				(rating += 10, waiting > 300) ||
--				(rating += 20, waiting > 100) ||
-+				(rating -= 90, ge->max_waiting_cargo > 1500) ||
-+				(rating += 55, ge->max_waiting_cargo > 1000) ||
-+				(rating += 35, ge->max_waiting_cargo > 600) ||
-+				(rating += 10, ge->max_waiting_cargo > 300) ||
-+				(rating += 20, ge->max_waiting_cargo > 100) ||
- 				(rating += 10, true);
- 			}
- 
-@@ -3196,12 +3210,12 @@ static void UpdateStationRating(Station *st)
- 				/* only modify rating in steps of -2, -1, 0, 1 or 2 */
- 				ge->rating = rating = or_ + Clamp(Clamp(rating, 0, 255) - or_, -2, 2);
- 
--				/* if rating is <= 64 and more than 200 items waiting,
-+				/* if rating is <= 64 and more than 100 items waiting on average per destination,
- 				 * remove some random amount of goods from the station */
--				if (rating <= 64 && waiting >= 200) {
-+				if (rating <= 64 && waiting_avg >= 100) {
- 					int dec = Random() & 0x1F;
--					if (waiting < 400) dec &= 7;
--					waiting -= dec + 1;
-+					if (waiting_avg < 200) dec &= 7;
-+					waiting -= (dec + 1) * num_dests;
- 					waiting_changed = true;
- 				}
- 
-@@ -3210,7 +3224,7 @@ static void UpdateStationRating(Station *st)
- 					uint32 r = Random();
- 					if (rating <= (int)GB(r, 0, 7)) {
- 						/* Need to have int, otherwise it will just overflow etc. */
--						waiting = max((int)waiting - (int)GB(r, 8, 2) - 1, 0);
-+						waiting = max((int)waiting - (int)((GB(r, 8, 2) - 1) * num_dests), 0);
- 						waiting_changed = true;
- 					}
- 				}
-@@ -3230,7 +3244,28 @@ static void UpdateStationRating(Station *st)
+@@ -3230,7 +3231,7 @@ static void UpdateStationRating(Station *st)
  					waiting_changed = true;
  				}
  
 -				if (waiting_changed) ge->cargo.Truncate(waiting);
-+				if (waiting_changed) {
-+					/* feed back the exact own waiting cargo at this station for the
-+					 * next rating calculation.
-+					 */
-+					ge->max_waiting_cargo = 0;
-+
-+					/* If truncating also punish the source stations' ratings to
-+					 * decrease the flow of incoming cargo. */
-+
-+					StationCargoAmountMap waiting_per_source;
-+					ge->cargo.CountAndTruncate(waiting, waiting_per_source);
-+					for (StationCargoAmountMap::iterator i(waiting_per_source.begin()); i != waiting_per_source.end(); ++i) {
-+						Station *source_station = Station::GetIfValid(i->first);
-+						if (source_station == NULL) continue;
-+
-+						GoodsEntry &source_ge = source_station->goods[cs->Index()];
-+						source_ge.max_waiting_cargo = max(source_ge.max_waiting_cargo, i->second);
-+					}
-+				} else {
-+					/* if the average number per next hop is low, be more forgiving. */
-+					ge->max_waiting_cargo = waiting_avg;
-+				}
++				if (waiting_changed) ge->cargo.RandomTruncate(waiting);
  			}
  		}
  	}
-@@ -3243,6 +3278,114 @@ static void UpdateStationRating(Station *st)
+@@ -3243,6 +3244,114 @@ static void UpdateStationRating(Station *st)
  	}
  }
  
@@ -9245,7 +8711,7 @@ index c2de53b..5781c36 100644
  /* called for every station each tick */
  static void StationHandleSmallTick(BaseStation *st)
  {
-@@ -3259,6 +3402,8 @@ void OnTick_Station()
+@@ -3259,6 +3368,8 @@ void OnTick_Station()
  {
  	if (_game_mode == GM_EDITOR) return;
  
@@ -9254,7 +8720,7 @@ index c2de53b..5781c36 100644
  	BaseStation *st;
  	FOR_ALL_BASE_STATIONS(st) {
  		StationHandleSmallTick(st);
-@@ -3285,6 +3430,8 @@ void StationMonthlyLoop()
+@@ -3285,6 +3396,8 @@ void StationMonthlyLoop()
  			GoodsEntry *ge = &st->goods[i];
  			SB(ge->acceptance_pickup, GoodsEntry::GES_LAST_MONTH, 1, GB(ge->acceptance_pickup, GoodsEntry::GES_CURRENT_MONTH, 1));
  			ClrBit(ge->acceptance_pickup, GoodsEntry::GES_CURRENT_MONTH);
@@ -9263,7 +8729,7 @@ index c2de53b..5781c36 100644
  		}
  	}
  }
-@@ -3322,7 +3469,10 @@ static uint UpdateStationWaiting(Station *st, CargoID type, uint amount, SourceT
+@@ -3322,7 +3435,10 @@ static uint UpdateStationWaiting(Station *st, CargoID type, uint amount, SourceT
  	/* No new "real" cargo item yet. */
  	if (amount == 0) return 0;
  
@@ -9275,7 +8741,7 @@ index c2de53b..5781c36 100644
  
  	if (!HasBit(ge.acceptance_pickup, GoodsEntry::GES_PICKUP)) {
  		InvalidateWindowData(WC_STATION_LIST, st->index);
-@@ -3720,6 +3870,60 @@ static CommandCost TerraformTile_Station(TileIndex tile, DoCommandFlag flags, in
+@@ -3720,6 +3836,60 @@ static CommandCost TerraformTile_Station(TileIndex tile, DoCommandFlag flags, in
  	return DoCommand(tile, 0, 0, flags, CMD_LANDSCAPE_CLEAR);
  }
  
@@ -9362,1271 +8828,18 @@ index 8f29017..a546874 100644
   * Calculates the maintenance cost of a number of station tiles.
   * @param num Number of station tiles.
 diff --git a/src/station_gui.cpp b/src/station_gui.cpp
-index 4494515..0bd31d3 100644
+index 4494515..9a35774 100644
 --- a/src/station_gui.cpp
 +++ b/src/station_gui.cpp
-@@ -34,6 +34,8 @@
+@@ -991,7 +991,7 @@ struct StationViewWindow : public Window {
+ 				this->cargo_rows[i] = (uint16)cargolist->size();
  
- #include "table/strings.h"
- 
-+#include <vector>
-+
- /**
-  * Draw a (multi)line of cargoes seperated by commas, and prefixed with a string.
-  * @param cargo_mask Mask of cargoes to include in the list.
-@@ -797,10 +799,18 @@ static const NWidgetPart _nested_station_view_widgets[] = {
- 		NWidget(WWT_STICKYBOX, COLOUR_GREY),
- 	EndContainer(),
- 	NWidget(NWID_HORIZONTAL),
--		NWidget(WWT_PANEL, COLOUR_GREY, WID_SV_WAITING), SetMinimalSize(237, 52), SetResize(1, 10), SetScrollbar(WID_SV_SCROLLBAR), EndContainer(),
-+		NWidget(WWT_PUSHTXTBTN, COLOUR_GREY, WID_SV_SORT_ORDER), SetMinimalSize(81, 12), SetFill(1, 1), SetDataTip(STR_BUTTON_SORT_BY, STR_TOOLTIP_SORT_ORDER),
-+		NWidget(WWT_DROPDOWN, COLOUR_GREY, WID_SV_SORT_BY), SetMinimalSize(168, 12), SetResize(1, 0), SetFill(0, 1), SetDataTip(0x0, STR_TOOLTIP_SORT_CRITERIA),
-+	EndContainer(),
-+	NWidget(NWID_HORIZONTAL),
-+		NWidget(WWT_TEXTBTN, COLOUR_GREY, WID_SV_GROUP), SetMinimalSize(81, 12), SetFill(1, 1), SetDataTip(STR_STATION_VIEW_GROUP, 0x0),
-+		NWidget(WWT_DROPDOWN, COLOUR_GREY, WID_SV_GROUP_BY), SetMinimalSize(168, 12), SetResize(1, 0), SetFill(0, 1), SetDataTip(0x0, STR_TOOLTIP_GROUP_ORDER),
-+	EndContainer(),
-+	NWidget(NWID_HORIZONTAL),
-+		NWidget(WWT_PANEL, COLOUR_GREY, WID_SV_WAITING), SetMinimalSize(237, 44), SetResize(1, 10), SetScrollbar(WID_SV_SCROLLBAR), EndContainer(),
- 		NWidget(NWID_VSCROLLBAR, COLOUR_GREY, WID_SV_SCROLLBAR),
- 	EndContainer(),
--	NWidget(WWT_PANEL, COLOUR_GREY, WID_SV_ACCEPT_RATING_LIST), SetMinimalSize(249, 32), SetResize(1, 0), EndContainer(),
-+	NWidget(WWT_PANEL, COLOUR_GREY, WID_SV_ACCEPT_RATING_LIST), SetMinimalSize(249, 23), SetResize(1, 0), EndContainer(),
- 	NWidget(NWID_HORIZONTAL, NC_EQUALSIZE),
- 		NWidget(WWT_PUSHTXTBTN, COLOUR_GREY, WID_SV_LOCATION), SetMinimalSize(60, 12), SetResize(1, 0), SetFill(1, 1),
- 				SetDataTip(STR_BUTTON_LOCATION, STR_STATION_VIEW_CENTER_TOOLTIP),
-@@ -833,33 +843,270 @@ static void DrawCargoIcons(CargoID i, uint waiting, int left, int right, int y)
- 
- 	SpriteID sprite = CargoSpec::Get(i)->GetCargoIcon();
- 
--	int x = _current_text_dir == TD_RTL ? right - num * 10 : left;
-+	int x = _current_text_dir == TD_RTL ? left : right - num * 10;
- 	do {
- 		DrawSprite(sprite, PAL_NONE, x, y);
- 		x += 10;
- 	} while (--num);
- }
- 
--struct CargoData {
--	CargoID cargo;
--	StationID source;
--	uint count;
-+CargoDataEntry::CargoDataEntry() :
-+	parent(NULL),
-+	station(INVALID_STATION),
-+	num_children(0),
-+	count(0),
-+	children(new CargoDataSet(CargoSorter(ST_CARGO_ID)))
-+{}
-+
-+CargoDataEntry::CargoDataEntry(CargoID cargo, uint count, CargoDataEntry *parent) :
-+	parent(parent),
-+	cargo(cargo),
-+	num_children(0),
-+	count(count),
-+	children(new CargoDataSet)
-+{}
-+
-+CargoDataEntry::CargoDataEntry(StationID station, uint count, CargoDataEntry *parent) :
-+	parent(parent),
-+	station(station),
-+	num_children(0),
-+	count(count),
-+	children(new CargoDataSet)
-+{}
-+
-+CargoDataEntry::CargoDataEntry(StationID station) :
-+	parent(NULL),
-+	station(station),
-+	num_children(0),
-+	count(0),
-+	children(NULL)
-+{}
-+
-+CargoDataEntry::CargoDataEntry(CargoID cargo) :
-+	parent(NULL),
-+	cargo(cargo),
-+	num_children(0),
-+	count(0),
-+	children(NULL)
-+{}
-+
-+CargoDataEntry::~CargoDataEntry()
-+{
-+	this->Clear();
-+	delete this->children;
-+}
- 
--	CargoData(CargoID cargo, StationID source, uint count) :
--		cargo(cargo),
--		source(source),
--		count(count)
--	{ }
--};
-+/**
-+ * Delete all subentries, reset count and num_children and adapt parent's count.
-+ */
-+void CargoDataEntry::Clear()
-+{
-+	if (this->children != NULL) {
-+		for (CargoDataSet::iterator i = this->children->begin(); i != this->children->end(); ++i) {
-+			assert(*i != this);
-+			delete *i;
-+		}
-+		this->children->clear();
-+	}
-+	if (this->parent != NULL) this->parent->count -= this->count;
-+	this->count = 0;
-+	this->num_children = 0;
-+}
-+
-+/**
-+ * Remove a subentry from this one and delete it.
-+ * @param child the entry to be removed. This may also be a synthetic entry
-+ * which only contains the ID of the entry to be removed. In this case child is
-+ * not deleted.
-+ */
-+void CargoDataEntry::Remove(CargoDataEntry *child)
-+{
-+	CargoDataSet::iterator i = this->children->find(child);
-+	if (i != this->children->end()) {
-+		delete *i;
-+		this->children->erase(i);
-+	}
-+}
-+
-+/**
-+ * Retrieve a subentry or insert it if it doesn't exist, yet.
-+ * @tparam ID type of ID: either StationID or CargoID
-+ * @param child_id ID of the child to be inserted or retrieved.
-+ * @return the new or retrieved subentry
-+ */
-+template<class ID>
-+CargoDataEntry *CargoDataEntry::InsertOrRetrieve(ID child_id)
-+{
-+	CargoDataEntry tmp(child_id);
-+	CargoDataSet::iterator i = this->children->find(&tmp);
-+	if (i == this->children->end()) {
-+		IncrementSize();
-+		return *(this->children->insert(new CargoDataEntry(child_id, 0, this)).first);
-+	} else {
-+		CargoDataEntry *ret = *i;
-+		assert(this->children->value_comp().GetSortType() != ST_COUNT);
-+		return ret;
-+	}
-+}
-+
-+/**
-+ * Update the count for this entry and propagate the change to the parent entry
-+ * if there is one.
-+ * @param count the amount to be added to this entry
-+ */
-+void CargoDataEntry::Update(uint count)
-+{
-+	this->count += count;
-+	if (this->parent != NULL) this->parent->Update(count);
-+}
-+
-+/**
-+ * Increment
-+ */
-+void CargoDataEntry::IncrementSize()
-+{
-+	 ++this->num_children;
-+	 if (this->parent != NULL) this->parent->IncrementSize();
-+}
-+
-+void CargoDataEntry::Resort(CargoSortType type, SortOrder order)
-+{
-+	CargoDataSet *new_subs = new CargoDataSet(this->children->begin(), this->children->end(), CargoSorter(type, order));
-+	delete this->children;
-+	this->children = new_subs;
-+}
-+
-+CargoDataEntry *CargoDataEntry::Retrieve(CargoDataSet::iterator i) const
-+{
-+	if (i == this->children->end()) {
-+		return NULL;
-+	} else {
-+		assert(this->children->value_comp().GetSortType() != ST_COUNT);
-+		return *i;
-+	}
-+}
-+
-+bool CargoSorter::operator()(const CargoDataEntry *cd1, const CargoDataEntry *cd2) const
-+{
-+	switch (this->type) {
-+		case ST_STATION_ID:
-+			return this->SortId<StationID>(cd1->GetStation(), cd2->GetStation());
-+			break;
-+		case ST_CARGO_ID:
-+			return this->SortId<CargoID>(cd1->GetCargo(), cd2->GetCargo());
-+			break;
-+		case ST_COUNT:
-+			return this->SortCount(cd1, cd2);
-+			break;
-+		case ST_STATION_STRING:
-+			return this->SortStation(cd1->GetStation(), cd2->GetStation());
-+			break;
-+		default:
-+			NOT_REACHED();
-+	}
-+}
-+
-+template<class ID>
-+bool CargoSorter::SortId(ID st1, ID st2) const
-+{
-+	return (this->order == SO_ASCENDING) ? st1 < st2 : st2 < st1;
-+}
- 
--typedef std::list<CargoData> CargoDataList;
-+bool CargoSorter::SortCount(const CargoDataEntry *cd1, const CargoDataEntry *cd2) const
-+{
-+	uint c1 = cd1->GetCount();
-+	uint c2 = cd2->GetCount();
-+	if (c1 == c2) {
-+		return this->SortStation(cd1->GetStation(), cd2->GetStation());
-+	} else if (this->order == SO_ASCENDING) {
-+		return c1 < c2;
-+	} else {
-+		return c2 < c1;
-+	}
-+}
-+
-+bool CargoSorter::SortStation(StationID st1, StationID st2) const
-+{
-+	static char buf1[MAX_LENGTH_STATION_NAME_CHARS];
-+	static char buf2[MAX_LENGTH_STATION_NAME_CHARS];
-+
-+	if (!Station::IsValidID(st1)) {
-+		return Station::IsValidID(st2) ? this->order == SO_ASCENDING : this->SortId(st1, st2);
-+	} else if (!Station::IsValidID(st2)) {
-+		return order == SO_DESCENDING;
-+	}
-+
-+	SetDParam(0, st1);
-+	GetString(buf1, STR_STATION_NAME, lastof(buf1));
-+	SetDParam(0, st2);
-+	GetString(buf2, STR_STATION_NAME, lastof(buf2));
-+
-+	int res = strcmp(buf1, buf2);
-+	if (res == 0) {
-+		return this->SortId(st1, st2);
-+	} else {
-+		return (this->order == SO_ASCENDING) ? res < 0 : res > 0;
-+	}
-+}
- 
- /**
-  * The StationView window
-  */
- struct StationViewWindow : public Window {
--	uint32 cargo;                 ///< Bitmask of cargo types to expand
--	uint16 cargo_rows[NUM_CARGO]; ///< Header row for each cargo type
-+	/**
-+	 * A row being displayed in the cargo view (as opposed to being "hidden" behind a plus sign).
-+	 */
-+	struct RowDisplay {
-+		RowDisplay(CargoDataEntry *f, StationID n) : filter(f), next_station(n) {}
-+		RowDisplay(CargoDataEntry *f, CargoID n) : filter(f), next_cargo(n) {}
-+
-+		/**
-+		 * Parent of the cargo entry belonging to the row.
-+		 */
-+		CargoDataEntry *filter;
-+		union {
-+			/**
-+			 * ID of the station belonging to the entry actually displayed if it's to/from/via.
-+			 */
-+			StationID next_station;
-+
-+			/**
-+			 * ID of the cargo belonging to the entry actually displayed if it's cargo.
-+			 */
-+			CargoID next_cargo;
-+		};
-+	};
-+
-+	typedef std::vector<RowDisplay> CargoDataVector;
-+
-+	static const int NUM_COLUMNS = 4; ///< Number of "columns" in the cargo view: cargo, from, via, to
-+
-+	/**
-+	 * Type of data invalidation.
-+	 */
-+	enum Invalidation {
-+		INV_FLOWS = 0x100, ///< The planned flows have been recalculated and everything has to be updated.
-+		INV_CARGO = 0x200  ///< Some cargo has been added or removed.
-+	};
-+
-+	/**
-+	 * Type of grouping used in each of the "columns".
-+	 */
-+	enum Grouping {
-+		GR_SOURCE,      ///< Group by source of cargo ("from").
-+		GR_NEXT,        ///< Group by next station ("via").
-+		GR_DESTINATION, ///< Group by estimated final destination ("to").
-+		GR_CARGO,       ///< Group by cargo type.
-+	};
-+
-+	/**
-+	 * Display mode of the cargo view.
-+	 */
-+	enum Mode {
-+		MODE_WAITING, ///< Show cargo waiting at the station.
-+		MODE_PLANNED  ///< Show cargo planned to pass through the station.
-+	};
-+
- 	uint expand_shrink_width;     ///< The width allocated to the expand/shrink 'button'
- 	int rating_lines;             ///< Number of lines in the cargo ratings view.
- 	int accepts_lines;            ///< Number of lines in the accepted cargo view.
-@@ -871,7 +1118,31 @@ struct StationViewWindow : public Window {
- 		ALH_ACCEPTS = 3,  ///< Height of the accepted cargo view.
- 	};
- 
--	StationViewWindow(const WindowDesc *desc, WindowNumber window_number) : Window()
-+	static const StringID _sort_names[];  ///< Names of the sorting options in the dropdown.
-+	static const StringID _group_names[]; ///< Names of the grouping options in the dropdown.
-+
-+	/**
-+	 * Sort types of the different 'columns'.
-+	 * In fact only ST_COUNT and ST_AS_GROUPING are active and you can only
-+	 * sort all the columns in the same way. The other options haven't been
-+	 * included in the GUI due to lack of space.
-+	 */
-+	CargoSortType sortings[NUM_COLUMNS];
-+
-+	/** Sort order (ascending/descending) for the 'columns'. */
-+	SortOrder sort_orders[NUM_COLUMNS];
-+
-+	int scroll_to_row;                  ///< If set, scroll the main viewport to the station pointed to by this row.
-+	int grouping_index;                 ///< Currently selected entry in the grouping drop down.
-+	Mode current_mode;                  ///< Currently selected display mode of cargo view.
-+	Grouping groupings[NUM_COLUMNS];    ///< Grouping modes for the different columns.
-+
-+	CargoDataEntry expanded_rows;       ///< Parent entry of currently expanded rows.
-+	CargoDataEntry cached_destinations; ///< Cache for the flows passing through this station.
-+	CargoDataVector displayed_rows;     ///< Parent entry of currently displayed rows (including collapsed ones).
-+
-+	StationViewWindow(const WindowDesc *desc, WindowNumber window_number) : Window(),
-+		scroll_to_row(INT_MAX), grouping_index(0)
- 	{
- 		this->rating_lines  = ALH_RATING;
- 		this->accepts_lines = ALH_ACCEPTS;
-@@ -881,6 +1152,12 @@ struct StationViewWindow : public Window {
- 		/* Nested widget tree creation is done in two steps to ensure that this->GetWidget<NWidgetCore>(WID_SV_ACCEPTS_RATINGS) exists in UpdateWidgetSize(). */
- 		this->FinishInitNested(desc, window_number);
- 
-+		this->groupings[0] = GR_CARGO;
-+		this->sortings[0] = ST_AS_GROUPING;
-+		this->SelectGroupBy(_settings_client.gui.station_gui_group_order);
-+		this->SelectSortBy(_settings_client.gui.station_gui_sort_by);
-+		this->sort_orders[0] = SO_ASCENDING;
-+		this->SelectSortOrder((SortOrder)_settings_client.gui.station_gui_sort_order);
- 		Owner owner = Station::Get(window_number)->owner;
- 		if (owner != OWNER_NONE) this->owner = owner;
- 	}
-@@ -896,12 +1173,50 @@ struct StationViewWindow : public Window {
- 		DeleteWindowById(WC_AIRCRAFT_LIST, VehicleListIdentifier(VL_STATION_LIST, VEH_AIRCRAFT, owner, this->window_number).Pack(), false);
- 	}
- 
-+	/**
-+	 * Show a certain cargo entry characterized by source/next/dest station, cargo ID and amount of cargo at the
-+	 * right place in the cargo view. I.e. update as many rows as are expanded following that characterization.
-+	 * @param data Root entry of the tree.
-+	 * @param cargo Cargo ID of the entry to be shown.
-+	 * @param source Source station of the entry to be shown.
-+	 * @param next Next station the cargo to be shown will visit.
-+	 * @param dest Final destination of the cargo to be shown.
-+	 * @param count Amount of cargo to be shown.
-+	 */
-+	void ShowCargo(CargoDataEntry *data, CargoID cargo, StationID source, StationID next, StationID dest, uint count)
-+	{
-+		if (count == 0) return;
-+		const CargoDataEntry *expand = &this->expanded_rows;
-+		for (int i = 0; i < NUM_COLUMNS && expand != NULL; ++i) {
-+			switch (groupings[i]) {
-+				case GR_CARGO:
-+					assert(i == 0);
-+					data = data->InsertOrRetrieve(cargo);
-+					expand = expand->Retrieve(cargo);
-+					break;
-+				case GR_SOURCE:
-+					data = data->InsertOrRetrieve(source);
-+					expand = expand->Retrieve(source);
-+					break;
-+				case GR_NEXT:
-+					data = data->InsertOrRetrieve(next);
-+					expand = expand->Retrieve(next);
-+					break;
-+				case GR_DESTINATION:
-+					data = data->InsertOrRetrieve(dest);
-+					expand = expand->Retrieve(dest);
-+					break;
-+			}
-+		}
-+		data->Update(count);
-+	}
-+
- 	virtual void UpdateWidgetSize(int widget, Dimension *size, const Dimension &padding, Dimension *fill, Dimension *resize)
- 	{
- 		switch (widget) {
- 			case WID_SV_WAITING:
- 				resize->height = FONT_HEIGHT_NORMAL;
--				size->height = WD_FRAMERECT_TOP + 5 * resize->height + WD_FRAMERECT_BOTTOM;
-+				size->height = WD_FRAMERECT_TOP + 4 * resize->height + WD_FRAMERECT_BOTTOM;
- 				this->expand_shrink_width = max(GetStringBoundingBox("-").width, GetStringBoundingBox("+").width) + WD_FRAMERECT_LEFT + WD_FRAMERECT_RIGHT;
- 				break;
- 
-@@ -913,20 +1228,21 @@ struct StationViewWindow : public Window {
- 
- 	virtual void OnPaint()
- 	{
--		CargoDataList cargolist;
--		uint32 transfers = 0;
--		this->OrderWaitingCargo(&cargolist, &transfers);
-+		const Station *st = Station::Get(this->window_number);
-+		CargoDataEntry cargo;
-+		BuildCargoList(&cargo, st);
- 
--		this->vscroll->SetCount((int)cargolist.size() + 1); // update scrollbar
-+		this->vscroll->SetCount(cargo.GetNumChildren()); // update scrollbar
- 
- 		/* disable some buttons */
--		const Station *st = Station::Get(this->window_number);
- 		this->SetWidgetDisabledState(WID_SV_RENAME,   st->owner != _local_company);
- 		this->SetWidgetDisabledState(WID_SV_TRAINS,   !(st->facilities & FACIL_TRAIN));
- 		this->SetWidgetDisabledState(WID_SV_ROADVEHS, !(st->facilities & FACIL_TRUCK_STOP) && !(st->facilities & FACIL_BUS_STOP));
- 		this->SetWidgetDisabledState(WID_SV_SHIPS,    !(st->facilities & FACIL_DOCK));
- 		this->SetWidgetDisabledState(WID_SV_PLANES,   !(st->facilities & FACIL_AIRPORT));
- 
-+		SetDParam(0, st->index);
-+		SetDParam(1, st->facilities);
- 		this->DrawWidgets();
- 
- 		if (!this->IsShaded()) {
-@@ -949,10 +1265,20 @@ struct StationViewWindow : public Window {
- 				}
- 			}
- 
-+			/* draw arrow pointing up/down for ascending/descending sorting */
-+			this->DrawSortButtonState(WID_SV_SORT_ORDER, sort_orders[1] == SO_ASCENDING ? SBS_UP : SBS_DOWN);
-+
-+			int pos = this->vscroll->GetPosition();
-+
-+			int maxrows = this->vscroll->GetCapacity();
-+
-+			displayed_rows.clear();
-+
- 			/* Draw waiting cargo. */
- 			NWidgetBase *nwi = this->GetWidget<NWidgetBase>(WID_SV_WAITING);
- 			Rect waiting_rect = {nwi->pos_x, nwi->pos_y, nwi->pos_x + nwi->current_x - 1, nwi->pos_y + nwi->current_y - 1};
--			this->DrawWaitingCargo(waiting_rect, cargolist, transfers);
-+			this->DrawEntries(&cargo, waiting_rect, pos, maxrows, 0);
-+			scroll_to_row = INT_MAX;
- 		}
- 	}
- 
-@@ -966,116 +1292,330 @@ struct StationViewWindow : public Window {
- 	}
- 
- 	/**
--	 * Order waiting cargo by type and destination.
--	 * @param cargolist [out] Ordered cargo.
--	 * @param transfers [out] Bitmask for cargoes being transfered.
--	 * @pre \c *cargolist must be empty.
-+	 * Rebuild the cache for estimated destinations which is used to quickly show the "destination" entries
-+	 * even if we actually don't know the destination of a certain packet from just looking at it.
-+	 * @param i Cargo to recalculate the cache for.
- 	 */
--	void OrderWaitingCargo(CargoDataList *cargolist, uint32 *transfers)
-+	void RecalcDestinations(CargoID i)
- 	{
--		assert(cargolist->size() == 0);
--		*transfers = 0;
-+		const Station *st = Station::Get(this->window_number);
-+		CargoDataEntry *cargo_entry = cached_destinations.InsertOrRetrieve(i);
-+		cargo_entry->Clear();
-+
-+		const FlowStatMap &flows = st->goods[i].flows;
-+		for (FlowStatMap::const_iterator it = flows.begin(); it != flows.end(); ++it) {
-+			StationID from = it->first;
-+			CargoDataEntry *source_entry = cargo_entry->InsertOrRetrieve(from);
-+			const FlowStat::SharesMap *shares = it->second.GetShares();
-+			for (FlowStat::SharesMap::const_iterator flow_it = shares->begin(); flow_it != shares->end(); ++flow_it) {
-+				StationID via = flow_it->second;
-+				CargoDataEntry *via_entry = source_entry->InsertOrRetrieve(via);
-+				if (via == this->window_number) {
-+					via_entry->InsertOrRetrieve(via)->Update(flow_it->first);
-+				} else {
-+					EstimateDestinations(i, from, via, flow_it->first, via_entry);
-+				}
-+			}
-+		}
-+	}
- 
--		StationID station_id = this->window_number;
--		const Station *st = Station::Get(station_id);
-+	/**
-+	 * Estimate the amounts of cargo per final destination for a given cargo, source station and next hop and
-+	 * save the result as children of the given CargoDataEntry.
-+	 * @param cargo ID of the cargo to estimate destinations for.
-+	 * @param source Source station of the given batch of cargo.
-+	 * @param next Intermediate hop to start the calculation at ("next hop").
-+	 * @param count Size of the batch of cargo.
-+	 * @param dest CargoDataEntry to save the results in.
-+	 */
-+	void EstimateDestinations(CargoID cargo, StationID source, StationID next, uint count, CargoDataEntry *dest)
-+	{
-+		if (Station::IsValidID(next) && Station::IsValidID(source)) {
-+			CargoDataEntry tmp;
-+			const FlowStatMap &flowmap = Station::Get(next)->goods[cargo].flows;
-+			FlowStatMap::const_iterator map_it = flowmap.find(source);
-+			if (map_it != flowmap.end()) {
-+				const FlowStat::SharesMap *shares = map_it->second.GetShares();
-+				for (FlowStat::SharesMap::const_iterator i = shares->begin(); i != shares->end(); ++i) {
-+					tmp.InsertOrRetrieve(i->second)->Update(i->first);
-+				}
-+			}
- 
--		/* count types of cargoes waiting in station */
--		for (CargoID i = 0; i < NUM_CARGO; i++) {
--			if (st->goods[i].cargo.Empty()) {
--				this->cargo_rows[i] = 0;
-+			if (tmp.GetCount() == 0) {
-+				dest->InsertOrRetrieve(INVALID_STATION)->Update(count);
- 			} else {
--				/* Add an entry for total amount of cargo of this type waiting. */
--				cargolist->push_back(CargoData(i, INVALID_STATION, st->goods[i].cargo.Count()));
--
--				/* Set the row for this cargo entry for the expand/hide button */
--				this->cargo_rows[i] = (uint16)cargolist->size();
--
--				/* Add an entry for each distinct cargo source. */
+ 				/* Add an entry for each distinct cargo source. */
 -				const StationCargoList::List *packets = st->goods[i].cargo.Packets();
--				for (StationCargoList::ConstIterator it(packets->begin()); it != packets->end(); it++) {
--					const CargoPacket *cp = *it;
--					if (cp->SourceStation() != station_id) {
--						bool added = false;
--
--						/* Enable the expand/hide button for this cargo type */
--						SetBit(*transfers, i);
--
--						/* Don't add cargo lines if not expanded */
--						if (!HasBit(this->cargo, i)) break;
--
--						/* Check if we already have this source in the list */
--						for (CargoDataList::iterator jt(cargolist->begin()); jt != cargolist->end(); jt++) {
--							CargoData *cd = &(*jt);
--							if (cd->cargo == i && cd->source == cp->SourceStation()) {
--								cd->count += cp->Count();
--								added = true;
--								break;
--							}
-+				uint sum_estimated = 0;
-+				while (sum_estimated < count) {
-+					for (CargoDataSet::iterator i = tmp.Begin(); i != tmp.End() && sum_estimated < count; ++i) {
-+						CargoDataEntry *child = *i;
-+						uint estimate = DivideApprox(child->GetCount() * count, tmp.GetCount());
-+						if (estimate == 0) estimate = 1;
-+
-+						sum_estimated += estimate;
-+						if (sum_estimated > count) {
-+							estimate -= sum_estimated - count;
-+							sum_estimated = count;
- 						}
- 
--						if (!added) cargolist->push_back(CargoData(i, cp->SourceStation(), cp->Count()));
-+						if (estimate > 0) {
-+							if (child->GetStation() == next) {
-+								dest->InsertOrRetrieve(next)->Update(estimate);
-+							} else {
-+								EstimateDestinations(cargo, source, child->GetStation(), estimate, dest);
-+							}
-+						}
- 					}
-+
- 				}
- 			}
-+		} else {
-+			dest->InsertOrRetrieve(INVALID_STATION)->Update(count);
- 		}
- 	}
- 
- 	/**
--	 * Draw waiting cargo.
--	 * @param r Rectangle of the widget.
--	 * @param cargolist Cargo, ordered by type and destination.
--	 * @param transfers Bitmask for cargoes that are transfered.
-+	 * Build up the cargo view for PLANNED mode and a specific cargo.
-+	 * @param i Cargo to show.
-+	 * @param flows The current station's flows for that cargo.
-+	 * @param cargo The CargoDataEntry to save the results in.
- 	 */
--	void DrawWaitingCargo(const Rect &r, const CargoDataList &cargolist, uint32 transfers) const
-+	void BuildFlowList(CargoID i, const FlowStatMap &flows, CargoDataEntry *cargo)
- 	{
--		int y = r.top + WD_FRAMERECT_TOP;
--		int pos = this->vscroll->GetPosition();
-+		const CargoDataEntry *source_dest = this->cached_destinations.Retrieve(i);
-+		for (FlowStatMap::const_iterator it = flows.begin(); it != flows.end(); ++it) {
-+			StationID from = it->first;
-+			const CargoDataEntry *source_entry = source_dest->Retrieve(from);
-+			const FlowStat::SharesMap *shares = it->second.GetShares();
-+			for (FlowStat::SharesMap::const_iterator flow_it = shares->begin(); flow_it != shares->end(); ++flow_it) {
-+				const CargoDataEntry *via_entry = source_entry->Retrieve(flow_it->second);
-+				for (CargoDataSet::iterator dest_it = via_entry->Begin(); dest_it != via_entry->End(); ++dest_it) {
-+					CargoDataEntry *dest_entry = *dest_it;
-+					ShowCargo(cargo, i, from, flow_it->second, dest_entry->GetStation(), dest_entry->GetCount());
-+				}
-+			}
-+		}
-+	}
- 
--		const Station *st = Station::Get(this->window_number);
--		if (--pos < 0) {
--			StringID str = STR_JUST_NOTHING;
--			for (CargoID i = 0; i < NUM_CARGO; i++) {
--				if (!st->goods[i].cargo.Empty()) str = STR_EMPTY;
-+	/**
-+	 * Build up the cargo view for WAITING mode and a specific cargo.
-+	 * @param i Cargo to show.
-+	 * @param packets The current station's cargo list for that cargo.
-+	 * @param cargo The CargoDataEntry to save the result in.
-+	 */
-+	void BuildCargoList(CargoID i, const StationCargoList &packets, CargoDataEntry *cargo)
-+	{
-+		const CargoDataEntry *source_dest = this->cached_destinations.Retrieve(i);
-+		for (StationCargoList::ConstIterator it = packets.Packets()->begin(); it != packets.Packets()->end(); it++) {
-+			const CargoPacket *cp = *it;
-+			StationID next = it.GetKey();
-+
-+			const CargoDataEntry *source_entry = source_dest->Retrieve(cp->SourceStation());
-+			if (source_entry == NULL) {
-+				ShowCargo(cargo, i, cp->SourceStation(), next, INVALID_STATION, cp->Count());
-+				continue;
-+			}
-+
-+			const CargoDataEntry *via_entry = source_entry->Retrieve(next);
-+			if (via_entry == NULL) {
-+				ShowCargo(cargo, i, cp->SourceStation(), next, INVALID_STATION, cp->Count());
-+				continue;
-+			}
-+
-+			for (CargoDataSet::iterator dest_it = via_entry->Begin(); dest_it != via_entry->End(); ++dest_it) {
-+				CargoDataEntry *dest_entry = *dest_it;
-+				uint val = DivideApprox(cp->Count() * dest_entry->GetCount(), via_entry->GetCount());
-+				ShowCargo(cargo, i, cp->SourceStation(), next, dest_entry->GetStation(), val);
- 			}
--			SetDParam(0, str);
--			DrawString(r.left + WD_FRAMERECT_LEFT, r.right - WD_FRAMERECT_RIGHT, y, STR_STATION_VIEW_WAITING_TITLE);
--			y += FONT_HEIGHT_NORMAL;
- 		}
-+	}
- 
--		bool rtl = _current_text_dir == TD_RTL;
--		int text_left    = rtl ? r.left + this->expand_shrink_width : r.left + WD_FRAMERECT_LEFT;
--		int text_right   = rtl ? r.right - WD_FRAMERECT_LEFT : r.right - this->expand_shrink_width;
--		int shrink_left  = rtl ? r.left + WD_FRAMERECT_LEFT : r.right - this->expand_shrink_width + WD_FRAMERECT_LEFT;
--		int shrink_right = rtl ? r.left + this->expand_shrink_width - WD_FRAMERECT_RIGHT : r.right - WD_FRAMERECT_RIGHT;
--
--
--		int maxrows = this->vscroll->GetCapacity();
--		for (CargoDataList::const_iterator it = cargolist.begin(); it != cargolist.end() && pos > -maxrows; ++it) {
--			if (--pos < 0) {
--				const CargoData *cd = &(*it);
--				if (cd->source == INVALID_STATION) {
--					/* Heading */
--					DrawCargoIcons(cd->cargo, cd->count, r.left + WD_FRAMERECT_LEFT, r.right - WD_FRAMERECT_RIGHT, y);
--					SetDParam(0, cd->cargo);
--					SetDParam(1, cd->count);
--					if (HasBit(transfers, cd->cargo)) {
--						/* This cargo has transfers waiting so show the expand or shrink 'button' */
--						const char *sym = HasBit(this->cargo, cd->cargo) ? "-" : "+";
--						DrawString(text_left, text_right, y, STR_STATION_VIEW_WAITING_CARGO, TC_FROMSTRING, SA_RIGHT);
--						DrawString(shrink_left, shrink_right, y, sym, TC_YELLOW, SA_RIGHT);
--					} else {
--						DrawString(r.left + WD_FRAMERECT_LEFT, r.right - WD_FRAMERECT_RIGHT, y, STR_STATION_VIEW_WAITING_CARGO, TC_FROMSTRING, SA_RIGHT);
--					}
-+	/**
-+	 * Build up the cargo view for all cargoes.
-+	 * @param cargo The root cargo entry to save all results in.
-+	 * @param st The station to calculate the cargo view from.
-+	 */
-+	void BuildCargoList(CargoDataEntry *cargo, const Station *st)
-+	{
-+		for (CargoID i = 0; i < NUM_CARGO; i++) {
-+
-+			if (this->cached_destinations.Retrieve(i) == NULL) {
-+				this->RecalcDestinations(i);
-+			}
-+
-+			if (this->current_mode == MODE_WAITING) {
-+				BuildCargoList(i, st->goods[i].cargo, cargo);
-+			} else {
-+				BuildFlowList(i, st->goods[i].flows, cargo);
-+			}
-+		}
-+	}
-+
-+	/**
-+	 * Mark a specific row, characterized by its CargoDataEntry, as expanded.
-+	 * @param data The row to be marked as expanded.
-+	 */
-+	void SetDisplayedRow(const CargoDataEntry *data)
-+	{
-+		std::list<StationID> stations;
-+		const CargoDataEntry *parent = data->GetParent();
-+		if (parent->GetParent() == NULL) {
-+			this->displayed_rows.push_back(RowDisplay(&this->expanded_rows, data->GetCargo()));
-+			return;
-+		}
-+
-+		StationID next = data->GetStation();
-+		while (parent->GetParent()->GetParent() != NULL) {
-+			stations.push_back(parent->GetStation());
-+			parent = parent->GetParent();
-+		}
-+
-+		CargoID cargo = parent->GetCargo();
-+		CargoDataEntry *filter = this->expanded_rows.Retrieve(cargo);
-+		while (!stations.empty()) {
-+			filter = filter->Retrieve(stations.back());
-+			stations.pop_back();
-+		}
-+
-+		this->displayed_rows.push_back(RowDisplay(filter, next));
-+	}
-+
-+	/**
-+	 * Select the correct string for an entry referring to the specified station.
-+	 * @param station Station the entry is showing cargo for.
-+	 * @param here String to be shown if the entry refers to the same station as this station GUI belongs to.
-+	 * @param other_station String to be shown if the entry refers to a specific other station.
-+	 * @param any String to be shown if the entry refers to "any station".
-+	 * @return One of the three given strings, depending on what station the entry refers to.
-+	 */
-+	StringID GetEntryString(StationID station, StringID here, StringID other_station, StringID any)
-+	{
-+		if (station == this->window_number) {
-+			return here;
-+		} else if (station != INVALID_STATION) {
-+			SetDParam(2, station);
-+			return other_station;
-+		} else {
-+			return any;
-+		}
-+	}
-+
-+	/**
-+	 * Determine if we need to show the special "non-stop" string.
-+	 * @param cd Entry we are going to show.
-+	 * @param station Station the entry refers to.
-+	 * @param column The "column" the entry will be shown in.
-+	 * @return either STR_STATION_VIEW_VIA or STR_STATION_VIEW_NONSTOP.
-+	 */
-+	StringID SearchNonStop(CargoDataEntry *cd, StationID station, int column)
-+	{
-+		CargoDataEntry *parent = cd->GetParent();
-+		for (int i = column - 1; i > 0; --i) {
-+			if (this->groupings[i] == GR_DESTINATION) {
-+				if (parent->GetStation() == station) {
-+					return STR_STATION_VIEW_NONSTOP;
-+				} else {
-+					return STR_STATION_VIEW_VIA;
-+				}
-+			}
-+			parent = parent->GetParent();
-+		}
-+
-+		if (this->groupings[column + 1] == GR_DESTINATION) {
-+			CargoDataSet::iterator begin = cd->Begin();
-+			CargoDataSet::iterator end = cd->End();
-+			if (begin != end && ++(cd->Begin()) == end && (*(begin))->GetStation() == station) {
-+				return STR_STATION_VIEW_NONSTOP;
-+			} else {
-+				return STR_STATION_VIEW_VIA;
-+			}
-+		}
-+
-+		return STR_STATION_VIEW_VIA;
-+	}
-+
-+	/**
-+	 * Draw the given cargo entries in the station GUI.
-+	 * @param entry Root entry for all cargo to be drawn.
-+	 * @param r Screen rectangle to draw into.
-+	 * @param pos Current row to be drawn to (counted down from 0 to -maxrows, same as vscroll->GetPosition()).
-+	 * @param maxrows Maximum row to be drawn.
-+	 * @param column Current "column" being drawn.
-+	 * @param cargo Current cargo being drawn (if cargo column has been passed).
-+	 * @return row (in "pos" counting) after the one we have last drawn to.
-+	 */
-+	int DrawEntries(CargoDataEntry *entry, Rect &r, int pos, int maxrows, int column, CargoID cargo = CT_INVALID)
-+	{
-+		if (this->sortings[column] == ST_AS_GROUPING) {
-+			if (this->groupings[column] != GR_CARGO) {
-+				entry->Resort(ST_STATION_STRING, this->sort_orders[column]);
-+			}
-+		} else {
-+			entry->Resort(ST_COUNT, this->sort_orders[column]);
-+		}
-+		for (CargoDataSet::iterator i = entry->Begin(); i != entry->End(); ++i) {
-+			CargoDataEntry *cd = *i;
-+
-+			if (this->groupings[column] == GR_CARGO) cargo = cd->GetCargo();
-+
-+			if (pos > -maxrows && pos <= 0) {
-+				StringID str = STR_EMPTY;
-+				int y = r.top + WD_FRAMERECT_TOP - pos * FONT_HEIGHT_NORMAL;
-+				SetDParam(0, cargo);
-+				SetDParam(1, cd->GetCount());
-+
-+				if (this->groupings[column] == GR_CARGO) {
-+					str = STR_STATION_VIEW_WAITING_CARGO;
-+					DrawCargoIcons(cd->GetCargo(), cd->GetCount(), r.left + WD_FRAMERECT_LEFT + this->expand_shrink_width, r.right - WD_FRAMERECT_RIGHT - this->expand_shrink_width, y);
- 				} else {
--					SetDParam(0, cd->cargo);
--					SetDParam(1, cd->count);
--					SetDParam(2, cd->source);
--					DrawString(r.left + WD_FRAMERECT_LEFT, r.right - WD_FRAMERECT_RIGHT, y, STR_STATION_VIEW_EN_ROUTE_FROM, TC_FROMSTRING, SA_RIGHT);
-+					StationID station = cd->GetStation();
-+
-+					switch (this->groupings[column]) {
-+						case GR_SOURCE:
-+							str = this->GetEntryString(station, STR_STATION_VIEW_FROM_HERE, STR_STATION_VIEW_FROM, STR_STATION_VIEW_FROM_ANY);
-+							break;
-+						case GR_NEXT:
-+							str = this->GetEntryString(station, STR_STATION_VIEW_VIA_HERE, STR_STATION_VIEW_VIA, STR_STATION_VIEW_VIA_ANY);
-+							if (str == STR_STATION_VIEW_VIA) str = SearchNonStop(cd, station, column);
-+							break;
-+						case GR_DESTINATION:
-+							str = this->GetEntryString(station, STR_STATION_VIEW_TO_HERE, STR_STATION_VIEW_TO, STR_STATION_VIEW_TO_ANY);
-+							break;
-+						default:
-+							NOT_REACHED();
-+					}
-+					if (pos == -this->scroll_to_row && Station::IsValidID(station)) {
-+						ScrollMainWindowToTile(Station::Get(station)->xy);
-+					}
- 				}
- 
--				y += FONT_HEIGHT_NORMAL;
-+				bool rtl = _current_text_dir == TD_RTL;
-+				int text_left    = rtl ? r.left + this->expand_shrink_width : r.left + WD_FRAMERECT_LEFT + column * this->expand_shrink_width;
-+				int text_right   = rtl ? r.right - WD_FRAMERECT_LEFT - column * this->expand_shrink_width : r.right - this->expand_shrink_width;
-+				int shrink_left  = rtl ? r.left + WD_FRAMERECT_LEFT : r.right - this->expand_shrink_width + WD_FRAMERECT_LEFT;
-+				int shrink_right = rtl ? r.left + this->expand_shrink_width - WD_FRAMERECT_RIGHT : r.right - WD_FRAMERECT_RIGHT;
-+
-+				DrawString(text_left, text_right, y, str);
-+
-+				if (column < NUM_COLUMNS - 1) {
-+					const char *sym = cd->GetNumChildren() > 0 ? "-" : "+";
-+					DrawString(shrink_left, shrink_right, y, sym, TC_YELLOW);
-+				}
-+				SetDisplayedRow(cd);
- 			}
-+			pos = DrawEntries(cd, r, --pos, maxrows, column + 1, cargo);
- 		}
-+		return pos;
-+	}
-+
-+	/**
-+	 * Invalidate the cache for the given cargo.
-+	 * @param cargo ID of the cargo.
-+	 * @param gui_scope Whether the call is done from GUI scope. You may not do everything when not in GUI scope. See #InvalidateWindowData() for details.
-+	 */
-+	virtual void OnInvalidateData(int data = 0, bool gui_scope = true)
-+	{
-+		if (!gui_scope) return;
-+		this->cached_destinations.Remove((CargoID)data);
- 	}
- 
- 	/**
-@@ -1115,32 +1655,55 @@ struct StationViewWindow : public Window {
- 			if (!HasBit(ge->acceptance_pickup, GoodsEntry::GES_PICKUP)) continue;
- 
- 			SetDParam(0, cs->name);
--			SetDParam(2, ToPercent8(ge->rating));
--			SetDParam(1, STR_CARGO_RATING_APPALLING + (ge->rating >> 5));
--			DrawString(r.left + WD_FRAMERECT_LEFT + 6, r.right - WD_FRAMERECT_RIGHT - 6, y, STR_STATION_VIEW_CARGO_RATING);
-+			SetDParam(1, ge->supply);
-+			SetDParam(3, ToPercent8(ge->rating));
-+			SetDParam(2, STR_CARGO_RATING_APPALLING + (ge->rating >> 5));
-+			DrawString(r.left + WD_FRAMERECT_LEFT + 6, r.right - WD_FRAMERECT_RIGHT - 6, y, STR_STATION_VIEW_CARGO_SUPPLY_RATING);
- 			y += FONT_HEIGHT_NORMAL;
- 		}
- 		return CeilDiv(y - r.top - WD_FRAMERECT_TOP, FONT_HEIGHT_NORMAL);
- 	}
- 
--	void HandleCargoWaitingClick(int row)
-+	/**
-+	 * Expand or collapse a specific row.
-+	 * @param filter Parent of the row.
-+	 * @param next ID pointing to the row.
-+	 */
-+	template<class ID>
-+	void HandleCargoWaitingClick(CargoDataEntry *filter, ID next)
- 	{
--		if (row == 0) return;
-+		if (filter->Retrieve(next) != NULL) {
-+			filter->Remove(next);
-+		} else {
-+			filter->InsertOrRetrieve(next);
-+		}
-+	}
- 
--		for (CargoID c = 0; c < NUM_CARGO; c++) {
--			if (this->cargo_rows[c] == row) {
--				ToggleBit(this->cargo, c);
--				this->SetWidgetDirty(WID_SV_WAITING);
--				break;
-+	/**
-+	 * Handle a click on a specific row in the cargo view.
-+	 * @param row Row being clicked.
-+	 */
-+	void HandleCargoWaitingClick(int row)
-+	{
-+		if (row < 0 || (uint)row >= this->displayed_rows.size()) return;
-+		if (_ctrl_pressed) {
-+			this->scroll_to_row = row;
-+		} else {
-+			RowDisplay &display = this->displayed_rows[row];
-+			if (display.filter == &this->expanded_rows) {
-+				this->HandleCargoWaitingClick<CargoID>(display.filter, display.next_cargo);
-+			} else {
-+				this->HandleCargoWaitingClick<StationID>(display.filter, display.next_station);
- 			}
- 		}
-+		this->SetWidgetDirty(WID_SV_WAITING);
- 	}
- 
- 	virtual void OnClick(Point pt, int widget, int click_count)
- 	{
- 		switch (widget) {
- 			case WID_SV_WAITING:
--				this->HandleCargoWaitingClick(this->vscroll->GetScrolledRowFromWidget(pt.y, this, WID_SV_WAITING, WD_FRAMERECT_TOP, FONT_HEIGHT_NORMAL));
-+				this->HandleCargoWaitingClick(this->vscroll->GetScrolledRowFromWidget(pt.y, this, WID_SV_WAITING, WD_FRAMERECT_TOP, FONT_HEIGHT_NORMAL) - this->vscroll->GetPosition());
- 				break;
- 
- 			case WID_SV_LOCATION:
-@@ -1178,6 +1741,119 @@ struct StationViewWindow : public Window {
- 			case WID_SV_PLANES:   // Show list of scheduled aircraft to this station
- 				ShowVehicleListWindow(this->owner, (VehicleType)(widget - WID_SV_TRAINS), (StationID)this->window_number);
- 				break;
-+
-+			case WID_SV_SORT_BY: {
-+				ShowDropDownMenu(this, _sort_names, this->current_mode, WID_SV_SORT_BY, 0, 0);
-+				break;
-+			}
-+
-+			case WID_SV_GROUP_BY: {
-+				ShowDropDownMenu(this, _group_names, this->grouping_index, WID_SV_GROUP_BY, 0, 0);
-+				break;
-+			}
-+
-+			case WID_SV_SORT_ORDER: { // flip sorting method asc/desc
-+				this->SelectSortOrder(this->sort_orders[1] == SO_ASCENDING ? SO_DESCENDING : SO_ASCENDING);
-+				this->SetTimeout();
-+				this->LowerWidget(WID_SV_SORT_ORDER);
-+				break;
-+			}
-+		}
-+	}
-+
-+	/**
-+	 * Select a new sort order for the cargo view.
-+	 * @param order New sort order.
-+	 */
-+	void SelectSortOrder(SortOrder order)
-+	{
-+		this->sort_orders[1] = this->sort_orders[2] = this->sort_orders[3] = order;
-+		_settings_client.gui.station_gui_sort_order = this->sort_orders[1];
-+		this->SetDirty();
-+	}
-+
-+	/**
-+	 * Select a new sort criterium for the cargo view.
-+	 * @param index Row being selected in the sort criteria drop down.
-+	 */
-+	void SelectSortBy(int index)
-+	{
-+		_settings_client.gui.station_gui_sort_by = index;
-+		switch (_sort_names[index]) {
-+			case STR_STATION_VIEW_WAITING_STATION:
-+				this->current_mode = MODE_WAITING;
-+				this->sortings[1] = this->sortings[2] = this->sortings[3] = ST_AS_GROUPING;
-+				break;
-+			case STR_STATION_VIEW_WAITING_AMOUNT:
-+				this->current_mode = MODE_WAITING;
-+				this->sortings[1] = this->sortings[2] = this->sortings[3] = ST_COUNT;
-+				break;
-+			case STR_STATION_VIEW_PLANNED_STATION:
-+				this->current_mode = MODE_PLANNED;
-+				this->sortings[1] = this->sortings[2] = this->sortings[3] = ST_AS_GROUPING;
-+				break;
-+			case STR_STATION_VIEW_PLANNED_AMOUNT:
-+				this->current_mode = MODE_PLANNED;
-+				this->sortings[1] = this->sortings[2] = this->sortings[3] = ST_COUNT;
-+				break;
-+			default:
-+				NOT_REACHED();
-+		}
-+		/* Display the current sort variant */
-+		this->GetWidget<NWidgetCore>(WID_SV_SORT_BY)->widget_data = _sort_names[index];
-+		this->SetDirty();
-+	}
-+
-+	/**
-+	 * Select a new grouping mode for the cargo view.
-+	 * @param index Row being selected in the grouping drop down.
-+	 */
-+	void SelectGroupBy(int index)
-+	{
-+		this->grouping_index = index;
-+		_settings_client.gui.station_gui_group_order = index;
-+		this->GetWidget<NWidgetCore>(WID_SV_GROUP_BY)->widget_data = _group_names[index];
-+		switch (_group_names[index]) {
-+			case STR_STATION_VIEW_GROUP_S_V_D:
-+				this->groupings[1] = GR_SOURCE;
-+				this->groupings[2] = GR_NEXT;
-+				this->groupings[3] = GR_DESTINATION;
-+				break;
-+			case STR_STATION_VIEW_GROUP_S_D_V:
-+				this->groupings[1] = GR_SOURCE;
-+				this->groupings[2] = GR_DESTINATION;
-+				this->groupings[3] = GR_NEXT;
-+				break;
-+			case STR_STATION_VIEW_GROUP_V_S_D:
-+				this->groupings[1] = GR_NEXT;
-+				this->groupings[2] = GR_SOURCE;
-+				this->groupings[3] = GR_DESTINATION;
-+				break;
-+			case STR_STATION_VIEW_GROUP_V_D_S:
-+				this->groupings[1] = GR_NEXT;
-+				this->groupings[2] = GR_DESTINATION;
-+				this->groupings[3] = GR_SOURCE;
-+				break;
-+			case STR_STATION_VIEW_GROUP_D_S_V:
-+				this->groupings[1] = GR_DESTINATION;
-+				this->groupings[2] = GR_SOURCE;
-+				this->groupings[3] = GR_NEXT;
-+				break;
-+			case STR_STATION_VIEW_GROUP_D_V_S:
-+				this->groupings[1] = GR_DESTINATION;
-+				this->groupings[2] = GR_NEXT;
-+				this->groupings[3] = GR_SOURCE;
-+				break;
-+		}
-+		this->SetDirty();
-+	}
-+
-+	virtual void OnDropdownSelect(int widget, int index)
-+	{
-+		if (widget == WID_SV_SORT_BY) {
-+			this->SelectSortBy(index);
-+		} else {
-+			this->SelectGroupBy(index);
- 		}
- 	}
- 
-@@ -1194,9 +1870,26 @@ struct StationViewWindow : public Window {
- 	}
- };
- 
-+const StringID StationViewWindow::_sort_names[] = {
-+	STR_STATION_VIEW_WAITING_STATION,
-+	STR_STATION_VIEW_WAITING_AMOUNT,
-+	STR_STATION_VIEW_PLANNED_STATION,
-+	STR_STATION_VIEW_PLANNED_AMOUNT,
-+	INVALID_STRING_ID
-+};
-+
-+const StringID StationViewWindow::_group_names[] = {
-+	STR_STATION_VIEW_GROUP_S_V_D,
-+	STR_STATION_VIEW_GROUP_S_D_V,
-+	STR_STATION_VIEW_GROUP_V_S_D,
-+	STR_STATION_VIEW_GROUP_V_D_S,
-+	STR_STATION_VIEW_GROUP_D_S_V,
-+	STR_STATION_VIEW_GROUP_D_V_S,
-+	INVALID_STRING_ID
-+};
- 
- static const WindowDesc _station_view_desc(
--	WDP_AUTO, 249, 110,
-+	WDP_AUTO, 249, 117,
- 	WC_STATION_VIEW, WC_NONE,
- 	WDF_UNCLICK_BUTTONS,
- 	_nested_station_view_widgets, lengthof(_nested_station_view_widgets)
-diff --git a/src/station_gui.h b/src/station_gui.h
-index b088f55..189032b 100644
---- a/src/station_gui.h
-+++ b/src/station_gui.h
-@@ -13,8 +13,11 @@
- #define STATION_GUI_H
- 
- #include "command_type.h"
-+#include "station_type.h"
- #include "tilearea_type.h"
- #include "window_type.h"
-+#include "cargo_type.h"
-+#include <set>
- 
- #include "widgets/station_widget.h"
- 
-@@ -31,4 +34,152 @@ void CheckRedrawStationCoverage(const Window *w);
- void ShowSelectStationIfNeeded(CommandContainer cmd, TileArea ta);
- void ShowSelectWaypointIfNeeded(CommandContainer cmd, TileArea ta);
- 
-+enum SortOrder {
-+	SO_DESCENDING,
-+	SO_ASCENDING
-+};
-+
-+class CargoDataEntry;
-+
-+enum CargoSortType {
-+	ST_AS_GROUPING,    ///< by the same principle the entries are being grouped
-+	ST_COUNT,          ///< by amount of cargo
-+	ST_STATION_STRING, ///< by station name
-+	ST_STATION_ID,     ///< by station id
-+	ST_CARGO_ID,       ///< by cargo id
-+};
-+
-+class CargoSorter {
-+public:
-+	CargoSorter(CargoSortType t = ST_STATION_ID, SortOrder o = SO_ASCENDING) : type(t), order(o) {}
-+	CargoSortType GetSortType() {return this->type;}
-+	bool operator()(const CargoDataEntry *cd1, const CargoDataEntry *cd2) const;
-+
-+private:
-+	CargoSortType type;
-+	SortOrder order;
-+
-+	template<class ID>
-+	bool SortId(ID st1, ID st2) const;
-+	bool SortCount(const CargoDataEntry *cd1, const CargoDataEntry *cd2) const;
-+	bool SortStation (StationID st1, StationID st2) const;
-+};
-+
-+typedef std::set<CargoDataEntry *, CargoSorter> CargoDataSet;
-+
-+/**
-+ * A cargo data entry representing one possible row in the station view window's
-+ * top part. Cargo data entries form a tree where each entry can have several
-+ * children. Parents keep track of the sums of their childrens' cargo counts.
-+ */
-+class CargoDataEntry {
-+public:
-+	CargoDataEntry();
-+	~CargoDataEntry();
-+
-+	/**
-+	 * Insert a new child or retrieve an existing child using a station ID as ID.
-+	 * @param station ID of the station for which an entry shall be created or retrieved
-+	 * @return a child entry associated with the given station.
-+	 */
-+	CargoDataEntry *InsertOrRetrieve(StationID station) {return this->InsertOrRetrieve<StationID>(station);}
-+
-+	/**
-+	 * Insert a new child or retrieve an existing child using a cargo ID as ID.
-+	 * @param cargo ID of the cargo for which an entry shall be created or retrieved
-+	 * @return a child entry associated with the given cargo.
-+	 */
-+	CargoDataEntry *InsertOrRetrieve(CargoID cargo) {return this->InsertOrRetrieve<CargoID>(cargo);}
-+
-+	void Update(uint count);
-+
-+	/**
-+	 * Remove a child associated with the given station.
-+	 * @param station ID of the station for which the child should be removed.
-+	 */
-+	void Remove(StationID station) {CargoDataEntry t(station); this->Remove(&t);}
-+
-+	/**
-+	 * Remove a child associated with the given cargo.
-+	 * @param cargo ID of the cargo for which the child should be removed.
-+	 */
-+	void Remove(CargoID cargo) {CargoDataEntry t(cargo); this->Remove(&t);}
-+
-+	/**
-+	 * Retrieve a child for the given station. Return NULL if it doesn't exist.
-+	 * @param station ID of the station the child we're looking for is associated with.
-+	 * @return a child entry for the given station or NULL.
-+	 */
-+	CargoDataEntry *Retrieve(StationID station) const {CargoDataEntry t(station); return this->Retrieve(this->children->find(&t));}
-+
-+	/**
-+	 * Retrieve a child for the given cargo. Return NULL if it doesn't exist.
-+	 * @param cargo ID of the cargo the child we're looking for is associated with.
-+	 * @return a child entry for the given cargo or NULL.
-+	 */
-+	CargoDataEntry *Retrieve(CargoID cargo) const {CargoDataEntry t(cargo);return this->Retrieve(this->children->find(&t));}
-+
-+	void Resort(CargoSortType type, SortOrder order);
-+
-+	/**
-+	 * Get the station ID for this entry.
-+	 */
-+	StationID GetStation() const {return this->station;}
-+
-+	/**
-+	 * Get the cargo ID for this entry.
-+	 */
-+	CargoID GetCargo() const {return this->cargo;}
-+
-+	/**
-+	 * Get the cargo count for this entry.
-+	 */
-+	uint GetCount() const {return this->count;}
-+
-+	/**
-+	 * Get the parent entry for this entry.
-+	 */
-+	CargoDataEntry *GetParent() const {return this->parent;}
-+
-+	/**
-+	 * Get the number of children for this entry.
-+	 */
-+	uint GetNumChildren() const {return this->num_children;}
-+
-+	/**
-+	 * Get an iterator pointing to the begin of the set of children.
-+	 */
-+	CargoDataSet::iterator Begin() const {return this->children->begin();}
-+
-+	/**
-+	 * Get an iterator pointing to the end of the set of children.
-+	 */
-+	CargoDataSet::iterator End() const {return this->children->end();}
-+
-+	void Clear();
-+private:
-+
-+	CargoDataEntry(StationID st, uint c, CargoDataEntry *p);
-+	CargoDataEntry(CargoID car, uint c, CargoDataEntry *p);
-+	CargoDataEntry(StationID st);
-+	CargoDataEntry(CargoID car);
-+
-+	CargoDataEntry *Retrieve(CargoDataSet::iterator i) const;
-+
-+	template<class ID>
-+	CargoDataEntry *InsertOrRetrieve(ID s);
-+
-+	void Remove(CargoDataEntry *comp);
-+	void IncrementSize();
-+
-+	CargoDataEntry *parent;   ///< the parent of this entry
-+	const union {
-+		StationID station;    ///< ID of the station this entry is associated with
-+		CargoID cargo;        ///< ID of the cargo this entry is associated with
-+	};
-+	uint num_children;        ///< the number of subentries belonging to this entry
-+	uint count;               ///< sum of counts of all children or amount of cargo for this entry
-+	CargoDataSet *children;   ///< the children of this entry
-+};
-+
- #endif /* STATION_GUI_H */
++				const StationCargoPacketMap *packets = st->goods[i].cargo.Packets();
+ 				for (StationCargoList::ConstIterator it(packets->begin()); it != packets->end(); it++) {
+ 					const CargoPacket *cp = *it;
+ 					if (cp->SourceStation() != station_id) {
 diff --git a/src/station_type.h b/src/station_type.h
 index b312bdd..82ee0ae 100644
 --- a/src/station_type.h
@@ -10650,7 +8863,7 @@ index b312bdd..82ee0ae 100644
  typedef SmallVector<Station *, 2> StationList;
  
 diff --git a/src/table/settings.ini b/src/table/settings.ini
-index 3a83433..4ce7824 100644
+index 3a83433..d9829ba 100644
 --- a/src/table/settings.ini
 +++ b/src/table/settings.ini
 @@ -513,6 +513,115 @@ guiflags = SGF_NO_NETWORK
@@ -10769,40 +8982,6 @@ index 3a83433..4ce7824 100644
  ; Vehicles
  
  [SDT_VAR]
-@@ -2418,6 +2527,33 @@ str      = STR_CONFIG_SETTING_EXPENSES_LAYOUT
- proc     = RedrawScreen
- 
- [SDTC_VAR]
-+var      = gui.station_gui_group_order
-+type     = SLE_UINT8
-+flags    = SLF_NOT_IN_SAVE | SLF_NO_NETWORK_SYNC
-+def      = 0
-+min      = 0
-+max      = 5
-+interval = 1
-+
-+[SDTC_VAR]
-+var      = gui.station_gui_sort_by
-+type     = SLE_UINT8
-+flags    = SLF_NOT_IN_SAVE | SLF_NO_NETWORK_SYNC
-+def      = 0
-+min      = 0
-+max      = 3
-+interval = 1
-+
-+[SDTC_VAR]
-+var      = gui.station_gui_sort_order
-+type     = SLE_UINT8
-+flags    = SLF_NOT_IN_SAVE | SLF_NO_NETWORK_SYNC
-+def      = 0
-+min      = 0
-+max      = 1
-+interval = 1
-+
-+[SDTC_VAR]
- var      = gui.missing_strings_threshold
- type     = SLE_UINT8
- flags    = SLF_NOT_IN_SAVE | SLF_NO_NETWORK_SYNC
 diff --git a/src/texteff.cpp b/src/texteff.cpp
 index 32062fc..1675930 100644
 --- a/src/texteff.cpp
@@ -10852,40 +9031,6 @@ index b9762c3..9ef74c1 100644
 +void ShowFeederIncomeAnimation(int x, int y, int z, Money transfer, Money income);
  
  #endif /* TEXTEFF_HPP */
-diff --git a/src/toolbar_gui.cpp b/src/toolbar_gui.cpp
-index de1fb73..31be34a 100644
---- a/src/toolbar_gui.cpp
-+++ b/src/toolbar_gui.cpp
-@@ -39,6 +39,7 @@
- #include "smallmap_gui.h"
- #include "graph_gui.h"
- #include "textbuf_gui.h"
-+#include "linkgraph_gui.h"
- #include "newgrf_debug.h"
- #include "hotkeys.h"
- #include "engine_base.h"
-@@ -411,10 +412,11 @@ static CallBackFunction MenuClickSaveLoad(int index = 0)
- enum MapMenuEntries {
- 	MME_SHOW_SMALLMAP        = 0,
- 	MME_SHOW_EXTRAVIEWPORTS,
-+	MME_SHOW_LINKGRAPH,
- 	MME_SHOW_SIGNLISTS,
- 	MME_SHOW_TOWNDIRECTORY,    ///< This entry is only used in Editor mode
--	MME_MENUCOUNT_NORMAL     = 3,
--	MME_MENUCOUNT_EDITOR     = 4,
-+	MME_MENUCOUNT_NORMAL     = 4,
-+	MME_MENUCOUNT_EDITOR     = 5,
- };
- 
- static CallBackFunction ToolbarMapClick(Window *w)
-@@ -440,6 +442,7 @@ static CallBackFunction MenuClickMap(int index)
- 	switch (index) {
- 		case MME_SHOW_SMALLMAP:       ShowSmallMap();            break;
- 		case MME_SHOW_EXTRAVIEWPORTS: ShowExtraViewPortWindow(); break;
-+		case MME_SHOW_LINKGRAPH:      ShowLinkGraphLegend();     break;
- 		case MME_SHOW_SIGNLISTS:      ShowSignList();            break;
- 		case MME_SHOW_TOWNDIRECTORY:  if (_game_mode == GM_EDITOR) ShowTownDirectory(); break;
- 	}
 diff --git a/src/train_cmd.cpp b/src/train_cmd.cpp
 index 44e8d9e..b0f96ad 100644
 --- a/src/train_cmd.cpp
@@ -11218,233 +9363,6 @@ index 0e4cefc..171a48c 100644
  				u->cargo_cap = mail_capacity;
  				u->cargo.Truncate(mail_capacity);
  			}
-diff --git a/src/viewport.cpp b/src/viewport.cpp
-index 2388443..39c2a87 100644
---- a/src/viewport.cpp
-+++ b/src/viewport.cpp
-@@ -45,6 +45,7 @@
- #include "window_func.h"
- #include "tilehighlight_func.h"
- #include "window_gui.h"
-+#include "linkgraph_gui.h"
- 
- #include "table/strings.h"
- 
-@@ -213,6 +214,8 @@ void InitializeWindowViewport(Window *w, int x, int y,
- 	vp->dest_scrollpos_x = pt.x;
- 	vp->dest_scrollpos_y = pt.y;
- 
-+	vp->overlay = NULL;
-+
- 	w->viewport = vp;
- 	vp->virtual_left = 0;//pt.x;
- 	vp->virtual_top = 0;//pt.y;
-@@ -1361,22 +1364,8 @@ static void ViewportDrawBoundingBoxes(const ParentSpriteToSortVector *psd)
- 	}
- }
- 
--static void ViewportDrawStrings(DrawPixelInfo *dpi, const StringSpriteToDrawVector *sstdv)
-+static void ViewportDrawStrings(ZoomLevel zoom, const StringSpriteToDrawVector *sstdv)
- {
--	DrawPixelInfo dp;
--	ZoomLevel zoom;
--
--	_cur_dpi = &dp;
--	dp = *dpi;
--
--	zoom = dp.zoom;
--	dp.zoom = ZOOM_LVL_NORMAL;
--
--	dp.left   = UnScaleByZoom(dp.left,   zoom);
--	dp.top    = UnScaleByZoom(dp.top,    zoom);
--	dp.width  = UnScaleByZoom(dp.width,  zoom);
--	dp.height = UnScaleByZoom(dp.height, zoom);
--
- 	const StringSpriteToDraw *ssend = sstdv->End();
- 	for (const StringSpriteToDraw *ss = sstdv->Begin(); ss != ssend; ++ss) {
- 		TextColour colour = TC_BLACK;
-@@ -1458,7 +1447,24 @@ void ViewportDoDraw(const ViewPort *vp, int left, int top, int right, int bottom
- 
- 	if (_draw_bounding_boxes) ViewportDrawBoundingBoxes(&_vd.parent_sprites_to_sort);
- 
--	if (_vd.string_sprites_to_draw.Length() != 0) ViewportDrawStrings(&_vd.dpi, &_vd.string_sprites_to_draw);
-+	DrawPixelInfo dp = _vd.dpi;
-+	ZoomLevel zoom = _vd.dpi.zoom;
-+	dp.zoom = ZOOM_LVL_NORMAL;
-+	dp.width = UnScaleByZoom(dp.width, zoom);
-+	dp.height = UnScaleByZoom(dp.height, zoom);
-+	_cur_dpi = &dp;
-+
-+	/* translate to window coordinates */
-+	dp.left = x;
-+	dp.top = y;
-+
-+	if (vp->overlay != NULL) vp->overlay->Draw(&dp);
-+
-+	/* translate back to world coordinates */
-+	dp.left = UnScaleByZoom(_vd.dpi.left, zoom);
-+	dp.top = UnScaleByZoom(_vd.dpi.top, zoom);
-+
-+	if (_vd.string_sprites_to_draw.Length() != 0) ViewportDrawStrings(zoom, &_vd.string_sprites_to_draw);
- 
- 	_cur_dpi = old_dpi;
- 
-@@ -1574,6 +1580,7 @@ void UpdateViewportPosition(Window *w)
- 		int delta_x = w->viewport->dest_scrollpos_x - w->viewport->scrollpos_x;
- 		int delta_y = w->viewport->dest_scrollpos_y - w->viewport->scrollpos_y;
- 
-+		bool update_overlay = false;
- 		if (delta_x != 0 || delta_y != 0) {
- 			if (_settings_client.gui.smooth_scroll) {
- 				int max_scroll = ScaleByMapSize1D(512 * ZOOM_LVL_BASE);
-@@ -1584,11 +1591,14 @@ void UpdateViewportPosition(Window *w)
- 				w->viewport->scrollpos_x = w->viewport->dest_scrollpos_x;
- 				w->viewport->scrollpos_y = w->viewport->dest_scrollpos_y;
- 			}
-+			update_overlay = (w->viewport->scrollpos_x == w->viewport->dest_scrollpos_x &&
-+								w->viewport->scrollpos_y == w->viewport->dest_scrollpos_y);
- 		}
- 
- 		ClampViewportToMap(vp, w->viewport->scrollpos_x, w->viewport->scrollpos_y);
- 
- 		SetViewportPosition(w, w->viewport->scrollpos_x, w->viewport->scrollpos_y);
-+		if (update_overlay) RebuildViewportOverlay(w);
- 	}
- }
- 
-@@ -1948,6 +1958,15 @@ bool HandleViewportClicked(const ViewPort *vp, int x, int y)
- 	return result;
- }
- 
-+void RebuildViewportOverlay(Window *w)
-+{
-+	if (w->viewport->overlay != NULL &&
-+			w->viewport->overlay->GetCompanyMask() != 0 &&
-+			w->viewport->overlay->GetCargoMask() != 0) {
-+		w->viewport->overlay->RebuildCache();
-+		w->SetDirty();
-+	}
-+}
- 
- /**
-  * Scrolls the viewport in a window to a given location.
-@@ -1971,6 +1990,7 @@ bool ScrollWindowTo(int x, int y, int z, Window *w, bool instant)
- 	if (instant) {
- 		w->viewport->scrollpos_x = pt.x;
- 		w->viewport->scrollpos_y = pt.y;
-+		RebuildViewportOverlay(w);
- 	}
- 
- 	w->viewport->dest_scrollpos_x = pt.x;
-@@ -2927,3 +2947,15 @@ void ResetObjectToPlace()
- {
- 	SetObjectToPlace(SPR_CURSOR_MOUSE, PAL_NONE, HT_NONE, WC_MAIN_WINDOW, 0);
- }
-+
-+Point GetViewportStationMiddle(const ViewPort *vp, const Station *st)
-+{
-+	int x = TileX(st->xy) * TILE_SIZE;
-+	int y = TileY(st->xy) * TILE_SIZE;
-+	int z = GetSlopePixelZ(Clamp(x, 0, MapSizeX() * TILE_SIZE - 1), Clamp(y, 0, MapSizeY() * TILE_SIZE - 1));
-+
-+	Point p = RemapCoords(x, y, z);
-+	p.x = UnScaleByZoom(p.x - vp->virtual_left, vp->zoom) + vp->left;
-+	p.y = UnScaleByZoom(p.y - vp->virtual_top, vp->zoom) + vp->top;
-+	return p;
-+}
-diff --git a/src/viewport_func.h b/src/viewport_func.h
-index dba28bb..7d86dda 100644
---- a/src/viewport_func.h
-+++ b/src/viewport_func.h
-@@ -16,6 +16,7 @@
- #include "viewport_type.h"
- #include "window_type.h"
- #include "tile_type.h"
-+#include "station_type.h"
- 
- static const int TILE_HEIGHT_STEP = 50; ///< One Z unit tile height difference is displayed as 50m.
- 
-@@ -67,6 +68,8 @@ void ViewportDoDraw(const ViewPort *vp, int left, int top, int right, int bottom
- bool ScrollWindowToTile(TileIndex tile, Window *w, bool instant = false);
- bool ScrollWindowTo(int x, int y, int z, Window *w, bool instant = false);
- 
-+void RebuildViewportOverlay(Window *w);
-+
- bool ScrollMainWindowToTile(TileIndex tile, bool instant = false);
- bool ScrollMainWindowTo(int x, int y, int z = -1, bool instant = false);
- 
-@@ -76,4 +79,6 @@ extern Point _tile_fract_coords;
- 
- void MarkTileDirtyByTile(TileIndex tile);
- 
-+Point GetViewportStationMiddle(const ViewPort *vp, const Station *st);
-+
- #endif /* VIEWPORT_FUNC_H */
-diff --git a/src/viewport_type.h b/src/viewport_type.h
-index cd8ebae..d95ede4 100644
---- a/src/viewport_type.h
-+++ b/src/viewport_type.h
-@@ -15,6 +15,8 @@
- #include "zoom_type.h"
- #include "strings_type.h"
- 
-+class LinkGraphOverlay;
-+
- /**
-  * Data structure for viewport, display of a part of the world
-  */
-@@ -30,6 +32,7 @@ struct ViewPort {
- 	int virtual_height;  ///< height << zoom
- 
- 	ZoomLevel zoom; ///< The zoom level of the viewport.
-+	LinkGraphOverlay *overlay;
- };
- 
- /** Margings for the viewport sign */
-diff --git a/src/widgets/link_graph_legend_widget.h b/src/widgets/link_graph_legend_widget.h
-new file mode 100644
-index 0000000..ee002df
---- /dev/null
-+++ b/src/widgets/link_graph_legend_widget.h
-@@ -0,0 +1,38 @@
-+/* $Id$ */
-+
-+/*
-+ * This file is part of OpenTTD.
-+ * OpenTTD is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, version 2.
-+ * OpenTTD is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-+ * See the GNU General Public License for more details. You should have received a copy of the GNU General Public License along with OpenTTD. If not, see <http://www.gnu.org/licenses/>.
-+ */
-+
-+/** @file linkgraph_legend_widget.h Types related to the linkgraph_legend widgets. */
-+
-+#ifndef WIDGETS_LINKGRAPH_LEGEND_WIDGET_H
-+#define WIDGETS_LINKGRAPH_LEGEND_WIDGET_H
-+
-+/** Widgets of the WC_LINKGRAPH_LEGEND. */
-+
-+enum LinkGraphLegendWidgets {
-+	WID_LGL_CAPTION,           ///< Caption widget.
-+	WID_LGL_SATURATION,        ///< Saturation legend.
-+	WID_LGL_SATURATION_FIRST,
-+
-+	/* lengthof(LinkGraphOverlay::LINK_COLOURS) - 1 == 11
-+	 * There's no way to easily get that number here, though.
-+	 */
-+	WID_LGL_SATURATION_LAST = WID_LGL_SATURATION_FIRST + 11, 
-+	WID_LGL_COMPANIES,         ///< Company selection widget.
-+	WID_LGL_COMPANY_FIRST,
-+	WID_LGL_COMPANY_LAST = WID_LGL_COMPANY_FIRST + MAX_COMPANIES - 1,
-+	WID_LGL_COMPANIES_ALL,
-+	WID_LGL_COMPANIES_NONE,
-+	WID_LGL_CARGOES,            ///< Cargo selection widget.
-+	WID_LGL_CARGO_FIRST,
-+	WID_LGL_CARGO_LAST = WID_LGL_CARGO_FIRST + NUM_CARGO - 1,
-+	WID_LGL_CARGOES_ALL,
-+	WID_LGL_CARGOES_NONE,
-+};
-+
-+#endif /* WIDGETS_LINKGRAPH_LEGEND_WIDGET_H */
 diff --git a/src/widgets/smallmap_widget.h b/src/widgets/smallmap_widget.h
 index 6476b8f..0b1daea 100644
 --- a/src/widgets/smallmap_widget.h
@@ -11463,35 +9381,3 @@ index 6476b8f..0b1daea 100644
  	WID_SM_ROUTES,         ///< Button to select the routes view.
  	WID_SM_VEGETATION,     ///< Button to select the vegetation view.
  	WID_SM_OWNERS,         ///< Button to select the owners view.
-diff --git a/src/widgets/station_widget.h b/src/widgets/station_widget.h
-index 4d52049..dd2f746 100644
---- a/src/widgets/station_widget.h
-+++ b/src/widgets/station_widget.h
-@@ -15,6 +15,10 @@
- /** Widgets of the #StationViewWindow class. */
- enum StationViewWidgets {
- 	WID_SV_CAPTION,            ///< Caption of the window.
-+	WID_SV_SORT_ORDER,         ///< 'Sort order' button
-+	WID_SV_SORT_BY,            ///< 'Sort by' button
-+	WID_SV_GROUP,              ///< label for "group by"
-+	WID_SV_GROUP_BY,           ///< 'Group by' button
- 	WID_SV_WAITING,            ///< List of waiting cargo.
- 	WID_SV_SCROLLBAR,          ///< Scrollbar.
- 	WID_SV_ACCEPT_RATING_LIST, ///< List of accepted cargoes / rating of cargoes.
-diff --git a/src/window_type.h b/src/window_type.h
-index 921e71d..ef275fc 100644
---- a/src/window_type.h
-+++ b/src/window_type.h
-@@ -665,6 +665,12 @@ enum WindowClass {
- 	 */
- 	WC_SPRITE_ALIGNER,
- 
-+	/**
-+	 * Linkgraph legend; Window numbers:
-+	 *   - 0 = #LinkGraphWidgets
-+	 */
-+	WC_LINKGRAPH_LEGEND,
-+
- 	WC_INVALID = 0xFFFF, ///< Invalid window.
- };
- 

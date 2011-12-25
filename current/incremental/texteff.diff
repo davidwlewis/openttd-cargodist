@@ -1,8 +1,8 @@
 diff --git a/src/economy.cpp b/src/economy.cpp
-index 5af0d78..6441d07 100644
+index 74f5552..c0123b8 100644
 --- a/src/economy.cpp
 +++ b/src/economy.cpp
-@@ -1083,21 +1083,23 @@ CargoPayment::~CargoPayment()
+@@ -1085,21 +1085,23 @@ CargoPayment::~CargoPayment()
  
  	this->front->cargo_payment = NULL;
  
@@ -35,7 +35,7 @@ index 5af0d78..6441d07 100644
  	}
  
  	cur_company.Restore();
-@@ -1139,7 +1141,7 @@ Money CargoPayment::PayTransfer(const CargoPacket *cp, uint count)
+@@ -1141,7 +1143,7 @@ Money CargoPayment::PayTransfer(const CargoPacket *cp, uint count)
  
  	profit = profit * _settings_game.economy.feeder_payment_share / 100;
  
@@ -63,10 +63,10 @@ index 742d018..60b0964 100644
  	/* Unsaved variables */
  	Company *owner;            ///< The owner of the vehicle
 diff --git a/src/lang/english.txt b/src/lang/english.txt
-index 565568f..ea7f40c 100644
+index e28d328..44ceee5 100644
 --- a/src/lang/english.txt
 +++ b/src/lang/english.txt
-@@ -3520,6 +3520,10 @@ STR_INCOME_FLOAT_INCOME_SMALL                                   :{TINY_FONT}{GRE
+@@ -3551,6 +3551,10 @@ STR_INCOME_FLOAT_INCOME_SMALL                                   :{TINY_FONT}{GRE
  STR_INCOME_FLOAT_INCOME                                         :{GREEN}Income: {CURRENCY_LONG}
  STR_FEEDER_TINY                                                 :{TINY_FONT}{YELLOW}Transfer: {CURRENCY_LONG}
  STR_FEEDER                                                      :{YELLOW}Transfer: {CURRENCY_LONG}
@@ -78,7 +78,7 @@ index 565568f..ea7f40c 100644
  STR_MESSAGE_ESTIMATED_INCOME                                    :{WHITE}Estimated Income: {CURRENCY_LONG}
  
 diff --git a/src/misc_gui.cpp b/src/misc_gui.cpp
-index 1256f54..6625ebf 100644
+index 1bd488a..0fa2120 100644
 --- a/src/misc_gui.cpp
 +++ b/src/misc_gui.cpp
 @@ -545,17 +545,28 @@ void ShowCostOrIncomeAnimation(int x, int y, int z, Money cost)

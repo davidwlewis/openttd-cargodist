@@ -1,8 +1,8 @@
 diff --git a/projects/openttd_vs100.vcxproj b/projects/openttd_vs100.vcxproj
-index ff0ec9a..323a74e 100644
+index 40fb5a6..0331c38 100644
 --- a/projects/openttd_vs100.vcxproj
 +++ b/projects/openttd_vs100.vcxproj
-@@ -461,6 +461,8 @@
+@@ -465,6 +465,8 @@
      <ClInclude Include="..\src\map_func.h" />
      <ClInclude Include="..\src\map_type.h" />
      <ClInclude Include="..\src\mixer.h" />
@@ -12,10 +12,10 @@ index ff0ec9a..323a74e 100644
      <ClInclude Include="..\src\network\network_admin.h" />
      <ClInclude Include="..\src\network\network_base.h" />
 diff --git a/projects/openttd_vs100.vcxproj.filters b/projects/openttd_vs100.vcxproj.filters
-index a90e8d8..b599bab 100644
+index 0170fdb..7aaca3e 100644
 --- a/projects/openttd_vs100.vcxproj.filters
 +++ b/projects/openttd_vs100.vcxproj.filters
-@@ -606,6 +606,12 @@
+@@ -624,6 +624,12 @@
      <ClInclude Include="..\src\mixer.h">
        <Filter>Header Files</Filter>
      </ClInclude>
@@ -29,10 +29,10 @@ index a90e8d8..b599bab 100644
        <Filter>Header Files</Filter>
      </ClInclude>
 diff --git a/projects/openttd_vs80.vcproj b/projects/openttd_vs80.vcproj
-index f60e5fa..de845c1 100644
+index 6eb7cfc..e89f525 100644
 --- a/projects/openttd_vs80.vcproj
 +++ b/projects/openttd_vs80.vcproj
-@@ -1119,6 +1119,14 @@
+@@ -1135,6 +1135,14 @@
  				>
  			</File>
  			<File
@@ -48,10 +48,10 @@ index f60e5fa..de845c1 100644
  				>
  			</File>
 diff --git a/projects/openttd_vs90.vcproj b/projects/openttd_vs90.vcproj
-index 636b9f1..7636fd5 100644
+index 001c01c..1cf4027 100644
 --- a/projects/openttd_vs90.vcproj
 +++ b/projects/openttd_vs90.vcproj
-@@ -1116,6 +1116,14 @@
+@@ -1132,6 +1132,14 @@
  				>
  			</File>
  			<File
@@ -67,10 +67,10 @@ index 636b9f1..7636fd5 100644
  				>
  			</File>
 diff --git a/source.list b/source.list
-index 1de4d68..bf3dd8f 100644
+index 50020c9..3d9576a 100644
 --- a/source.list
 +++ b/source.list
-@@ -194,6 +194,8 @@ livery.h
+@@ -198,6 +198,8 @@ livery.h
  map_func.h
  map_type.h
  mixer.h
@@ -115,7 +115,7 @@ index 0000000..22c3ccc
 +}
 diff --git a/src/moving_average.h b/src/moving_average.h
 new file mode 100644
-index 0000000..3a4d2eb
+index 0000000..224c1a0
 --- /dev/null
 +++ b/src/moving_average.h
 @@ -0,0 +1,78 @@
@@ -153,7 +153,7 @@ index 0000000..3a4d2eb
 +	 * Create a moving average.
 +	 * @param length Length to be used.
 +	 */
-+	FORCEINLINE MovingAverage(uint length) : length(length)
++	inline MovingAverage(uint length) : length(length)
 +	{
 +		assert(this->length > 0);
 +	}
@@ -162,7 +162,7 @@ index 0000000..3a4d2eb
 +	 * Get the length of this moving average.
 +	 * @return Length.
 +	 */
-+	FORCEINLINE uint Length() const
++	inline uint Length() const
 +	{
 +		return this->length;
 +	}
@@ -177,7 +177,7 @@ index 0000000..3a4d2eb
 +	 * @param value Raw moving average.
 +	 * @return 30 "length unit" average.
 +	 */
-+	FORCEINLINE Tvalue Monthly(const Tvalue &value) const
++	inline Tvalue Monthly(const Tvalue &value) const
 +	{
 +		return (value * 30) / (this->length);
 +	}
@@ -187,7 +187,7 @@ index 0000000..3a4d2eb
 +	 * @param value Moving average value to be decreased.
 +	 * @return Decreased value.
 +	 */
-+	FORCEINLINE Tvalue &Decrease(Tvalue &value) const
++	inline Tvalue &Decrease(Tvalue &value) const
 +	{
 +		return value = (value * this->length) / (this->length + 1);
 +	}
