@@ -39,6 +39,7 @@ fi
 case $apilc in
 	template) apiuc="Template" ;;
 	ai) apiuc="AI" ;;
+	game) apiuc="GS" ;;
 	*) echo "Unknown API type."; exit 1 ;;
 esac
 
@@ -105,7 +106,7 @@ functions=``
 
 echo "
 { }
-/.hpp.sq/ { next }
+/.hpp.sq/ { if (match(\$0, \"template\")) print \$0; next }
 /SQ${apiuc}Controller_Register/ { print \$0; next }
 /SQ${apiuc}.*_Register/ { next }
 

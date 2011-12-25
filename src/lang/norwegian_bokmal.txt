@@ -350,7 +350,6 @@ STR_SCENEDIT_FILE_MENU_QUIT                                     :Avslutt
 STR_SETTINGS_MENU_GAME_OPTIONS                                  :Spillinnstillinger
 STR_SETTINGS_MENU_DIFFICULTY_SETTINGS                           :Vanskelighetsgrad
 STR_SETTINGS_MENU_CONFIG_SETTINGS                               :Avanserte innstillinger
-STR_SETTINGS_MENU_AI_SETTINGS                                   :Instillinger for kunstig intelligens
 STR_SETTINGS_MENU_NEWGRF_SETTINGS                               :NewGRF-innstillinger
 STR_SETTINGS_MENU_TRANSPARENCY_OPTIONS                          :Instillinger for gjennomsiktighet
 STR_SETTINGS_MENU_TOWN_NAMES_DISPLAYED                          :Vis bynavn
@@ -746,6 +745,8 @@ STR_NEWS_MESSAGE_TYPE_NEW_VEHICLES                              :{YELLOW}Nye kj�
 STR_NEWS_MESSAGE_TYPE_CHANGES_OF_CARGO_ACCEPTANCE               :{YELLOW}Endringer i godtatte varer
 STR_NEWS_MESSAGE_TYPE_SUBSIDIES                                 :{YELLOW}Subsidier
 STR_NEWS_MESSAGE_TYPE_GENERAL_INFORMATION                       :{YELLOW}Generell informasjon
+
+STR_NEWS_CUSTOM_ITEM                                            :{BIG_FONT}{BLACK}{STRING}
 
 STR_NEWS_FIRST_TRAIN_ARRIVAL                                    :{BIG_FONT}{BLACK}Borgerne jubler . . .{}Første tog ankommer {STATION}!
 STR_NEWS_FIRST_BUS_ARRIVAL                                      :{BIG_FONT}{BLACK}Innbyggerne jubler . . .{}Første buss ankommer {STATION}!
@@ -1351,6 +1352,8 @@ STR_CONFIG_SETTING_REVERSE_AT_SIGNALS                           :{LTBLUE}Automat
 
 STR_CONFIG_SETTING_QUERY_CAPTION                                :{WHITE}Endre verdi
 
+# Config errors
+
 # Intro window
 STR_INTRO_CAPTION                                               :{WHITE}OpenTTD {REV}
 
@@ -1366,7 +1369,6 @@ STR_INTRO_DIFFICULTY                                            :{BLACK}Vanskeli
 STR_INTRO_ADVANCED_SETTINGS                                     :{BLACK}Avanserte Innstillinger
 STR_INTRO_NEWGRF_SETTINGS                                       :{BLACK}NewGRF-innstillinger
 STR_INTRO_ONLINE_CONTENT                                        :{BLACK}Se etter innhold på nettet
-STR_INTRO_AI_SETTINGS                                           :{BLACK}AI-innstillinger
 STR_INTRO_QUIT                                                  :{BLACK}Avslutt
 
 STR_INTRO_TOOLTIP_NEW_GAME                                      :{BLACK}Start et nytt spill. CTRL+klikk hopper over kartkonfigurering
@@ -1386,7 +1388,6 @@ STR_INTRO_TOOLTIP_DIFFICULTY_OPTIONS                            :{BLACK}Vis vans
 STR_INTRO_TOOLTIP_ADVANCED_SETTINGS                             :{BLACK}Vis avanserte innstillinger
 STR_INTRO_TOOLTIP_NEWGRF_SETTINGS                               :{BLACK}Vis NewGRF-instillinger
 STR_INTRO_TOOLTIP_ONLINE_CONTENT                                :{BLACK}Se etter nytt og oppdatert innhold for nedlasting
-STR_INTRO_TOOLTIP_AI_SETTINGS                                   :{BLACK}Vis AI-instillinger
 STR_INTRO_TOOLTIP_QUIT                                          :{BLACK}Avslutt 'OpenTTD'
 
 
@@ -1787,6 +1788,7 @@ STR_NETWORK_SERVER_MESSAGE_GAME_PAUSED                          :Spill satt på 
 STR_NETWORK_SERVER_MESSAGE_GAME_STILL_PAUSED_1                  :Spillet står fortsatt på pause ({STRING})
 STR_NETWORK_SERVER_MESSAGE_GAME_STILL_PAUSED_2                  :Spillet står fortsatt på pause ({STRING}, {STRING})
 STR_NETWORK_SERVER_MESSAGE_GAME_STILL_PAUSED_3                  :Spillet står fortsatt på pause ({STRING}, {STRING}, {STRING})
+STR_NETWORK_SERVER_MESSAGE_GAME_STILL_PAUSED_4                  :Spillet er fortsatt på pause ({STRING}, {STRING}, {STRING}, {STRING})
 STR_NETWORK_SERVER_MESSAGE_GAME_UNPAUSED                        :Spillet fortsetter ({STRING})
 STR_NETWORK_SERVER_MESSAGE_GAME_REASON_NOT_ENOUGH_PLAYERS       :ikke nok spillere
 STR_NETWORK_SERVER_MESSAGE_GAME_REASON_CONNECTING_CLIENTS       :kobler til klienter
@@ -1865,6 +1867,7 @@ STR_CONTENT_ERROR_COULD_NOT_DOWNLOAD_CONNECTION_LOST            :{WHITE}...{NBSP
 STR_CONTENT_ERROR_COULD_NOT_DOWNLOAD_FILE_NOT_WRITABLE          :{WHITE}...{NBSP}kunne ikke skrive til fil
 STR_CONTENT_ERROR_COULD_NOT_EXTRACT                             :{WHITE}Kunne ikke pakke ut den nedlastede filen
 
+
 # Transparency settings window
 STR_TRANSPARENCY_CAPTION                                        :{WHITE}Instillinger for gjennomsiktighet
 STR_TRANSPARENT_SIGNS_TOOLTIP                                   :{BLACK}Gjennomsiktighet for stasjonsskilt. Ctrl-klikk for å låse.
@@ -1910,6 +1913,7 @@ STR_RAIL_TOOLBAR_TOOLTIP_BUILD_RAILROAD_BRIDGE                  :{BLACK}Bygg jer
 STR_RAIL_TOOLBAR_TOOLTIP_BUILD_RAILROAD_TUNNEL                  :{BLACK}Bygg jernbanetunnel. Shift slår av og på kostnadsestimat.
 STR_RAIL_TOOLBAR_TOOLTIP_TOGGLE_BUILD_REMOVE_FOR                :{BLACK}Veksle mellom bygging/fjerning av jernbanespor, signaler, kontrollpunkt og stasjoner. Hold inne Ctrl for i tillegg å fjerne jernbanespor fra kontrollpunkt og stasjoner.
 STR_RAIL_TOOLBAR_TOOLTIP_CONVERT_RAIL                           :{BLACK}Konverter/oppgrader jernbanetypen. Shift slår av og på kostnadsestimat.
+
 
 # Rail depot construction window
 STR_BUILD_DEPOT_TRAIN_ORIENTATION_CAPTION                       :{WHITE}Togstallens retning
@@ -2181,6 +2185,7 @@ STR_LAI_CLEAR_DESCRIPTION_FIELDS                                :Jorder
 STR_LAI_CLEAR_DESCRIPTION_SNOW_COVERED_LAND                     :Snødekket land
 STR_LAI_CLEAR_DESCRIPTION_DESERT                                :Ørken
 
+
 STR_LAI_ROAD_DESCRIPTION_ROAD                                   :Vei
 STR_LAI_ROAD_DESCRIPTION_ROAD_WITH_STREETLIGHTS                 :Vei med gatelykter
 STR_LAI_ROAD_DESCRIPTION_TREE_LINED_ROAD                        :Aveny
@@ -2361,7 +2366,9 @@ STR_NEWGRF_SETTINGS_MOVEUP                                      :{BLACK}Flytt op
 STR_NEWGRF_SETTINGS_MOVEUP_TOOLTIP                              :{BLACK}Flytt den valgte NewGRF-filen oppover listen
 STR_NEWGRF_SETTINGS_MOVEDOWN                                    :{BLACK}Flytt ned
 STR_NEWGRF_SETTINGS_MOVEDOWN_TOOLTIP                            :{BLACK}Flytt den valgte NewGRF-filen nedover listen
-STR_NEWGRF_SETTINGS_FILE_TOOLTIP                                :{BLACK}En liste over NewGRF-filene som er installert. Klikk på en fil for å forandre dens parametre
+STR_NEWGRF_SETTINGS_FILE_TOOLTIP                                :{BLACK}En liste over NewGRF-filene som er installert.
+
+# Additional textfiles accompanying NewGRFs
 
 STR_NEWGRF_SETTINGS_SET_PARAMETERS                              :{BLACK}Sett parametre
 STR_NEWGRF_SETTINGS_TOGGLE_PALETTE                              :{BLACK}Vis/skjul palett
@@ -2384,7 +2391,6 @@ STR_NEWGRF_SETTINGS_NOT_FOUND                                   :{RED}Matchende 
 STR_NEWGRF_SETTINGS_DISABLED                                    :{RED}Deaktivert
 STR_NEWGRF_SETTINGS_INCOMPATIBLE                                :{RED}Ukompatibelt med denne versjonen av OpenTTD
 
-
 # NewGRF parameters window
 STR_NEWGRF_PARAMETERS_CAPTION                                   :{WHITE}Forandre NewGRF-parametre
 STR_NEWGRF_PARAMETERS_CLOSE                                     :{BLACK}Nær
@@ -2393,6 +2399,8 @@ STR_NEWGRF_PARAMETERS_RESET_TOOLTIP                             :{BLACK}Sett all
 STR_NEWGRF_PARAMETERS_DEFAULT_NAME                              :Parameter {NUM}
 STR_NEWGRF_PARAMETERS_SETTING                                   :{STRING}: {ORANGE}{STRING}
 STR_NEWGRF_PARAMETERS_NUM_PARAM                                 :{LTBLUE}Antall parametere: {ORANGE}{NUM}
+
+# NewGRF textfile window
 
 # NewGRF inspect window
 STR_NEWGRF_INSPECT_CAPTION                                      :{WHITE}Inspiser - {STRING}
@@ -2553,6 +2561,10 @@ STR_LOCAL_AUTHORITY_ACTION_TOOLTIP_NEW_BUILDINGS                :{YELLOW}Finansi
 STR_LOCAL_AUTHORITY_ACTION_TOOLTIP_EXCLUSIVE_TRANSPORT          :{YELLOW}Kjøp ett års ekslusive transportrettigheter i byen. Bystyret vil kun tillate passasjerer og varer å bruke dine transporttjenester.{}Kostnad: {CURRENCY_LONG}
 STR_LOCAL_AUTHORITY_ACTION_TOOLTIP_BRIBE                        :{YELLOW}Du kan bestikke bystyret for å forbedre vurderingen av firmaet ditt, men du risikerer å bli bøtelagt hvis du blir oppdaget.{}Kostnad: {CURRENCY_LONG}
 
+# Goal window
+STR_GOALS_TEXT                                                  :{ORANGE}{STRING}
+STR_GOALS_NONE                                                  :{ORANGE}- Ingen -
+
 # Subsidies window
 STR_SUBSIDIES_CAPTION                                           :{WHITE}Subsidier
 STR_SUBSIDIES_OFFERED_TITLE                                     :{BLACK}Subsidietilbud:
@@ -2687,6 +2699,8 @@ STR_COMPANY_VIEW_COMPANY_NAME_QUERY_CAPTION                     :Firmanavn
 STR_COMPANY_VIEW_PRESIDENT_S_NAME_QUERY_CAPTION                 :Sjefens navn
 
 STR_BUY_COMPANY_MESSAGE                                         :{WHITE}Vi ser etter et transportfirma som er villig til å overta oss.{}{}Vil du kjøpe {COMPANY} for {CURRENCY_LONG}?
+
+# Company infrastructure window
 
 # Industry directory
 STR_INDUSTRY_DIRECTORY_CAPTION                                  :{WHITE}Industrier
@@ -3232,6 +3246,7 @@ STR_ORDER_STOP_LOCATION_NEAR_END                                :[nær slutten]
 STR_ORDER_STOP_LOCATION_MIDDLE                                  :[midten]
 STR_ORDER_STOP_LOCATION_FAR_END                                 :[enden]
 
+
 STR_ORDER_CONDITIONAL_UNCONDITIONAL                             :Hopp til ordre {COMMA}
 STR_ORDER_CONDITIONAL_NUM                                       :Hopp til ordre {COMMA} når {STRING} {STRING} {COMMA}
 STR_ORDER_CONDITIONAL_TRUE_FALSE                                :Hopp til ordre {COMMA} når {STRING} {STRING}
@@ -3298,7 +3313,7 @@ STR_DATE_YEAR_TOOLTIP                                           :{BLACK}Velg år
 STR_AI_DEBUG                                                    :{WHITE}AI-feilsøking
 STR_AI_DEBUG_NAME_AND_VERSION                                   :{BLACK}{STRING} (v{NUM})
 STR_AI_DEBUG_NAME_TOOLTIP                                       :{BLACK}Navnet til AIen
-STR_AI_DEBUG_SETTINGS                                           :{BLACK}AI-innstillinger
+STR_AI_DEBUG_SETTINGS                                           :{BLACK}Iinnstillinger
 STR_AI_DEBUG_SETTINGS_TOOLTIP                                   :{BLACK}Endre AI-innstillinger
 STR_AI_DEBUG_RELOAD                                             :{BLACK}Last inn AI på nytt
 STR_AI_DEBUG_RELOAD_TOOLTIP                                     :{BLACK}Slå av AI, last skript på nytt, og start AI på nytt
@@ -3312,14 +3327,12 @@ STR_AI_DEBUG_CONTINUE                                           :{BLACK}Fortsett
 STR_AI_DEBUG_CONTINUE_TOOLTIP                                   :{BLACK}Slå av pause og fortsett AIen
 STR_AI_DEBUG_SELECT_AI_TOOLTIP                                  :{BLACK}Vis feilsøkingsresultater fra denne AIen
 
-
 STR_ERROR_AI_NO_AI_FOUND                                        :Ingen passende AI ble funnet.{}Denne AIen er en plassholder og vil ikke gjøre noe.{}Du kan laste ned flere AIer fra nettet med spillets nedlastingssystem.
 STR_ERROR_AI_PLEASE_REPORT_CRASH                                :{WHITE}En av AIene krasjet. Vennligst rapporter dette til forfatteren av AIen med en skjermdump av AI-feilsøkingsvinduet.
 STR_ERROR_AI_DEBUG_SERVER_ONLY                                  :{YELLOW}AI-feilsøkingsvindu er kun tilgjengelig for tjeneren
 
 # AI configuration window
 STR_AI_CONFIG_CAPTION                                           :{WHITE}AI-konfigurasjon
-STR_AI_CONFIG_LIST_TOOLTIP                                      :{BLACK}Alle AIer som blir lastet i neste spill
 STR_AI_CONFIG_HUMAN_PLAYER                                      :Menneskelig spiller
 STR_AI_CONFIG_RANDOM_AI                                         :Tilfeldig AI
 
@@ -3328,13 +3341,11 @@ STR_AI_CONFIG_MOVE_UP_TOOLTIP                                   :{BLACK}Flytt va
 STR_AI_CONFIG_MOVE_DOWN                                         :{BLACK}Flytt ned
 STR_AI_CONFIG_MOVE_DOWN_TOOLTIP                                 :{BLACK}Flytt valgte AI nedover i listen
 
-STR_AI_CONFIG_CHANGE                                            :{BLACK}Velg AI
-STR_AI_CONFIG_CHANGE_TOOLTIP                                    :{BLACK}Last enda en AI
+
 STR_AI_CONFIG_CONFIGURE                                         :{BLACK}Konfigurer
 STR_AI_CONFIG_CONFIGURE_TOOLTIP                                 :{BLACK}Konfigurer AI-parametre
 
 # Available AIs window
-STR_AI_LIST_CAPTION                                             :{WHITE}Tilgjengelige AIer
 STR_AI_LIST_TOOLTIP                                             :{BLACK}Klikk for å velge en AI
 
 STR_AI_LIST_AUTHOR                                              :{BLACK}Forfatter: {STRING}
@@ -3347,7 +3358,6 @@ STR_AI_LIST_CANCEL                                              :{BLACK}Avbryt
 STR_AI_LIST_CANCEL_TOOLTIP                                      :{BLACK}Ikke endre AI
 
 # AI Parameters
-STR_AI_SETTINGS_CAPTION                                         :{WHITE}AI-parametre
 STR_AI_SETTINGS_CLOSE                                           :{BLACK}Lukk
 STR_AI_SETTINGS_RESET                                           :{BLACK}Tilbakestill
 STR_AI_SETTINGS_SETTING                                         :{STRING}: {ORANGE}{STRING}
