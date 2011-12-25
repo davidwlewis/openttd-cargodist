@@ -75,6 +75,7 @@ struct SignList {
 		const Sign *si;
 		FOR_ALL_SIGNS(si) *this->signs.Append() = si;
 
+		this->signs.SetFilterState(true);
 		this->FilterSignList();
 		this->signs.Compact();
 		this->signs.RebuildDone();
@@ -119,6 +120,13 @@ struct SignList {
 		return (filter_info.case_sensitive ? strstr(buf1, filter_info.string) : strcasestr(buf1, filter_info.string)) != NULL;
 	}
 
+	/** Filter sign list excluding OWNER_DEITY */
+	static bool CDECL OwnerDeityFilter(const Sign * const *a, FilterInfo filter_info)
+	{
+		/* You should never be able to edit signs of owner DEITY */
+		return (*a)->owner != OWNER_DEITY;
+	}
+
 	/** Filter sign list by owner */
 	static bool CDECL OwnerVisibilityFilter(const Sign * const *a, FilterInfo filter_info)
 	{
@@ -132,6 +140,7 @@ struct SignList {
 	{
 		FilterInfo filter_info = {this->filter_string, this->match_case};
 		this->signs.Filter(&SignNameFilter, filter_info);
+		this->signs.Filter(&OwnerDeityFilter, filter_info);
 		if (!HasBit(_display_opt, DO_SHOW_COMPETITOR_SIGNS)) {
 			this->signs.Filter(&OwnerVisibilityFilter, filter_info);
 		}
@@ -196,14 +205,11 @@ struct SignListWindow : QueryStringBaseWindow, SignList {
 			/* Copy new filter string */
 			strecpy(this->filter_string, new_filter_string, lastof(this->filter_string));
 
-			this->signs.SetFilterState(true);
-
 			this->EnableWidget(WID_SIL_FILTER_CLEAR_BTN);
 		} else {
 			/* There is no new string -> clear this->filter_string */
 			this->filter_string[0] = '\0';
 
-			this->signs.SetFilterState(!HasBit(_display_opt, DO_SHOW_COMPETITOR_SIGNS)); // keep sign list filtering active if competitor signs should be hidden
 			this->DisableWidget(WID_SIL_FILTER_CLEAR_BTN);
 		}
 
@@ -378,11 +384,6 @@ struct SignListWindow : QueryStringBaseWindow, SignList {
 	 */
 	virtual void OnInvalidateData(int data = 0, bool gui_scope = true)
 	{
-		if (data == -1) {
-			/* The DO_SHOW_COMPETITOR_SIGNS display option has changed */
-			this->signs.SetFilterState(!StrEmpty(this->filter_string) || !HasBit(_display_opt, DO_SHOW_COMPETITOR_SIGNS));
-		}
-
 		/* When there is a filter string, we always need to rebuild the list even if
 		 * the amount of signs in total is unchanged, as the subset of signs that is
 		 * accepted by the filter might has changed. */
@@ -479,7 +480,7 @@ struct SignWindow : QueryStringBaseWindow, SignList {
 		this->caption = STR_EDIT_SIGN_CAPTION;
 		this->afilter = CS_ALPHANUMERAL;
 
-		this->InitNested(desc);
+		this->InitNested(desc, WN_QUERY_STRING_SIGN);
 
 		this->LowerWidget(WID_QES_TEXT);
 		UpdateSignEditWindow(si);
@@ -656,7 +657,7 @@ void HandleClickOnSign(const Sign *si)
 void ShowRenameSignWindow(const Sign *si)
 {
 	/* Delete all other edit windows */
-	DeleteWindowById(WC_QUERY_STRING, 0);
+	DeleteWindowByClass(WC_QUERY_STRING);
 
 	new SignWindow(&_query_sign_edit_desc, si);
 }
@@ -667,7 +668,7 @@ void ShowRenameSignWindow(const Sign *si)
  */
 void DeleteRenameSignWindow(SignID sign)
 {
-	SignWindow *w = dynamic_cast<SignWindow *>(FindWindowById(WC_QUERY_STRING, 0));
+	SignWindow *w = dynamic_cast<SignWindow *>(FindWindowById(WC_QUERY_STRING, WN_QUERY_STRING_SIGN));
 
 	if (w != NULL && w->cur_sign == sign) delete w;
 }

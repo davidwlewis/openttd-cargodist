@@ -33,7 +33,7 @@
 
 /** Widgets for the background window to prevent smearing. */
 static const struct NWidgetPart _background_widgets[] = {
-	NWidget(WWT_PANEL, COLOUR_DARK_BLUE, 0), SetResize(1, 1),
+	NWidget(WWT_PANEL, COLOUR_DARK_BLUE, WID_BB_BACKGROUND), SetResize(1, 1),
 };
 
 /**
@@ -132,7 +132,7 @@ public:
 	/** Start listening to the content client events. */
 	BootstrapAskForDownloadWindow() : Window()
 	{
-		this->InitNested(&_bootstrap_query_desc);
+		this->InitNested(&_bootstrap_query_desc, WN_CONFIRM_POPUP_QUERY_BOOTSTRAP);
 		_network_content_client.AddCallback(this);
 	}
 

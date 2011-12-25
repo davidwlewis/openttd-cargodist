@@ -22,7 +22,7 @@ enum AircraftSubType {
 	AIR_HELICOPTER = 0, ///< an helicopter
 	AIR_AIRCRAFT   = 2, ///< an airplane
 	AIR_SHADOW     = 4, ///< shadow of the aircraft
-	AIR_ROTOR      = 6  ///< rotor of an helicopter
+	AIR_ROTOR      = 6, ///< rotor of an helicopter
 };
 
 /** Aircraft flags. */
@@ -50,7 +50,7 @@ struct AircraftCache {
 /**
  * Aircraft, helicopters, rotors and their shadows belong to this class.
  */
-struct Aircraft : public SpecializedVehicle<Aircraft, VEH_AIRCRAFT> {
+struct Aircraft FINAL : public SpecializedVehicle<Aircraft, VEH_AIRCRAFT> {
 	uint16 crashed_counter;        ///< Timer for handling crash animations.
 	byte pos;                      ///< Next desired position of the aircraft.
 	byte previous_pos;             ///< Previous desired position of the aircraft.
@@ -90,7 +90,7 @@ struct Aircraft : public SpecializedVehicle<Aircraft, VEH_AIRCRAFT> {
 	 * @return Returns true if the aircraft is a helicopter/airplane and
 	 * false if it is a shadow or a rotor
 	 */
-	FORCEINLINE bool IsNormalAircraft() const
+	inline bool IsNormalAircraft() const
 	{
 		/* To be fully correct the commented out functionality is the proper one,
 		 * but since value can only be 0 or 2, it is sufficient to only check <= 2

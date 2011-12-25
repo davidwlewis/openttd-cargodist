@@ -16,6 +16,7 @@
 #include "../vehicle_func.h"
 #include "../road_type.h"
 #include "../group.h"
+#include "../goal_type.h"
 
 #include "table/strings.h"
 #include <vector>
@@ -33,6 +34,8 @@ friend class ScriptObject;
 private:
 	ScriptModeProc *mode;             ///< The current build mode we are int.
 	class ScriptObject *mode_instance; ///< The instance belonging to the current build mode.
+	CompanyID root_company;          ///< The root company, the company that the script really belongs to.
+	CompanyID company;               ///< The current company.
 
 	uint delay;                      ///< The ticks of delay each DoCommand has.
 	bool allow_do_command;           ///< Is the usage of DoCommands restricted?
@@ -45,6 +48,7 @@ private:
 	VehicleID new_vehicle_id;        ///< The ID of the new Vehicle.
 	SignID new_sign_id;              ///< The ID of the new Sign.
 	GroupID new_group_id;            ///< The ID of the new Group.
+	GoalID new_goal_id;              ///< The ID of the new Goal.
 
 	std::vector<int> callback_value; ///< The values which need to survive a callback.
 
@@ -58,6 +62,8 @@ public:
 	ScriptStorage() :
 		mode              (NULL),
 		mode_instance     (NULL),
+		root_company      (INVALID_OWNER),
+		company           (INVALID_OWNER),
 		delay             (1),
 		allow_do_command  (true),
 		/* costs (can't be set) */

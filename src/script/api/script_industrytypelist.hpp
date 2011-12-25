@@ -16,7 +16,7 @@
 
 /**
  * Creates a list of valid industry types.
- * @api ai
+ * @api ai game
  * @ingroup ScriptList
  */
 class ScriptIndustryTypeList : public ScriptList {

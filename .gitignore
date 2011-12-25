@@ -24,6 +24,7 @@ bin/scripts/*
 bundle/*
 bundles/*
 docs/aidocs/*
+docs/gamedocs/*
 docs/source/*
 media/openttd.desktop
 media/openttd.desktop.install
