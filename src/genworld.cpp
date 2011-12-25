@@ -33,6 +33,8 @@
 #include "core/backup_type.hpp"
 #include "progress.h"
 #include "error.h"
+#include "game/game.hpp"
+#include "game/game_instance.hpp"
 
 #include "table/sprites.h"
 
@@ -83,7 +85,7 @@ static void CleanupGeneration()
 	_gw.abortp   = NULL;
 	_gw.threaded = false;
 
-	DeleteWindowById(WC_MODAL_PROGRESS, 0);
+	DeleteWindowByClass(WC_MODAL_PROGRESS);
 	ShowFirstError();
 	MarkWholeScreenDirty();
 }
@@ -161,6 +163,21 @@ static void _GenerateWorld(void *)
 			for (i = 0; i < 0x500; i++) {
 				RunTileLoop();
 				IncreaseGeneratingWorldProgress(GWP_RUNTILELOOP);
+			}
+
+			if (_game_mode != GM_EDITOR) {
+				Game::StartNew();
+
+				if (Game::GetInstance() != NULL) {
+					SetGeneratingWorldProgress(GWP_RUNSCRIPT, 2500);
+					_generating_world = true;
+					for (i = 0; i < 2500; i++) {
+						Game::GameLoop();
+						IncreaseGeneratingWorldProgress(GWP_RUNSCRIPT);
+						if (Game::GetInstance()->IsSleeping()) break;
+					}
+					_generating_world = false;
+				}
 			}
 		}
 

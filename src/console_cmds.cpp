@@ -37,6 +37,7 @@
 #include "newgrf.h"
 #include "console_func.h"
 #include "engine_base.h"
+#include "game/game.hpp"
 
 #ifdef ENABLE_NETWORK
 	#include "table/strings.h"
@@ -1105,6 +1106,26 @@ DEF_CONSOLE_CMD(ConListAI)
 	return true;
 }
 
+DEF_CONSOLE_CMD(ConListGameLibs)
+{
+	char buf[4096];
+	Game::GetConsoleLibraryList(buf, lastof(buf));
+
+	PrintLineByLine(buf);
+
+	return true;
+}
+
+DEF_CONSOLE_CMD(ConListGame)
+{
+	char buf[4096];
+	Game::GetConsoleList(buf, lastof(buf));
+
+	PrintLineByLine(buf);
+
+	return true;
+}
+
 DEF_CONSOLE_CMD(ConStartAI)
 {
 	if (argc == 0 || argc > 3) {
@@ -1249,6 +1270,23 @@ DEF_CONSOLE_CMD(ConRescanAI)
 	}
 
 	AI::Rescan();
+
+	return true;
+}
+
+DEF_CONSOLE_CMD(ConRescanGame)
+{
+	if (argc == 0) {
+		IConsoleHelp("Rescan the Game Script dir for scripts. Usage: 'rescan_game'");
+		return true;
+	}
+
+	if (_networking && !_network_server) {
+		IConsoleWarning("Only the server can rescan the Game Script dir for scripts.");
+		return true;
+	}
+
+	Game::Rescan();
 
 	return true;
 }
@@ -1732,7 +1770,7 @@ DEF_CONSOLE_CMD(ConContent)
 	if (strcasecmp(argv[1], "state") == 0) {
 		IConsolePrintF(CC_WHITE, "id, type, state, name");
 		for (ConstContentIterator iter = _network_content_client.Begin(); iter != _network_content_client.End(); iter++) {
-			static const char * const types[] = { "Base graphics", "NewGRF", "AI", "AI library", "Scenario", "Heightmap", "Base sound", "Base music" };
+			static const char * const types[] = { "Base graphics", "NewGRF", "AI", "AI library", "Scenario", "Heightmap", "Base sound", "Base music", "Game script", "GS library" };
 			assert_compile(lengthof(types) == CONTENT_TYPE_END - CONTENT_TYPE_BEGIN);
 			static const char * const states[] = { "Not selected", "Selected", "Dep Selected", "Installed", "Unknown" };
 			static const TextColour state_to_colour[] = { CC_COMMAND, CC_INFO, CC_INFO, CC_WHITE, CC_ERROR };
@@ -1894,6 +1932,10 @@ void IConsoleStdLibRegister()
 	IConsoleCmdRegister("rescan_ai",    ConRescanAI);
 	IConsoleCmdRegister("start_ai",     ConStartAI);
 	IConsoleCmdRegister("stop_ai",      ConStopAI);
+
+	IConsoleCmdRegister("list_game",    ConListGame);
+	IConsoleCmdRegister("list_game_libs", ConListGameLibs);
+	IConsoleCmdRegister("rescan_game",    ConRescanGame);
 
 	/* networking functions */
 #ifdef ENABLE_NETWORK

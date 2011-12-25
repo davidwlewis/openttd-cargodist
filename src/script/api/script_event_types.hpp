@@ -14,11 +14,12 @@
 
 #include "script_event.hpp"
 #include "script_company.hpp"
+#include "script_window.hpp"
 
 /**
  * Event Vehicle Crash, indicating a vehicle of yours is crashed.
  *  It contains the crash site, the crashed vehicle and the reason for the crash.
- * @api ai
+ * @api ai game
  */
 class ScriptEventVehicleCrashed : public ScriptEvent {
 public:
@@ -79,7 +80,7 @@ private:
 
 /**
  * Event Subsidy Offered, indicating someone offered a subsidy.
- * @api ai
+ * @api ai game
  */
 class ScriptEventSubsidyOffer : public ScriptEvent {
 public:
@@ -110,7 +111,7 @@ private:
 
 /**
  * Event Subsidy Offer Expired, indicating a subsidy will no longer be awarded.
- * @api ai
+ * @api ai game
  */
 class ScriptEventSubsidyOfferExpired : public ScriptEvent {
 public:
@@ -141,7 +142,7 @@ private:
 
 /**
  * Event Subidy Awarded, indicating a subsidy is awarded to some company.
- * @api ai
+ * @api ai game
  */
 class ScriptEventSubsidyAwarded : public ScriptEvent {
 public:
@@ -172,7 +173,7 @@ private:
 
 /**
  * Event Subsidy Expired, indicating a route that was once subsidized no longer is.
- * @api ai
+ * @api ai game
  */
 class ScriptEventSubsidyExpired : public ScriptEvent {
 public:
@@ -294,7 +295,7 @@ private:
 
 /**
  * Event Company New, indicating a new company has been created.
- * @api ai
+ * @api ai game
  */
 class ScriptEventCompanyNew : public ScriptEvent {
 public:
@@ -326,7 +327,7 @@ private:
 /**
  * Event Company In Trouble, indicating a company is in trouble and might go
  *  bankrupt soon.
- * @api ai
+ * @api ai game
  */
 class ScriptEventCompanyInTrouble : public ScriptEvent {
 public:
@@ -405,7 +406,7 @@ private:
 /**
  * Event Company Merger, indicating a company has been bought by another
  *  company.
- * @api ai
+ * @api ai game
  */
 class ScriptEventCompanyMerger : public ScriptEvent {
 public:
@@ -448,7 +449,7 @@ private:
 
 /**
  * Event Company Bankrupt, indicating a company has gone bankrupt.
- * @api ai
+ * @api ai game
  */
 class ScriptEventCompanyBankrupt : public ScriptEvent {
 public:
@@ -572,7 +573,7 @@ private:
 
 /**
  * Event Industry Open, indicating a new industry has been created.
- * @api ai
+ * @api ai game
  */
 class ScriptEventIndustryOpen : public ScriptEvent {
 public:
@@ -603,7 +604,7 @@ private:
 
 /**
  * Event Industry Close, indicating an industry is going to be closed.
- * @api ai
+ * @api ai game
  */
 class ScriptEventIndustryClose : public ScriptEvent {
 public:
@@ -665,7 +666,7 @@ private:
 
 /**
  * Event Station First Vehicle, indicating a station has been visited by a vehicle for the first time.
- * @api ai
+ * @api ai game
  */
 class ScriptEventStationFirstVehicle : public ScriptEvent {
 public:
@@ -767,7 +768,7 @@ private:
 
 /**
  * Event Town Founded, indicating a new town has been created.
- * @api ai
+ * @api ai game
  */
 class ScriptEventTownFounded : public ScriptEvent {
 public:
@@ -827,6 +828,108 @@ public:
 
 private:
 	VehicleID vehicle_id; ///< The vehicle aircraft whose destination is too far away.
+};
+
+/**
+ * Event Admin Port, indicating the admin port is sending you information.
+ * @api game
+ */
+class ScriptEventAdminPort : public ScriptEvent {
+public:
+	/**
+	 * @param json The JSON string which got sent.
+	 */
+	ScriptEventAdminPort(const char *json) :
+		ScriptEvent(ET_ADMIN_PORT),
+		json(strdup(json))
+	{}
+
+	~ScriptEventAdminPort()
+	{
+		free(this->json);
+	}
+
+	/**
+	 * Convert an ScriptEvent to the real instance.
+	 * @param instance The instance to convert.
+	 * @return The converted instance.
+	 */
+	static ScriptEventAdminPort *Convert(ScriptEvent *instance) { return (ScriptEventAdminPort *)instance; }
+
+	/**
+	 * Get the information that was sent to you back as Squirrel object.
+	 */
+	SQInteger GetObject(HSQUIRRELVM vm);
+
+private:
+	char *json; ///< The JSON string.
+
+	/**
+	 * Read a table from a JSON string.
+	 * @param vm The VM used.
+	 * @param p The (part of the) JSON string reading.
+	 */
+	char *ReadTable(HSQUIRRELVM vm, char *p);
+
+	/**
+	 * Read a value from a JSON string.
+	 * @param vm The VM used.
+	 * @param p The (part of the) JSON string reading.
+	 */
+	char *ReadValue(HSQUIRRELVM vm, char *p);
+
+	/**
+	 * Read a string from a JSON string.
+	 * @param vm The VM used.
+	 * @param p The (part of the) JSON string reading.
+	 */
+	char *ReadString(HSQUIRRELVM vm, char *p);
+};
+
+/**
+ * Event Window Widget Click, when a user clicks on a highlighted widget.
+ * @api game
+ */
+class ScriptEventWindowWidgetClick : public ScriptEvent {
+public:
+	/**
+	 * @param window The windowclass that was clicked.
+	 * @param number The windownumber that was clicked.
+	 * @param widget The widget in the window that was clicked.
+	 */
+	ScriptEventWindowWidgetClick(ScriptWindow::WindowClass window, uint32 number, uint8 widget) :
+		ScriptEvent(ET_WINDOW_WIDGET_CLICK),
+		window(window),
+		number(number),
+		widget(widget)
+	{}
+
+	/**
+	 * Convert an ScriptEvent to the real instance.
+	 * @param instance The instance to convert.
+	 * @return The converted instance.
+	 */
+	static ScriptEventWindowWidgetClick *Convert(ScriptEvent *instance) { return (ScriptEventWindowWidgetClick *)instance; }
+
+	/**
+	 * Get the class of the window that was clicked.
+	 */
+	ScriptWindow::WindowClass GetWindowClass() { return this->window; }
+
+	/**
+	 * Get the number of the window that was clicked.
+	 */
+	uint32 GetWindowNumber() { return this->number; }
+
+	/**
+	 * Get the number of the widget that was clicked.
+	 */
+	uint8 GetWidgetNumber() { return this->widget; }
+
+private:
+	ScriptWindow::WindowClass window; ///< Window of the click.
+	uint32 number;                    ///< Number of the click.
+	uint8 widget;                     ///< Widget of the click.
 };
 
 #endif /* SCRIPT_EVENT_TYPES_HPP */
