@@ -43,6 +43,16 @@
 	return town_name;
 }
 
+/* static */ bool ScriptTown::SetText(TownID town_id, Text *text)
+{
+	CCountedPtr<Text> counter(text);
+
+	EnforcePrecondition(false, text != NULL);
+	EnforcePrecondition(false, IsValidTown(town_id));
+
+	return ScriptObject::DoCommand(::Town::Get(town_id)->xy, town_id, 0, CMD_TOWN_SET_TEXT, text->GetEncodedText());
+}
+
 /* static */ int32 ScriptTown::GetPopulation(TownID town_id)
 {
 	if (!IsValidTown(town_id)) return -1;
@@ -103,6 +113,14 @@
 	return t->received[towneffect_id].old_act;
 }
 
+/* static */ bool ScriptTown::SetCargoGoal(TownID town_id, ScriptCargo::TownEffect towneffect_id, uint32 goal)
+{
+	EnforcePrecondition(false, IsValidTown(town_id));
+	EnforcePrecondition(false, ScriptCargo::IsValidTownEffect(towneffect_id));
+
+	return ScriptObject::DoCommand(::Town::Get(town_id)->xy, town_id | (towneffect_id << 16), goal, CMD_TOWN_CARGO_GOAL);
+}
+
 /* static */ uint32 ScriptTown::GetCargoGoal(TownID town_id, ScriptCargo::TownEffect towneffect_id)
 {
 	if (!IsValidTown(town_id)) return -1;
@@ -121,6 +139,16 @@
 
 		default: return t->goal[towneffect_id];
 	}
+}
+
+/* static */ bool ScriptTown::SetGrowthRate(TownID town_id, uint16 days_between_town_growth)
+{
+	days_between_town_growth = days_between_town_growth * DAY_TICKS / TOWN_GROWTH_TICKS;
+
+	EnforcePrecondition(false, IsValidTown(town_id));
+	EnforcePrecondition(false, (days_between_town_growth & TOWN_GROW_RATE_CUSTOM) == 0);
+
+	return ScriptObject::DoCommand(::Town::Get(town_id)->xy, town_id, days_between_town_growth, CMD_TOWN_GROWTH_RATE);
 }
 
 /* static */ int32 ScriptTown::GetGrowthRate(TownID town_id)
@@ -152,9 +180,10 @@
 
 /* static */ bool ScriptTown::HasStatue(TownID town_id)
 {
+	if (ScriptObject::GetCompany() == OWNER_DEITY) return false;
 	if (!IsValidTown(town_id)) return false;
 
-	return ::HasBit(::Town::Get(town_id)->statues, _current_company);
+	return ::HasBit(::Town::Get(town_id)->statues, ScriptObject::GetCompany());
 }
 
 /* static */ bool ScriptTown::IsCity(TownID town_id)
@@ -173,6 +202,7 @@
 
 /* static */ ScriptCompany::CompanyID ScriptTown::GetExclusiveRightsCompany(TownID town_id)
 {
+	if (ScriptObject::GetCompany() == OWNER_DEITY) return ScriptCompany::COMPANY_INVALID;
 	if (!IsValidTown(town_id)) return ScriptCompany::COMPANY_INVALID;
 
 	return (ScriptCompany::CompanyID)(int8)::Town::Get(town_id)->exclusivity;
@@ -187,17 +217,28 @@
 
 /* static */ bool ScriptTown::IsActionAvailable(TownID town_id, TownAction town_action)
 {
+	if (ScriptObject::GetCompany() == OWNER_DEITY) return false;
 	if (!IsValidTown(town_id)) return false;
 
-	return HasBit(::GetMaskOfTownActions(NULL, _current_company, ::Town::Get(town_id)), town_action);
+	return HasBit(::GetMaskOfTownActions(NULL, ScriptObject::GetCompany(), ::Town::Get(town_id)), town_action);
 }
 
 /* static */ bool ScriptTown::PerformTownAction(TownID town_id, TownAction town_action)
 {
+	EnforcePrecondition(false, ScriptObject::GetCompany() != OWNER_DEITY);
 	EnforcePrecondition(false, IsValidTown(town_id));
 	EnforcePrecondition(false, IsActionAvailable(town_id, town_action));
 
 	return ScriptObject::DoCommand(::Town::Get(town_id)->xy, town_id, town_action, CMD_DO_TOWN_ACTION);
+}
+
+/* static */ bool ScriptTown::ExpandTown(TownID town_id, int houses)
+{
+	EnforcePrecondition(false, ScriptObject::GetCompany() == OWNER_DEITY);
+	EnforcePrecondition(false, IsValidTown(town_id));
+	EnforcePrecondition(false, houses > 0);
+
+	return ScriptObject::DoCommand(::Town::Get(town_id)->xy, town_id, houses, CMD_EXPAND_TOWN);
 }
 
 /* static */ ScriptTown::TownRating ScriptTown::GetRating(TownID town_id, ScriptCompany::CompanyID company_id)

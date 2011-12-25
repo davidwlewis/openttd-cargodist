@@ -15,6 +15,7 @@
 #include "../script_instance.hpp"
 #include "../../tunnel_map.h"
 #include "../../command_func.h"
+#include "../../company_func.h"
 
 /* static */ bool ScriptTunnel::IsTunnelTile(TileIndex tile)
 {
@@ -83,6 +84,7 @@ static void _DoCommandReturnBuildTunnel1(class ScriptInstance *instance)
 	EnforcePrecondition(false, ::IsValidTile(start));
 	EnforcePrecondition(false, vehicle_type == ScriptVehicle::VT_RAIL || vehicle_type == ScriptVehicle::VT_ROAD);
 	EnforcePrecondition(false, vehicle_type != ScriptVehicle::VT_RAIL || ScriptRail::IsRailTypeAvailable(ScriptRail::GetCurrentRailType()));
+	EnforcePrecondition(false, ScriptObject::GetCompany() != OWNER_DEITY || vehicle_type == ScriptVehicle::VT_ROAD);
 
 	uint type = 0;
 	if (vehicle_type == ScriptVehicle::VT_ROAD) {
@@ -128,6 +130,7 @@ static void _DoCommandReturnBuildTunnel1(class ScriptInstance *instance)
 
 /* static */ bool ScriptTunnel::RemoveTunnel(TileIndex tile)
 {
+	EnforcePrecondition(false, ScriptObject::GetCompany() != OWNER_DEITY);
 	EnforcePrecondition(false, IsTunnelTile(tile));
 
 	return ScriptObject::DoCommand(tile, 0, 0, CMD_LANDSCAPE_CLEAR);

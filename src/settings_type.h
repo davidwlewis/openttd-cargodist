@@ -433,7 +433,7 @@ struct LinkGraphSettings {
 	uint8 demand_distance;                      ///< influence of distance between stations on the demand function
 	uint8 short_path_saturation;                ///< percentage up to which short paths are saturated before saturating most capacious paths
 
-	FORCEINLINE DistributionType GetDistributionType(CargoID cargo) const {
+	inline DistributionType GetDistributionType(CargoID cargo) const {
 		if (IsCargoInClass(cargo, CC_PASSENGERS)) {
 			return this->distribution_pax;
 		} else if (IsCargoInClass(cargo, CC_MAIL)) {
@@ -481,6 +481,7 @@ struct GameSettings {
 	AISettings           ai;                 ///< what may the AI do?
 	ScriptSettings       script;             ///< settings for scripts
 	class AIConfig      *ai_config[MAX_COMPANIES]; ///< settings per company
+	class GameConfig    *game_config;        ///< settings for gamescript
 	PathfinderSettings   pf;                 ///< settings for all pathfinders
 	OrderSettings        order;              ///< settings related to orders
 	VehicleSettings      vehicle;            ///< options for vehicles

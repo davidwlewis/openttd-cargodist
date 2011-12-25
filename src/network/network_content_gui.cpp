@@ -16,6 +16,7 @@
 #include "../window_func.h"
 #include "../error.h"
 #include "../ai/ai.hpp"
+#include "../game/game.hpp"
 #include "../base_media_base.h"
 #include "../sortlist_type.h"
 #include "../querystring_gui.h"
@@ -55,7 +56,7 @@ BaseNetworkContentDownloadStatusWindow::BaseNetworkContentDownloadStatusWindow(c
 	_network_content_client.AddCallback(this);
 	_network_content_client.DownloadSelectedContent(this->total_files, this->total_bytes);
 
-	this->InitNested(desc, 0);
+	this->InitNested(desc, WN_NETWORK_STATUS_WINDOW_CONTENT_DOWNLOAD);
 }
 
 BaseNetworkContentDownloadStatusWindow::~BaseNetworkContentDownloadStatusWindow()
@@ -117,7 +118,7 @@ public:
 	 */
 	NetworkContentDownloadStatusWindow() : BaseNetworkContentDownloadStatusWindow(&_network_content_download_status_window_desc)
 	{
-		this->parent = FindWindowById(WC_NETWORK_WINDOW, 1);
+		this->parent = FindWindowById(WC_NETWORK_WINDOW, WN_NETWORK_WINDOW_CONTENT_LIST);
 	}
 
 	/** Free whatever we've allocated */
@@ -129,6 +130,10 @@ public:
 				case CONTENT_TYPE_AI:
 				case CONTENT_TYPE_AI_LIBRARY:
 					/* AI::Rescan calls the scanner. */
+					break;
+				case CONTENT_TYPE_GAME:
+				case CONTENT_TYPE_GAME_LIBRARY:
+					/* Game::Rescan calls the scanner. */
 					break;
 
 				case CONTENT_TYPE_BASE_GRAPHICS:
@@ -161,19 +166,24 @@ public:
 					AI::Rescan();
 					break;
 
+				case CONTENT_TYPE_GAME:
+				case CONTENT_TYPE_GAME_LIBRARY:
+					Game::Rescan();
+					break;
+
 				case CONTENT_TYPE_BASE_GRAPHICS:
 					BaseGraphics::FindSets();
-					SetWindowDirty(WC_GAME_OPTIONS, 0);
+					SetWindowDirty(WC_GAME_OPTIONS, WN_GAME_OPTIONS_GAME_OPTIONS);
 					break;
 
 				case CONTENT_TYPE_BASE_SOUNDS:
 					BaseSounds::FindSets();
-					SetWindowDirty(WC_GAME_OPTIONS, 0);
+					SetWindowDirty(WC_GAME_OPTIONS, WN_GAME_OPTIONS_GAME_OPTIONS);
 					break;
 
 				case CONTENT_TYPE_BASE_MUSIC:
 					BaseMusic::FindSets();
-					SetWindowDirty(WC_GAME_OPTIONS, 0);
+					SetWindowDirty(WC_GAME_OPTIONS, WN_GAME_OPTIONS_GAME_OPTIONS);
 					break;
 
 				case CONTENT_TYPE_NEWGRF:
@@ -193,7 +203,7 @@ public:
 		}
 
 		/* Always invalidate the download window; tell it we are going to be gone */
-		InvalidateWindowData(WC_NETWORK_WINDOW, 1, 2);
+		InvalidateWindowData(WC_NETWORK_WINDOW, WN_NETWORK_WINDOW_CONTENT_LIST, 2);
 	}
 
 	virtual void OnClick(Point pt, int widget, int click_count)
@@ -205,7 +215,7 @@ public:
 			} else {
 				/* If downloading succeeded, close the online content window. This will close
 				 * the current window as well. */
-				DeleteWindowById(WC_NETWORK_WINDOW, 1);
+				DeleteWindowById(WC_NETWORK_WINDOW, WN_NETWORK_WINDOW_CONTENT_LIST);
 			}
 		}
 	}
@@ -357,7 +367,7 @@ public:
 	{
 		this->CreateNestedTree(desc);
 		this->vscroll = this->GetScrollbar(WID_NCL_SCROLLBAR);
-		this->FinishInitNested(desc, 1);
+		this->FinishInitNested(desc, WN_NETWORK_WINDOW_CONTENT_LIST);
 
 		this->GetWidget<NWidgetStacked>(WID_NCL_SEL_ALL_UPDATE)->SetDisplayedPlane(select_all);
 
@@ -658,7 +668,7 @@ public:
 				break;
 
 			case WID_NCL_DOWNLOAD:
-				if (BringWindowToFrontById(WC_NETWORK_STATUS_WINDOW, 0) == NULL) new NetworkContentDownloadStatusWindow();
+				if (BringWindowToFrontById(WC_NETWORK_STATUS_WINDOW, WN_NETWORK_STATUS_WINDOW_CONTENT_DOWNLOAD) == NULL) new NetworkContentDownloadStatusWindow();
 				break;
 		}
 	}
@@ -801,7 +811,7 @@ public:
 		}
 
 		/* If data == 2 then the status window caused this OnInvalidate */
-		this->SetWidgetDisabledState(WID_NCL_DOWNLOAD, this->filesize_sum == 0 || (FindWindowById(WC_NETWORK_STATUS_WINDOW, 0) != NULL && data != 2));
+		this->SetWidgetDisabledState(WID_NCL_DOWNLOAD, this->filesize_sum == 0 || (FindWindowById(WC_NETWORK_STATUS_WINDOW, WN_NETWORK_STATUS_WINDOW_CONTENT_DOWNLOAD) != NULL && data != 2));
 		this->SetWidgetDisabledState(WID_NCL_UNSELECT, this->filesize_sum == 0);
 		this->SetWidgetDisabledState(WID_NCL_SELECT_ALL, !show_select_all);
 		this->SetWidgetDisabledState(WID_NCL_SELECT_UPDATE, !show_select_upgrade);
@@ -915,7 +925,7 @@ void ShowNetworkContentListWindow(ContentVector *cv, ContentType type)
 		_network_content_client.RequestContentList(cv, true);
 	}
 
-	DeleteWindowById(WC_NETWORK_WINDOW, 1);
+	DeleteWindowById(WC_NETWORK_WINDOW, WN_NETWORK_WINDOW_CONTENT_LIST);
 	new NetworkContentListWindow(&_network_content_list_desc, cv != NULL);
 #else
 	ShowErrorMessage(STR_CONTENT_NO_ZLIB, STR_CONTENT_NO_ZLIB_SUB, WL_ERROR);

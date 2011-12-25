@@ -14,11 +14,12 @@
 
 #include "script_cargo.hpp"
 #include "script_company.hpp"
+#include "script_text.hpp"
 #include "../../town_type.h"
 
 /**
  * Class that handles all town related functions.
- * @api ai
+ * @api ai game
  */
 class ScriptTown : public ScriptObject {
 public:
@@ -127,6 +128,16 @@ public:
 	static char *GetName(TownID town_id);
 
 	/**
+	 * Set the custom text of a town, shown in the GUI.
+	 * @param town_id The town to set the custom text of.
+	 * @param text The text to set it to (can be either a raw string, or a ScriptText object).
+	 * @pre IsValidTown(town_id).
+	 * @return True if the action succeeded.
+	 * @api -ai
+	 */
+	static bool SetText(TownID town_id, Text *text);
+
+	/**
 	 * Gets the number of inhabitants in the town.
 	 * @param town_id The town to get the population of.
 	 * @pre IsValidTown(town_id).
@@ -191,6 +202,18 @@ public:
 	static int32 GetLastMonthReceived(TownID town_id, ScriptCargo::TownEffect towneffect_id);
 
 	/**
+	 * Set the goal of a cargo for this town.
+	 * @param town_id The index of the town.
+	 * @param towneffect_id The index of the cargo.
+	 * @param goal The new goal.
+	 * @pre IsValidTown(town_id).
+	 * @pre ScriptCargo::IsValidTownEffect(cargo_id).
+	 * @return True if the action succeeded.
+	 * @api -ai
+	 */
+	static bool SetCargoGoal(TownID town_id, ScriptCargo::TownEffect towneffect_id, uint32 goal);
+
+	/**
 	 * Get the amount of cargo that needs to be delivered (per TownEffect) for a
 	 *  town to grow. All goals need to be reached before a town will grow.
 	 * @param town_id The index of the town.
@@ -202,6 +225,17 @@ public:
 	 *  with a growing town.
 	 */
 	static uint32 GetCargoGoal(TownID town_id, ScriptCargo::TownEffect towneffect_id);
+
+	/**
+	 * Set the amount of days between town growth.
+	 * @param town_id The index of the town.
+	 * @param days_between_town_growth The amont of days between town growth.
+	 * @pre IsValidTown(town_id).
+	 * @return True if the action succeeded.
+	 * @note If 'Fund Building' and 'economy.town_growth_rate' is active, the game will often set a new GrowthRate.
+	 * @api -ai
+	 */
+	static bool SetGrowthRate(TownID town_id, uint16 days_between_town_growth);
 
 	/**
 	 * Get the amount of days between town growth.
@@ -247,6 +281,7 @@ public:
 	 * Find out if this town has a statue for the current company.
 	 * @param town_id The town to check.
 	 * @pre IsValidTown(town_id).
+	 * @game @pre Valid ScriptCompanyMode active in scope.
 	 * @return True if the town has a statue.
 	 */
 	static bool HasStatue(TownID town_id);
@@ -272,6 +307,7 @@ public:
 	 * Find out which company currently has the exclusive rights of this town.
 	 * @param town_id The town to check.
 	 * @pre IsValidTown(town_id).
+	 * @game @pre Valid ScriptCompanyMode active in scope.
 	 * @return The company that has the exclusive rights. The value
 	 *         ScriptCompany::COMPANY_INVALID means that there are currently no
 	 *         exclusive rights given out to anyone.
@@ -293,6 +329,7 @@ public:
 	 * @param town_id The town to perform the action on.
 	 * @param town_action The action to perform on the town.
 	 * @pre IsValidTown(town_id).
+	 * @game @pre Valid ScriptCompanyMode active in scope.
 	 * @return True if and only if the action can performed.
 	 */
 	static bool IsActionAvailable(TownID town_id, TownAction town_action);
@@ -303,9 +340,21 @@ public:
 	 * @param town_action The action to perform on the town.
 	 * @pre IsValidTown(town_id).
 	 * @pre IsActionAvailable(town_id, town_action).
+	 * @game @pre Valid ScriptCompanyMode active in scope.
 	 * @return True if the action succeeded.
 	 */
 	static bool PerformTownAction(TownID town_id, TownAction town_action);
+
+	/**
+	 * Expand the town.
+	 * @param town_id The town to expand.
+	 * @param houses The amount of houses to grow the town with.
+	 * @pre IsValidTown(town_id).
+	 * @pre houses > 0.
+	 * @return True if the action succeeded.
+	 * @api -ai
+	 */
+	static bool ExpandTown(TownID town_id, int houses);
 
 	/**
 	 * Get the rating of a company within a town.
