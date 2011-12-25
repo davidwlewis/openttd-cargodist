@@ -154,7 +154,7 @@ public:
 	 * @param from ID of the source node
 	 * @return ID of the destination node
 	 */
-	FORCEINLINE NodeID GetFirstEdge(NodeID from) {return edges[from][from].next_edge;}
+	inline NodeID GetFirstEdge(NodeID from) {return edges[from][from].next_edge;}
 
 	/**
 	 * Set the number of nodes to 0 to mark this component as done.
@@ -278,45 +278,45 @@ public:
 	Path(NodeID n, bool source = false);
 
 	/** Get the node this leg passes. */
-	FORCEINLINE NodeID GetNode() const {return this->node;}
+	inline NodeID GetNode() const {return this->node;}
 
 	/** Get the overall origin of the path. */
-	FORCEINLINE NodeID GetOrigin() const {return this->origin;}
+	inline NodeID GetOrigin() const {return this->origin;}
 
 	/** Get the parent leg of this one. */
-	FORCEINLINE Path *GetParent() {return this->parent;}
+	inline Path *GetParent() {return this->parent;}
 
 	/** Get the overall capacity of the path. */
-	FORCEINLINE uint GetCapacity() const {return this->capacity;}
+	inline uint GetCapacity() const {return this->capacity;}
 
 	/** Get the free capacity of the path. */
-	FORCEINLINE int GetFreeCapacity() const {return this->free_capacity;}
+	inline int GetFreeCapacity() const {return this->free_capacity;}
 
 	/**
 	 * Get ratio of free * 16 (so that we get fewer 0) /
 	 * overall capacity + 1 (so that we don't divide by 0).
 	 */
-	FORCEINLINE int GetCapacityRatio() const {return (this->free_capacity << 4) / (this->capacity + 1);}
+	inline int GetCapacityRatio() const {return (this->free_capacity << 4) / (this->capacity + 1);}
 
 	/** Get the overall distance of the path. */
-	FORCEINLINE uint GetDistance() const {return this->distance;}
+	inline uint GetDistance() const {return this->distance;}
 
 	/** Reduce the flow on this leg only by the specified amount. */
-	FORCEINLINE void ReduceFlow(uint f) {this->flow -= f;}
+	inline void ReduceFlow(uint f) {this->flow -= f;}
 
 	/** Increase the flow on this leg only by the specified amount. */
-	FORCEINLINE void AddFlow(uint f) {this->flow += f;}
+	inline void AddFlow(uint f) {this->flow += f;}
 
 	/** Get the flow on this leg. */
-	FORCEINLINE uint GetFlow() const {return this->flow;}
+	inline uint GetFlow() const {return this->flow;}
 
 	/** Get the number of "forked off" child legs of this one. */
-	FORCEINLINE uint GetNumChildren() const {return this->num_children;}
+	inline uint GetNumChildren() const {return this->num_children;}
 
 	/**
 	 * Detach this path from its parent.
 	 */
-	FORCEINLINE void Detach()
+	inline void Detach()
 	{
 		if (this->parent != NULL) {
 			this->parent->num_children--;
