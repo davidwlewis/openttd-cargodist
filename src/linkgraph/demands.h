@@ -24,13 +24,13 @@ protected:
  */
 class SymmetricScaler : public Scaler {
 public:
-	FORCEINLINE SymmetricScaler(uint mod_size) : mod_size(mod_size), supply_sum(0) {}
+	inline SymmetricScaler(uint mod_size) : mod_size(mod_size), supply_sum(0) {}
 
 	/**
 	 * Count a node's supply into the sum of supplies.
 	 * @param node Node.
 	 */
-	FORCEINLINE void AddNode(const Node &node)
+	inline void AddNode(const Node &node)
 	{
 		this->supply_sum += node.supply;
 	}
@@ -39,7 +39,7 @@ public:
 	 * Calculate the mean demand per node using the sum of supplies.
 	 * @param num_demands Number of accepting nodes.
 	 */
-	FORCEINLINE void SetDemandPerNode(uint num_demands)
+	inline void SetDemandPerNode(uint num_demands)
 	{
 		this->demand_per_node = max(this->supply_sum / num_demands, 1U);
 	}
@@ -51,7 +51,7 @@ public:
 	 * @param to The receiving node.
 	 * @return Effective supply.
 	 */
-	FORCEINLINE uint EffectiveSupply(const Node &from, const Node &to)
+	inline uint EffectiveSupply(const Node &from, const Node &to)
 	{
 		return max(from.supply * max(1U, to.supply) * this->mod_size / 100 / this->demand_per_node, 1U);
 	}
@@ -62,7 +62,7 @@ public:
 	 * undelivered_supply == 0 at the node there isn't any demand left either.
 	 * @param to The node to be checked.
 	 */
-	FORCEINLINE bool DemandLeft(Node &to)
+	inline bool DemandLeft(Node &to)
 	{
 		return (to.supply == 0 || to.undelivered_supply > 0) && to.demand > 0;
 	}
@@ -85,7 +85,7 @@ public:
 	 * Count a node's demand into the sum of demands.
 	 * @param node The node to be counted.
 	 */
-	FORCEINLINE void AddNode(const Node &node)
+	inline void AddNode(const Node &node)
 	{
 		this->demand_sum += node.demand;
 	}
@@ -94,7 +94,7 @@ public:
 	 * Calculate the mean demand per node using the sum of demands.
 	 * @param num_demands Number of accepting nodes.
 	 */
-	FORCEINLINE void SetDemandPerNode(uint num_demands)
+	inline void SetDemandPerNode(uint num_demands)
 	{
 		this->demand_per_node = max(this->demand_sum / num_demands, (uint)1);
 	}
@@ -105,7 +105,7 @@ public:
 	 * @param from The supplying node.
 	 * @param to The receiving node.
 	 */
-	FORCEINLINE uint EffectiveSupply(const Node &from, const Node &to)
+	inline uint EffectiveSupply(const Node &from, const Node &to)
 	{
 		return max(from.supply * to.demand / this->demand_per_node, (uint)1);
 	}
@@ -115,7 +115,7 @@ public:
 	 * nodes always accept as long as their demand > 0.
 	 * @param to The node to be checked.
 	 */
-	FORCEINLINE bool DemandLeft(Node &to) { return to.demand > 0; }
+	inline bool DemandLeft(Node &to) { return to.demand > 0; }
 
 private:
 	uint demand_sum; ///< Sum of all demands in the component.
