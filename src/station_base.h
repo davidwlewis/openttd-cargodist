@@ -162,9 +162,9 @@ class FlowStat {
 public:
 	typedef std::map<uint32, StationID> SharesMap;
 
-	FORCEINLINE FlowStat() {NOT_REACHED();}
+	inline FlowStat() {NOT_REACHED();}
 	
-	FORCEINLINE FlowStat(StationID st, uint flow)
+	inline FlowStat(StationID st, uint flow)
 	{
 		assert(flow > 0);
 		this->shares[flow] = st;
@@ -175,7 +175,7 @@ public:
 	 * @param st Remote station.
 	 * @param flow Amount of flow to be added.
 	 */
-	FORCEINLINE void AddShare(StationID st, uint flow)
+	inline void AddShare(StationID st, uint flow)
 	{
 		assert(flow > 0);
 		this->shares[(--this->shares.end())->first + flow] = st;
@@ -185,7 +185,7 @@ public:
 	
 	void EraseShare(StationID st);
 	
-	FORCEINLINE const SharesMap *GetShares() const {return &this->shares;}
+	inline const SharesMap *GetShares() const {return &this->shares;}
 
 	/**
 	 * Get a station a package can be routed to. This done by drawing a
@@ -194,14 +194,13 @@ public:
 	 * probability dependent on its flow.
          * @return A station ID from the shares map.
          */
-	FORCEINLINE StationID GetVia() const
+	inline StationID GetVia() const
 	{
 		assert(!this->shares.empty());
-		uint rand = RandomRange((--this->shares.end())->first - 1);
-		SharesMap::const_iterator it = this->shares.upper_bound(rand);
-		assert(it != this->shares.end());
-		return it->second;
+		return this->shares.upper_bound(RandomRange((--this->shares.end())->first - 1))->second;
 	}
+
+	StationID GetVia(StationID excluded) const;
 
 private:
 	SharesMap shares;  ///< Shares of flow to be sent via specified station (or consumed locally).
@@ -251,10 +250,10 @@ struct GoodsEntry {
 	LinkGraphComponentID last_component; ///< Component this station was last part of in this cargo's link graph.
 	uint GetSumFlowVia(StationID via) const;
 
-	FORCEINLINE StationID GetVia(StationID source) const
+	inline StationID GetVia(StationID source, StationID excluded = INVALID_STATION) const
 	{
 		FlowStatMap::const_iterator flow_it(this->flows.find(source));
-		return flow_it != this->flows.end() ? flow_it->second.GetVia() : INVALID_STATION;
+		return flow_it != this->flows.end() ? flow_it->second.GetVia(excluded) : INVALID_STATION;
 	}
 };
 
