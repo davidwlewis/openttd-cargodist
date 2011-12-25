@@ -115,7 +115,7 @@ static bool LoadPNG(SpriteLoader::Sprite *sprite, const char *filename, uint32 i
 		}
 		sprite->height = height;
 		sprite->width  = width;
-		sprite->AllocateData(sprite->width * sprite->height);
+		sprite->AllocateData(sprite->width * sprite->height * ZOOM_LVL_BASE * ZOOM_LVL_BASE);
 	} else if (sprite->height != png_get_image_height(png_ptr, info_ptr) || sprite->width != png_get_image_width(png_ptr, info_ptr)) {
 		/* Make sure the mask image isn't larger than the sprite image. */
 		DEBUG(misc, 0, "Ignoring mask for SpriteID %d as it isn't the same dimension as the masked sprite", id);
@@ -186,13 +186,10 @@ static bool LoadPNG(SpriteLoader::Sprite *sprite, const char *filename, uint32 i
 		for (uint x = 0; x < png_get_image_width(png_ptr, info_ptr); x++) {
 			if (mask) {
 				if (row_pointer[x * sizeof(uint8)] != 0) {
-					dst[x].r = 0;
-					dst[x].g = 0;
-					dst[x].b = 0;
 					/* Alpha channel is used from the original image (to allow transparency in remap colours) */
 					extern const byte _palmap_w2d[];
-					byte color = row_pointer[x * sizeof(uint8)];
-					dst[x].m = win_palette ? _palmap_w2d[color] : color;
+					byte colour = row_pointer[x * sizeof(uint8)];
+					dst[x].m = win_palette ? _palmap_w2d[colour] : colour;
 				}
 			} else {
 				dst[x].r = row_pointer[x * sizeof(uint32) + 0];
@@ -214,6 +211,23 @@ bool SpriteLoaderPNG::LoadSprite(SpriteLoader::Sprite *sprite, uint8 file_slot, 
 	const char *filename = FioGetFilename(file_slot);
 	if (!LoadPNG(sprite, filename, (uint32)file_pos, false)) return false;
 	if (!LoadPNG(sprite, filename, (uint32)file_pos, true)) return false;
+
+	if (ZOOM_LVL_BASE != 1 && sprite_type == ST_NORMAL) {
+		/* Simple scaling, back-to-front so that no intermediate buffers are needed. */
+		int width  = sprite->width  * ZOOM_LVL_BASE;
+		int height = sprite->height * ZOOM_LVL_BASE;
+		for (int y = height - 1; y >= 0; y--) {
+			for (int x = width - 1; x >= 0; x--) {
+				sprite->data[y * width + x] = sprite->data[y / ZOOM_LVL_BASE * sprite->width + x / ZOOM_LVL_BASE];
+			}
+		}
+
+		sprite->width  *= ZOOM_LVL_BASE;
+		sprite->height *= ZOOM_LVL_BASE;
+		sprite->x_offs *= ZOOM_LVL_BASE;
+		sprite->y_offs *= ZOOM_LVL_BASE;
+	}
+
 	return true;
 }
 
