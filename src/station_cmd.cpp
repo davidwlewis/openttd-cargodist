@@ -3254,16 +3254,9 @@ void DeleteStaleFlows(StationID at, CargoID c_id, StationID to)
 {
 	FlowStatMap &flows = Station::Get(at)->goods[c_id].flows;
 	for (FlowStatMap::iterator f_it = flows.begin(); f_it != flows.end();) {
-		FlowStatSet &s_flows = f_it->second;
-		for (FlowStatSet::iterator s_it = s_flows.begin(); s_it != s_flows.end();) {
-			if (s_it->Via() == to) {
-				s_flows.erase(s_it++);
-				break; // There can only be one flow stat for this remote station in each set.
-			} else {
-				++s_it;
-			}
-		}
-		if (s_flows.empty()) {
+		FlowStat &s_flows = f_it->second;
+		s_flows.EraseShare(to);
+		if (s_flows.GetShares()->empty()) {
 			flows.erase(f_it++);
 		} else {
 			++f_it;
@@ -3287,7 +3280,6 @@ uint GetMovingAverageLength(const Station *from, const Station *to)
  */
 void Station::RunAverages()
 {
-	FlowStatSet new_flows;
 	for (int goods_index = 0; goods_index < NUM_CARGO; ++goods_index) {
 		LinkStatMap &links = this->goods[goods_index].link_stats;
 		for (LinkStatMap::iterator i = links.begin(); i != links.end();) {
@@ -3309,24 +3301,6 @@ void Station::RunAverages()
 
 		if (_settings_game.linkgraph.GetDistributionType(goods_index) == DT_MANUAL) {
 			this->goods[goods_index].flows.clear();
-			continue;
-		}
-
-		FlowStatMap &flows = this->goods[goods_index].flows;
-		for (FlowStatMap::iterator i = flows.begin(); i != flows.end();) {
-			if (!Station::IsValidID(i->first)) {
-				flows.erase(i++);
-			} else {
-				FlowStatSet &flow_set = i->second;
-				for (FlowStatSet::iterator j = flow_set.begin(); j != flow_set.end(); ++j) {
-					if (Station::IsValidID(j->Via())) {
-						new_flows.insert(j->GetDecreasedCopy());
-					}
-				}
-				flow_set.swap(new_flows);
-				new_flows.clear();
-				++i;
-			}
 		}
 	}
 }
@@ -3859,21 +3833,56 @@ static CommandCost TerraformTile_Station(TileIndex tile, DoCommandFlag flags, in
 }
 
 /**
+ * Get flow for a station.
+ * @param st Station to get flow for.
+ * @return Flow for st.
+ */	
+uint FlowStat::GetShare(StationID st) const
+{
+	uint32 prev = 0;
+	for (SharesMap::const_iterator it = this->shares.begin(); it != this->shares.end(); ++it) {
+		if (it->second == st) {
+			return it->first - prev;
+		} else {
+			prev = it->first;
+		}
+	}
+	return 0;
+}
+	
+/**
+ * Erase shares for specified station.
+ * @param st Next Hop to be removed.
+ */
+void FlowStat::EraseShare(StationID st)
+{
+	uint32 removed_shares = 0;
+	uint32 last_share = 0;
+	SharesMap new_shares;
+	for (SharesMap::iterator it(this->shares.begin()); it != this->shares.end(); ++it) {
+		if (it->second == st) {
+			removed_shares += it->first - last_share;
+		} else {
+			new_shares[it->first - removed_shares] = it->second;
+		}
+		last_share = it->first;
+	}
+	this->shares.swap(new_shares);
+	for (SharesMap::iterator it(this->shares.begin()); it != this->shares.end(); ++it) {
+		assert(it->second != st);
+	}
+}
+
+/**
  * Get the sum of flows via a specific station from this GoodsEntry.
  * @param via Remote station to look for.
  * @return a FlowStat with all flows for 'via' added up.
  */
-FlowStat GoodsEntry::GetSumFlowVia(StationID via) const
+uint GoodsEntry::GetSumFlowVia(StationID via) const
 {
-	FlowStat ret(1, via);
+	uint ret = 0;
 	for (FlowStatMap::const_iterator i = this->flows.begin(); i != this->flows.end(); ++i) {
-		const FlowStatSet &flow_set = i->second;
-		for (FlowStatSet::const_iterator j = flow_set.begin(); j != flow_set.end(); ++j) {
-			const FlowStat &flow = *j;
-			if (flow.Via() == via) {
-				ret += flow;
-			}
-		}
+		ret += i->second.GetShare(via);
 	}
 	return ret;
 }
