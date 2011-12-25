@@ -161,6 +161,11 @@ protected:
 	static GroupID GetNewGroupID();
 
 	/**
+	 * Get the latest stored new_goal_id.
+	 */
+	static GoalID GetNewGoalID();
+
+	/**
 	 * Store a allow_do_command per company.
 	 * @param allow The new allow.
 	 */
@@ -174,6 +179,27 @@ protected:
 	 * @return True iff DoCommands are allowed in the current scope.
 	 */
 	static bool GetAllowDoCommand();
+
+	/**
+	 * Set the current company to execute commands for or request
+	 *  information about.
+	 * @param company The new company.
+	 */
+	static void SetCompany(CompanyID company);
+
+	/**
+	 * Get the current company we are executing commands for or
+	 *  requesting information about.
+	 * @return The current company.
+	 */
+	static CompanyID GetCompany();
+
+	/**
+	 * Get the root company, the company that the script really
+	 *  runs under / for.
+	 * @return The root company.
+	 */
+	static CompanyID GetRootCompany();
 
 	/**
 	 * Set the cost of the last command.
@@ -228,6 +254,12 @@ private:
 	 * @param group_id The new GroupID.
 	 */
 	static void SetNewGroupID(GroupID group_id);
+
+	/**
+	 * Store a new_goal_id per company.
+	 * @param goal_id The new GoalID.
+	 */
+	static void SetNewGoalID(GoalID goal_id);
 };
 
 #endif /* SCRIPT_OBJECT_HPP */

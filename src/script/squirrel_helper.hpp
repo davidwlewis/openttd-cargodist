@@ -109,7 +109,9 @@ namespace SQConvert {
 	template <> inline void       *GetParam(ForceType<void *>      , HSQUIRRELVM vm, int index, SQAutoFreePointers *ptr) { SQUserPointer tmp; sq_getuserpointer(vm, index, &tmp); return tmp; }
 	template <> inline const char *GetParam(ForceType<const char *>, HSQUIRRELVM vm, int index, SQAutoFreePointers *ptr)
 	{
+		/* Convert what-ever there is as parameter to a string */
 		sq_tostring(vm, index);
+
 		const SQChar *tmp;
 		sq_getstring(vm, -1, &tmp);
 		char *tmp_str = strdup(SQ2OTTD(tmp));
@@ -829,6 +831,28 @@ namespace SQConvert {
 		}
 	}
 
+
+	/**
+	 * A general template for all static advanced method callbacks from Squirrel.
+	 *  In here the function_proc is recovered, and the SQCall is called that
+	 *  can handle this exact amount of params.
+	 */
+	template <typename Tcls, typename Tmethod>
+	inline SQInteger DefSQAdvancedStaticCallback(HSQUIRRELVM vm)
+	{
+		/* Find the amount of params we got */
+		int nparam = sq_gettop(vm);
+		SQUserPointer ptr = NULL;
+
+		/* Get the real function pointer */
+		sq_getuserdata(vm, nparam, &ptr, 0);
+		/* Remove the userdata from the stack */
+		sq_pop(vm, 1);
+
+		/* Call the function, which its only param is always the VM */
+		return (SQInteger)(*(*(Tmethod *)ptr))(vm);
+	}
+
 	/**
 	 * A general template for the destructor of SQ instances. This is needed
 	 *  here as it has to be in the same scope as DefSQConstructorCallback.
@@ -854,6 +878,28 @@ namespace SQConvert {
 			Tcls *instance = HelperT<Tmethod>::SQConstruct((Tcls *)NULL, (Tmethod)NULL, vm);
 			sq_setinstanceup(vm, -Tnparam, instance);
 			sq_setreleasehook(vm, -Tnparam, DefSQDestructorCallback<Tcls>);
+			instance->AddRef();
+			return 0;
+		} catch (SQInteger e) {
+			return e;
+		}
+	}
+
+	/**
+	 * A general template to handle creating of an instance with a complex
+	 *  constructor.
+	 */
+	template <typename Tcls>
+	inline SQInteger DefSQAdvancedConstructorCallback(HSQUIRRELVM vm)
+	{
+		try {
+			/* Find the amount of params we got */
+			int nparam = sq_gettop(vm);
+
+			/* Create the real instance */
+			Tcls *instance = new Tcls(vm);
+			sq_setinstanceup(vm, -nparam, instance);
+			sq_setreleasehook(vm, -nparam, DefSQDestructorCallback<Tcls>);
 			instance->AddRef();
 			return 0;
 		} catch (SQInteger e) {

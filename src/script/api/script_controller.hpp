@@ -12,6 +12,7 @@
 #ifndef SCRIPT_CONTROLLER_HPP
 #define SCRIPT_CONTROLLER_HPP
 
+#include "../../company_type.h"
 #include "../../core/string_compare_type.hpp"
 #include <map>
 
@@ -19,7 +20,7 @@
  * The Controller, the class each Script should extend. It creates the Script,
  *  makes sure the logic kicks in correctly, and that GetTick() has a valid
  *  value.
- * @api ai
+ * @api ai game
  */
 class ScriptController {
 	friend class AIScanner;
@@ -28,8 +29,9 @@ class ScriptController {
 public:
 	/**
 	 * Initializer of the ScriptController.
+	 * @param company The company this Script is normally serving.
 	 */
-	ScriptController();
+	ScriptController(CompanyID company);
 
 	/**
 	 * Destructor of the ScriptController.

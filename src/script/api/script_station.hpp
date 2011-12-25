@@ -18,7 +18,7 @@
 
 /**
  * Class that handles all station related functions.
- * @api ai
+ * @api ai game
  */
 class ScriptStation : public ScriptBaseStation {
 public:
@@ -58,6 +58,15 @@ public:
 	 * @return True if and only if the station is valid.
 	 */
 	static bool IsValidStation(StationID station_id);
+
+	/**
+	 * Get the owner of a station.
+	 * @param station_id The station to get the owner of.
+	 * @pre IsValidStation(station_id).
+	 * @return The owner the station has.
+	 * @api -ai
+	 */
+	static ScriptCompany::CompanyID GetOwner(StationID station_id);
 
 	/**
 	 * Get the StationID of a tile, if there is a station.
