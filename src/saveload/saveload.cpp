@@ -232,6 +232,7 @@
  *  165   23304
  *  166   23415
  *  167   23504
+ *  168   23637
  */
 extern const uint16 SAVEGAME_VERSION = SL_RESERVATION; ///< Current savegame version of OpenTTD.
 
@@ -277,7 +278,7 @@ struct ReadBuffer {
 	{
 	}
 
-	FORCEINLINE byte ReadByte()
+	inline byte ReadByte()
 	{
 		if (this->bufp == this->bufe) {
 			size_t len = this->reader->Read(this->buf, lengthof(this->buf));
@@ -317,7 +318,7 @@ struct MemoryDumper {
 	 * Write a single byte into the dumper.
 	 * @param b The byte to write.
 	 */
-	FORCEINLINE void WriteByte(byte b)
+	inline void WriteByte(byte b)
 	{
 		/* Are we at the end of this chunk? */
 		if (this->buf == this->bufe) {
@@ -402,7 +403,9 @@ extern const ChunkHandler _station_chunk_handlers[];
 extern const ChunkHandler _industry_chunk_handlers[];
 extern const ChunkHandler _economy_chunk_handlers[];
 extern const ChunkHandler _subsidy_chunk_handlers[];
+extern const ChunkHandler _goal_chunk_handlers[];
 extern const ChunkHandler _ai_chunk_handlers[];
+extern const ChunkHandler _game_chunk_handlers[];
 extern const ChunkHandler _animated_tile_chunk_handlers[];
 extern const ChunkHandler _newgrf_chunk_handlers[];
 extern const ChunkHandler _group_chunk_handlers[];
@@ -428,12 +431,14 @@ static const ChunkHandler * const _chunk_handlers[] = {
 	_industry_chunk_handlers,
 	_economy_chunk_handlers,
 	_subsidy_chunk_handlers,
+	_goal_chunk_handlers,
 	_engine_chunk_handlers,
 	_town_chunk_handlers,
 	_sign_chunk_handlers,
 	_station_chunk_handlers,
 	_company_chunk_handlers,
 	_ai_chunk_handlers,
+	_game_chunk_handlers,
 	_animated_tile_chunk_handlers,
 	_newgrf_chunk_handlers,
 	_group_chunk_handlers,
@@ -1089,7 +1094,14 @@ static void SlString(void *ptr, size_t length, VarType conv)
 			}
 
 			((char *)ptr)[len] = '\0'; // properly terminate the string
-			str_validate((char *)ptr, (char *)ptr + len);
+			StringValidationSettings settings = SVS_REPLACE_WITH_QUESTION_MARK;
+			if ((conv & SLF_ALLOW_CONTROL) != 0) {
+				settings = settings | SVS_ALLOW_CONTROL_CODE;
+			}
+			if ((conv & SLF_ALLOW_NEWLINE) != 0) {
+				settings = settings | SVS_ALLOW_NEWLINE;
+			}
+			str_validate((char *)ptr, (char *)ptr + len, settings);
 			break;
 		}
 		case SLA_PTRS: break;
@@ -1442,7 +1454,7 @@ bool SlObjectMember(void *ptr, const SaveLoad *sld)
 					}
 					break;
 				case SL_ARR: SlArray(ptr, sld->length, conv); break;
-				case SL_STR: SlString(ptr, sld->length, conv); break;
+				case SL_STR: SlString(ptr, sld->length, sld->conv); break;
 				case SL_LST: SlList(ptr, (SLRefType)conv); break;
 				default: NOT_REACHED();
 			}

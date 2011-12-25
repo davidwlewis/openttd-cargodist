@@ -35,6 +35,17 @@ function dump_class_templates(name)
 	print "	template <> inline const " name " &GetParam(ForceType<const " name " &>, HSQUIRRELVM vm, int index, SQAutoFreePointers *ptr) { SQUserPointer instance; sq_getinstanceup(vm, index, &instance, 0); return *(" name " *)instance; }"
 	if (name == "ScriptEvent") {
 		print "	template <> inline int Return<" name " *>(HSQUIRRELVM vm, " name " *res) { if (res == NULL) { sq_pushnull(vm); return 1; } Squirrel::CreateClassInstanceVM(vm, \"" realname "\", res, NULL, DefSQDestructorCallback<" name ">, true); return 1; }"
+	} else if (name == "ScriptText") {
+		print ""
+		print "	template <> inline Text *GetParam(ForceType<Text *>, HSQUIRRELVM vm, int index, SQAutoFreePointers *ptr) {"
+		print "		if (sq_gettype(vm, index) == OT_INSTANCE) {"
+		print "			return GetParam(ForceType<ScriptText *>(), vm, index, ptr);"
+		print "		}"
+		print "		if (sq_gettype(vm, index) == OT_STRING) {"
+		print "			return new RawText(GetParam(ForceType<const char *>(), vm, index, ptr));"
+		print "		}"
+		print "		return NULL;"
+		print "	}"
 	} else {
 		print "	template <> inline int Return<" name " *>(HSQUIRRELVM vm, " name " *res) { if (res == NULL) { sq_pushnull(vm); return 1; } res->AddRef(); Squirrel::CreateClassInstanceVM(vm, \"" realname "\", res, NULL, DefSQDestructorCallback<" name ">, true); return 1; }"
 	}
@@ -95,11 +106,13 @@ BEGIN {
 	has_fileheader = "false"
 	cls_level = 0
 	RS = "\r|\n"
+	apis = tolower(api)
+	if (apis == "gs") apis = "game"
 }
 
 /@file/ {
 	filename = $3
-	gsub("^" tolower(api) "_", "script_", filename)
+	gsub("^" apis "_", "script_", filename)
 }
 
 # Ignore special doxygen blocks
@@ -117,24 +130,25 @@ BEGIN {
 { if (doxygen_skip == "true") next }
 
 /^([	 ]*)\* @api/ {
-	if (api == "Template") {
-		api_selected = "true"
-		next
-	}
-
 	# By default, classes are not selected
 	if (cls_level == 0) api_selected = "false"
 
 	gsub("^([	 ]*)", "", $0)
 	gsub("* @api ", "", $0)
 
+	if (api == "Template") {
+		api_selected = "true"
+		if ($0 == "none" || $0 == "-all") api_selected = "false"
+		next
+	}
+
 	if ($0 == "none") {
 		api_selected = "false"
 	} else if ($0 == "-all") {
 		api_selected = "false"
-	} else if (match($0, "-" tolower(api))) {
+	} else if (match($0, "-" apis)) {
 		api_selected = "false"
-	} else if (match($0, tolower(api))) {
+	} else if (match($0, apis)) {
 		api_selected = "true"
 	}
 
@@ -321,13 +335,17 @@ BEGIN {
 	print "void SQ" api_cls "_Register(Squirrel *engine)"
 	print "{"
 	print "	DefSQClass<" cls ", ST_" toupper(api) "> SQ" api_cls "(\"" api_cls "\");"
-	if (super_cls == "ScriptObject" || super_cls == "AIAbstractList::Valuator") {
+	if (super_cls == "Text" || super_cls == "ScriptObject" || super_cls == "AIAbstractList::Valuator") {
 		print "	SQ" api_cls ".PreRegister(engine);"
 	} else {
 		print "	SQ" api_cls ".PreRegister(engine, \"" api_super_cls "\");"
 	}
 	if (virtual_class == "false" && super_cls != "ScriptEvent") {
-		print "	SQ" api_cls ".AddConstructor<void (" cls "::*)(" cls_param[0] "), " cls_param[1]">(engine, \"" cls_param[2] "\");"
+		if (cls_param[2] == "v") {
+			print "	SQ" api_cls ".AddSQAdvancedConstructor(engine);"
+		} else {
+			print "	SQ" api_cls ".AddConstructor<void (" cls "::*)(" cls_param[0] "), " cls_param[1]">(engine, \"" cls_param[2] "\");"
+		}
 	}
 	print ""
 
@@ -382,7 +400,11 @@ BEGIN {
 		if (mlen <= length(static_methods[i, 0])) mlen = length(static_methods[i, 0])
 	}
 	for (i = 1; i <= static_method_size; i++) {
-		print "	SQ" api_cls ".DefSQStaticMethod(engine, &" cls "::" static_methods[i, 0] ", " substr(spaces, 1, mlen - length(static_methods[i, 0])) "\""  static_methods[i, 0] "\", " substr(spaces, 1, mlen - length(static_methods[i, 0])) "" static_methods[i, 1] ", \"" static_methods[i, 2] "\");"
+		if (static_methods[i, 2] == "v") {
+			print "	SQ" api_cls ".DefSQAdvancedStaticMethod(engine, &" cls "::" static_methods[i, 0] ", " substr(spaces, 1, mlen - length(static_methods[i, 0]) - 8) "\""  static_methods[i, 0] "\");"
+		} else {
+			print "	SQ" api_cls ".DefSQStaticMethod(engine, &" cls "::" static_methods[i, 0] ", " substr(spaces, 1, mlen - length(static_methods[i, 0])) "\""  static_methods[i, 0] "\", " substr(spaces, 1, mlen - length(static_methods[i, 0])) "" static_methods[i, 1] ", \"" static_methods[i, 2] "\");"
+		}
 		delete static_methods[i]
 	}
 	if (static_method_size != 0) print ""
@@ -501,6 +523,7 @@ BEGIN {
 		sub("^[ 	]*", "", params[len])
 		if (match(params[len], "\\*") || match(params[len], "&")) {
 			if (match(params[len], "^char")) {
+				# Many types can be converted to string, so use '.', not 's'. (handled by our glue code)
 				types = types "."
 			} else if (match(params[len], "^void")) {
 				types = types "p"
@@ -508,6 +531,8 @@ BEGIN {
 				types = types "a"
 			} else if (match(params[len], "^struct Array")) {
 				types = types "a"
+			} else if (match(params[len], "^Text")) {
+				types = types "."
 			} else {
 				types = types "x"
 			}

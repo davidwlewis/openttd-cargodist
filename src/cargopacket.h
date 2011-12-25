@@ -70,7 +70,7 @@ public:
 	 * Gets the number of 'items' in this packet.
 	 * @return Item count.
 	 */
-	FORCEINLINE uint16 Count() const
+	inline uint16 Count() const
 	{
 		return this->count;
 	}
@@ -80,7 +80,7 @@ public:
 	 * the feeder chain.
 	 * @return Feeder share.
 	 */
-	FORCEINLINE Money FeederShare() const
+	inline Money FeederShare() const
 	{
 		return this->feeder_share;
 	}
@@ -91,7 +91,7 @@ public:
 	 * it is capped at 255.
 	 * @return Length this cargo has been in transit.
 	 */
-	FORCEINLINE byte DaysInTransit() const
+	inline byte DaysInTransit() const
 	{
 		return this->days_in_transit;
 	}
@@ -100,7 +100,7 @@ public:
 	 * Gets the type of the cargo's source. industry, town or head quarter.
 	 * @return Source type.
 	 */
-	FORCEINLINE SourceType SourceSubsidyType() const
+	inline SourceType SourceSubsidyType() const
 	{
 		return this->source_type;
 	}
@@ -109,7 +109,7 @@ public:
 	 * Gets the ID of the cargo's source. An IndustryID, TownID or CompanyID.
 	 * @return Source ID.
 	 */
-	FORCEINLINE SourceID SourceSubsidyID() const
+	inline SourceID SourceSubsidyID() const
 	{
 		return this->source_id;
 	}
@@ -118,7 +118,7 @@ public:
 	 * Gets the ID of the station where the cargo was loaded for the first time.
 	 * @return StationID.
 	 */
-	FORCEINLINE SourceID SourceStation() const
+	inline SourceID SourceStation() const
 	{
 		return this->source;
 	}
@@ -127,7 +127,7 @@ public:
 	 * Gets the coordinates of the cargo's source station.
 	 * @return Source station's coordinates.
 	 */
-	FORCEINLINE TileIndex SourceStationXY() const
+	inline TileIndex SourceStationXY() const
 	{
 		return this->source_xy;
 	}
@@ -136,7 +136,7 @@ public:
 	 * Gets the coordinates of the cargo's last loading station.
 	 * @return Last loading station's coordinates.
 	 */
-	FORCEINLINE TileIndex LoadedAtXY() const
+	inline TileIndex LoadedAtXY() const
 	{
 		return this->loaded_at_xy;
 	}
@@ -205,7 +205,7 @@ public:
 	 * Returns a pointer to the cargo packet list (so you can iterate over it etc).
 	 * @return Pointer to the packet list.
 	 */
-	FORCEINLINE const List *Packets() const
+	inline const List *Packets() const
 	{
 		return &this->packets;
 	}
@@ -214,7 +214,7 @@ public:
 	 * Checks whether this list is empty.
 	 * @return True if and only if the list is empty.
 	 */
-	FORCEINLINE bool Empty() const
+	inline bool Empty() const
 	{
 		return this->count == 0;
 	}
@@ -223,16 +223,25 @@ public:
 	 * Returns the number of cargo entities in this list.
 	 * @return The before mentioned number.
 	 */
-	FORCEINLINE uint Count() const
+	inline uint Count() const
 	{
 		return this->count;
+	}
+
+	/**
+	 * Returns source of the first cargo packet in this list.
+	 * @return The before mentioned source.
+	 */
+	inline StationID Source() const
+	{
+		return this->Empty() ? INVALID_STATION : this->packets.front()->source;
 	}
 
 	/**
 	 * Returns average number of days in transit for a cargo entity.
 	 * @return The before mentioned number.
 	 */
-	FORCEINLINE uint DaysInTransit() const
+	inline uint DaysInTransit() const
 	{
 		return this->count == 0 ? 0 : this->cargo_days_in_transit / this->count;
 	}
@@ -274,7 +283,7 @@ public:
 	 * Returns total sum of the feeder share for all packets.
 	 * @return The before mentioned number.
 	 */
-	FORCEINLINE Money FeederShare() const
+	inline Money FeederShare() const
 	{
 		return this->feeder_share;
 	}
@@ -284,7 +293,7 @@ public:
 	 * reserved).
 	 * @return Cargo on board the vehicle.
 	 */
-	FORCEINLINE uint OnboardCount() const
+	inline uint OnboardCount() const
 	{
 		return this->count - this->reserved_count;
 	}
@@ -293,7 +302,7 @@ public:
 	 * Returns sum of cargo reserved for the vehicle.
 	 * @return Cargo reserved for the vehicle.
 	 */
-	FORCEINLINE uint ReservedCount() const
+	inline uint ReservedCount() const
 	{
 		return this->reserved_count;
 	}
@@ -302,7 +311,7 @@ public:
 	 * Returns a pointer to the reserved cargo list.
 	 * @return Pointer to the reserved list.
 	 */
-	FORCEINLINE const List *Reserved() const
+	inline const List *Reserved() const
 	{
 		return &this->reserved;
 	}
@@ -314,7 +323,7 @@ public:
 	 * reserved packet.
 	 * @return The before mentioned source.
 	 */
-	FORCEINLINE StationID Source() const
+	inline StationID Source() const
 	{
 		if (this->Empty()) {
 			return INVALID_STATION;
@@ -381,7 +390,7 @@ public:
 	 * Returns source of the first cargo packet in this list.
 	 * @return The before mentioned source.
 	 */
-	FORCEINLINE StationID Source() const
+	inline StationID Source() const
 	{
 		return this->Empty() ? INVALID_STATION : this->packets.front()->source;
 	}

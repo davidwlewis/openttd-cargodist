@@ -74,6 +74,7 @@ static void _DoCommandReturnBuildBridge1(class ScriptInstance *instance)
 	EnforcePrecondition(false, TileX(start) == TileX(end) || TileY(start) == TileY(end));
 	EnforcePrecondition(false, vehicle_type == ScriptVehicle::VT_ROAD || vehicle_type == ScriptVehicle::VT_RAIL || vehicle_type == ScriptVehicle::VT_WATER);
 	EnforcePrecondition(false, vehicle_type != ScriptVehicle::VT_RAIL || ScriptRail::IsRailTypeAvailable(ScriptRail::GetCurrentRailType()));
+	EnforcePrecondition(false, ScriptObject::GetCompany() != OWNER_DEITY || vehicle_type == ScriptVehicle::VT_ROAD);
 
 	uint type = 0;
 	switch (vehicle_type) {
@@ -127,6 +128,7 @@ static void _DoCommandReturnBuildBridge1(class ScriptInstance *instance)
 
 /* static */ bool ScriptBridge::RemoveBridge(TileIndex tile)
 {
+	EnforcePrecondition(false, ScriptObject::GetCompany() != OWNER_DEITY);
 	EnforcePrecondition(false, IsBridgeTile(tile));
 	return ScriptObject::DoCommand(tile, 0, 0, CMD_LANDSCAPE_CLEAR);
 }
