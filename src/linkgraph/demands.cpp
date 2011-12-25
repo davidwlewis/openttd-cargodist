@@ -42,7 +42,7 @@ void SymmetricScaler::SetDemands(LinkGraphComponent *graph, NodeID from_id, Node
  * @þaram to_id The receiving node.
  * @param demand_forw Demand calculated for the "forward" direction.
  */
-FORCEINLINE void Scaler::SetDemands(LinkGraphComponent *graph, NodeID from_id, NodeID to_id, uint demand_forw)
+inline void Scaler::SetDemands(LinkGraphComponent *graph, NodeID from_id, NodeID to_id, uint demand_forw)
 {
 	Edge &forward = graph->GetEdge(from_id, to_id);
 	forward.demand += demand_forw;
