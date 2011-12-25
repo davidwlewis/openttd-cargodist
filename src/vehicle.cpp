@@ -2020,6 +2020,9 @@ void Vehicle::RefreshNextHopsStats()
 			i->second += v->cargo_cap;
 		}
 	}
+	
+	/* If orders were deleted while loading, we're done here.*/
+	if (this->orders.list == NULL) return;
 
 	uint hops = 0;
 	const Order *first = this->orders.list->GetNextStoppingOrder(this,
@@ -2046,7 +2049,7 @@ void Vehicle::RefreshNextHopsStats()
 				v->cargo_subtype = new_subtype;
 
 				uint16 mail_capacity = 0;
-				uint amount = GetVehicleCapacity(v, &mail_capacity);
+				uint amount = e->DetermineCapacity(v, &mail_capacity);
 
 				/* Restore the original cargo type */
 				v->cargo_type = temp_cid;
