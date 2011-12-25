@@ -45,7 +45,7 @@
 #include <map>
 #include "smallmap_gui.h"
 #include "genworld.h"
-#include "gui.h"
+#include "error.h"
 #include "vehicle_func.h"
 #include "language.h"
 #include "vehicle_base.h"
@@ -207,7 +207,7 @@ protected:
 public:
 	ByteReader(byte *data, byte *end) : data(data), end(end) { }
 
-	FORCEINLINE byte ReadByte()
+	inline byte ReadByte()
 	{
 		if (data < end) return *(data)++;
 		throw OTTDByteReaderSignal();
@@ -261,22 +261,22 @@ public:
 		return string;
 	}
 
-	FORCEINLINE size_t Remaining() const
+	inline size_t Remaining() const
 	{
 		return end - data;
 	}
 
-	FORCEINLINE bool HasData(size_t count = 1) const
+	inline bool HasData(size_t count = 1) const
 	{
 		return data + count <= end;
 	}
 
-	FORCEINLINE byte *Data()
+	inline byte *Data()
 	{
 		return data;
 	}
 
-	FORCEINLINE void Skip(size_t len)
+	inline void Skip(size_t len)
 	{
 		data += len;
 		/* It is valid to move the buffer to exactly the end of the data,
@@ -298,6 +298,8 @@ struct GRFTempEngineData {
 	bool refitmask_valid;    ///< Did the newgrf set any refittability property? If not, default refittability will be applied.
 	bool prop27_set;         ///< Did the NewGRF set property 27 (misc flags)?
 	uint8 rv_max_speed;      ///< Temporary storage of RV prop 15, maximum speed in mph/0.8
+	uint32 ctt_include_mask; ///< Cargo types always included in the refit mask.
+	uint32 ctt_exclude_mask; ///< Cargo types always excluded from the refit mask.
 };
 
 static GRFTempEngineData *_gted;  ///< Temporary engine data used during NewGRF loading
@@ -309,7 +311,7 @@ static GRFTempEngineData *_gted;  ///< Temporary engine data used during NewGRF 
 static uint32 _grm_engines[256];
 
 /** Contains the GRF ID of the owner of a cargo if it has been reserved */
-static uint32 _grm_cargos[NUM_CARGO * 2];
+static uint32 _grm_cargoes[NUM_CARGO * 2];
 
 struct GRFLocation {
 	uint32 grfid;
@@ -888,7 +890,7 @@ static ChangeInfoResult CommonVehicleChangeInfo(EngineInfo *ei, int prop, ByteRe
 			ei->climates = buf->ReadByte();
 			break;
 
-		case 0x07: // Loading speed
+		case PROP_VEHICLE_LOAD_AMOUNT: // 0x07 Loading speed
 			/* Amount of cargo loaded during a vehicle's "loading tick" */
 			ei->load_amount = buf->ReadByte();
 			break;
@@ -1004,11 +1006,15 @@ static ChangeInfoResult RailVehicleChangeInfo(uint engine, int numinfo, int prop
 			case 0x15: { // Cargo type
 				uint8 ctype = buf->ReadByte();
 
-				if (ctype < NUM_CARGO && HasBit(_cargo_mask, ctype)) {
-					ei->cargo_type = ctype;
-				} else if (ctype == 0xFF) {
+				if (ctype == 0xFF) {
 					/* 0xFF is specified as 'use first refittable' */
 					ei->cargo_type = CT_INVALID;
+				} else if (_cur.grffile->grf_version >= 8) {
+					/* Use translated cargo. Might result in CT_INVALID (first refittable), if cargo is not defined. */
+					ei->cargo_type = GetCargoTranslation(ctype, _cur.grffile);
+				} else if (ctype < NUM_CARGO && HasBit(_cargo_mask, ctype)) {
+					/* Use untranslated cargo. */
+					ei->cargo_type = ctype;
 				} else {
 					ei->cargo_type = CT_INVALID;
 					grfmsg(2, "RailVehicleChangeInfo: Invalid cargo type %d, using first refittable", ctype);
@@ -1095,7 +1101,7 @@ static ChangeInfoResult RailVehicleChangeInfo(uint engine, int numinfo, int prop
 				rvi->air_drag = buf->ReadByte();
 				break;
 
-			case 0x21: // Shorter vehicle
+			case PROP_TRAIN_SHORTEN_FACTOR: // 0x21 Shorter vehicle
 				rvi->shorten_factor = buf->ReadByte();
 				break;
 
@@ -1156,6 +1162,18 @@ static ChangeInfoResult RailVehicleChangeInfo(uint engine, int numinfo, int prop
 				ei->cargo_age_period = buf->ReadWord();
 				break;
 
+			case 0x2C:   // CTT refit include list
+			case 0x2D: { // CTT refit exclude list
+				uint8 count = buf->ReadByte();
+				while (count--) {
+					CargoID ctype = GetCargoTranslation(buf->ReadByte(), _cur.grffile);
+					if (ctype == CT_INVALID) continue;
+					SetBit(prop == 0x2C ? _gted[e->index].ctt_include_mask : _gted[e->index].ctt_exclude_mask, ctype);
+				}
+				_gted[e->index].refitmask_valid = true;
+				break;
+			}
+
 			default:
 				ret = CommonVehicleChangeInfo(ei, prop, buf);
 				break;
@@ -1214,15 +1232,20 @@ static ChangeInfoResult RoadVehicleChangeInfo(uint engine, int numinfo, int prop
 				break;
 
 			case 0x10: { // Cargo type
-				uint8 cargo = buf->ReadByte();
+				uint8 ctype = buf->ReadByte();
 
-				if (cargo < NUM_CARGO && HasBit(_cargo_mask, cargo)) {
-					ei->cargo_type = cargo;
-				} else if (cargo == 0xFF) {
+				if (ctype == 0xFF) {
+					/* 0xFF is specified as 'use first refittable' */
 					ei->cargo_type = CT_INVALID;
+				} else if (_cur.grffile->grf_version >= 8) {
+					/* Use translated cargo. Might result in CT_INVALID (first refittable), if cargo is not defined. */
+					ei->cargo_type = GetCargoTranslation(ctype, _cur.grffile);
+				} else if (ctype < NUM_CARGO && HasBit(_cargo_mask, ctype)) {
+					/* Use untranslated cargo. */
+					ei->cargo_type = ctype;
 				} else {
 					ei->cargo_type = CT_INVALID;
-					grfmsg(2, "RoadVehicleChangeInfo: Invalid cargo type %d, using first refittable", cargo);
+					grfmsg(2, "RailVehicleChangeInfo: Invalid cargo type %d, using first refittable", ctype);
 				}
 				break;
 			}
@@ -1247,7 +1270,7 @@ static ChangeInfoResult RoadVehicleChangeInfo(uint engine, int numinfo, int prop
 				_gted[e->index].rv_max_speed = buf->ReadByte();
 				break;
 
-			case 0x16: // Cargos available for refitting
+			case 0x16: // Cargoes available for refitting
 				ei->refit_mask = buf->ReadDWord();
 				_gted[e->index].refitmask_valid = true;
 				_gted[e->index].refitmask_grf = _cur.grffile;
@@ -1310,6 +1333,22 @@ static ChangeInfoResult RoadVehicleChangeInfo(uint engine, int numinfo, int prop
 				ei->cargo_age_period = buf->ReadWord();
 				break;
 
+			case PROP_ROADVEH_SHORTEN_FACTOR: // 0x23 Shorter vehicle
+				rvi->shorten_factor = buf->ReadByte();
+				break;
+
+			case 0x24:   // CTT refit include list
+			case 0x25: { // CTT refit exclude list
+				uint8 count = buf->ReadByte();
+				while (count--) {
+					CargoID ctype = GetCargoTranslation(buf->ReadByte(), _cur.grffile);
+					if (ctype == CT_INVALID) continue;
+					SetBit(prop == 0x24 ? _gted[e->index].ctt_include_mask : _gted[e->index].ctt_exclude_mask, ctype);
+				}
+				_gted[e->index].refitmask_valid = true;
+				break;
+			}
+
 			default:
 				ret = CommonVehicleChangeInfo(ei, prop, buf);
 				break;
@@ -1364,15 +1403,20 @@ static ChangeInfoResult ShipVehicleChangeInfo(uint engine, int numinfo, int prop
 				break;
 
 			case 0x0C: { // Cargo type
-				uint8 cargo = buf->ReadByte();
+				uint8 ctype = buf->ReadByte();
 
-				if (cargo < NUM_CARGO && HasBit(_cargo_mask, cargo)) {
-					ei->cargo_type = cargo;
-				} else if (cargo == 0xFF) {
+				if (ctype == 0xFF) {
+					/* 0xFF is specified as 'use first refittable' */
 					ei->cargo_type = CT_INVALID;
+				} else if (_cur.grffile->grf_version >= 8) {
+					/* Use translated cargo. Might result in CT_INVALID (first refittable), if cargo is not defined. */
+					ei->cargo_type = GetCargoTranslation(ctype, _cur.grffile);
+				} else if (ctype < NUM_CARGO && HasBit(_cargo_mask, ctype)) {
+					/* Use untranslated cargo. */
+					ei->cargo_type = ctype;
 				} else {
 					ei->cargo_type = CT_INVALID;
-					grfmsg(2, "ShipVehicleChangeInfo: Invalid cargo type %d, using first refittable", cargo);
+					grfmsg(2, "RailVehicleChangeInfo: Invalid cargo type %d, using first refittable", ctype);
 				}
 				break;
 			}
@@ -1389,7 +1433,7 @@ static ChangeInfoResult ShipVehicleChangeInfo(uint engine, int numinfo, int prop
 				svi->sfx = buf->ReadByte();
 				break;
 
-			case 0x11: // Cargos available for refitting
+			case 0x11: // Cargoes available for refitting
 				ei->refit_mask = buf->ReadDWord();
 				_gted[e->index].refitmask_valid = true;
 				_gted[e->index].refitmask_grf = _cur.grffile;
@@ -1451,6 +1495,18 @@ static ChangeInfoResult ShipVehicleChangeInfo(uint engine, int numinfo, int prop
 			case PROP_SHIP_CARGO_AGE_PERIOD: // 0x1D Cargo aging period
 				ei->cargo_age_period = buf->ReadWord();
 				break;
+
+			case 0x1E:   // CTT refit include list
+			case 0x1F: { // CTT refit exclude list
+				uint8 count = buf->ReadByte();
+				while (count--) {
+					CargoID ctype = GetCargoTranslation(buf->ReadByte(), _cur.grffile);
+					if (ctype == CT_INVALID) continue;
+					SetBit(prop == 0x1E ? _gted[e->index].ctt_include_mask : _gted[e->index].ctt_exclude_mask, ctype);
+				}
+				_gted[e->index].refitmask_valid = true;
+				break;
+			}
 
 			default:
 				ret = CommonVehicleChangeInfo(ei, prop, buf);
@@ -1533,7 +1589,7 @@ static ChangeInfoResult AircraftVehicleChangeInfo(uint engine, int numinfo, int 
 				avi->sfx = buf->ReadByte();
 				break;
 
-			case 0x13: // Cargos available for refitting
+			case 0x13: // Cargoes available for refitting
 				ei->refit_mask = buf->ReadDWord();
 				_gted[e->index].refitmask_valid = true;
 				_gted[e->index].refitmask_grf = _cur.grffile;
@@ -1576,6 +1632,22 @@ static ChangeInfoResult AircraftVehicleChangeInfo(uint engine, int numinfo, int 
 
 			case PROP_AIRCRAFT_CARGO_AGE_PERIOD: // 0x1C Cargo aging period
 				ei->cargo_age_period = buf->ReadWord();
+				break;
+
+			case 0x1D:   // CTT refit include list
+			case 0x1E: { // CTT refit exclude list
+				uint8 count = buf->ReadByte();
+				while (count--) {
+					CargoID ctype = GetCargoTranslation(buf->ReadByte(), _cur.grffile);
+					if (ctype == CT_INVALID) continue;
+					SetBit(prop == 0x1D ? _gted[e->index].ctt_include_mask : _gted[e->index].ctt_exclude_mask, ctype);
+				}
+				_gted[e->index].refitmask_valid = true;
+				break;
+			}
+
+			case PROP_AIRCRAFT_RANGE: // 0x1F Max aircraft range
+				avi->max_range = buf->ReadWord();
 				break;
 
 			default:
@@ -2031,7 +2103,6 @@ static ChangeInfoResult IgnoreTownHouseProperty(int prop, ByteReader *buf)
 		case 0x20: {
 			byte count = buf->ReadByte();
 			for (byte j = 0; j < count; j++) buf->ReadByte();
-			ret = CIR_UNHANDLED;
 			break;
 		}
 
@@ -2113,13 +2184,6 @@ static ChangeInfoResult TownHouseChangeInfo(uint hid, int numinfo, int prop, Byt
 				if (!CargoSpec::Get(housespec->accepts_cargo[2])->IsValid()) {
 					housespec->cargo_acceptance[2] = 0;
 				}
-
-				/**
-				 * New houses do not (currently) expect to have a default start
-				 * date before 1930, as this breaks the build date stuff.
-				 * @see FinaliseHouseArray() for more details.
-				 */
-				if (housespec->min_year < 1930) housespec->min_year = 1930;
 
 				_loaded_newgrf_features.has_newhouses = true;
 				break;
@@ -2258,10 +2322,12 @@ static ChangeInfoResult TownHouseChangeInfo(uint hid, int numinfo, int prop, Byt
 				housespec->minimum_life = buf->ReadByte();
 				break;
 
-			case 0x20: { // @todo Cargo acceptance watch list
+			case 0x20: { // Cargo acceptance watch list
 				byte count = buf->ReadByte();
-				for (byte j = 0; j < count; j++) buf->ReadByte();
-				ret = CIR_UNHANDLED;
+				for (byte j = 0; j < count; j++) {
+					CargoID cargo = GetCargoTranslation(buf->ReadByte(), _cur.grffile);
+					if (cargo != CT_INVALID) SetBit(housespec->watched_cargoes, cargo);
+				}
 				break;
 			}
 
@@ -2417,6 +2483,16 @@ static ChangeInfoResult GlobalVarChangeInfo(uint gvid, int numinfo, int prop, By
 					for (uint i = 0; i < SNOW_LINE_MONTHS; i++) {
 						for (uint j = 0; j < SNOW_LINE_DAYS; j++) {
 							table[i][j] = buf->ReadByte();
+							if (_cur.grffile->grf_version >= 8) {
+								if (table[i][j] != 0xFF) table[i][j] = table[i][j] * (1 + MAX_TILE_HEIGHT) / 256;
+							} else {
+								if (table[i][j] >= 128) {
+									/* no snow */
+									table[i][j] = 0xFF;
+								} else {
+									table[i][j] = table[i][j] * (1 + MAX_TILE_HEIGHT) / 128;
+								}
+							}
 						}
 					}
 					SetSnowLine(table);
@@ -2590,7 +2666,7 @@ static ChangeInfoResult GlobalVarReserveInfo(uint gvid, int numinfo, int prop, B
 
 
 /**
- * Define properties for cargos
+ * Define properties for cargoes
  * @param cid Local ID of the cargo.
  * @param numinfo Number of subsequent IDs to change the property for.
  * @param prop The property to change.
@@ -3049,10 +3125,10 @@ static void CleanIndustryTileTable(IndustrySpec *ind)
 	if (HasBit(ind->cleanup_flag, CLEAN_TILELAYOUT) && ind->table != NULL) {
 		for (int j = 0; j < ind->num_table; j++) {
 			/* remove the individual layouts */
-			free((void*)ind->table[j]);
+			free(ind->table[j]);
 		}
 		/* remove the layouts pointers */
-		free((void*)ind->table);
+		free(ind->table);
 		ind->table = NULL;
 	}
 }
@@ -3300,7 +3376,7 @@ static ChangeInfoResult IndustriesChangeInfo(uint indid, int numinfo, int prop, 
 				}
 
 				if (HasBit(indsp->cleanup_flag, CLEAN_RANDOMSOUNDS)) {
-					free((void*)indsp->random_sounds);
+					free(indsp->random_sounds);
 				}
 				indsp->random_sounds = sounds;
 				SetBit(indsp->cleanup_flag, CLEAN_RANDOMSOUNDS);
@@ -3563,6 +3639,10 @@ static ChangeInfoResult AirportChangeInfo(uint airport, int numinfo, int prop, B
 				_string_to_grf_mapping[&as->name] = _cur.grffile->grfid;
 				break;
 
+			case 0x11: // Maintenance cost factor
+				as->maintenance_cost = buf->ReadWord();
+				break;
+
 			default:
 				ret = CIR_UNKNOWN;
 				break;
@@ -3775,9 +3855,13 @@ static ChangeInfoResult RailTypeChangeInfo(uint id, int numinfo, int prop, ByteR
 				buf->ReadDWord();
 				break;
 
-			case 0x09: // Name of railtype
+			case 0x09: // Toolbar caption of railtype (sets name as well for backwards compatibility for grf ver < 8)
 				rti->strings.toolbar_caption = buf->ReadWord();
 				_string_to_grf_mapping[&rti->strings.toolbar_caption] = _cur.grffile->grfid;
+				if (_cur.grffile->grf_version < 8) {
+					rti->strings.name = rti->strings.toolbar_caption;
+					_string_to_grf_mapping[&rti->strings.name] = _cur.grffile->grfid;
+				}
 				break;
 
 			case 0x0A: // Menu text of railtype
@@ -3860,6 +3944,15 @@ static ChangeInfoResult RailTypeChangeInfo(uint id, int numinfo, int prop, ByteR
 				rti->sorting_order = buf->ReadByte();
 				break;
 
+			case 0x1B: // Name of railtype (overridden by prop 09 for grf ver < 8)
+				rti->strings.name = buf->ReadWord();
+				_string_to_grf_mapping[&rti->strings.name] = _cur.grffile->grfid;
+				break;
+
+			case 0x1C: // Maintenance cost factor
+				rti->maintenance_multiplier = buf->ReadWord();
+				break;
+
 			default:
 				ret = CIR_UNKNOWN;
 				break;
@@ -3895,13 +3988,15 @@ static ChangeInfoResult RailTypeReserveInfo(uint id, int numinfo, int prop, Byte
 				break;
 			}
 
-			case 0x09: // Name of railtype
+			case 0x09: // Toolbar caption of railtype
 			case 0x0A: // Menu text
 			case 0x0B: // Build window caption
 			case 0x0C: // Autoreplace text
 			case 0x0D: // New loco
 			case 0x13: // Construction cost
 			case 0x14: // Speed limit
+			case 0x1B: // Name of railtype
+			case 0x1C: // Maintenance cost factor
 				buf->ReadWord();
 				break;
 
@@ -4077,7 +4172,7 @@ static void FeatureChangeInfo(ByteReader *buf)
 		/* GSF_GLOBALVAR */     GlobalVarChangeInfo,
 		/* GSF_INDUSTRYTILES */ IndustrytilesChangeInfo,
 		/* GSF_INDUSTRIES */    IndustriesChangeInfo,
-		/* GSF_CARGOS */        NULL, // Cargo is handled during reservation
+		/* GSF_CARGOES */       NULL, // Cargo is handled during reservation
 		/* GSF_SOUNDFX */       SoundEffectChangeInfo,
 		/* GSF_AIRPORTS */      AirportChangeInfo,
 		/* GSF_SIGNALS */       NULL,
@@ -4095,7 +4190,7 @@ static void FeatureChangeInfo(ByteReader *buf)
 	               feature, numprops, engine, numinfo);
 
 	if (feature >= lengthof(handler) || handler[feature] == NULL) {
-		if (feature != GSF_CARGOS) grfmsg(1, "FeatureChangeInfo: Unsupported feature %d, skipping", feature);
+		if (feature != GSF_CARGOES) grfmsg(1, "FeatureChangeInfo: Unsupported feature %d, skipping", feature);
 		return;
 	}
 
@@ -4152,7 +4247,7 @@ static void ReserveChangeInfo(ByteReader *buf)
 {
 	uint8 feature  = buf->ReadByte();
 
-	if (feature != GSF_CARGOS && feature != GSF_GLOBALVAR && feature != GSF_RAILTYPES) return;
+	if (feature != GSF_CARGOES && feature != GSF_GLOBALVAR && feature != GSF_RAILTYPES) return;
 
 	uint8 numprops = buf->ReadByte();
 	uint8 numinfo  = buf->ReadByte();
@@ -4164,7 +4259,7 @@ static void ReserveChangeInfo(ByteReader *buf)
 
 		switch (feature) {
 			default: NOT_REACHED();
-			case GSF_CARGOS:
+			case GSF_CARGOES:
 				cir = CargoChangeInfo(index, numinfo, prop, buf);
 				break;
 
@@ -4238,7 +4333,7 @@ static const SpriteGroup *GetGroupFromGroupID(byte setid, byte type, uint16 grou
 {
 	if (HasBit(groupid, 15)) {
 		assert(CallbackResultSpriteGroup::CanAllocateItem());
-		return new CallbackResultSpriteGroup(groupid);
+		return new CallbackResultSpriteGroup(groupid, _cur.grffile->grf_version >= 8);
 	}
 
 	if (groupid > MAX_SPRITEGROUP || _cur.spritegroups[groupid] == NULL) {
@@ -4261,7 +4356,7 @@ static const SpriteGroup *CreateGroupFromGroupID(byte feature, byte setid, byte 
 {
 	if (HasBit(spriteid, 15)) {
 		assert(CallbackResultSpriteGroup::CanAllocateItem());
-		return new CallbackResultSpriteGroup(spriteid);
+		return new CallbackResultSpriteGroup(spriteid, _cur.grffile->grf_version >= 8);
 	}
 
 	if (!_cur.IsValidSpriteSet(feature, spriteid)) {
@@ -4416,7 +4511,7 @@ static void NewSpriteGroup(ByteReader *buf)
 				case GSF_AIRCRAFT:
 				case GSF_STATIONS:
 				case GSF_CANALS:
-				case GSF_CARGOS:
+				case GSF_CARGOES:
 				case GSF_AIRPORTS:
 				case GSF_RAILTYPES:
 				{
@@ -4834,9 +4929,9 @@ static void IndustrytileMapSpriteGroup(ByteReader *buf, uint8 idcount)
 
 static void CargoMapSpriteGroup(ByteReader *buf, uint8 idcount)
 {
-	CargoID *cargos = AllocaM(CargoID, idcount);
+	CargoID *cargoes = AllocaM(CargoID, idcount);
 	for (uint i = 0; i < idcount; i++) {
-		cargos[i] = buf->ReadByte();
+		cargoes[i] = buf->ReadByte();
 	}
 
 	/* Skip the cargo type section, we only care about the default group */
@@ -4847,7 +4942,7 @@ static void CargoMapSpriteGroup(ByteReader *buf, uint8 idcount)
 	if (!IsValidGroupID(groupid, "CargoMapSpriteGroup")) return;
 
 	for (uint i = 0; i < idcount; i++) {
-		CargoID cid = cargos[i];
+		CargoID cid = cargoes[i];
 
 		if (cid >= NUM_CARGO) {
 			grfmsg(1, "CargoMapSpriteGroup: Cargo ID %d out of range, skipping", cid);
@@ -5074,7 +5169,7 @@ static void FeatureMapSpriteGroup(ByteReader *buf)
 			IndustrytileMapSpriteGroup(buf, idcount);
 			return;
 
-		case GSF_CARGOS:
+		case GSF_CARGOES:
 			CargoMapSpriteGroup(buf, idcount);
 			return;
 
@@ -5153,7 +5248,7 @@ static void FeatureNewName(ByteReader *buf)
 				if (!generic) {
 					Engine *e = GetNewEngine(_cur.grffile, (VehicleType)feature, id, HasBit(_cur.grfconfig->flags, GCF_STATIC));
 					if (e == NULL) break;
-					StringID string = AddGRFString(_cur.grffile->grfid, e->index, lang, false, new_scheme, name, e->info.string_id);
+					StringID string = AddGRFString(_cur.grffile->grfid, e->index, lang, new_scheme, false, name, e->info.string_id);
 					e->info.string_id = string;
 				} else {
 					AddGRFString(_cur.grffile->grfid, id, lang, new_scheme, true, name, STR_UNDEFINED);
@@ -5414,9 +5509,10 @@ void CheckForMissingSprites()
  *
  * @param param variable number (as for VarAction2, for Action7/9/D you have to subtract 0x80 first).
  * @param value returns the value of the variable.
+ * @param grffile NewGRF querying the variable
  * @return true iff the variable is known and the value is returned in 'value'.
  */
-bool GetGlobalVariable(byte param, uint32 *value)
+bool GetGlobalVariable(byte param, uint32 *value, const GRFFile *grffile)
 {
 	switch (param) {
 		case 0x00: // current date
@@ -5517,9 +5613,16 @@ bool GetGlobalVariable(byte param, uint32 *value)
 
 		/* case 0x1F: // locale dependent settings not implemented to avoid desync */
 
-		case 0x20: // snow line height
-			*value = _settings_game.game_creation.landscape == LT_ARCTIC ? GetSnowLine() : 0xFF;
+		case 0x20: { // snow line height
+			byte snowline = GetSnowLine();
+			if (_settings_game.game_creation.landscape == LT_ARCTIC && snowline <= MAX_TILE_HEIGHT) {
+				*value = Clamp(snowline * (grffile->grf_version >= 8 ? 1 : TILE_HEIGHT), 0, 0xFE);
+			} else {
+				/* No snow */
+				*value = 0xFF;
+			}
 			return true;
+		}
 
 		case 0x21: // OpenTTD version
 			*value = _openttd_newgrf_version;
@@ -5545,7 +5648,7 @@ static uint32 GetParamVal(byte param, uint32 *cond_val)
 {
 	/* First handle variable common with VarAction2 */
 	uint32 value;
-	if (GetGlobalVariable(param - 0x80, &value)) return value;
+	if (GetGlobalVariable(param - 0x80, &value, _cur.grffile)) return value;
 
 	/* Non-common variable */
 	switch (param) {
@@ -5869,7 +5972,7 @@ static void ScanInfo(ByteReader *buf)
 
 	_cur.grfconfig->ident.grfid = grfid;
 
-	if (grf_version < 2 || grf_version > 7) {
+	if (grf_version < 2 || grf_version > 8) {
 		SetBit(_cur.grfconfig->flags, GCF_INVALID);
 		DEBUG(grf, 0, "%s: NewGRF \"%s\" (GRFID %08X) uses GRF version %d, which is incompatible with this version of OpenTTD.", _cur.grfconfig->filename, name, BSWAP32(grfid), grf_version);
 	}
@@ -6165,6 +6268,10 @@ static uint32 GetPatchVariable(uint8 param)
 				(log_X << 12) | (log_Y << 8) | (log_X + log_Y);
 		}
 
+		/* The maximum height of the map. */
+		case 0x14:
+			return MAX_TILE_HEIGHT;
+
 		default:
 			grfmsg(2, "ParamSet: Unknown Patch variable 0x%02X.", param);
 			return 0;
@@ -6341,7 +6448,7 @@ static void ParamSet(ByteReader *buf)
 
 						case 0x0B: // Cargo
 							/* There are two ranges: one for cargo IDs and one for cargo bitmasks */
-							src1 = PerformGRM(_grm_cargos, NUM_CARGO * 2, count, op, target, "cargos");
+							src1 = PerformGRM(_grm_cargoes, NUM_CARGO * 2, count, op, target, "cargoes");
 							if (_cur.skip_sprites == -1) return;
 							break;
 
@@ -6842,7 +6949,7 @@ static void LoadFontGlyph(ByteReader *buf)
 	/* <12> <num_def> <font_size> <num_char> <base_char>
 	 *
 	 * B num_def      Number of definitions
-	 * B font_size    Size of font (0 = normal, 1 = small, 2 = large)
+	 * B font_size    Size of font (0 = normal, 1 = small, 2 = large, 3 = mono)
 	 * B num_char     Number of consecutive glyphs
 	 * W base_char    First character index */
 
@@ -6853,10 +6960,14 @@ static void LoadFontGlyph(ByteReader *buf)
 		uint8  num_char  = buf->ReadByte();
 		uint16 base_char = buf->ReadWord();
 
+		if (size >= FS_END) {
+			grfmsg(1, "LoadFontGlyph: Size %u is not supported, ignoring", size);
+		}
+
 		grfmsg(7, "LoadFontGlyph: Loading %u glyph(s) at 0x%04X for size %u", num_char, base_char, size);
 
 		for (uint c = 0; c < num_char; c++) {
-			SetUnicodeGlyph(size, base_char + c, _cur.spriteid);
+			if (size < FS_END) SetUnicodeGlyph(size, base_char + c, _cur.spriteid);
 			_cur.nfo_line++;
 			LoadNextSprite(_cur.spriteid++, _cur.file_index, _cur.nfo_line);
 		}
@@ -6918,6 +7029,12 @@ static void TranslateGRFStrings(ByteReader *buf)
 		return;
 	}
 
+	/* Since no language id is supplied for with version 7 and lower NewGRFs, this string has
+	 * to be added as a generic string, thus the language id of 0x7F. For this to work
+	 * new_scheme has to be true as well, which will also be implicitly the case for version 8
+	 * and higher. A language id of 0x7F will be overridden by a non-generic id, so this will
+	 * not change anything if a string has been provided specifically for this language. */
+	byte language = _cur.grffile->grf_version >= 8 ? buf->ReadByte() : 0x7F;
 	byte num_strings = buf->ReadByte();
 	uint16 first_id  = buf->ReadWord();
 
@@ -6934,12 +7051,7 @@ static void TranslateGRFStrings(ByteReader *buf)
 			continue;
 		}
 
-		/* Since no language id is supplied this string has to be added as a
-		 * generic string, thus the language id of 0x7F. For this to work
-		 * new_scheme has to be true as well. A language id of 0x7F will be
-		 * overridden by a non-generic id, so this will not change anything if
-		 * a string has been provided specifically for this language. */
-		AddGRFString(grfid, first_id + i, 0x7F, true, true, string, STR_UNDEFINED);
+		AddGRFString(grfid, first_id + i, language, true, true, string, STR_UNDEFINED);
 	}
 }
 
@@ -6954,6 +7066,13 @@ static bool ChangeGRFName(byte langid, const char *str)
 static bool ChangeGRFDescription(byte langid, const char *str)
 {
 	AddGRFTextToList(&_cur.grfconfig->info->text, langid, _cur.grfconfig->ident.grfid, true, str);
+	return true;
+}
+
+/** Callback function for 'INFO'->'URL_' to set the newgrf url. */
+static bool ChangeGRFURL(byte langid, const char *str)
+{
+	AddGRFTextToList(&_cur.grfconfig->url->text, langid, _cur.grfconfig->ident.grfid, false, str);
 	return true;
 }
 
@@ -7304,6 +7423,7 @@ static bool HandleParameterInfo(ByteReader *buf)
 AllowedSubtags _tags_info[] = {
 	AllowedSubtags('NAME', ChangeGRFName),
 	AllowedSubtags('DESC', ChangeGRFDescription),
+	AllowedSubtags('URL_', ChangeGRFURL),
 	AllowedSubtags('NPAR', ChangeGRFNumUsedParams),
 	AllowedSubtags('PALS', ChangeGRFPalette),
 	AllowedSubtags('BLTR', ChangeGRFBlitter),
@@ -7619,10 +7739,10 @@ static void ResetCustomAirports()
 					/* We need to remove the tiles layouts */
 					for (int j = 0; j < as->num_table; j++) {
 						/* remove the individual layouts */
-						free((void*)as->table[j]);
+						free(as->table[j]);
 					}
-					free((void*)as->table);
-					free((void*)as->depot_table);
+					free(as->table);
+					free(as->depot_table);
 
 					free(as);
 				}
@@ -7659,7 +7779,7 @@ static void ResetCustomIndustries()
 
 				/* We need to remove the sounds array */
 				if (HasBit(ind->cleanup_flag, CLEAN_RANDOMSOUNDS)) {
-					free((void*)ind->random_sounds);
+					free(ind->random_sounds);
 				}
 
 				/* We need to remove the tiles layouts */
@@ -7755,7 +7875,7 @@ void ResetNewGRFData()
 
 	/* Reset GRM reservations */
 	memset(&_grm_engines, 0, sizeof(_grm_engines));
-	memset(&_grm_cargos, 0, sizeof(_grm_cargos));
+	memset(&_grm_cargoes, 0, sizeof(_grm_cargoes));
 
 	/* Reset generic feature callback lists */
 	ResetGenericCallbacks();
@@ -7954,15 +8074,26 @@ static void CalculateRefitMasks()
 	FOR_ALL_ENGINES(e) {
 		EngineID engine = e->index;
 		EngineInfo *ei = &e->info;
-		uint32 mask = 0;
-		uint32 not_mask = 0;
-		uint32 xor_mask = 0;
+		bool only_defaultcargo; ///< Set if the vehicle shall carry only the default cargo
+		const uint8 *cargo_map_for_first_refittable = NULL;
 
 		/* Did the newgrf specify any refitting? If not, use defaults. */
 		if (_gted[engine].refitmask_valid) {
+			uint32 mask = 0;
+			uint32 not_mask = 0;
+			uint32 xor_mask = 0;
+
+			/* If the original masks set by the grf are zero, the vehicle shall only carry the default cargo.
+			 * Note: After applying the translations, the vehicle may end up carrying no defined cargo. It becomes unavailable in that case. */
+			only_defaultcargo = (ei->refit_mask == 0 && _gted[engine].cargo_allowed == 0 && _gted[engine].ctt_include_mask == 0);
+
+			const GRFFile *file = _gted[engine].refitmask_grf;
+			if (file == NULL) file = e->GetGRF();
+			if (file != NULL && file->grf_version >= 8 && file->cargo_max != 0) {
+				cargo_map_for_first_refittable = file->cargo_map;
+			}
+
 			if (ei->refit_mask != 0) {
-				const GRFFile *file = _gted[engine].refitmask_grf;
-				if (file == NULL) file = e->grf_prop.grffile;
 				if (file != NULL && file->cargo_max != 0) {
 					/* Apply cargo translation table to the refit mask */
 					uint num_cargo = min(32, file->cargo_max);
@@ -7991,7 +8122,15 @@ static void CalculateRefitMasks()
 					if (_gted[engine].cargo_disallowed & cs->classes) SetBit(not_mask, cs->Index());
 				}
 			}
+
+			ei->refit_mask = ((mask & ~not_mask) ^ xor_mask) & _cargo_mask;
+
+			/* Apply explicit refit includes/excludes. */
+			ei->refit_mask |= _gted[engine].ctt_include_mask;
+			ei->refit_mask &= ~_gted[engine].ctt_exclude_mask;
 		} else {
+			uint32 xor_mask = 0;
+
 			/* Don't apply default refit mask to wagons nor engines with no capacity */
 			if (e->type != VEH_TRAIN || (e->u.rail.capacity != 0 && e->u.rail.railveh_type != RAILVEH_WAGON)) {
 				const CargoLabel *cl = _default_refitmasks[e->type];
@@ -8004,17 +8143,44 @@ static void CalculateRefitMasks()
 					SetBit(xor_mask, cargo);
 				}
 			}
+
+			ei->refit_mask = xor_mask & _cargo_mask;
+
+			/* If the mask is zero, the vehicle shall only carry the default cargo */
+			only_defaultcargo = (ei->refit_mask == 0);
 		}
 
-		ei->refit_mask = ((mask & ~not_mask) ^ xor_mask) & _cargo_mask;
+		/* Ensure that the vehicle is either not refittable, or that the default cargo is one of the refittable cargoes.
+		 * Note: Vehicles refittable to no cargo are handle differently to vehicle refittable to a single cargo. The latter might have subtypes. */
+		if (!only_defaultcargo && (e->type != VEH_SHIP || e->u.ship.old_refittable) && ei->cargo_type != CT_INVALID && !HasBit(ei->refit_mask, ei->cargo_type)) {
+			ei->cargo_type = CT_INVALID;
+		}
 
 		/* Check if this engine's cargo type is valid. If not, set to the first refittable
 		 * cargo type. Finally disable the vehicle, if there is still no cargo. */
-		if (ei->cargo_type == CT_INVALID && ei->refit_mask != 0) ei->cargo_type = (CargoID)FindFirstBit(ei->refit_mask);
+		if (ei->cargo_type == CT_INVALID && ei->refit_mask != 0) {
+			if (cargo_map_for_first_refittable == NULL) {
+				/* Use first refittable cargo slot */
+				ei->cargo_type = (CargoID)FindFirstBit(ei->refit_mask);
+			} else {
+				/* Use first refittable cargo from cargo translation table */
+				byte best_local_slot = 0xFF;
+				CargoID cargo_type;
+				FOR_EACH_SET_CARGO_ID(cargo_type, ei->refit_mask) {
+					byte local_slot = cargo_map_for_first_refittable[cargo_type];
+					if (local_slot < best_local_slot) {
+						best_local_slot = local_slot;
+						ei->cargo_type = cargo_type;
+					}
+				}
+			}
+		}
 		if (ei->cargo_type == CT_INVALID) ei->climates = 0;
 
 		/* Clear refit_mask for not refittable ships */
-		if (e->type == VEH_SHIP && !e->u.ship.old_refittable) ei->refit_mask = 0;
+		if (e->type == VEH_SHIP && !e->u.ship.old_refittable) {
+			ei->refit_mask = 0;
+		}
 	}
 }
 
@@ -8035,7 +8201,7 @@ static void FinaliseEngineArray()
 	Engine *e;
 
 	FOR_ALL_ENGINES(e) {
-		if (e->grf_prop.grffile == NULL) {
+		if (e->GetGRF() == NULL) {
 			const EngineIDMapping &eid = _engine_mngr[e->index];
 			if (eid.grfid != INVALID_GRFID || eid.internal_id != eid.substitute_id) {
 				e->info.string_id = STR_NEWGRF_INVALID_ENGINE;
@@ -8045,7 +8211,7 @@ static void FinaliseEngineArray()
 		/* When the train does not set property 27 (misc flags), but it
 		 * is overridden by a NewGRF graphically we want to disable the
 		 * flipping possibility. */
-		if (e->type == VEH_TRAIN && !_gted[e->index].prop27_set && e->grf_prop.grffile != NULL && is_custom_sprite(e->u.rail.image_index)) {
+		if (e->type == VEH_TRAIN && !_gted[e->index].prop27_set && e->GetGRF() != NULL && is_custom_sprite(e->u.rail.image_index)) {
 			ClrBit(e->info.misc_flags, EF_RAIL_FLIPS);
 		}
 
@@ -8078,7 +8244,7 @@ static void FinaliseEngineArray()
 	}
 }
 
-/** Check for invalid cargos */
+/** Check for invalid cargoes */
 static void FinaliseCargoArray()
 {
 	for (CargoID c = 0; c < NUM_CARGO; c++) {
@@ -8659,9 +8825,10 @@ static void FinalisePriceBaseMultipliers()
 		}
 	}
 
-	/* Apply fallback prices */
+	/* Apply fallback prices for grf version < 8 */
 	const GRFFile * const *end = _grf_files.End();
 	for (GRFFile **file = _grf_files.Begin(); file != end; file++) {
+		if ((*file)->grf_version >= 8) continue;
 		PriceMultipliers &price_base_multipliers = (*file)->price_base_multipliers;
 		for (Price p = PR_BEGIN; p < PR_END; p++) {
 			Price fallback_price = _price_base_specs[p].fallback_price;
@@ -8713,7 +8880,7 @@ static void AfterLoadGRFs()
 	}
 	_grf_line_to_action6_sprite_override.clear();
 
-	/* Polish cargos */
+	/* Polish cargoes */
 	FinaliseCargoArray();
 
 	/* Pre-calculate all refit masks after loading GRF files. */
@@ -8838,6 +9005,17 @@ void LoadNewGRF(uint load_index, uint file_index)
 		 * This ensures that action7/9 conditions 0x06 - 0x0A work correctly. */
 		for (GRFConfig *c = _grfconfig; c != NULL; c = c->next) {
 			if (c->status == GCS_ACTIVATED) c->status = GCS_INITIALISED;
+		}
+
+		if (stage == GLS_RESERVE) {
+			static const uint32 overrides[][2] = {
+				{ 0x44442202, 0x44440111 }, // UKRS addons modifies UKRS
+				{ 0x6D620402, 0x6D620401 }, // DBSetXL ECS extension modifies DBSetXL
+				{ 0x4D656f20, 0x4D656F17 }, // LV4cut modifies LV4
+			};
+			for (size_t i = 0; i < lengthof(overrides); i++) {
+				SetNewGRFOverride(BSWAP32(overrides[i][0]), BSWAP32(overrides[i][1]));
+			}
 		}
 
 		uint slot = file_index;

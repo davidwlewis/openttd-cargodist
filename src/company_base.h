@@ -30,6 +30,15 @@ struct CompanyEconomyEntry {
 	Money company_value;
 };
 
+struct CompanyInfrastructure {
+	uint32 road[ROADTYPE_END]; ///< Count of company owned track bits for each road type.
+	uint32 signal;             ///< Count of company owned signals.
+	uint32 rail[RAILTYPE_END]; ///< Count of company owned track bits for each rail type.
+	uint32 water;              ///< Count of company owned track bits for canals.
+	uint32 station;            ///< Count of company owned station tiles.
+	uint32 airport;            ///< Count of company owned airports.
+};
+
 typedef Pool<Company, CompanyByte, 1, MAX_COMPANIES> CompanyPool;
 extern CompanyPool _company_pool;
 
@@ -108,12 +117,14 @@ struct Company : CompanyPool::PoolItem<&_company_pool>, CompanyProperties {
 	GroupStatistics group_all[VEH_COMPANY_END];      ///< NOSAVE: Statistics for the ALL_GROUP group.
 	GroupStatistics group_default[VEH_COMPANY_END];  ///< NOSAVE: Statistics for the DEFAULT_GROUP group.
 
+	CompanyInfrastructure infrastructure; ///< NOSAVE: Counts of company owned infrastructure.
+
 	/**
 	 * Is this company a valid company, controlled by the computer (a NoAI program)?
 	 * @param index Index in the pool.
 	 * @return \c true if it is a valid, computer controlled company, else \c false.
 	 */
-	static FORCEINLINE bool IsValidAiID(size_t index)
+	static inline bool IsValidAiID(size_t index)
 	{
 		const Company *c = Company::GetIfValid(index);
 		return c != NULL && c->is_ai;
@@ -125,7 +136,7 @@ struct Company : CompanyPool::PoolItem<&_company_pool>, CompanyProperties {
 	 * @return \c true if it is a valid, human controlled company, else \c false.
 	 * @note If you know that \a index refers to a valid company, you can use #IsHumanID() instead.
 	 */
-	static FORCEINLINE bool IsValidHumanID(size_t index)
+	static inline bool IsValidHumanID(size_t index)
 	{
 		const Company *c = Company::GetIfValid(index);
 		return c != NULL && !c->is_ai;
@@ -138,7 +149,7 @@ struct Company : CompanyPool::PoolItem<&_company_pool>, CompanyProperties {
 	 * @pre \a index must be a valid CompanyID.
 	 * @note If you don't know whether \a index refers to a valid company, you should use #IsValidHumanID() instead.
 	 */
-	static FORCEINLINE bool IsHumanID(size_t index)
+	static inline bool IsHumanID(size_t index)
 	{
 		return !Company::Get(index)->is_ai;
 	}

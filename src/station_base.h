@@ -19,6 +19,7 @@
 #include "linkgraph/linkgraph_type.h"
 #include "newgrf_storage.h"
 #include "moving_average.h"
+#include "town.h"
 #include <map>
 
 typedef Pool<BaseStation, StationID, 32, 64000> StationPool;
@@ -72,7 +73,7 @@ public:
          * @param capacity Initial capacity of the link.
          * @param usage Initial usage of the link.
          */
-	FORCEINLINE LinkStat(uint distance, uint capacity = 1, uint usage = 0) :
+	inline LinkStat(uint distance, uint capacity = 1, uint usage = 0) :
 		MovingAverage<uint>(distance), capacity(capacity), timeout(distance), usage(usage)
 	{
 		assert(this->usage <= this->capacity);
@@ -81,7 +82,7 @@ public:
 	/**
 	 * Reset everything to 0.
 	 */
-	FORCEINLINE void Clear()
+	inline void Clear()
 	{
 		this->capacity = 1;
 		this->usage = 0;
@@ -91,7 +92,7 @@ public:
 	/**
 	 * Apply the moving averages to usage and capacity.
 	 */
-	FORCEINLINE void Decrease()
+	inline void Decrease()
 	{
 		this->MovingAverage<uint>::Decrease(this->usage);
 		this->timeout = this->timeout * MIN_AVERAGE_LENGTH / (MIN_AVERAGE_LENGTH + 1);
@@ -103,7 +104,7 @@ public:
 	 * Get an estimate of the current the capacity by calculating the moving average.
 	 * @return Capacity.
 	 */
-	FORCEINLINE uint Capacity() const
+	inline uint Capacity() const
 	{
 		return this->MovingAverage<uint>::Monthly(this->capacity);
 	}
@@ -112,7 +113,7 @@ public:
 	 * Get an estimage of the current usage by calculating the moving average.
 	 * @return Usage.
 	 */
-	FORCEINLINE uint Usage() const
+	inline uint Usage() const
 	{
 		return this->MovingAverage<uint>::Monthly(this->usage);
 	}
@@ -122,7 +123,7 @@ public:
 	 * @param capacity Additional capacity.
 	 * @param usage Additional usage.
 	 */
-	FORCEINLINE void Increase(uint capacity, uint usage)
+	inline void Increase(uint capacity, uint usage)
 	{
 		this->timeout = this->length;
 		this->capacity += capacity;
@@ -133,7 +134,7 @@ public:
 	/**
 	 * Reset the timeout and make sure there is at least a minimum capacity.
          */
-	FORCEINLINE void Refresh(uint min_capacity)
+	inline void Refresh(uint min_capacity)
 	{
 		this->capacity = max(this->capacity, min_capacity);
 		this->timeout = this->length;
@@ -143,7 +144,7 @@ public:
 	 * Check if the timeout has hit.
 	 * @return If timeout is > 0.
 	 */
-	FORCEINLINE bool IsValid() const
+	inline bool IsValid() const
 	{
 		return this->timeout > 0;
 	}
@@ -225,7 +226,7 @@ struct Airport : public TileArea {
 	}
 
 	/** Check if this airport has at least one hangar. */
-	FORCEINLINE bool HasHangar() const
+	inline bool HasHangar() const
 	{
 		return this->GetSpec()->nof_depots > 0;
 	}
@@ -238,7 +239,7 @@ struct Airport : public TileArea {
 	 * @param tidc The tilediff to add to the airport tile.
 	 * @return The tile of this airport plus the rotated offset.
 	 */
-	FORCEINLINE TileIndex GetRotatedTileFromOffset(TileIndexDiffC tidc) const
+	inline TileIndex GetRotatedTileFromOffset(TileIndexDiffC tidc) const
 	{
 		const AirportSpec *as = this->GetSpec();
 		switch (this->rotation) {
@@ -260,7 +261,7 @@ struct Airport : public TileArea {
 	 * @pre hangar_num < GetNumHangars().
 	 * @return A tile with the given hangar.
 	 */
-	FORCEINLINE TileIndex GetHangarTile(uint hangar_num) const
+	inline TileIndex GetHangarTile(uint hangar_num) const
 	{
 		const AirportSpec *as = this->GetSpec();
 		for (uint i = 0; i < as->nof_depots; i++) {
@@ -277,7 +278,7 @@ struct Airport : public TileArea {
 	 * @pre IsHangarTile(tile).
 	 * @return The exit direction of the hangar, taking airport rotation into account.
 	 */
-	FORCEINLINE Direction GetHangarExitDirection(TileIndex tile) const
+	inline Direction GetHangarExitDirection(TileIndex tile) const
 	{
 		const AirportSpec *as = this->GetSpec();
 		const HangarTileTable *htt = GetHangarDataByTile(tile);
@@ -290,14 +291,14 @@ struct Airport : public TileArea {
 	 * @pre IsHangarTile(tile).
 	 * @return The hangar number of the hangar at the given tile.
 	 */
-	FORCEINLINE uint GetHangarNum(TileIndex tile) const
+	inline uint GetHangarNum(TileIndex tile) const
 	{
 		const HangarTileTable *htt = GetHangarDataByTile(tile);
 		return htt->hangar_num;
 	}
 
 	/** Get the number of hangars on this airport. */
-	FORCEINLINE uint GetNumHangars() const
+	inline uint GetNumHangars() const
 	{
 		uint num = 0;
 		uint counted = 0;
@@ -318,7 +319,7 @@ private:
 	 * @return The requested hangar information.
 	 * @pre The \a tile must be at a hangar tile at an airport.
 	 */
-	FORCEINLINE const HangarTileTable *GetHangarDataByTile(TileIndex tile) const
+	inline const HangarTileTable *GetHangarDataByTile(TileIndex tile) const
 	{
 		const AirportSpec *as = this->GetSpec();
 		for (uint i = 0; i < as->nof_depots; i++) {
@@ -333,7 +334,7 @@ private:
 typedef SmallVector<Industry *, 2> IndustryVector;
 
 /** Station data structure */
-struct Station : SpecializedStation<Station, false> {
+struct Station FINAL : SpecializedStation<Station, false> {
 public:
 	RoadStop *GetPrimaryRoadStop(RoadStopType type) const
 	{
@@ -381,12 +382,12 @@ public:
 	uint GetCatchmentRadius() const;
 	Rect GetCatchmentRect() const;
 
-	/* virtual */ FORCEINLINE bool TileBelongsToRailStation(TileIndex tile) const
+	/* virtual */ inline bool TileBelongsToRailStation(TileIndex tile) const
 	{
 		return IsRailStationTile(tile) && GetStationIndex(tile) == this->index;
 	}
 
-	FORCEINLINE bool TileBelongsToAirport(TileIndex tile) const
+	inline bool TileBelongsToAirport(TileIndex tile) const
 	{
 		return IsAirportTile(tile) && GetStationIndex(tile) == this->index;
 	}
@@ -399,5 +400,35 @@ public:
 };
 
 #define FOR_ALL_STATIONS(var) FOR_ALL_BASE_STATIONS_OF_TYPE(Station, var)
+
+/** Iterator to iterate over all tiles belonging to an airport. */
+class AirportTileIterator : public OrthogonalTileIterator {
+private:
+	const Station *st; ///< The station the airport is a part of.
+
+public:
+	/**
+	 * Construct the iterator.
+	 * @param ta Area, i.e. begin point and width/height of to-be-iterated area.
+	 */
+	AirportTileIterator(const Station *st) : OrthogonalTileIterator(st->airport), st(st)
+	{
+		if (!st->TileBelongsToAirport(this->tile)) ++(*this);
+	}
+
+	inline TileIterator& operator ++()
+	{
+		(*this).OrthogonalTileIterator::operator++();
+		while (this->tile != INVALID_TILE && !st->TileBelongsToAirport(this->tile)) {
+			(*this).OrthogonalTileIterator::operator++();
+		}
+		return *this;
+	}
+
+	virtual TileIterator *Clone() const
+	{
+		return new AirportTileIterator(*this);
+	}
+};
 
 #endif /* STATION_BASE_H */
