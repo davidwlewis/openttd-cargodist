@@ -551,6 +551,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\..\src\goal.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\..\src\ground_vehicle.cpp"
 				>
 			</File>
@@ -712,6 +716,10 @@
 			</File>
 			<File
 				RelativePath=".\..\src\station.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\..\src\strgen\strgen_base.cpp"
 				>
 			</File>
 			<File
@@ -1044,6 +1052,14 @@
 			</File>
 			<File
 				RelativePath=".\..\src\gfxinit.h"
+				>
+			</File>
+			<File
+				RelativePath=".\..\src\goal_base.h"
+				>
+			</File>
+			<File
+				RelativePath=".\..\src\goal_type.h"
 				>
 			</File>
 			<File
@@ -1547,6 +1563,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\..\src\strgen\strgen.h"
+				>
+			</File>
+			<File
 				RelativePath=".\..\src\string_func.h"
 				>
 			</File>
@@ -1931,6 +1951,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\..\src\goal_gui.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\..\src\graph_gui.cpp"
 				>
 			</File>
@@ -2160,6 +2184,10 @@
 			</File>
 			<File
 				RelativePath=".\..\src\widgets\genworld_widget.h"
+				>
+			</File>
+			<File
+				RelativePath=".\..\src\widgets\goal_widget.h"
 				>
 			</File>
 			<File
@@ -2459,7 +2487,15 @@
 				>
 			</File>
 			<File
+				RelativePath=".\..\src\saveload\game_sl.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\..\src\saveload\gamelog_sl.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\..\src\saveload\goal_sl.cpp"
 				>
 			</File>
 			<File
@@ -3028,10 +3064,74 @@
 			</File>
 		</Filter>
 		<Filter
+			Name="Game API"
+			>
+			<File
+				RelativePath=".\..\src\script\api\game_changelog.hpp"
+				>
+			</File>
+		</Filter>
+		<Filter
+			Name="Game Core"
+			>
+			<File
+				RelativePath=".\..\src\game\game.hpp"
+				>
+			</File>
+			<File
+				RelativePath=".\..\src\game\game_config.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\..\src\game\game_config.hpp"
+				>
+			</File>
+			<File
+				RelativePath=".\..\src\game\game_core.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\..\src\game\game_info.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\..\src\game\game_info.hpp"
+				>
+			</File>
+			<File
+				RelativePath=".\..\src\game\game_instance.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\..\src\game\game_instance.hpp"
+				>
+			</File>
+			<File
+				RelativePath=".\..\src\game\game_scanner.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\..\src\game\game_scanner.hpp"
+				>
+			</File>
+			<File
+				RelativePath=".\..\src\game\game_text.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\..\src\game\game_text.hpp"
+				>
+			</File>
+		</Filter>
+		<Filter
 			Name="Script API"
 			>
 			<File
 				RelativePath=".\..\src\script\api\script_accounting.hpp"
+				>
+			</File>
+			<File
+				RelativePath=".\..\src\script\api\script_admin.hpp"
 				>
 			</File>
 			<File
@@ -3064,6 +3164,10 @@
 			</File>
 			<File
 				RelativePath=".\..\src\script\api\script_company.hpp"
+				>
+			</File>
+			<File
+				RelativePath=".\..\src\script\api\script_companymode.hpp"
 				>
 			</File>
 			<File
@@ -3103,7 +3207,15 @@
 				>
 			</File>
 			<File
+				RelativePath=".\..\src\script\api\script_game.hpp"
+				>
+			</File>
+			<File
 				RelativePath=".\..\src\script\api\script_gamesettings.hpp"
+				>
+			</File>
+			<File
+				RelativePath=".\..\src\script\api\script_goal.hpp"
 				>
 			</File>
 			<File
@@ -3155,6 +3267,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\..\src\script\api\script_news.hpp"
+				>
+			</File>
+			<File
 				RelativePath=".\..\src\script\api\script_object.hpp"
 				>
 			</File>
@@ -3203,6 +3319,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\..\src\script\api\script_text.hpp"
+				>
+			</File>
+			<File
 				RelativePath=".\..\src\script\api\script_tile.hpp"
 				>
 			</File>
@@ -3235,11 +3355,19 @@
 				>
 			</File>
 			<File
+				RelativePath=".\..\src\script\api\script_viewport.hpp"
+				>
+			</File>
+			<File
 				RelativePath=".\..\src\script\api\script_waypoint.hpp"
 				>
 			</File>
 			<File
 				RelativePath=".\..\src\script\api\script_waypointlist.hpp"
+				>
+			</File>
+			<File
+				RelativePath=".\..\src\script\api\script_window.hpp"
 				>
 			</File>
 		</Filter>
@@ -3248,6 +3376,10 @@
 			>
 			<File
 				RelativePath=".\..\src\script\api\script_accounting.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\..\src\script\api\script_admin.cpp"
 				>
 			</File>
 			<File
@@ -3280,6 +3412,10 @@
 			</File>
 			<File
 				RelativePath=".\..\src\script\api\script_company.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\..\src\script\api\script_companymode.cpp"
 				>
 			</File>
 			<File
@@ -3319,7 +3455,15 @@
 				>
 			</File>
 			<File
+				RelativePath=".\..\src\script\api\script_game.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\..\src\script\api\script_gamesettings.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\..\src\script\api\script_goal.cpp"
 				>
 			</File>
 			<File
@@ -3364,6 +3508,10 @@
 			</File>
 			<File
 				RelativePath=".\..\src\script\api\script_marine.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\..\src\script\api\script_news.cpp"
 				>
 			</File>
 			<File
@@ -3415,6 +3563,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\..\src\script\api\script_text.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\..\src\script\api\script_tile.cpp"
 				>
 			</File>
@@ -3443,11 +3595,19 @@
 				>
 			</File>
 			<File
+				RelativePath=".\..\src\script\api\script_viewport.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\..\src\script\api\script_waypoint.cpp"
 				>
 			</File>
 			<File
 				RelativePath=".\..\src\script\api\script_waypointlist.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\..\src\script\api\script_window.cpp"
 				>
 			</File>
 		</Filter>

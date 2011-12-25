@@ -11,7 +11,6 @@
 
 #include "../../stdafx.h"
 #include "script_enginelist.hpp"
-#include "../../company_func.h"
 #include "../../engine_base.h"
 #include "../../core/bitmath_func.hpp"
 
@@ -19,6 +18,6 @@ ScriptEngineList::ScriptEngineList(ScriptVehicle::VehicleType vehicle_type)
 {
 	Engine *e;
 	FOR_ALL_ENGINES_OF_TYPE(e, (::VehicleType)vehicle_type) {
-		if (HasBit(e->company_avail, _current_company)) this->AddItem(e->index);
+		if (ScriptObject::GetCompany() == OWNER_DEITY || HasBit(e->company_avail, ScriptObject::GetCompany())) this->AddItem(e->index);
 	}
 }

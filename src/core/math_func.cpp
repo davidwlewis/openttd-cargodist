@@ -68,7 +68,7 @@ int DivideApprox(int a, int b)
 	return ret;
 }
 
-/**      
+/**
  * Compute the integer square root.
  * @param num Radicand.
  * @return Rounded integer square root.
