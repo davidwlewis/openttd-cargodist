@@ -12,7 +12,7 @@
 #ifndef WIDGETS_STATION_WIDGET_H
 #define WIDGETS_STATION_WIDGET_H
 
-/** Widgets of the WC_STATION_VIEW. */
+/** Widgets of the #StationViewWindow class. */
 enum StationViewWidgets {
 	WID_SV_CAPTION,            ///< Caption of the window.
 	WID_SV_SORT_ORDER,         ///< 'Sort order' button
@@ -31,7 +31,7 @@ enum StationViewWidgets {
 	WID_SV_PLANES,             ///< List of scheduled planes button.
 };
 
-/** Widgets of the WC_STATION_LIST. */
+/** Widgets of the #CompanyStationsWindow class. */
 enum StationListWidgets {
 	/* Name starts with ST instead of S, because of collision with SaveLoadWidgets */
 	WID_STL_CAPTION,        ///< Caption of the window.
@@ -55,7 +55,7 @@ enum StationListWidgets {
 	WID_STL_CARGOSTART,     ///< Widget numbers used for list of cargo types (not present in _company_stations_widgets).
 };
 
-/** Widgets of the WC_SELECT_STATION. */
+/** Widgets of the #SelectStationWindow class. */
 enum JoinStationWidgets {
 	WID_JS_CAPTION,   // Caption of the window.
 	WID_JS_PANEL,     // Main panel.

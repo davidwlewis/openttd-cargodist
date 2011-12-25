@@ -100,7 +100,7 @@ void LinkGraphOverlay::RebuildCache()
  * @param padding Extent of the point.
  * @return If the point or any of its 'extent' is inside the dpi.
  */
-FORCEINLINE bool LinkGraphOverlay::IsPointVisible(Point pt, const DrawPixelInfo *dpi, int padding) const
+inline bool LinkGraphOverlay::IsPointVisible(Point pt, const DrawPixelInfo *dpi, int padding) const
 {
 	return pt.x > dpi->left - padding && pt.y > dpi->top - padding &&
 			pt.x < dpi->left + dpi->width + padding &&
@@ -115,7 +115,7 @@ FORCEINLINE bool LinkGraphOverlay::IsPointVisible(Point pt, const DrawPixelInfo 
  * @param padding Width or thickness of the link.
  * @return If the link or any of its "thickness" is visible. This may return false positives.
  */
-FORCEINLINE bool LinkGraphOverlay::IsLinkVisible(Point pta, Point ptb, const DrawPixelInfo *dpi, int padding) const
+inline bool LinkGraphOverlay::IsLinkVisible(Point pta, Point ptb, const DrawPixelInfo *dpi, int padding) const
 {
 	return !((pta.x < dpi->left - padding && ptb.x < dpi->left - padding) ||
 			(pta.y < dpi->top - padding && ptb.y < dpi->top - padding) ||

@@ -250,7 +250,7 @@ enum OptionMenuEntries {
 	OME_GAMEOPTIONS,
 	OME_DIFFICULTIES,
 	OME_SETTINGS,
-	OME_AI_SETTINGS,
+	OME_SCRIPT_SETTINGS,
 	OME_NEWGRFSETTINGS,
 	OME_TRANSPARENCIES,
 	OME_SHOW_TOWNNAMES,
@@ -279,7 +279,7 @@ static CallBackFunction ToolbarOptionsClick(Window *w)
 	/* Changes to the per-AI settings don't get send from the server to the clients. Clients get
 	 * the settings once they join but never update it. As such don't show the window at all
 	 * to network clients. */
-	if (!_networking || _network_server) list->push_back(new DropDownListStringItem(STR_SETTINGS_MENU_AI_SETTINGS, OME_AI_SETTINGS, false));
+	if (!_networking || _network_server) list->push_back(new DropDownListStringItem(STR_SETTINGS_MENU_SCRIPT_SETTINGS, OME_SCRIPT_SETTINGS, false));
 	list->push_back(new DropDownListStringItem(STR_SETTINGS_MENU_NEWGRF_SETTINGS,          OME_NEWGRFSETTINGS, false));
 	list->push_back(new DropDownListStringItem(STR_SETTINGS_MENU_TRANSPARENCY_OPTIONS,     OME_TRANSPARENCIES, false));
 	list->push_back(new DropDownListItem(-1, false));
@@ -310,7 +310,7 @@ static CallBackFunction MenuClickSettings(int index)
 		case OME_GAMEOPTIONS:          ShowGameOptions();                               return CBF_NONE;
 		case OME_DIFFICULTIES:         ShowGameDifficulty();                            return CBF_NONE;
 		case OME_SETTINGS:             ShowGameSettings();                              return CBF_NONE;
-		case OME_AI_SETTINGS:          ShowAIConfigWindow();                            return CBF_NONE;
+		case OME_SCRIPT_SETTINGS:      ShowAIConfigWindow();                            return CBF_NONE;
 		case OME_NEWGRFSETTINGS:       ShowNewGRFSettings(!_networking && _settings_client.gui.UserIsAllowedToChangeNewGRFs(), true, true, &_grfconfig); return CBF_NONE;
 		case OME_TRANSPARENCIES:       ShowTransparencyToolbar();                       break;
 
@@ -478,7 +478,7 @@ static CallBackFunction MenuClickTown(int index)
 
 static CallBackFunction ToolbarSubsidiesClick(Window *w)
 {
-	PopupMainToolbMenu(w, WID_TN_SUBSIDIES, STR_SUBSIDIES_MENU_SUBSIDIES, 1);
+	PopupMainToolbMenu(w, WID_TN_SUBSIDIES, STR_SUBSIDIES_MENU_SUBSIDIES, 2);
 	return CBF_NONE;
 }
 
@@ -490,7 +490,10 @@ static CallBackFunction ToolbarSubsidiesClick(Window *w)
  */
 static CallBackFunction MenuClickSubsidies(int index)
 {
-	ShowSubsidiesList();
+	switch (index) {
+		case 0: ShowSubsidiesList(); break;
+		case 1: ShowGoalsList();     break;
+	}
 	return CBF_NONE;
 }
 
@@ -1042,7 +1045,7 @@ static CallBackFunction ToolbarScenDatePanel(Window *w)
 static CallBackFunction ToolbarScenDateBackward(Window *w)
 {
 	/* don't allow too fast scrolling */
-	if ((w->flags & WF_TIMEOUT) && w->timeout_timer <= 1) {
+	if (!(w->flags & WF_TIMEOUT) || w->timeout_timer <= 1) {
 		w->HandleButtonClick(WID_TE_DATE_BACKWARD);
 		w->SetDirty();
 
@@ -1056,7 +1059,7 @@ static CallBackFunction ToolbarScenDateBackward(Window *w)
 static CallBackFunction ToolbarScenDateForward(Window *w)
 {
 	/* don't allow too fast scrolling */
-	if ((w->flags & WF_TIMEOUT) && w->timeout_timer <= 1) {
+	if (!(w->flags & WF_TIMEOUT) || w->timeout_timer <= 1) {
 		w->HandleButtonClick(WID_TE_DATE_FORWARD);
 		w->SetDirty();
 

@@ -13,8 +13,11 @@
 #include "../../script/squirrel.hpp"
 #include "../../command_func.h"
 #include "../../company_func.h"
+#include "../../company_base.h"
 #include "../../network/network.h"
 #include "../../tunnelbridge.h"
+#include "../../genworld.h"
+#include "../../goal_type.h"
 
 #include "../script_storage.hpp"
 #include "../script_instance.hpp"
@@ -141,6 +144,7 @@ ScriptObject::ActiveInstance::~ActiveInstance()
 	SetNewVehicleID(_new_vehicle_id);
 	SetNewSignID(_new_sign_id);
 	SetNewGroupID(_new_group_id);
+	SetNewGoalID(_new_goal_id);
 }
 
 /* static */ bool ScriptObject::GetLastCommandRes()
@@ -178,6 +182,16 @@ ScriptObject::ActiveInstance::~ActiveInstance()
 	return GetStorage()->new_group_id;
 }
 
+/* static */ void ScriptObject::SetNewGoalID(GoalID goal_id)
+{
+	GetStorage()->new_goal_id = goal_id;
+}
+
+/* static */ GroupID ScriptObject::GetNewGoalID()
+{
+	return GetStorage()->new_goal_id;
+}
+
 /* static */ void ScriptObject::SetAllowDoCommand(bool allow)
 {
 	GetStorage()->allow_do_command = allow;
@@ -186,6 +200,24 @@ ScriptObject::ActiveInstance::~ActiveInstance()
 /* static */ bool ScriptObject::GetAllowDoCommand()
 {
 	return GetStorage()->allow_do_command;
+}
+
+/* static */ void ScriptObject::SetCompany(CompanyID company)
+{
+	if (GetStorage()->root_company == INVALID_OWNER) GetStorage()->root_company = company;
+	GetStorage()->company = company;
+
+	_current_company = company;
+}
+
+/* static */ CompanyID ScriptObject::GetCompany()
+{
+	return GetStorage()->company;
+}
+
+/* static */ CompanyID ScriptObject::GetRootCompany()
+{
+	return GetStorage()->root_company;
 }
 
 /* static */ bool ScriptObject::CanSuspend()
@@ -221,6 +253,11 @@ ScriptObject::ActiveInstance::~ActiveInstance()
 		throw Script_FatalError("You are not allowed to execute any DoCommand (even indirect) in your constructor, Save(), Load(), and any valuator.");
 	}
 
+	if (ScriptObject::GetCompany() != OWNER_DEITY && !::Company::IsValidID(ScriptObject::GetCompany())) {
+		ScriptObject::SetLastError(ScriptError::ERR_PRECONDITION_INVALID_COMPANY);
+		return false;
+	}
+
 	/* Set the default callback to return a true/false result of the DoCommand */
 	if (callback == NULL) callback = &ScriptInstance::DoCommandReturn;
 
@@ -233,7 +270,7 @@ ScriptObject::ActiveInstance::~ActiveInstance()
 #endif
 
 	/* Try to perform the command. */
-	CommandCost res = ::DoCommandPInternal(tile, p1, p2, cmd, _networking ? ScriptObject::GetActiveInstance()->GetDoCommandCallback() : NULL, text, false, estimate_only);
+	CommandCost res = ::DoCommandPInternal(tile, p1, p2, cmd, (_networking && !_generating_world) ? ScriptObject::GetActiveInstance()->GetDoCommandCallback() : NULL, text, false, estimate_only);
 
 	/* We failed; set the error and bail out */
 	if (res.Failed()) {
@@ -254,7 +291,11 @@ ScriptObject::ActiveInstance::~ActiveInstance()
 	SetLastCost(res.GetCost());
 	SetLastCommandRes(true);
 
-	if (_networking) {
+	if (_generating_world) {
+		IncreaseDoCommandCosts(res.GetCost());
+		if (callback != NULL) callback(GetActiveInstance());
+		return true;
+	} else if (_networking) {
 		/* Suspend the AI till the command is really executed. */
 		throw Script_Suspend(-(int)GetDoCommandDelay(), callback);
 	} else {

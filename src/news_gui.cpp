@@ -31,6 +31,8 @@
 #include "engine_base.h"
 #include "engine_gui.h"
 #include "core/geometry_func.hpp"
+#include "command_func.h"
+#include "company_base.h"
 
 #include "widgets/news_widget.h"
 
@@ -707,6 +709,70 @@ void AddNewsItem(StringID string, NewsSubtype subtype, NewsReferenceType reftype
 	SetWindowDirty(WC_MESSAGE_HISTORY, 0);
 }
 
+/**
+ * Create a new custom news item.
+ * @param tile unused
+ * @param flags type of operation
+ * @param p1 various bitstuffed elements
+ * - p1 = (bit  0 -  7) - NewsSubtype of the message.
+ * - p1 = (bit  8 - 15) - NewsReferenceType of first reference.
+ * - p1 = (bit 16 - 23) - Company this news message is for.
+ * @param p2 First reference of the news message.
+ * @param text The text of the news message.
+ * @return the cost of this operation or an error
+ */
+CommandCost CmdCustomNewsItem(TileIndex tile, DoCommandFlag flags, uint32 p1, uint32 p2, const char *text)
+{
+	if (_current_company != OWNER_DEITY) return CMD_ERROR;
+
+	NewsSubtype subtype = (NewsSubtype)GB(p1, 0, 8);
+	NewsReferenceType reftype1 = (NewsReferenceType)GB(p1, 8, 8);
+	CompanyID company = (CompanyID)GB(p1, 16, 8);
+
+	if (company != INVALID_OWNER && !Company::IsValidID(company)) return CMD_ERROR;
+	if (subtype >= NS_END) return CMD_ERROR;
+	if (StrEmpty(text)) return CMD_ERROR;
+
+	switch (reftype1) {
+		case NR_NONE: break;
+		case NR_TILE:
+			if (!IsValidTile(p2)) return CMD_ERROR;
+			break;
+
+		case NR_VEHICLE:
+			if (!Vehicle::IsValidID(p2)) return CMD_ERROR;
+			break;
+
+		case NR_STATION:
+			if (!Station::IsValidID(p2)) return CMD_ERROR;
+			break;
+
+		case NR_INDUSTRY:
+			if (!Industry::IsValidID(p2)) return CMD_ERROR;
+			break;
+
+		case NR_TOWN:
+			if (!Town::IsValidID(p2)) return CMD_ERROR;
+			break;
+
+		case NR_ENGINE:
+			if (!Engine::IsValidID(p2)) return CMD_ERROR;
+			break;
+
+		default: return CMD_ERROR;
+	}
+
+	if (company != INVALID_OWNER && company != _local_company) return CommandCost();
+
+	if (flags & DC_EXEC) {
+		char *news = strdup(text);
+		SetDParamStr(0, news);
+		AddNewsItem(STR_NEWS_CUSTOM_ITEM, subtype, reftype1, p2, NR_NONE, UINT32_MAX, news);
+	}
+
+	return CommandCost();
+}
+
 /** Delete a news item from the queue */
 static void DeleteNewsItem(NewsItem *ni)
 {
@@ -971,7 +1037,9 @@ struct MessageHistoryWindow : Window {
 			this->line_height = FONT_HEIGHT_NORMAL + 2;
 			resize->height = this->line_height;
 
-			SetDParam(0, ConvertYMDToDate(ORIGINAL_MAX_YEAR, 12, 30));
+			/* Months are off-by-one, so it's actually 8. Not using
+			 * month 12 because the 1 is usually less wide. */
+			SetDParam(0, ConvertYMDToDate(ORIGINAL_MAX_YEAR, 7, 30));
 			this->date_width = GetStringBoundingBox(STR_SHORT_DATE).width;
 
 			size->height = 4 * resize->height + this->top_spacing + this->bottom_spacing; // At least 4 lines are visible.
@@ -1089,7 +1157,7 @@ struct MessageOptionsWindow : Window {
 
 	MessageOptionsWindow(const WindowDesc *desc) : Window()
 	{
-		this->InitNested(desc);
+		this->InitNested(desc, WN_GAME_OPTIONS_MESSAGE_OPTION);
 		/* Set up the initial disabled buttons in the case of 'off' or 'full' */
 		NewsDisplay all_val = _news_type_data[0].display;
 		for (int i = 0; i < NT_END; i++) {
@@ -1345,6 +1413,6 @@ static const WindowDesc _message_options_desc(
  */
 void ShowMessageOptions()
 {
-	DeleteWindowById(WC_GAME_OPTIONS, 0);
+	DeleteWindowByClass(WC_GAME_OPTIONS);
 	new MessageOptionsWindow(&_message_options_desc);
 }
