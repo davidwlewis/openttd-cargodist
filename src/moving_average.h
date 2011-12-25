@@ -32,7 +32,7 @@ public:
 	 * Create a moving average.
 	 * @param length Length to be used.
 	 */
-	FORCEINLINE MovingAverage(uint length) : length(length)
+	inline MovingAverage(uint length) : length(length)
 	{
 		assert(this->length > 0);
 	}
@@ -41,7 +41,7 @@ public:
 	 * Get the length of this moving average.
 	 * @return Length.
 	 */
-	FORCEINLINE uint Length() const
+	inline uint Length() const
 	{
 		return this->length;
 	}
@@ -56,7 +56,7 @@ public:
 	 * @param value Raw moving average.
 	 * @return 30 "length unit" average.
 	 */
-	FORCEINLINE Tvalue Monthly(const Tvalue &value) const
+	inline Tvalue Monthly(const Tvalue &value) const
 	{
 		return (value * 30) / (this->length);
 	}
@@ -66,7 +66,7 @@ public:
 	 * @param value Moving average value to be decreased.
 	 * @return Decreased value.
 	 */
-	FORCEINLINE Tvalue &Decrease(Tvalue &value) const
+	inline Tvalue &Decrease(Tvalue &value) const
 	{
 		return value = (value * this->length) / (this->length + 1);
 	}
