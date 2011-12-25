@@ -377,7 +377,7 @@ struct UnmappedChoiceList : ZeroedMemoryAllocator {
 				const char *str = this->strings[this->strings.Contains(idx) ? idx : 0];
 				/* Limit the length of the string we copy to 0xFE. The length is written above
 				 * as a byte and we need room for the final '\0'. */
-				size_t len = min(0xFE, strlen(str));
+				size_t len = min<size_t>(0xFE, strlen(str));
 				memcpy(d, str, len);
 				d += len;
 				*d++ = '\0';
@@ -470,7 +470,7 @@ char *TranslateTTDPatchCodes(uint32 grfid, uint8 language_id, bool allow_newline
 			case 0x84: d += Utf8Encode(d, SCC_NEWGRF_PRINT_WORD_DATE_LONG + c - 0x82); break;
 			case 0x85: d += Utf8Encode(d, SCC_NEWGRF_DISCARD_WORD);       break;
 			case 0x86: d += Utf8Encode(d, SCC_NEWGRF_ROTATE_TOP_4_WORDS); break;
-			case 0x87: d += Utf8Encode(d, SCC_NEWGRF_PRINT_WORD_VOLUME);  break;
+			case 0x87: d += Utf8Encode(d, SCC_NEWGRF_PRINT_WORD_VOLUME_LONG);  break;
 			case 0x88: d += Utf8Encode(d, SCC_BLUE);    break;
 			case 0x89: d += Utf8Encode(d, SCC_SILVER);  break;
 			case 0x8A: d += Utf8Encode(d, SCC_GOLD);    break;
@@ -519,7 +519,7 @@ char *TranslateTTDPatchCodes(uint32 grfid, uint8 language_id, bool allow_newline
 					/* 0x09, 0x0A are TTDPatch internal use only string codes. */
 					case 0x0B: d += Utf8Encode(d, SCC_NEWGRF_PRINT_QWORD_HEX);         break;
 					case 0x0C: d += Utf8Encode(d, SCC_NEWGRF_PRINT_WORD_STATION_NAME); break;
-					case 0x0D: d += Utf8Encode(d, SCC_NEWGRF_PRINT_WORD_WEIGHT);       break;
+					case 0x0D: d += Utf8Encode(d, SCC_NEWGRF_PRINT_WORD_WEIGHT_LONG);  break;
 					case 0x0E:
 					case 0x0F: {
 						if (str[0] == '\0') goto string_end;
@@ -527,7 +527,7 @@ char *TranslateTTDPatchCodes(uint32 grfid, uint8 language_id, bool allow_newline
 						int index = *str++;
 						int mapped = lm != NULL ? lm->GetMapping(index, code == 0x0E) : -1;
 						if (mapped >= 0) {
-							d += Utf8Encode(d, code == 0x0E ? SCC_GENDER_INDEX : SCC_SETCASE);
+							d += Utf8Encode(d, code == 0x0E ? SCC_GENDER_INDEX : SCC_SET_CASE);
 							d += Utf8Encode(d, code == 0x0E ? mapped : mapped + 1);
 						}
 						break;
@@ -582,7 +582,9 @@ char *TranslateTTDPatchCodes(uint32 grfid, uint8 language_id, bool allow_newline
 
 					case 0x16:
 					case 0x17:
-					case 0x18: d += Utf8Encode(d, SCC_NEWGRF_PRINT_DWORD_DATE_LONG + code - 0x16); break;
+					case 0x18:
+					case 0x19:
+					case 0x1A: d += Utf8Encode(d, SCC_NEWGRF_PRINT_DWORD_DATE_LONG + code - 0x16); break;
 
 					default:
 						grfmsg(1, "missing handler for extended format code");
@@ -591,21 +593,21 @@ char *TranslateTTDPatchCodes(uint32 grfid, uint8 language_id, bool allow_newline
 				break;
 			}
 
-			case 0x9E: d += Utf8Encode(d, 0x20AC);             break; // Euro
-			case 0x9F: d += Utf8Encode(d, 0x0178);             break; // Y with diaeresis
-			case 0xA0: d += Utf8Encode(d, SCC_UPARROW);        break;
-			case 0xAA: d += Utf8Encode(d, SCC_DOWNARROW);      break;
-			case 0xAC: d += Utf8Encode(d, SCC_CHECKMARK);      break;
-			case 0xAD: d += Utf8Encode(d, SCC_CROSS);          break;
-			case 0xAF: d += Utf8Encode(d, SCC_RIGHTARROW);     break;
-			case 0xB4: d += Utf8Encode(d, SCC_TRAIN);          break;
-			case 0xB5: d += Utf8Encode(d, SCC_LORRY);          break;
-			case 0xB6: d += Utf8Encode(d, SCC_BUS);            break;
-			case 0xB7: d += Utf8Encode(d, SCC_PLANE);          break;
-			case 0xB8: d += Utf8Encode(d, SCC_SHIP);           break;
-			case 0xB9: d += Utf8Encode(d, SCC_SUPERSCRIPT_M1); break;
-			case 0xBC: d += Utf8Encode(d, SCC_SMALLUPARROW);   break;
-			case 0xBD: d += Utf8Encode(d, SCC_SMALLDOWNARROW); break;
+			case 0x9E: d += Utf8Encode(d, 0x20AC);               break; // Euro
+			case 0x9F: d += Utf8Encode(d, 0x0178);               break; // Y with diaeresis
+			case 0xA0: d += Utf8Encode(d, SCC_UP_ARROW);         break;
+			case 0xAA: d += Utf8Encode(d, SCC_DOWN_ARROW);       break;
+			case 0xAC: d += Utf8Encode(d, SCC_CHECKMARK);        break;
+			case 0xAD: d += Utf8Encode(d, SCC_CROSS);            break;
+			case 0xAF: d += Utf8Encode(d, SCC_RIGHT_ARROW);      break;
+			case 0xB4: d += Utf8Encode(d, SCC_TRAIN);            break;
+			case 0xB5: d += Utf8Encode(d, SCC_LORRY);            break;
+			case 0xB6: d += Utf8Encode(d, SCC_BUS);              break;
+			case 0xB7: d += Utf8Encode(d, SCC_PLANE);            break;
+			case 0xB8: d += Utf8Encode(d, SCC_SHIP);             break;
+			case 0xB9: d += Utf8Encode(d, SCC_SUPERSCRIPT_M1);   break;
+			case 0xBC: d += Utf8Encode(d, SCC_SMALL_UP_ARROW);   break;
+			case 0xBD: d += Utf8Encode(d, SCC_SMALL_DOWN_ARROW); break;
 			default:
 				/* Validate any unhandled character */
 				if (!IsValidChar(c, CS_ALPHANUMERAL)) c = '?';
@@ -1038,11 +1040,13 @@ uint RemapNewGRFStringControlCode(uint scc, char *buf_start, char **buff, const 
 			case SCC_NEWGRF_PRINT_QWORD_HEX:        *argv = _newgrf_textrefstack.PopUnsignedQWord(); break;
 
 			case SCC_NEWGRF_PRINT_WORD_SPEED:
-			case SCC_NEWGRF_PRINT_WORD_VOLUME:
+			case SCC_NEWGRF_PRINT_WORD_VOLUME_LONG:
+			case SCC_NEWGRF_PRINT_WORD_VOLUME_SHORT:
 			case SCC_NEWGRF_PRINT_WORD_SIGNED:      *argv = _newgrf_textrefstack.PopSignedWord();    break;
 
 			case SCC_NEWGRF_PRINT_WORD_HEX:
-			case SCC_NEWGRF_PRINT_WORD_WEIGHT:
+			case SCC_NEWGRF_PRINT_WORD_WEIGHT_LONG:
+			case SCC_NEWGRF_PRINT_WORD_WEIGHT_SHORT:
 			case SCC_NEWGRF_PRINT_WORD_POWER:
 			case SCC_NEWGRF_PRINT_WORD_STATION_NAME:
 			case SCC_NEWGRF_PRINT_WORD_UNSIGNED:    *argv = _newgrf_textrefstack.PopUnsignedWord();  break;
@@ -1082,7 +1086,7 @@ uint RemapNewGRFStringControlCode(uint scc, char *buf_start, char **buff, const 
 
 		case SCC_NEWGRF_PRINT_DWORD_CURRENCY:
 		case SCC_NEWGRF_PRINT_QWORD_CURRENCY:
-			return SCC_CURRENCY;
+			return SCC_CURRENCY_LONG;
 
 		case SCC_NEWGRF_PRINT_WORD_STRING_ID:
 			return SCC_NEWGRF_PRINT_WORD_STRING_ID;
@@ -1098,11 +1102,17 @@ uint RemapNewGRFStringControlCode(uint scc, char *buf_start, char **buff, const 
 		case SCC_NEWGRF_PRINT_WORD_SPEED:
 			return SCC_VELOCITY;
 
-		case SCC_NEWGRF_PRINT_WORD_VOLUME:
-			return SCC_VOLUME;
+		case SCC_NEWGRF_PRINT_WORD_VOLUME_LONG:
+			return SCC_VOLUME_LONG;
 
-		case SCC_NEWGRF_PRINT_WORD_WEIGHT:
-			return SCC_WEIGHT;
+		case SCC_NEWGRF_PRINT_WORD_VOLUME_SHORT:
+			return SCC_VOLUME_SHORT;
+
+		case SCC_NEWGRF_PRINT_WORD_WEIGHT_LONG:
+			return SCC_WEIGHT_LONG;
+
+		case SCC_NEWGRF_PRINT_WORD_WEIGHT_SHORT:
+			return SCC_WEIGHT_SHORT;
 
 		case SCC_NEWGRF_PRINT_WORD_POWER:
 			return SCC_POWER;

@@ -21,6 +21,7 @@
 
 #include "table/sprites.h"
 #include "table/strings.h"
+#include "table/palettes.h"
 
 static const char *UPARROW   = "\xEE\x8A\xA0"; ///< String containing an upwards pointing arrow.
 static const char *DOWNARROW = "\xEE\x8A\xAA"; ///< String containing a downwards pointing arrow.
@@ -184,20 +185,20 @@ void DrawFrameRect(int left, int top, int right, int bottom, Colours colour, Fra
 		uint interior;
 
 		if (flags & FR_LOWERED) {
-			GfxFillRect(left,     top,     left,  bottom,     dark);
-			GfxFillRect(left + 1, top,     right, top,        dark);
-			GfxFillRect(right,    top + 1, right, bottom - 1, light);
-			GfxFillRect(left + 1, bottom,  right, bottom,     light);
+			GfxFillRect(left,                 top,                left,                   bottom,                   dark);
+			GfxFillRect(left + WD_BEVEL_LEFT, top,                right,                  top,                      dark);
+			GfxFillRect(right,                top + WD_BEVEL_TOP, right,                  bottom - WD_BEVEL_BOTTOM, light);
+			GfxFillRect(left + WD_BEVEL_LEFT, bottom,             right,                  bottom,                   light);
 			interior = (flags & FR_DARKENED ? medium_dark : medium_light);
 		} else {
-			GfxFillRect(left,     top,    left,      bottom - 1, light);
-			GfxFillRect(left + 1, top,    right - 1, top,        light);
-			GfxFillRect(right,    top,    right,     bottom - 1, dark);
-			GfxFillRect(left,     bottom, right,     bottom,     dark);
+			GfxFillRect(left,                 top,                left,                   bottom - WD_BEVEL_BOTTOM, light);
+			GfxFillRect(left + WD_BEVEL_LEFT, top,                right - WD_BEVEL_RIGHT, top,                      light);
+			GfxFillRect(right,                top,                right,                  bottom - WD_BEVEL_BOTTOM, dark);
+			GfxFillRect(left,                 bottom,             right,                  bottom,                   dark);
 			interior = medium_dark;
 		}
 		if (!(flags & FR_BORDERONLY)) {
-			GfxFillRect(left + 1, top + 1, right - 1, bottom - 1, interior);
+			GfxFillRect(left + WD_BEVEL_LEFT, top + WD_BEVEL_TOP, right - WD_BEVEL_RIGHT, bottom - WD_BEVEL_BOTTOM, interior);
 		}
 	}
 }
@@ -567,8 +568,28 @@ void Window::DrawWidgets() const
 {
 	this->nested_root->Draw(this);
 
-	if (this->flags4 & WF_WHITE_BORDER_MASK) {
+	if (this->flags & WF_WHITE_BORDER) {
 		DrawFrameRect(0, 0, this->width - 1, this->height - 1, COLOUR_WHITE, FR_BORDERONLY);
+	}
+
+	if (this->flags & WF_HIGHLIGHTED) {
+		extern bool _window_highlight_colour;
+		for (uint i = 0; i < this->nested_array_size; i++) {
+			const NWidgetBase *widget = this->GetWidget<NWidgetBase>(i);
+			if (widget == NULL || !widget->IsHighlighted()) continue;
+
+			int left = widget->pos_x;
+			int top  = widget->pos_y;
+			int right  = left + widget->current_x - 1;
+			int bottom = top  + widget->current_y - 1;
+
+			int colour = _string_colourmap[_window_highlight_colour ? widget->GetHighlightColour() : TC_WHITE];
+
+			GfxFillRect(left,                 top,    left,                   bottom - WD_BEVEL_BOTTOM, colour);
+			GfxFillRect(left + WD_BEVEL_LEFT, top,    right - WD_BEVEL_RIGHT, top,                      colour);
+			GfxFillRect(right,                top,    right,                  bottom - WD_BEVEL_BOTTOM, colour);
+			GfxFillRect(left,                 bottom, right,                  bottom,                   colour);
+		}
 	}
 }
 
@@ -2341,12 +2362,12 @@ void NWidgetLeaf::Draw(const Window *w)
 
 		case WWT_STICKYBOX:
 			assert(this->widget_data == 0);
-			DrawStickyBox(r, this->colour, !!(w->flags4 & WF_STICKY));
+			DrawStickyBox(r, this->colour, !!(w->flags & WF_STICKY));
 			break;
 
 		case WWT_RESIZEBOX:
 			assert(this->widget_data == 0);
-			DrawResizeBox(r, this->colour, this->pos_x < (uint)(w->width / 2), !!(w->flags4 & WF_SIZING));
+			DrawResizeBox(r, this->colour, this->pos_x < (uint)(w->width / 2), !!(w->flags & WF_SIZING));
 			break;
 
 		case WWT_CLOSEBOX:
