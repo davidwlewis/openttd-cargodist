@@ -70,7 +70,7 @@ public:
 	 * @param to Destination node.
 	 * @return Edge between from and to.
 	 */
-	FORCEINLINE Edge &GetEdge(NodeID from, NodeID to)
+	inline Edge &GetEdge(NodeID from, NodeID to)
 	{
 		return this->edges[from][to];
 	}
@@ -80,7 +80,7 @@ public:
 	 * @param num ID of the node.
 	 * @return the Requested node.
 	 */
-	FORCEINLINE Node &GetNode(NodeID num)
+	inline Node &GetNode(NodeID num)
 	{
 		return this->nodes[num];
 	}
@@ -89,7 +89,7 @@ public:
 	 * Get the current size of the component.
 	 * @return Size.
 	 */
-	FORCEINLINE uint GetSize() const
+	inline uint GetSize() const
 	{
 		return this->num_nodes;
 	}
@@ -104,7 +104,7 @@ public:
 	 * Get the ID of this component.
 	 * @return ID.
 	 */
-	FORCEINLINE LinkGraphComponentID GetIndex() const
+	inline LinkGraphComponentID GetIndex() const
 	{
 		return this->index;
 	}
@@ -113,7 +113,7 @@ public:
 	 * Get the cargo ID this component's link graph refers to.
 	 * @return Cargo ID.
 	 */
-	FORCEINLINE CargoID GetCargo() const
+	inline CargoID GetCargo() const
 	{
 		return this->cargo;
 	}
@@ -122,7 +122,7 @@ public:
 	 * Get the link graph settings for this component.
 	 * @return Settings.
 	 */
-	FORCEINLINE const LinkGraphSettings &GetSettings() const
+	inline const LinkGraphSettings &GetSettings() const
 	{
 		return this->settings;
 	}
@@ -130,7 +130,7 @@ public:
 	/**
 	 * Mark this component as empty.
 	 */
-	FORCEINLINE void Clear()
+	inline void Clear()
 	{
 		this->num_nodes = 0;
 	}

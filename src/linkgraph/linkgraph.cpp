@@ -33,7 +33,7 @@ LinkGraphJob::HandlerList LinkGraphJob::_handlers;
  * @param sup Supply of cargo at the station last month.
  * @param dem Acceptance for cargo at the station.
  */
-FORCEINLINE void Node::Init(StationID st, uint sup, uint dem)
+inline void Node::Init(StationID st, uint sup, uint dem)
 {
 	this->supply = sup;
 	this->demand = dem;
@@ -45,7 +45,7 @@ FORCEINLINE void Node::Init(StationID st, uint sup, uint dem)
  * @param distance Length of the link as manhattan distance.
  * @param capacity Capacity of the link.
  */
-FORCEINLINE void Edge::Init(uint distance, uint capacity)
+inline void Edge::Init(uint distance, uint capacity)
 {
 	this->distance = distance;
 	this->capacity = capacity;
@@ -227,7 +227,7 @@ NodeID LinkGraphComponent::AddNode(Station *st)
  * @param to Destination node of the link.
  * @param capacity Capacity of the link.
  */
-FORCEINLINE void LinkGraphComponent::AddEdge(NodeID from, NodeID to, uint capacity)
+inline void LinkGraphComponent::AddEdge(NodeID from, NodeID to, uint capacity)
 {
 	assert(from != to);
 	this->edges[from][to].capacity = capacity;
@@ -316,7 +316,7 @@ void LinkGraph::Join()
 /**
  * Join the calling thread with this job's thread if threading is enabled.
  */
-FORCEINLINE void LinkGraphJob::Join()
+inline void LinkGraphJob::Join()
 {
 	if (this->thread == NULL) return;
 	this->thread->Join();
