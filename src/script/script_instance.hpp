@@ -17,6 +17,8 @@
 
 #include "../command_type.h"
 
+static const uint SQUIRREL_MAX_DEPTH = 25; ///< The maximum recursive depth for items stored in the savegame.
+
 /** Runtime information about a script like a pointer to the squirrel vm and the current state. */
 class ScriptInstance {
 public:
@@ -33,8 +35,9 @@ public:
 	 * Initialize the script and prepare it for its first run.
 	 * @param main_script The full path of the script to load.
 	 * @param instance_name The name of the instance out of the script to load.
+	 * @param company Which company this script is serving.
 	 */
-	void Initialize(const char *main_script, const char *instance_name);
+	void Initialize(const char *main_script, const char *instance_name, CompanyID company);
 
 	/**
 	 * Get the value of a setting of the current instance.
@@ -98,6 +101,11 @@ public:
 	static void DoCommandReturnGroupID(ScriptInstance *instance);
 
 	/**
+	 * Return a GoalID reply for a DoCommand.
+	 */
+	static void DoCommandReturnGoalID(ScriptInstance *instance);
+
+	/**
 	 * Get the controller attached to the instance.
 	 */
 	class ScriptController *GetController() { return controller; }
@@ -158,6 +166,12 @@ public:
 	 * @param event The event to insert.
 	 */
 	void InsertEvent(class ScriptEvent *event);
+
+	/**
+	 * Check if the instance is sleeping, which either happened because the
+	 *  script executed a DoCommand, or executed this.Sleep().
+	 */
+	bool IsSleeping() { return this->suspend != 0; }
 
 protected:
 	class Squirrel *engine;               ///< A wrapper around the squirrel vm.

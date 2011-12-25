@@ -22,7 +22,7 @@ public:
 	 * Return the actual value of the annotation, in this case the distance.
 	 * @return Distance.
 	 */
-	FORCEINLINE  uint GetAnnotation() const {return this->distance;}
+	inline  uint GetAnnotation() const {return this->distance;}
 
 	struct Comparator {
 		bool operator()(const DistanceAnnotation *x, const DistanceAnnotation *y) const;
@@ -46,7 +46,7 @@ public:
 	 * Return the actual value of the annotation, in this case the capacity.
 	 * @return Capacity.
 	 */
-	FORCEINLINE int GetAnnotation() const {return this->GetCapacityRatio();}
+	inline int GetAnnotation() const {return this->GetCapacityRatio();}
 
 	struct Comparator {
 		bool operator()(const CapacityAnnotation *x, const CapacityAnnotation *y) const;

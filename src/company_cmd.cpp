@@ -35,6 +35,7 @@
 #include "vehicle_func.h"
 #include "sprite.h"
 #include "smallmap_gui.h"
+#include "game/game.hpp"
 
 #include "table/strings.h"
 
@@ -565,6 +566,7 @@ Company *DoStartupNewCompany(bool is_ai, CompanyID company = INVALID_COMPANY)
 	if (is_ai && (!_networking || _network_server)) AI::StartNew(c->index);
 
 	AI::BroadcastNewEvent(new ScriptEventCompanyNew(c->index), c->index);
+	Game::NewEvent(new ScriptEventCompanyNew(c->index));
 
 	return c;
 }
@@ -814,7 +816,7 @@ CommandCost CmdCompanyCtrl(TileIndex tile, DoCommandFlag flags, uint32 p1, uint3
 			if (ci == NULL) return CommandCost();
 
 			/* Delete multiplayer progress bar */
-			DeleteWindowById(WC_NETWORK_STATUS_WINDOW, 0);
+			DeleteWindowById(WC_NETWORK_STATUS_WINDOW, WN_NETWORK_STATUS_WINDOW_JOIN);
 
 			Company *c = DoStartupNewCompany(false);
 
@@ -907,6 +909,7 @@ CommandCost CmdCompanyCtrl(TileIndex tile, DoCommandFlag flags, uint32 p1, uint3
 			CompanyID c_index = c->index;
 			delete c;
 			AI::BroadcastNewEvent(new ScriptEventCompanyBankrupt(c_index));
+			Game::NewEvent(new ScriptEventCompanyBankrupt(c_index));
 			CompanyAdminRemove(c_index, (CompanyRemoveReason)reason);
 			break;
 		}

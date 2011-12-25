@@ -47,7 +47,7 @@ enum CargoClass {
 	CC_REFRIGERATED = 1 <<  7, ///< Refrigerated cargo (Food, Fruit)
 	CC_HAZARDOUS    = 1 <<  8, ///< Hazardous cargo (Nuclear Fuel, Explosives, etc.)
 	CC_COVERED      = 1 <<  9, ///< Covered/Sheltered Freight (Transporation in Box Vans, Silo Wagons, etc.)
-	CC_SPECIAL      = 1 << 15  ///< Special bit used for livery refit tricks instead of normal cargoes.
+	CC_SPECIAL      = 1 << 15, ///< Special bit used for livery refit tricks instead of normal cargoes.
 };
 
 static const byte INVALID_CARGO = 0xFF; ///< Constant representing invalid cargo
@@ -85,7 +85,7 @@ struct CargoSpec {
 	 * Determines index of this cargospec
 	 * @return index (in the CargoSpec::array array)
 	 */
-	FORCEINLINE CargoID Index() const
+	inline CargoID Index() const
 	{
 		return this - CargoSpec::array;
 	}
@@ -95,7 +95,7 @@ struct CargoSpec {
 	 * @return is this cargospec valid?
 	 * @note assert(cs->IsValid()) can be triggered when GRF config is modified
 	 */
-	FORCEINLINE bool IsValid() const
+	inline bool IsValid() const
 	{
 		return this->bitnum != INVALID_CARGO;
 	}
@@ -104,7 +104,7 @@ struct CargoSpec {
 	 * Total number of cargospecs, both valid and invalid
 	 * @return length of CargoSpec::array
 	 */
-	static FORCEINLINE size_t GetArraySize()
+	static inline size_t GetArraySize()
 	{
 		return lengthof(CargoSpec::array);
 	}
@@ -114,7 +114,7 @@ struct CargoSpec {
 	 * @param index ID of cargo
 	 * @pre index is a valid cargo ID
 	 */
-	static FORCEINLINE CargoSpec *Get(size_t index)
+	static inline CargoSpec *Get(size_t index)
 	{
 		assert(index < lengthof(CargoSpec::array));
 		return &CargoSpec::array[index];

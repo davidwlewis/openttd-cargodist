@@ -62,6 +62,8 @@
 #include "hotkeys.h"
 #include "newgrf.h"
 #include "misc/getoptdata.h"
+#include "game/game.hpp"
+#include "game/game_config.hpp"
 
 
 #include "town.h"
@@ -205,6 +207,11 @@ static void ShowHelp()
 	p = AI::GetConsoleList(p, lastof(buf), true);
 	AI::Uninitialize(true);
 
+	/* We need to initialize the GameScript, so it finds the GSs */
+	Game::Initialize();
+	p = Game::GetConsoleList(p, lastof(buf), true);
+	Game::Uninitialize(true);
+
 	/* ShowInfo put output to stderr, but version information should go
 	 * to stdout; this is the only exception */
 #if !defined(WIN32) && !defined(WIN64)
@@ -286,8 +293,9 @@ static void ShutdownGame()
 
 	UnInitWindowSystem();
 
-	/* stop the AI */
+	/* stop the scripts */
 	AI::Uninitialize(false);
+	Game::Uninitialize(false);
 
 	/* Uninitialize variables that are allocated dynamically */
 	GamelogReset();
@@ -353,6 +361,9 @@ void MakeNewgameSettingsLive()
 			delete _settings_game.ai_config[c];
 		}
 	}
+	if (_settings_game.game_config != NULL) {
+		delete _settings_game.game_config;
+	}
 
 	/* Copy newgame settings to active settings.
 	 * Also initialise old settings needed for savegame conversion. */
@@ -364,6 +375,10 @@ void MakeNewgameSettingsLive()
 		if (_settings_newgame.ai_config[c] != NULL) {
 			_settings_game.ai_config[c] = new AIConfig(_settings_newgame.ai_config[c]);
 		}
+	}
+	_settings_game.game_config = NULL;
+	if (_settings_newgame.game_config != NULL) {
+		_settings_game.game_config = new GameConfig(_settings_newgame.game_config);
 	}
 }
 
@@ -408,6 +423,7 @@ struct AfterNewGRFScan : NewGRFScanCallback {
 		TarScanner::DoScan(TarScanner::SCENARIO);
 
 		AI::Initialize();
+		Game::Initialize();
 
 		/* We want the new (correct) NewGRF count to survive the loading. */
 		uint last_newgrf_count = _settings_client.gui.last_newgrf_count;
@@ -417,6 +433,7 @@ struct AfterNewGRFScan : NewGRFScanCallback {
 		 * reading the configuration file, recalculate that now. */
 		UpdateNewGRFConfigPalette();
 
+		Game::Uninitialize(true);
 		AI::Uninitialize(true);
 		CheckConfig();
 		LoadFromHighScore();
@@ -1127,6 +1144,10 @@ void SwitchToMode(SwitchMode new_mode)
  */
 static void CheckCaches()
 {
+	/* Return here so it is easy to add checks that are run
+	 * always to aid testing of caches. */
+	if (_debug_desync_level <= 1) return;
+
 	/* Check company infrastructure cache. */
 	SmallVector<CompanyInfrastructure, 4> old_infrastructure;
 	Company *c;
@@ -1142,10 +1163,6 @@ static void CheckCaches()
 		}
 		i++;
 	}
-
-	/* Return here so it is easy to add checks that are run
-	 * always to aid testing of caches. */
-	if (_debug_desync_level <= 1) return;
 
 	/* Strict checking of the road stop cache entries */
 	const RoadStop *rs;
@@ -1261,6 +1278,7 @@ void StateGameLoop()
 	/* dont execute the state loop during pause */
 	if (_pause_mode != PM_UNPAUSED) {
 		UpdateLandscapingLimits();
+		Game::GameLoop();
 		CallWindowTickEvent();
 		return;
 	}
@@ -1299,6 +1317,7 @@ void StateGameLoop()
 		ClearStorageChanges(true);
 
 		AI::GameLoop();
+		Game::GameLoop();
 		UpdateLandscapingLimits();
 
 		CallWindowTickEvent();

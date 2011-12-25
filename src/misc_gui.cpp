@@ -443,7 +443,7 @@ struct AboutWindow : public Window {
 
 	AboutWindow() : Window()
 	{
-		this->InitNested(&_about_desc);
+		this->InitNested(&_about_desc, WN_GAME_OPTIONS_ABOUT);
 
 		this->counter = 5;
 		this->text_position = this->GetWidget<NWidgetBase>(WID_A_SCROLLING_TEXT)->pos_y + this->GetWidget<NWidgetBase>(WID_A_SCROLLING_TEXT)->current_y;
@@ -501,7 +501,7 @@ struct AboutWindow : public Window {
 
 void ShowAboutWindow()
 {
-	DeleteWindowById(WC_GAME_OPTIONS, 0);
+	DeleteWindowByClass(WC_GAME_OPTIONS);
 	new AboutWindow();
 }
 
@@ -1110,7 +1110,7 @@ struct QueryStringWindow : public QueryStringBaseWindow
 			QueryStringBaseWindow(max_bytes, max_chars)
 	{
 		GetString(this->edit_str_buf, str, &this->edit_str_buf[max_bytes - 1]);
-		str_validate(this->edit_str_buf, &this->edit_str_buf[max_bytes - 1], false, true);
+		str_validate(this->edit_str_buf, &this->edit_str_buf[max_bytes - 1], SVS_NONE);
 
 		/* Make sure the name isn't too long for the text buffer in the number of
 		 * characters (not bytes). max_chars also counts the '\0' characters. */
@@ -1125,7 +1125,7 @@ struct QueryStringWindow : public QueryStringBaseWindow
 		this->flags = flags;
 		InitializeTextBuffer(&this->text, this->edit_str_buf, max_bytes, max_chars);
 
-		this->InitNested(desc);
+		this->InitNested(desc, WN_QUERY_STRING);
 
 		this->parent = parent;
 
@@ -1256,7 +1256,7 @@ static const WindowDesc _query_string_desc(
  */
 void ShowQueryString(StringID str, StringID caption, uint maxsize, Window *parent, CharSetFilter afilter, QueryStringFlags flags)
 {
-	DeleteWindowById(WC_QUERY_STRING, 0);
+	DeleteWindowByClass(WC_QUERY_STRING);
 	new QueryStringWindow(str, caption, ((flags & QSF_LEN_IN_CHARS) ? MAX_CHAR_LENGTH : 1) * maxsize, maxsize, &_query_string_desc, parent, afilter, flags);
 }
 
@@ -1278,7 +1278,7 @@ struct QueryWindow : public Window {
 		this->message = message;
 		this->proc    = callback;
 
-		this->InitNested(desc);
+		this->InitNested(desc, WN_CONFIRM_POPUP_QUERY);
 
 		this->parent = parent;
 		this->left = parent->left + (parent->width / 2) - (this->width / 2);
