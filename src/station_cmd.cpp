@@ -3887,7 +3887,33 @@ uint FlowStat::GetShare(StationID st) const
 	}
 	return 0;
 }
-	
+
+/**
+ * Get a station a package can be routed to, but exclude the given one.
+ * @param excluded StationID not to be selected.
+ * @return A station ID from the shares map.
+ */
+inline StationID FlowStat::GetVia(StationID excluded) const
+{
+	assert(!this->shares.empty());
+	uint max = (--this->shares.end())->first - 1;
+	SharesMap::const_iterator it = this->shares.upper_bound(RandomRange(max));
+	assert(it != this->shares.end());
+	if (it->second != excluded) {
+		return it->second;
+	} else {
+		uint end = it->first;
+		if (end == max) return INVALID_STATION; // only one station in the map
+		uint begin = (it == this->shares.begin() ? 0 : (--it)->first);
+		uint rand = RandomRange(max - (end - begin));
+		if (rand < begin) {
+			return this->shares.upper_bound(rand)->second;
+		} else {
+			return this->shares.upper_bound(rand + (end - begin))->second;
+		}
+	}
+}
+
 /**
  * Erase shares for specified station.
  * @param st Next Hop to be removed.
