@@ -197,11 +197,10 @@ public:
 	inline StationID GetVia() const
 	{
 		assert(!this->shares.empty());
-		uint rand = RandomRange((--this->shares.end())->first - 1);
-		SharesMap::const_iterator it = this->shares.upper_bound(rand);
-		assert(it != this->shares.end());
-		return it->second;
+		return this->shares.upper_bound(RandomRange((--this->shares.end())->first - 1))->second;
 	}
+
+	StationID GetVia(StationID excluded) const;
 
 private:
 	SharesMap shares;  ///< Shares of flow to be sent via specified station (or consumed locally).
@@ -251,10 +250,10 @@ struct GoodsEntry {
 	LinkGraphComponentID last_component; ///< Component this station was last part of in this cargo's link graph.
 	uint GetSumFlowVia(StationID via) const;
 
-	inline StationID GetVia(StationID source) const
+	inline StationID GetVia(StationID source, StationID excluded = INVALID_STATION) const
 	{
 		FlowStatMap::const_iterator flow_it(this->flows.find(source));
-		return flow_it != this->flows.end() ? flow_it->second.GetVia() : INVALID_STATION;
+		return flow_it != this->flows.end() ? flow_it->second.GetVia(excluded) : INVALID_STATION;
 	}
 };
 
