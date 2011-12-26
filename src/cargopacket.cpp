@@ -608,7 +608,7 @@ uint StationCargoList::TakeFrom(VehicleCargoList *source, uint max_unload, Order
 			/* use cargodist unloading*/
 			action = this->WillUnloadCargoDist(flags, next, via, cargo_source);
 		} else {
-			via  = INVALID_STATION;
+			via = INVALID_STATION;
 			/* there is no plan: use normal unloading */
 			action = this->WillUnloadOld(flags, cargo_source);
 		}
@@ -620,13 +620,7 @@ uint StationCargoList::TakeFrom(VehicleCargoList *source, uint max_unload, Order
 				break;
 			case UL_TRANSFER:
 				/* TransferPacket may split the packet and return the transferred part */
-				while (via == this->station->index) {
-					if (flows_it->second.GetShares()->size() > 1) {
-						via = flows_it->second.GetVia();
-					} else {
-						via = INVALID_STATION;
-					}
-				}
+				if (via == this->station->index) via = flows_it->second.GetVia(via);
 				unloaded = source->TransferPacket(c, remaining_unload, this, payment, via);
 				remaining_unload -= unloaded;
 				break;
@@ -802,7 +796,7 @@ void StationCargoList::RerouteStalePackets(StationID to)
 	for (Iterator it(range.first); it != range.second && it.GetKey() == to;) {
 		CargoPacket *packet = *it;
 		it = this->packets.erase(it);
-		StationID next = this->station->goods[this->cargo].GetVia(packet->source);
+		StationID next = this->station->goods[this->cargo].GetVia(packet->source, this->station->index);
 		assert(next != to);
 
 		/* legal, as insert doesn't invalidate iterators in the MultiMap, however
