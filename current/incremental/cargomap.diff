@@ -1686,7 +1686,7 @@ index e67e1fd..3d8b08a 100644
  	}
  
 diff --git a/src/station_cmd.cpp b/src/station_cmd.cpp
-index e1c694e..9db915f 100644
+index 2d4d933..d231c6c 100644
 --- a/src/station_cmd.cpp
 +++ b/src/station_cmd.cpp
 @@ -3231,7 +3231,7 @@ static void UpdateStationRating(Station *st)

@@ -479,7 +479,7 @@ index ea4124e..a6c0bfc 100644
  	}
  
 diff --git a/src/cargopacket.cpp b/src/cargopacket.cpp
-index 0b92de0..6340118 100644
+index 0b92de0..e5c6543 100644
 --- a/src/cargopacket.cpp
 +++ b/src/cargopacket.cpp
 @@ -10,7 +10,9 @@
@@ -571,7 +571,7 @@ index 0b92de0..6340118 100644
  {
  	for (Iterator it(packets.begin()); it != packets.end(); /* done during loop*/) {
  		CargoPacket *cp = *it;
-@@ -239,117 +241,412 @@ void CargoList<Tinst>::Truncate(uint max_remaining)
+@@ -239,117 +241,406 @@ void CargoList<Tinst>::Truncate(uint max_remaining)
  }
  
  /**
@@ -1025,7 +1025,7 @@ index 0b92de0..6340118 100644
 +			/* use cargodist unloading*/
 +			action = this->WillUnloadCargoDist(flags, next, via, cargo_source);
 +		} else {
-+			via  = INVALID_STATION;
++			via = INVALID_STATION;
 +			/* there is no plan: use normal unloading */
 +			action = this->WillUnloadOld(flags, cargo_source);
 +		}
@@ -1039,13 +1039,7 @@ index 0b92de0..6340118 100644
 +				break;
 +			case UL_TRANSFER:
 +				/* TransferPacket may split the packet and return the transferred part */
-+				while (via == this->station->index) {
-+					if (flows_it->second.GetShares()->size() > 1) {
-+						via = flows_it->second.GetVia();
-+					} else {
-+						via = INVALID_STATION;
-+					}
-+				}
++				if (via == this->station->index) via = flows_it->second.GetVia(via);
 +				unloaded = source->TransferPacket(c, remaining_unload, this, payment, via);
 +				remaining_unload -= unloaded;
 +				break;
@@ -1069,7 +1063,7 @@ index 0b92de0..6340118 100644
  }
  
  /**
-@@ -375,6 +672,22 @@ void VehicleCargoList::AddToCache(const CargoPacket *cp)
+@@ -375,6 +666,22 @@ void VehicleCargoList::AddToCache(const CargoPacket *cp)
  }
  
  /**
@@ -1092,7 +1086,7 @@ index 0b92de0..6340118 100644
   * Ages the all cargo in this list.
   */
  void VehicleCargoList::AgeCargo()
-@@ -389,22 +702,188 @@ void VehicleCargoList::AgeCargo()
+@@ -389,22 +696,188 @@ void VehicleCargoList::AgeCargo()
  	}
  }
  
@@ -1197,7 +1191,7 @@ index 0b92de0..6340118 100644
 +	for (Iterator it(range.first); it != range.second && it.GetKey() == to;) {
 +		CargoPacket *packet = *it;
 +		it = this->packets.erase(it);
-+		StationID next = this->station->goods[this->cargo].GetVia(packet->source);
++		StationID next = this->station->goods[this->cargo].GetVia(packet->source, this->station->index);
 +		assert(next != to);
 +
 +		/* legal, as insert doesn't invalidate iterators in the MultiMap, however
@@ -8762,7 +8756,7 @@ index 5fc2bbd..3d8b08a 100644
  
  	/* Clear the persistent storage. */
 diff --git a/src/station_base.h b/src/station_base.h
-index d49c649..3e3126d 100644
+index d49c649..f1cc625 100644
 --- a/src/station_base.h
 +++ b/src/station_base.h
 @@ -12,12 +12,16 @@
@@ -8782,7 +8776,7 @@ index d49c649..3e3126d 100644
  
  typedef Pool<BaseStation, StationID, 32, 64000> StationPool;
  extern StationPool _station_pool;
-@@ -25,6 +29,190 @@ extern StationPool _station_pool;
+@@ -25,6 +29,189 @@ extern StationPool _station_pool;
  static const byte INITIAL_STATION_RATING = 175;
  
  /**
@@ -8954,11 +8948,10 @@ index d49c649..3e3126d 100644
 +	inline StationID GetVia() const
 +	{
 +		assert(!this->shares.empty());
-+		uint rand = RandomRange((--this->shares.end())->first - 1);
-+		SharesMap::const_iterator it = this->shares.upper_bound(rand);
-+		assert(it != this->shares.end());
-+		return it->second;
++		return this->shares.upper_bound(RandomRange((--this->shares.end())->first - 1))->second;
 +	}
++
++	StationID GetVia(StationID excluded) const;
 +
 +private:
 +	SharesMap shares;  ///< Shares of flow to be sent via specified station (or consumed locally).
@@ -8973,7 +8966,7 @@ index d49c649..3e3126d 100644
   * Stores station stats for a single cargo.
   */
  struct GoodsEntry {
-@@ -43,7 +231,11 @@ struct GoodsEntry {
+@@ -43,7 +230,11 @@ struct GoodsEntry {
  		days_since_pickup(255),
  		rating(INITIAL_STATION_RATING),
  		last_speed(0),
@@ -8986,7 +8979,7 @@ index d49c649..3e3126d 100644
  	{}
  
  	byte acceptance_pickup; ///< Status of this cargo, see #GoodsEntryStatus.
-@@ -53,6 +245,20 @@ struct GoodsEntry {
+@@ -53,6 +244,20 @@ struct GoodsEntry {
  	byte last_age;          ///< Age in years of the last vehicle that picked up this cargo.
  	byte amount_fract;      ///< Fractional part of the amount in the cargo list
  	StationCargoList cargo; ///< The cargo packets of cargo waiting in this station
@@ -8999,15 +8992,15 @@ index d49c649..3e3126d 100644
 +
 +	uint GetSumFlowVia(StationID via) const;
 +
-+	inline StationID GetVia(StationID source) const
++	inline StationID GetVia(StationID source, StationID excluded = INVALID_STATION) const
 +	{
 +		FlowStatMap::const_iterator flow_it(this->flows.find(source));
-+		return flow_it != this->flows.end() ? flow_it->second.GetVia() : INVALID_STATION;
++		return flow_it != this->flows.end() ? flow_it->second.GetVia(excluded) : INVALID_STATION;
 +	}
  };
  
  /** All airport-related information. Only valid if tile != INVALID_TILE. */
-@@ -258,6 +464,8 @@ public:
+@@ -258,6 +463,8 @@ public:
  	/* virtual */ uint32 GetNewGRFVariable(const ResolverObject *object, byte variable, byte parameter, bool *available) const;
  
  	/* virtual */ void GetTileArea(TileArea *ta, StationType type) const;
@@ -9017,7 +9010,7 @@ index d49c649..3e3126d 100644
  
  #define FOR_ALL_STATIONS(var) FOR_ALL_BASE_STATIONS_OF_TYPE(Station, var)
 diff --git a/src/station_cmd.cpp b/src/station_cmd.cpp
-index c2de53b..5781c36 100644
+index c2de53b..ca9f579 100644
 --- a/src/station_cmd.cpp
 +++ b/src/station_cmd.cpp
 @@ -46,6 +46,7 @@
@@ -9275,7 +9268,7 @@ index c2de53b..5781c36 100644
  
  	if (!HasBit(ge.acceptance_pickup, GoodsEntry::GES_PICKUP)) {
  		InvalidateWindowData(WC_STATION_LIST, st->index);
-@@ -3720,6 +3870,60 @@ static CommandCost TerraformTile_Station(TileIndex tile, DoCommandFlag flags, in
+@@ -3720,6 +3870,86 @@ static CommandCost TerraformTile_Station(TileIndex tile, DoCommandFlag flags, in
  	return DoCommand(tile, 0, 0, flags, CMD_LANDSCAPE_CLEAR);
  }
  
@@ -9296,7 +9289,33 @@ index c2de53b..5781c36 100644
 +	}
 +	return 0;
 +}
-+	
++
++/**
++ * Get a station a package can be routed to, but exclude the given one.
++ * @param excluded StationID not to be selected.
++ * @return A station ID from the shares map.
++ */
++inline StationID FlowStat::GetVia(StationID excluded) const
++{
++	assert(!this->shares.empty());
++	uint max = (--this->shares.end())->first - 1;
++	SharesMap::const_iterator it = this->shares.upper_bound(RandomRange(max));
++	assert(it != this->shares.end());
++	if (it->second != excluded) {
++		return it->second;
++	} else {
++		uint end = it->first;
++		if (end == max) return INVALID_STATION; // only one station in the map
++		uint begin = (it == this->shares.begin() ? 0 : (--it)->first);
++		uint rand = RandomRange(max - (end - begin));
++		if (rand < begin) {
++			return this->shares.upper_bound(rand)->second;
++		} else {
++			return this->shares.upper_bound(rand + (end - begin))->second;
++		}
++	}
++}
++
 +/**
 + * Erase shares for specified station.
 + * @param st Next Hop to be removed.
