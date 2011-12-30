@@ -18,7 +18,6 @@
 #include "window_type.h"
 #include "cargo_type.h"
 #include <set>
-
 #include "widgets/station_widget.h"
 
 /** Types of cargo to display for station coverage. */

@@ -810,13 +810,12 @@ static const NWidgetPart _nested_station_view_widgets[] = {
 		NWidget(WWT_PANEL, COLOUR_GREY, WID_SV_WAITING), SetMinimalSize(237, 44), SetResize(1, 10), SetScrollbar(WID_SV_SCROLLBAR), EndContainer(),
 		NWidget(NWID_VSCROLLBAR, COLOUR_GREY, WID_SV_SCROLLBAR),
 	EndContainer(),
-	NWidget(WWT_PANEL, COLOUR_GREY, WID_SV_ACCEPT_RATING_LIST), SetMinimalSize(249, 23), SetResize(1, 0), EndContainer(),
+	NWidget(WWT_PANEL, COLOUR_GREY, SVW_BOTTOM_PANEL), SetMinimalSize(249, 23), SetResize(1, 0), EndContainer(),
 	NWidget(NWID_HORIZONTAL, NC_EQUALSIZE),
 		NWidget(WWT_PUSHTXTBTN, COLOUR_GREY, WID_SV_LOCATION), SetMinimalSize(60, 12), SetResize(1, 0), SetFill(1, 1),
 				SetDataTip(STR_BUTTON_LOCATION, STR_STATION_VIEW_CENTER_TOOLTIP),
-		NWidget(WWT_PUSHTXTBTN, COLOUR_GREY, WID_SV_ACCEPTS_RATINGS), SetMinimalSize(61, 12), SetResize(1, 0), SetFill(1, 1),
-				SetDataTip(STR_STATION_VIEW_RATINGS_BUTTON, STR_STATION_VIEW_RATINGS_TOOLTIP),
-		NWidget(WWT_PUSHTXTBTN, COLOUR_GREY, WID_SV_RENAME), SetMinimalSize(60, 12), SetResize(1, 0), SetFill(1, 1),
+		NWidget(WWT_DROPDOWN, COLOUR_GREY, SVW_BP_DROPDOWN), SetMinimalSize(60, 12), SetResize(1, 0), SetFill(0, 1), SetDataTip(0x0, STR_STATION_VIEW_RATINGS_TOOLTIP),
+		NWidget(WWT_PUSHTXTBTN, COLOUR_GREY, SVW_RENAME), SetMinimalSize(60, 12), SetResize(1, 0), SetFill(1, 1),
 				SetDataTip(STR_BUTTON_RENAME, STR_STATION_VIEW_RENAME_TOOLTIP),
 		NWidget(WWT_PUSHTXTBTN, COLOUR_GREY, WID_SV_TRAINS), SetMinimalSize(14, 12), SetFill(0, 1), SetDataTip(STR_TRAIN, STR_STATION_VIEW_SCHEDULED_TRAINS_TOOLTIP),
 		NWidget(WWT_PUSHTXTBTN, COLOUR_GREY, WID_SV_ROADVEHS), SetMinimalSize(14, 12), SetFill(0, 1), SetDataTip(STR_LORRY, STR_STATION_VIEW_SCHEDULED_ROAD_VEHICLES_TOOLTIP),
@@ -1108,19 +1107,13 @@ struct StationViewWindow : public Window {
 	};
 
 	uint expand_shrink_width;     ///< The width allocated to the expand/shrink 'button'
-	int rating_lines;             ///< Number of lines in the cargo ratings view.
-	int accepts_lines;            ///< Number of lines in the accepted cargo view.
+	int bp_lines;                 ///< Number of lines in the bottom panel
 	Scrollbar *vscroll;
-
-	/** Height of the #WID_SV_ACCEPT_RATING_LIST widget for different views. */
-	enum AcceptListHeight {
-		ALH_RATING  = 13, ///< Height of the cargo ratings view.
-		ALH_ACCEPTS = 3,  ///< Height of the accepted cargo view.
-	};
 
 	static const StringID _sort_names[];  ///< Names of the sorting options in the dropdown.
 	static const StringID _group_names[]; ///< Names of the grouping options in the dropdown.
-
+	static const StringID _bottom_panel_options[]; ///< Names of the grouping options in the dropdown.
+	
 	/**
 	 * Sort types of the different 'columns'.
 	 * In fact only ST_COUNT and ST_AS_GROUPING are active and you can only
@@ -1134,6 +1127,7 @@ struct StationViewWindow : public Window {
 
 	int scroll_to_row;                  ///< If set, scroll the main viewport to the station pointed to by this row.
 	int grouping_index;                 ///< Currently selected entry in the grouping drop down.
+	int bottom_panel;                   ///< Currently selected bottom panel (ratings, accepts, links)
 	Mode current_mode;                  ///< Currently selected display mode of cargo view.
 	Grouping groupings[NUM_COLUMNS];    ///< Grouping modes for the different columns.
 
@@ -1142,11 +1136,8 @@ struct StationViewWindow : public Window {
 	CargoDataVector displayed_rows;     ///< Parent entry of currently displayed rows (including collapsed ones).
 
 	StationViewWindow(const WindowDesc *desc, WindowNumber window_number) : Window(),
-		scroll_to_row(INT_MAX), grouping_index(0)
+		scroll_to_row(INT_MAX), grouping_index(0), bottom_panel(0)
 	{
-		this->rating_lines  = ALH_RATING;
-		this->accepts_lines = ALH_ACCEPTS;
-
 		this->CreateNestedTree(desc);
 		this->vscroll = this->GetScrollbar(WID_SV_SCROLLBAR);
 		/* Nested widget tree creation is done in two steps to ensure that this->GetWidget<NWidgetCore>(WID_SV_ACCEPTS_RATINGS) exists in UpdateWidgetSize(). */
@@ -1156,6 +1147,7 @@ struct StationViewWindow : public Window {
 		this->sortings[0] = ST_AS_GROUPING;
 		this->SelectGroupBy(_settings_client.gui.station_gui_group_order);
 		this->SelectSortBy(_settings_client.gui.station_gui_sort_by);
+		this->SelectBottomPanel(_settings_client.gui.station_gui_bottom_panel);
 		this->sort_orders[0] = SO_ASCENDING;
 		this->SelectSortOrder((SortOrder)_settings_client.gui.station_gui_sort_order);
 		Owner owner = Station::Get(window_number)->owner;
@@ -1219,9 +1211,8 @@ struct StationViewWindow : public Window {
 				size->height = WD_FRAMERECT_TOP + 4 * resize->height + WD_FRAMERECT_BOTTOM;
 				this->expand_shrink_width = max(GetStringBoundingBox("-").width, GetStringBoundingBox("+").width) + WD_FRAMERECT_LEFT + WD_FRAMERECT_RIGHT;
 				break;
-
-			case WID_SV_ACCEPT_RATING_LIST:
-				size->height = WD_FRAMERECT_TOP + ((this->GetWidget<NWidgetCore>(WID_SV_ACCEPTS_RATINGS)->widget_data == STR_STATION_VIEW_RATINGS_BUTTON) ? this->accepts_lines : this->rating_lines) * FONT_HEIGHT_NORMAL + WD_FRAMERECT_BOTTOM;
+			case SVW_BOTTOM_PANEL:
+				size->height = WD_FRAMERECT_TOP + this->bp_lines * FONT_HEIGHT_NORMAL + WD_FRAMERECT_BOTTOM;
 				break;
 		}
 	}
@@ -1246,23 +1237,26 @@ struct StationViewWindow : public Window {
 		this->DrawWidgets();
 
 		if (!this->IsShaded()) {
-			/* Draw 'accepted cargo' or 'cargo ratings'. */
-			const NWidgetBase *wid = this->GetWidget<NWidgetBase>(WID_SV_ACCEPT_RATING_LIST);
+			/* Draw 'accepted cargo', 'cargo ratings' or 'links'. */
+			const NWidgetBase *wid = this->GetWidget<NWidgetBase>(SVW_BOTTOM_PANEL);
 			const Rect r = {wid->pos_x, wid->pos_y, wid->pos_x + wid->current_x - 1, wid->pos_y + wid->current_y - 1};
-			if (this->GetWidget<NWidgetCore>(WID_SV_ACCEPTS_RATINGS)->widget_data == STR_STATION_VIEW_RATINGS_BUTTON) {
-				int lines = this->DrawAcceptedCargo(r);
-				if (lines > this->accepts_lines) { // Resize the widget, and perform re-initialization of the window.
-					this->accepts_lines = lines;
-					this->ReInit();
-					return;
-				}
-			} else {
-				int lines = this->DrawCargoRatings(r);
-				if (lines > this->rating_lines) { // Resize the widget, and perform re-initialization of the window.
-					this->rating_lines = lines;
-					this->ReInit();
-					return;
-				}
+			int lines = 0;
+			switch(_bottom_panel_options[this->bottom_panel]) {
+			    case STR_STATION_VIEW_BP_DROPDOWN_ACCEPTS:
+					lines = this->DrawAcceptedCargo(r);
+					break;
+				case STR_STATION_VIEW_BP_DROPDOWN_RATINGS:
+					lines = this->DrawCargoRatings(r);
+					break;
+				case STR_STATION_VIEW_BP_DROPDOWN_LINKS:
+					lines = this->DrawStationLinks(r);
+					break;
+			}
+			
+			if (lines != this->bp_lines) { // Resize the widget, and perform re-initialization of the window.
+				this->bp_lines = lines;
+				this->ReInit();
+				return;
 			}
 
 			/* draw arrow pointing up/down for ascending/descending sorting */
@@ -1619,7 +1613,7 @@ struct StationViewWindow : public Window {
 	}
 
 	/**
-	 * Draw accepted cargo in the #WID_SV_ACCEPT_RATING_LIST widget.
+	 * Draw accepted cargo in the #SVW_BOTTOM_PANEL widget.
 	 * @param r Rectangle of the widget.
 	 * @return Number of lines needed for drawing the accepted cargo.
 	 */
@@ -1637,7 +1631,7 @@ struct StationViewWindow : public Window {
 	}
 
 	/**
-	 * Draw cargo ratings in the #WID_SV_ACCEPT_RATING_LIST widget.
+	 * Draw cargo ratings in the #SVW_BOTTOM_PANEL widget.
 	 * @param r Rectangle of the widget.
 	 * @return Number of lines needed for drawing the cargo ratings.
 	 */
@@ -1660,6 +1654,37 @@ struct StationViewWindow : public Window {
 			SetDParam(2, STR_CARGO_RATING_APPALLING + (ge->rating >> 5));
 			DrawString(r.left + WD_FRAMERECT_LEFT + 6, r.right - WD_FRAMERECT_RIGHT - 6, y, STR_STATION_VIEW_CARGO_SUPPLY_RATING);
 			y += FONT_HEIGHT_NORMAL;
+		}
+		return CeilDiv(y - r.top - WD_FRAMERECT_TOP, FONT_HEIGHT_NORMAL);
+	}
+	
+	/**
+	 * Draw station links in the #SVW_BOTTOM_PANEL widget.
+	 * @param r Rectangle of the widget.
+	 * @return Number of lines needed for drawing the accepted cargo.
+	 */
+	int DrawStationLinks(const Rect &r) const
+	{
+		const Station *st = Station::Get(this->window_number);
+		int y = r.top + WD_FRAMERECT_TOP;
+
+		DrawString(r.left + WD_FRAMERECT_LEFT, r.right - WD_FRAMERECT_RIGHT, y, STR_STATION_VIEW_CARGO_RATINGS_TITLE);
+		y += FONT_HEIGHT_NORMAL;
+
+		const CargoSpec *cs;
+		FOR_ALL_SORTED_STANDARD_CARGOSPECS(cs) {
+			const GoodsEntry *ge = &st->goods[cs->Index()];
+			const LinkStatMap &links = ge->link_stats;
+			if(!(links.size() > 0)) continue;
+			SetDParam(0, cs->name);
+			DrawString(r.left + WD_FRAMERECT_LEFT + 6, r.right - WD_FRAMERECT_RIGHT - 6, y, STR_STATION_VIEW_LINK_CARGO);
+			y += FONT_HEIGHT_NORMAL;
+			
+			for (LinkStatMap::const_iterator i = links.begin(); i != links.end(); ++i) {
+				SetDParam(0, i->first);
+				DrawString(r.left + WD_FRAMERECT_LEFT + 6, r.right - WD_FRAMERECT_RIGHT - 6, y, STR_STATION_VIEW_LINK_TITLE);
+				y += FONT_HEIGHT_NORMAL;
+			}
 		}
 		return CeilDiv(y - r.top - WD_FRAMERECT_TOP, FONT_HEIGHT_NORMAL);
 	}
@@ -1714,22 +1739,7 @@ struct StationViewWindow : public Window {
 				}
 				break;
 
-			case WID_SV_ACCEPTS_RATINGS: {
-				/* Swap between 'accepts' and 'ratings' view. */
-				int height_change;
-				NWidgetCore *nwi = this->GetWidget<NWidgetCore>(WID_SV_ACCEPTS_RATINGS);
-				if (this->GetWidget<NWidgetCore>(WID_SV_ACCEPTS_RATINGS)->widget_data == STR_STATION_VIEW_RATINGS_BUTTON) {
-					nwi->SetDataTip(STR_STATION_VIEW_ACCEPTS_BUTTON, STR_STATION_VIEW_ACCEPTS_TOOLTIP); // Switch to accepts view.
-					height_change = this->rating_lines - this->accepts_lines;
-				} else {
-					nwi->SetDataTip(STR_STATION_VIEW_RATINGS_BUTTON, STR_STATION_VIEW_RATINGS_TOOLTIP); // Switch to ratings view.
-					height_change = this->accepts_lines - this->rating_lines;
-				}
-				this->ReInit(0, height_change * FONT_HEIGHT_NORMAL);
-				break;
-			}
-
-			case WID_SV_RENAME:
+			case SVW_RENAME:
 				SetDParam(0, this->window_number);
 				ShowQueryString(STR_STATION_NAME, STR_STATION_VIEW_RENAME_STATION_CAPTION, MAX_LENGTH_STATION_NAME_CHARS,
 						this, CS_ALPHANUMERAL, QSF_ENABLE_DEFAULT | QSF_LEN_IN_CHARS);
@@ -1751,8 +1761,13 @@ struct StationViewWindow : public Window {
 				ShowDropDownMenu(this, _group_names, this->grouping_index, WID_SV_GROUP_BY, 0, 0);
 				break;
 			}
-
-			case WID_SV_SORT_ORDER: { // flip sorting method asc/desc
+			
+			case SVW_BP_DROPDOWN: {
+				ShowDropDownMenu(this, _bottom_panel_options, this->bottom_panel, SVW_BP_DROPDOWN, 0, 0);
+				break;
+			}
+            
+			case SVW_SORT_ORDER: { // flip sorting method asc/desc
 				this->SelectSortOrder(this->sort_orders[1] == SO_ASCENDING ? SO_DESCENDING : SO_ASCENDING);
 				this->SetTimeout();
 				this->LowerWidget(WID_SV_SORT_ORDER);
@@ -1847,13 +1862,26 @@ struct StationViewWindow : public Window {
 		}
 		this->SetDirty();
 	}
-
+	
+	void SelectBottomPanel(int index) {
+		this->bottom_panel = index;
+		_settings_client.gui.station_gui_bottom_panel = index;
+		this->GetWidget<NWidgetCore>(SVW_BP_DROPDOWN)->widget_data = _bottom_panel_options[index];
+		this->SetDirty();
+	}
+	
 	virtual void OnDropdownSelect(int widget, int index)
 	{
-		if (widget == WID_SV_SORT_BY) {
-			this->SelectSortBy(index);
-		} else {
-			this->SelectGroupBy(index);
+		switch(widget) {
+		    case SVW_SORT_BY:
+				this->SelectSortBy(index);
+				break;
+			case SVW_GROUP_BY:
+				this->SelectGroupBy(index);
+				break;
+			case SVW_BP_DROPDOWN:
+				this->SelectBottomPanel(index);
+				break;
 		}
 	}
 
@@ -1887,6 +1915,13 @@ const StringID StationViewWindow::_group_names[] = {
 	STR_STATION_VIEW_GROUP_D_V_S,
 	INVALID_STRING_ID
 };
+
+const StringID StationViewWindow::_bottom_panel_options[] = {
+    STR_STATION_VIEW_BP_DROPDOWN_ACCEPTS,
+	STR_STATION_VIEW_BP_DROPDOWN_RATINGS,
+	STR_STATION_VIEW_BP_DROPDOWN_LINKS,
+	INVALID_STRING_ID
+};	
 
 static const WindowDesc _station_view_desc(
 	WDP_AUTO, 249, 117,

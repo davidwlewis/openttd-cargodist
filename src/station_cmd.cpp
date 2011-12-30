@@ -616,7 +616,7 @@ void UpdateStationAcceptance(Station *st, bool show_msg)
 	}
 
 	/* redraw the station view since acceptance changed */
-	SetWindowWidgetDirty(WC_STATION_VIEW, st->index, WID_SV_ACCEPT_RATING_LIST);
+	SetWindowWidgetDirty(WC_STATION_VIEW, st->index, SVW_BOTTOM_PANEL);
 }
 
 static void UpdateStationSignCoord(BaseStation *st)
@@ -3274,7 +3274,7 @@ static void UpdateStationRating(Station *st)
 	if (waiting_changed) {
 		SetWindowDirty(WC_STATION_VIEW, index); // update whole window
 	} else {
-		SetWindowWidgetDirty(WC_STATION_VIEW, index, WID_SV_ACCEPT_RATING_LIST); // update only ratings list
+		SetWindowWidgetDirty(WC_STATION_VIEW, index, SVW_BOTTOM_PANEL); // update only ratings list
 	}
 }
 
@@ -3364,7 +3364,8 @@ void IncreaseStats(Station *st, CargoID cargo, StationID next_station_id, uint c
 		if (usage == UINT_MAX) {
 			link_stat.Refresh(capacity);
 		} else {
-			assert(capacity >= usage);
+			//assert(capacity >= usage);
+			usage = ClampU(usage, 0, capacity); //hack
 			link_stat.Increase(capacity, usage);
 		}
 		assert(link_stat.IsValid());

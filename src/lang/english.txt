@@ -2725,15 +2725,25 @@ STR_STATION_VIEW_WAITING_TITLE                                  :{BLACK}Waiting:
 STR_STATION_VIEW_WAITING_CARGO                                  :{WHITE}{CARGO_LONG}
 STR_STATION_VIEW_EN_ROUTE_FROM                                  :{YELLOW}({CARGO_SHORT} en-route from {STATION})
 
+#deprecated
 STR_STATION_VIEW_ACCEPTS_BUTTON                                 :{BLACK}Accepts
+STR_STATION_VIEW_RATINGS_BUTTON                                 :{BLACK}Ratings
+
+STR_STATION_VIEW_BP_DROPDOWN_ACCEPTS                            :Accepts
+STR_STATION_VIEW_BP_DROPDOWN_RATINGS                            :Ratings
+STR_STATION_VIEW_BP_DROPDOWN_LINKS                              :Links
+
 STR_STATION_VIEW_ACCEPTS_TOOLTIP                                :{BLACK}Show list of accepted cargo
 STR_STATION_VIEW_ACCEPTS_CARGO                                  :{BLACK}Accepts: {WHITE}{RAW_STRING}
 
-STR_STATION_VIEW_RATINGS_BUTTON                                 :{BLACK}Ratings
 STR_STATION_VIEW_RATINGS_TOOLTIP                                :{BLACK}Show station ratings
 STR_STATION_VIEW_CARGO_RATINGS_TITLE                            :{BLACK}Monthly supply and local rating:
 STR_STATION_VIEW_CARGO_RATING                                   :{WHITE}{STRING}: {YELLOW}{STRING} ({COMMA}%)
 STR_STATION_VIEW_CARGO_SUPPLY_RATING                            :{WHITE}{STRING}: {YELLOW}{COMMA} / {STRING} ({COMMA}%)
+
+STR_STATION_VIEW_LINKS_TOOLTIP                                  :{BLACK}Show station links
+STR_STATION_VIEW_LINK_CARGO                                     :{WHITE}{STRING}:
+STR_STATION_VIEW_LINK_TITLE                                     : to {STATION}
 
 STR_STATION_VIEW_GROUP                                          :{BLACK}Group by
 STR_STATION_VIEW_WAITING_STATION                                :Station: Waiting
