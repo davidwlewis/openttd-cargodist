@@ -1026,11 +1026,15 @@ void SQGSWindow_Register(Squirrel *engine)
 	SQGSWindow.DefSQConst(engine, ScriptWindow::WID_SM_DISABLE_ALL,                        "WID_SM_DISABLE_ALL");
 	SQGSWindow.DefSQConst(engine, ScriptWindow::WID_SM_SHOW_HEIGHT,                        "WID_SM_SHOW_HEIGHT");
 	SQGSWindow.DefSQConst(engine, ScriptWindow::WID_SV_CAPTION,                            "WID_SV_CAPTION");
+	SQGSWindow.DefSQConst(engine, ScriptWindow::WID_SV_SORT_ORDER,                         "WID_SV_SORT_ORDER");
+	SQGSWindow.DefSQConst(engine, ScriptWindow::WID_SV_SORT_BY,                            "WID_SV_SORT_BY");
+	SQGSWindow.DefSQConst(engine, ScriptWindow::WID_SV_GROUP,                              "WID_SV_GROUP");
+	SQGSWindow.DefSQConst(engine, ScriptWindow::WID_SV_GROUP_BY,                           "WID_SV_GROUP_BY");
 	SQGSWindow.DefSQConst(engine, ScriptWindow::WID_SV_WAITING,                            "WID_SV_WAITING");
 	SQGSWindow.DefSQConst(engine, ScriptWindow::WID_SV_SCROLLBAR,                          "WID_SV_SCROLLBAR");
-	SQGSWindow.DefSQConst(engine, ScriptWindow::WID_SV_ACCEPT_RATING_LIST,                 "WID_SV_ACCEPT_RATING_LIST");
+	SQGSWindow.DefSQConst(engine, ScriptWindow::WID_SV_BOTTOM_PANEL,                       "WID_SV_BOTTOM_PANEL");
 	SQGSWindow.DefSQConst(engine, ScriptWindow::WID_SV_LOCATION,                           "WID_SV_LOCATION");
-	SQGSWindow.DefSQConst(engine, ScriptWindow::WID_SV_ACCEPTS_RATINGS,                    "WID_SV_ACCEPTS_RATINGS");
+	SQGSWindow.DefSQConst(engine, ScriptWindow::WID_SV_BP_DROPDOWN,                        "WID_SV_BP_DROPDOWN");
 	SQGSWindow.DefSQConst(engine, ScriptWindow::WID_SV_RENAME,                             "WID_SV_RENAME");
 	SQGSWindow.DefSQConst(engine, ScriptWindow::WID_SV_TRAINS,                             "WID_SV_TRAINS");
 	SQGSWindow.DefSQConst(engine, ScriptWindow::WID_SV_ROADVEHS,                           "WID_SV_ROADVEHS");

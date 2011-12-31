@@ -810,12 +810,12 @@ static const NWidgetPart _nested_station_view_widgets[] = {
 		NWidget(WWT_PANEL, COLOUR_GREY, WID_SV_WAITING), SetMinimalSize(237, 44), SetResize(1, 10), SetScrollbar(WID_SV_SCROLLBAR), EndContainer(),
 		NWidget(NWID_VSCROLLBAR, COLOUR_GREY, WID_SV_SCROLLBAR),
 	EndContainer(),
-	NWidget(WWT_PANEL, COLOUR_GREY, SVW_BOTTOM_PANEL), SetMinimalSize(249, 23), SetResize(1, 0), EndContainer(),
+	NWidget(WWT_PANEL, COLOUR_GREY, WID_SV_BOTTOM_PANEL), SetMinimalSize(249, 23), SetResize(1, 0), EndContainer(),
 	NWidget(NWID_HORIZONTAL, NC_EQUALSIZE),
 		NWidget(WWT_PUSHTXTBTN, COLOUR_GREY, WID_SV_LOCATION), SetMinimalSize(60, 12), SetResize(1, 0), SetFill(1, 1),
 				SetDataTip(STR_BUTTON_LOCATION, STR_STATION_VIEW_CENTER_TOOLTIP),
-		NWidget(WWT_DROPDOWN, COLOUR_GREY, SVW_BP_DROPDOWN), SetMinimalSize(60, 12), SetResize(1, 0), SetFill(0, 1), SetDataTip(0x0, STR_STATION_VIEW_RATINGS_TOOLTIP),
-		NWidget(WWT_PUSHTXTBTN, COLOUR_GREY, SVW_RENAME), SetMinimalSize(60, 12), SetResize(1, 0), SetFill(1, 1),
+		NWidget(WWT_DROPDOWN, COLOUR_GREY, WID_SV_BP_DROPDOWN), SetMinimalSize(60, 12), SetResize(1, 0), SetFill(0, 1), SetDataTip(0x0, STR_STATION_VIEW_RATINGS_TOOLTIP),
+		NWidget(WWT_PUSHTXTBTN, COLOUR_GREY, WID_SV_RENAME), SetMinimalSize(60, 12), SetResize(1, 0), SetFill(1, 1),
 				SetDataTip(STR_BUTTON_RENAME, STR_STATION_VIEW_RENAME_TOOLTIP),
 		NWidget(WWT_PUSHTXTBTN, COLOUR_GREY, WID_SV_TRAINS), SetMinimalSize(14, 12), SetFill(0, 1), SetDataTip(STR_TRAIN, STR_STATION_VIEW_SCHEDULED_TRAINS_TOOLTIP),
 		NWidget(WWT_PUSHTXTBTN, COLOUR_GREY, WID_SV_ROADVEHS), SetMinimalSize(14, 12), SetFill(0, 1), SetDataTip(STR_LORRY, STR_STATION_VIEW_SCHEDULED_ROAD_VEHICLES_TOOLTIP),
@@ -1211,7 +1211,7 @@ struct StationViewWindow : public Window {
 				size->height = WD_FRAMERECT_TOP + 4 * resize->height + WD_FRAMERECT_BOTTOM;
 				this->expand_shrink_width = max(GetStringBoundingBox("-").width, GetStringBoundingBox("+").width) + WD_FRAMERECT_LEFT + WD_FRAMERECT_RIGHT;
 				break;
-			case SVW_BOTTOM_PANEL:
+			case WID_SV_BOTTOM_PANEL:
 				size->height = WD_FRAMERECT_TOP + this->bp_lines * FONT_HEIGHT_NORMAL + WD_FRAMERECT_BOTTOM;
 				break;
 		}
@@ -1238,7 +1238,7 @@ struct StationViewWindow : public Window {
 
 		if (!this->IsShaded()) {
 			/* Draw 'accepted cargo', 'cargo ratings' or 'links'. */
-			const NWidgetBase *wid = this->GetWidget<NWidgetBase>(SVW_BOTTOM_PANEL);
+			const NWidgetBase *wid = this->GetWidget<NWidgetBase>(WID_SV_BOTTOM_PANEL);
 			const Rect r = {wid->pos_x, wid->pos_y, wid->pos_x + wid->current_x - 1, wid->pos_y + wid->current_y - 1};
 			int lines = 0;
 			switch(_bottom_panel_options[this->bottom_panel]) {
@@ -1613,7 +1613,7 @@ struct StationViewWindow : public Window {
 	}
 
 	/**
-	 * Draw accepted cargo in the #SVW_BOTTOM_PANEL widget.
+	 * Draw accepted cargo in the #WID_SV_BOTTOM_PANEL widget.
 	 * @param r Rectangle of the widget.
 	 * @return Number of lines needed for drawing the accepted cargo.
 	 */
@@ -1631,7 +1631,7 @@ struct StationViewWindow : public Window {
 	}
 
 	/**
-	 * Draw cargo ratings in the #SVW_BOTTOM_PANEL widget.
+	 * Draw cargo ratings in the #WID_SV_BOTTOM_PANEL widget.
 	 * @param r Rectangle of the widget.
 	 * @return Number of lines needed for drawing the cargo ratings.
 	 */
@@ -1659,7 +1659,7 @@ struct StationViewWindow : public Window {
 	}
 	
 	/**
-	 * Draw station links in the #SVW_BOTTOM_PANEL widget.
+	 * Draw station links in the #WID_SV_BOTTOM_PANEL widget.
 	 * @param r Rectangle of the widget.
 	 * @return Number of lines needed for drawing the accepted cargo.
 	 */
@@ -1739,7 +1739,7 @@ struct StationViewWindow : public Window {
 				}
 				break;
 
-			case SVW_RENAME:
+			case WID_SV_RENAME:
 				SetDParam(0, this->window_number);
 				ShowQueryString(STR_STATION_NAME, STR_STATION_VIEW_RENAME_STATION_CAPTION, MAX_LENGTH_STATION_NAME_CHARS,
 						this, CS_ALPHANUMERAL, QSF_ENABLE_DEFAULT | QSF_LEN_IN_CHARS);
@@ -1762,12 +1762,12 @@ struct StationViewWindow : public Window {
 				break;
 			}
 			
-			case SVW_BP_DROPDOWN: {
-				ShowDropDownMenu(this, _bottom_panel_options, this->bottom_panel, SVW_BP_DROPDOWN, 0, 0);
+			case WID_SV_BP_DROPDOWN: {
+				ShowDropDownMenu(this, _bottom_panel_options, this->bottom_panel, WID_SV_BP_DROPDOWN, 0, 0);
 				break;
 			}
             
-			case SVW_SORT_ORDER: { // flip sorting method asc/desc
+			case WID_SV_SORT_ORDER: { // flip sorting method asc/desc
 				this->SelectSortOrder(this->sort_orders[1] == SO_ASCENDING ? SO_DESCENDING : SO_ASCENDING);
 				this->SetTimeout();
 				this->LowerWidget(WID_SV_SORT_ORDER);
@@ -1866,20 +1866,20 @@ struct StationViewWindow : public Window {
 	void SelectBottomPanel(int index) {
 		this->bottom_panel = index;
 		_settings_client.gui.station_gui_bottom_panel = index;
-		this->GetWidget<NWidgetCore>(SVW_BP_DROPDOWN)->widget_data = _bottom_panel_options[index];
+		this->GetWidget<NWidgetCore>(WID_SV_BP_DROPDOWN)->widget_data = _bottom_panel_options[index];
 		this->SetDirty();
 	}
 	
 	virtual void OnDropdownSelect(int widget, int index)
 	{
 		switch(widget) {
-		    case SVW_SORT_BY:
+		    case WID_SV_SORT_BY:
 				this->SelectSortBy(index);
 				break;
-			case SVW_GROUP_BY:
+			case WID_SV_GROUP_BY:
 				this->SelectGroupBy(index);
 				break;
-			case SVW_BP_DROPDOWN:
+			case WID_SV_BP_DROPDOWN:
 				this->SelectBottomPanel(index);
 				break;
 		}

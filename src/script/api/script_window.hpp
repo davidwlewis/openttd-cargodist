@@ -2033,6 +2033,24 @@ public:
 
 	/** Widgets of the #StationViewWindow class. */
 	enum StationViewWidgets {
+		WID_SV_CAPTION                          = ::WID_SV_CAPTION,                          ///< Caption of the window
+		WID_SV_SORT_ORDER                       = ::WID_SV_SORT_ORDER,                       ///< 'Sort order' button
+		WID_SV_SORT_BY                          = ::WID_SV_SORT_BY,                          ///< 'Sort by' button
+		WID_SV_GROUP                            = ::WID_SV_GROUP,                            ///< label for "group by"
+		WID_SV_GROUP_BY                         = ::WID_SV_GROUP_BY,                         ///< 'Group by' button
+		WID_SV_WAITING                          = ::WID_SV_WAITING,                          ///< List of waiting cargo
+		WID_SV_SCROLLBAR                        = ::WID_SV_SCROLLBAR,                        ///< Scrollbar
+		WID_SV_BOTTOM_PANEL                     = ::WID_SV_BOTTOM_PANEL,                     ///< List of accepted cargos
+		WID_SV_LOCATION                         = ::WID_SV_LOCATION,                         ///< 'Location' button
+		WID_SV_BP_DROPDOWN                      = ::WID_SV_BP_DROPDOWN,                      ///< Bottom Panel dropdown
+		WID_SV_RENAME                           = ::WID_SV_RENAME,                           ///< 'Rename' button
+		WID_SV_TRAINS                           = ::WID_SV_TRAINS,                           ///< List of scheduled trains button
+		WID_SV_ROADVEHS                         = ::WID_SV_ROADVEHS,                         ///< List of scheduled road vehs button
+		WID_SV_SHIPS                            = ::WID_SV_SHIPS,                            ///< List of scheduled ships button
+		WID_SV_PLANES                           = ::WID_SV_PLANES,                           ///< List of scheduled planes button
+	};
+	/** deprecated
+	enum StationViewWidgets {
 		WID_SV_CAPTION                       = ::WID_SV_CAPTION,                       ///< Caption of the window.
 		WID_SV_WAITING                       = ::WID_SV_WAITING,                       ///< List of waiting cargo.
 		WID_SV_SCROLLBAR                     = ::WID_SV_SCROLLBAR,                     ///< Scrollbar.
@@ -2044,7 +2062,7 @@ public:
 		WID_SV_ROADVEHS                      = ::WID_SV_ROADVEHS,                      ///< List of scheduled road vehs button.
 		WID_SV_SHIPS                         = ::WID_SV_SHIPS,                         ///< List of scheduled ships button.
 		WID_SV_PLANES                        = ::WID_SV_PLANES,                        ///< List of scheduled planes button.
-	};
+	};*/
 
 	/** Widgets of the #CompanyStationsWindow class. */
 	enum StationListWidgets {

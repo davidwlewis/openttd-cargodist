@@ -14,21 +14,21 @@
 
 /** Widgets of the #StationViewWindow class. */
 enum StationViewWidgets {
-	SVW_CAPTION      =  0, ///< Caption of the window
-	SVW_SORT_ORDER   =  1, ///< 'Sort order' button
-	SVW_SORT_BY      =  2, ///< 'Sort by' button
-	SVW_GROUP        =  3, ///< label for "group by"
-	SVW_GROUP_BY     =  4, ///< 'Group by' button
-	SVW_WAITING      =  5, ///< List of waiting cargo
-	SVW_SCROLLBAR    =  6, ///< Scrollbar
-	SVW_BOTTOM_PANEL =  7, ///< List of accepted cargos
-	SVW_LOCATION     =  8, ///< 'Location' button
-	SVW_BP_DROPDOWN  =  9, ///< Bottom Panel dropdown
-	SVW_RENAME       = 10, ///< 'Rename' button
-	SVW_TRAINS       = 12, ///< List of scheduled trains button
-	SVW_ROADVEHS,          ///< List of scheduled road vehs button
-	SVW_SHIPS,             ///< List of scheduled ships button
-	SVW_PLANES,            ///< List of scheduled planes button
+	WID_SV_CAPTION      =  0, ///< Caption of the window
+	WID_SV_SORT_ORDER   =  1, ///< 'Sort order' button
+	WID_SV_SORT_BY      =  2, ///< 'Sort by' button
+	WID_SV_GROUP        =  3, ///< label for "group by"
+	WID_SV_GROUP_BY     =  4, ///< 'Group by' button
+	WID_SV_WAITING      =  5, ///< List of waiting cargo
+	WID_SV_SCROLLBAR    =  6, ///< Scrollbar
+	WID_SV_BOTTOM_PANEL =  7, ///< List of accepted cargos
+	WID_SV_LOCATION     =  8, ///< 'Location' button
+	WID_SV_BP_DROPDOWN  =  9, ///< Bottom Panel dropdown
+	WID_SV_RENAME       = 10, ///< 'Rename' button
+	WID_SV_TRAINS       = 12, ///< List of scheduled trains button
+	WID_SV_ROADVEHS,          ///< List of scheduled road vehs button
+	WID_SV_SHIPS,             ///< List of scheduled ships button
+	WID_SV_PLANES,            ///< List of scheduled planes button
 };
 
 /** Widgets of the #CompanyStationsWindow class. */
