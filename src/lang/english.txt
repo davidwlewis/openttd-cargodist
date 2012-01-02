@@ -2742,6 +2742,7 @@ STR_STATION_VIEW_CARGO_RATING                                   :{WHITE}{STRING}
 STR_STATION_VIEW_CARGO_SUPPLY_RATING                            :{WHITE}{STRING}: {YELLOW}{COMMA} / {STRING} ({COMMA}%)
 
 STR_STATION_VIEW_LINKS_TOOLTIP                                  :{BLACK}Show station links
+STR_STATION_VIEW_LINK_TITLE                                     :{BLACK}Links to/from this station:
 STR_STATION_VIEW_LINK_CARGO                                     :{WHITE}{STRING}:
 STR_STATION_VIEW_LINK_TITLE                                     : to {STATION}
 

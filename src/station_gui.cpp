@@ -1242,7 +1242,7 @@ struct StationViewWindow : public Window {
 			const Rect r = {wid->pos_x, wid->pos_y, wid->pos_x + wid->current_x - 1, wid->pos_y + wid->current_y - 1};
 			int lines = 0;
 			switch(_bottom_panel_options[this->bottom_panel]) {
-			    case STR_STATION_VIEW_BP_DROPDOWN_ACCEPTS:
+				case STR_STATION_VIEW_BP_DROPDOWN_ACCEPTS:
 					lines = this->DrawAcceptedCargo(r);
 					break;
 				case STR_STATION_VIEW_BP_DROPDOWN_RATINGS:
@@ -1668,7 +1668,7 @@ struct StationViewWindow : public Window {
 		const Station *st = Station::Get(this->window_number);
 		int y = r.top + WD_FRAMERECT_TOP;
 
-		DrawString(r.left + WD_FRAMERECT_LEFT, r.right - WD_FRAMERECT_RIGHT, y, STR_STATION_VIEW_CARGO_RATINGS_TITLE);
+		DrawString(r.left + WD_FRAMERECT_LEFT, r.right - WD_FRAMERECT_RIGHT, y, STR_STATION_VIEW_LINKS_TITLE);
 		y += FONT_HEIGHT_NORMAL;
 
 		const CargoSpec *cs;
@@ -1873,7 +1873,7 @@ struct StationViewWindow : public Window {
 	virtual void OnDropdownSelect(int widget, int index)
 	{
 		switch(widget) {
-		    case WID_SV_SORT_BY:
+			case WID_SV_SORT_BY:
 				this->SelectSortBy(index);
 				break;
 			case WID_SV_GROUP_BY:

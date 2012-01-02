@@ -3364,8 +3364,7 @@ void IncreaseStats(Station *st, CargoID cargo, StationID next_station_id, uint c
 		if (usage == UINT_MAX) {
 			link_stat.Refresh(capacity);
 		} else {
-			//assert(capacity >= usage);
-			usage = ClampU(usage, 0, capacity); //hack
+			assert(capacity >= usage);
 			link_stat.Increase(capacity, usage);
 		}
 		assert(link_stat.IsValid());
